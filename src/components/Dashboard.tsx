@@ -1,19 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
+import { useAccount } from '@/lib/jazz';
+import { GroceriesAccount } from '@/schemas';
+import { ListsView } from './lists/ListsView';
 
 export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
-  const [session, setSession] = useState<any>(null);
-
-  useEffect(() => {
-    // Check for existing session on mount
-    betterAuthClient.getSession().then((data) => {
-      console.log('Session data:', data);
-      setSession(data);
-    }).catch((error) => {
-      console.error('Session fetch error:', error);
-    });
-  }, []);
+  const { me, logOut } = useAccount(GroceriesAccount);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -31,29 +24,35 @@ export function Dashboard() {
   };
 
   const handleAppleSignIn = async () => {
-    alert('Apple OAuth is not yet configured. Please add Apple credentials to the backend/.env file.');
+    alert(
+      'Apple OAuth is not yet configured. Please add Apple credentials to the backend/.env file.',
+    );
   };
 
-  if (session?.data?.user) {
+  const handleSignOut = async () => {
+    try {
+      await logOut();
+      await betterAuthClient.signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  // Show loading state while account is being loaded
+  if (me === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-neutral-900">🛒 GroceryList</h1>
-            <p className="mt-2 text-neutral-600">Welcome, {session.data.user.name}!</p>
-          </div>
-          <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
-            <p className="text-center">You are logged in as {session.data.user.email}</p>
-            <button
-              onClick={() => betterAuthClient.signOut().then(() => setSession(null))}
-              className="mt-4 w-full rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-            >
-              Sign Out
-            </button>
-          </div>
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
+          <p className="mt-4 text-neutral-600">Loading...</p>
         </div>
       </div>
     );
+  }
+
+  // Show lists view if authenticated and account is ready
+  if (me && me.root) {
+    return <ListsView account={me} onSignOut={handleSignOut} />;
   }
 
   return (
