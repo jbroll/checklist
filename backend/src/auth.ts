@@ -13,18 +13,34 @@ export const auth = betterAuth({
   // Use better-sqlite3 directly (recommended pattern)
   database: sqliteDb,
 
-  // Base URL for OAuth callbacks
-  baseURL: process.env.BASE_URL || 'http://localhost:3001',
+  // Base URL for OAuth callbacks - must match frontend URL for same-origin cookies
+  baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
   // Trust the frontend origin
   trustedOrigins: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
   ],
 
-  // Advanced configuration for cross-origin auth
+  // Session configuration
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutes
+    },
+  },
+
+  // Advanced configuration
   advanced: {
-    // Use secure cookies (false for localhost development)
+    // Use secure cookies (false for localhost HTTP)
     useSecureCookies: false,
+    // Disable CSRF check for development
+    disableCSRFCheck: true,
+    // Configure cookie attributes for OAuth redirects
+    defaultCookieAttributes: {
+      sameSite: "lax", // Lax for development (None requires HTTPS)
+      httpOnly: true,
+      secure: false,
+    },
   },
 
   // Jazz plugin to store Jazz account keys with users
