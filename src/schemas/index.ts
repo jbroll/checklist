@@ -71,16 +71,17 @@ export const GroceriesAccount = co
     console.log('Has root?', account.$jazz.has('root'));
     console.log('Current root value:', account.root);
 
-    // Initialize root for new accounts OR accounts with null root
-    if (!account.$jazz.has('root') || !account.root) {
+    // Initialize root for new accounts
+    // Using has() to check if root has EVER been set (even if currently null)
+    if (!account.$jazz.has('root')) {
       console.log('Creating new root...');
       try {
-        const newRoot = {
-          myLists: co.list(GroceryList).create([]),
-          sharedLists: co.list(GroceryList).create([]),
-        };
-        console.log('New root created:', newRoot);
-        account.$jazz.set('root', newRoot);
+        // Set root using plain object literal - Jazz will convert to CoMap
+        // Use empty arrays [] as shorthand for creating CoLists
+        account.$jazz.set('root', {
+          myLists: [],
+          sharedLists: [],
+        });
         console.log('Root set successfully');
       } catch (error) {
         console.error('Error setting root:', error);

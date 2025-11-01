@@ -1,8 +1,6 @@
 import { List, LogOut, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { co } from 'jazz-tools';
-import { useCoState } from '@/lib/jazz';
-import { GroceryList, GroceryItem, ListsRoot } from '@/schemas';
+import { GroceryList, GroceryItem } from '@/schemas';
 import { ListView } from './ListView';
 
 interface ListsViewProps {
@@ -13,7 +11,8 @@ interface ListsViewProps {
 export function ListsView({ account, onSignOut }: ListsViewProps) {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
-  const root = useCoState(ListsRoot, account.root?.id);
+  // Directly access account.root - it's already loaded and reactive
+  const root = account.root;
 
   // If a list is selected, show the ListView
   if (selectedListId) {
@@ -49,28 +48,17 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
 
       console.log('Creating list with name:', listName);
 
-      // Create new list with properly initialized items CoList
-      const newList = GroceryList.create(
-        {
-          name: listName,
-          items: co.list(GroceryItem).create([]),
-          owner: account,
-          archived: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { owner: account }
-      );
+      // Push object literal - Jazz will create the CoMap and nested CoList automatically
+      root.myLists.$jazz.push({
+        name: listName,
+        items: [], // Jazz will create the CoList automatically
+        owner: account,
+        archived: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-      console.log('New list created:', newList);
-
-      // Add to user's lists using Jazz's push method
-      if (root.myLists) {
-        root.myLists.$jazz.push(newList);
-        console.log('List added to root.myLists');
-      } else {
-        console.error('root.myLists is null');
-      }
+      console.log('List added to root.myLists');
     } catch (error) {
       console.error('Error creating list:', error);
     }
