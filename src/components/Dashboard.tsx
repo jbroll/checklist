@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
 import { GroceriesAccount } from '@/schemas';
-import { ListsView } from './lists/ListsView';
+import { TemplateEditor } from './editor/TemplateEditor';
 
 export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
@@ -96,7 +96,7 @@ export function Dashboard() {
     // Otherwise show sign-in screen (will be shown below)
   } else if (me) {
     // User is authenticated and hasn't signed out, show the app
-    return <ListsView account={me} onSignOut={handleSignOut} />;
+    return <TemplateEditor onSignOut={handleSignOut} />;
   }
 
   return (

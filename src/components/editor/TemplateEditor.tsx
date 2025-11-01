@@ -5,7 +5,11 @@ import { type Category, FolderNode, type GroceriesAccount, TemplateItem } from '
 import { AddFolderDialog } from './AddFolderDialog';
 import { AddItemDialog } from './AddItemDialog';
 
-export function TemplateEditor() {
+interface TemplateEditorProps {
+  onSignOut?: () => void;
+}
+
+export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const { me } = useAccount<typeof GroceriesAccount>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
@@ -85,11 +89,22 @@ export function TemplateEditor() {
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-neutral-900">Template Editor</h1>
-          <p className="mt-2 text-neutral-600">
-            Organize your frequently purchased items into reusable templates.
-          </p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900">Template Editor</h1>
+            <p className="mt-2 text-neutral-600">
+              Organize your frequently purchased items into reusable templates.
+            </p>
+          </div>
+          {onSignOut && (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              Sign Out
+            </button>
+          )}
         </div>
 
         <TreeView
