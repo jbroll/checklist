@@ -18,6 +18,34 @@ app.use(
   }),
 );
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+
+  if (req.url.includes('/auth/')) {
+    console.log('  Headers:', {
+      cookie: req.headers.cookie || '(none)',
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+    });
+  }
+
+  // Log response
+  const originalSend = res.send;
+  res.send = function(data) {
+    if (req.url.includes('/auth/sign-out')) {
+      console.log('  Sign-out response:', {
+        statusCode: res.statusCode,
+        headers: res.getHeaders(),
+      });
+    }
+    return originalSend.call(this, data);
+  };
+
+  next();
+});
+
 // BetterAuth handler - MUST come before express.json()
 app.all('/api/auth/*', toNodeHandler(auth));
 

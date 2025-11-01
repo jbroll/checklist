@@ -8,7 +8,13 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const { me, logOut } = useAccount(GroceriesAccount);
 
+  // Check if user explicitly signed out
+  const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
+
   const handleGoogleSignIn = async () => {
+    // Clear the signed-out flag when user signs in
+    localStorage.removeItem('user-signed-out');
+
     setIsLoading(true);
     try {
       await betterAuthClient.signIn.social({
@@ -30,28 +36,43 @@ export function Dashboard() {
   };
 
   const handleSignOut = async () => {
+    // Set a flag to prevent auto-login after sign out
+    localStorage.setItem('user-signed-out', 'true');
+
+    // Sign out from Jazz first (this clears the local account)
     try {
       await logOut();
+    } catch (error) {
+      console.log('Jazz logOut error:', error);
+    }
+
+    // Sign out from BetterAuth (clear server session)
+    try {
       await betterAuthClient.signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.log('BetterAuth signOut error:', error);
     }
+
+    // Force reload to show sign-in screen
+    window.location.href = '/';
   };
 
-  // Show loading state while account is being loaded
-  if (!me) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
-          <p className="mt-4 text-neutral-600">Loading...</p>
+  // If user explicitly signed out, show sign-in screen even if still authenticated
+  if (userSignedOut || !me) {
+    // If no account, show loading briefly
+    if (!me && !userSignedOut) {
+      return (
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <div className="text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
+            <p className="mt-4 text-neutral-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  // Show lists view if authenticated (root is initialized by migration)
-  if (me) {
+      );
+    }
+    // Otherwise show sign-in screen (will be shown below)
+  } else if (me) {
+    // User is authenticated and hasn't signed out, show the app
     return <ListsView account={me} onSignOut={handleSignOut} />;
   }
 

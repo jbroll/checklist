@@ -67,12 +67,26 @@ export const GroceriesAccount = co
     profile: co.profile(),
   })
   .withMigration((account) => {
-    // Initialize root for new accounts
-    if (!account.$jazz.has('root')) {
-      account.$jazz.set('root', {
-        myLists: co.list(GroceryList).create([]),
-        sharedLists: co.list(GroceryList).create([]),
-      });
+    console.log('🔧 Migration running for account:', account.id);
+    console.log('Has root?', account.$jazz.has('root'));
+    console.log('Current root value:', account.root);
+
+    // Initialize root for new accounts OR accounts with null root
+    if (!account.$jazz.has('root') || !account.root) {
+      console.log('Creating new root...');
+      try {
+        const newRoot = {
+          myLists: co.list(GroceryList).create([]),
+          sharedLists: co.list(GroceryList).create([]),
+        };
+        console.log('New root created:', newRoot);
+        account.$jazz.set('root', newRoot);
+        console.log('Root set successfully');
+      } catch (error) {
+        console.error('Error setting root:', error);
+      }
+    } else {
+      console.log('Root already exists, skipping initialization');
     }
   });
 
