@@ -1,8 +1,7 @@
 import { List, LogOut, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useCoState } from '@/lib/jazz';
-import { ListsRoot } from '@/schemas';
-import { CreateListDialog } from './CreateListDialog';
+import { GroceryList, ListsRoot } from '@/schemas';
 import { ListView } from './ListView';
 
 interface ListsViewProps {
@@ -12,7 +11,6 @@ interface ListsViewProps {
 
 export function ListsView({ account, onSignOut }: ListsViewProps) {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const root = useCoState(ListsRoot, account.root?.id);
 
@@ -27,6 +25,37 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
   const myLists = root?.myLists || [];
   const sharedLists = root?.sharedLists || [];
   const allLists = [...myLists, ...sharedLists].filter((list) => list && !list.archived);
+
+  const handleCreateList = () => {
+    if (!root) return;
+
+    // Generate a unique name like "New List 1", "New List 2", etc.
+    const existingNumbers = allLists
+      .map((list: any) => {
+        const match = list?.name?.match(/^New List (\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((n: number) => n > 0);
+
+    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+    const listName = `New List ${nextNumber}`;
+
+    // Create new list
+    const newList = GroceryList.create(
+      {
+        name: listName,
+        items: [],
+        owner: account,
+        archived: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { owner: account }
+    );
+
+    // Add to user's lists
+    (root.myLists as any).push(newList);
+  };
 
   const handleDeleteList = (listId: string, listName: string) => {
     if (window.confirm(`Are you sure you want to delete "${listName}"?`)) {
@@ -89,8 +118,8 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
         {/* Create New List Button */}
         <button
           type="button"
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-neutral-300 bg-white px-4 py-6 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50"
+          onClick={handleCreateList}
+          className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-neutral-300 bg-white px-4 py-6 text-neutral-600 hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-colors"
         >
           <Plus className="h-5 w-5" />
           <span className="font-medium">Create New List</span>
@@ -157,13 +186,6 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
           </div>
         )}
       </main>
-
-      {/* Create List Dialog */}
-      <CreateListDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        account={account}
-      />
     </div>
   );
 }
