@@ -1,8 +1,8 @@
 import { Trash2 } from 'lucide-react';
-import { CATEGORIES } from '@/schemas';
+import { CATEGORIES, type GroceryItem } from '@/schemas';
 
 interface ItemRowProps {
-  item: any;
+  item: typeof GroceryItem;
   onToggleCheck: (itemId: string) => void;
   onDelete: (itemId: string) => void;
 }
@@ -12,7 +12,7 @@ export function ItemRow({ item, onToggleCheck, onDelete }: ItemRowProps) {
 
   const handleDelete = () => {
     if (window.confirm(`Delete "${item.name}"?`)) {
-      onDelete(item.id);
+      onDelete(item.$jazz.id);
     }
   };
 
@@ -25,7 +25,7 @@ export function ItemRow({ item, onToggleCheck, onDelete }: ItemRowProps) {
       {/* Checkbox */}
       <button
         type="button"
-        onClick={() => onToggleCheck(item.id)}
+        onClick={() => onToggleCheck(item.$jazz.id)}
         className={`flex-shrink-0 h-5 w-5 rounded border-2 transition-all ${
           item.checked
             ? 'border-green-600 bg-green-600'
@@ -40,7 +40,10 @@ export function ItemRow({ item, onToggleCheck, onDelete }: ItemRowProps) {
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={3}
+            role="img"
+            aria-label="Checked"
           >
+            <title>Checked</title>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         )}

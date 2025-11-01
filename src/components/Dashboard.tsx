@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
 import { GroceriesAccount } from '@/schemas';
@@ -11,6 +11,28 @@ export function Dashboard() {
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
 
+  // Update profile name from BetterAuth session when Jazz account becomes available
+  useEffect(() => {
+    const syncProfileName = async () => {
+      // Only sync if we have a Jazz account with a profile but no name set
+      if (me?.profile && !me.profile.name) {
+        try {
+          // Get the current BetterAuth session to access user data
+          const session = await betterAuthClient.getSession();
+
+          if (session?.data?.user?.name) {
+            console.log('Syncing profile name from BetterAuth:', session.data.user.name);
+            me.profile.$jazz.set('name', session.data.user.name);
+          }
+        } catch (error) {
+          console.error('Error syncing profile name:', error);
+        }
+      }
+    };
+
+    syncProfileName();
+  }, [me?.profile, me?.profile?.name]); // Run when account profile becomes available or name changes
+
   const handleGoogleSignIn = async () => {
     // Clear the signed-out flag when user signs in
     localStorage.removeItem('user-signed-out');
@@ -21,6 +43,7 @@ export function Dashboard() {
         provider: 'google',
         callbackURL: `${window.location.origin}/`,
       });
+      // Note: Profile name will be synced via useEffect after redirect
     } catch (error) {
       console.error('Google sign-in error:', error);
       alert('Google sign-in failed. Check the console for details.');

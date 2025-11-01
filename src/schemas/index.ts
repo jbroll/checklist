@@ -1,4 +1,12 @@
 import { co, z } from 'jazz-tools';
+import {
+  FolderNode,
+  ItemState,
+  ShoppingSession,
+  setGroceriesAccountReference,
+  TemplateFolderNode,
+  TemplateItem,
+} from './tree';
 
 // Category type definition
 export type Category =
@@ -17,19 +25,17 @@ export const GroceryItem = co.map({
   name: z.string(),
   quantity: z.optional(z.string()),
   notes: z.optional(z.string()),
-  category: z
-    .literal([
-      'produce',
-      'dairy',
-      'meat',
-      'pantry',
-      'frozen',
-      'household',
-      'bakery',
-      'beverages',
-      'other',
-    ] as const)
-    .default('other'),
+  category: z.literal([
+    'produce',
+    'dairy',
+    'meat',
+    'pantry',
+    'frozen',
+    'household',
+    'bakery',
+    'beverages',
+    'other',
+  ] as const),
   checked: z.boolean(),
   archived: z.boolean(),
   get addedBy() {
@@ -55,9 +61,12 @@ export const GroceryList = co.map({
 });
 
 // Root Schema for user's lists
+// New structure: flat list of folder nodes (both organizational and template folders)
 export const ListsRoot = co.map({
-  myLists: co.list(GroceryList),
-  sharedLists: co.list(GroceryList),
+  nodes: co.list(FolderNode),
+  // Keep old lists for migration (will be removed after migration completes)
+  myLists: co.optional(co.list(GroceryList)),
+  sharedLists: co.optional(co.list(GroceryList)),
 });
 
 // Account Schema (must be defined after ListsRoot)
@@ -67,7 +76,7 @@ export const GroceriesAccount = co
     profile: co.profile(),
   })
   .withMigration((account) => {
-    console.log('🔧 Migration running for account:', account.id);
+    console.log('🔧 Migration running for account:', account.$jazz.id);
     console.log('Has root?', account.$jazz.has('root'));
     console.log('Current root value:', account.root);
 
@@ -77,19 +86,23 @@ export const GroceriesAccount = co
       console.log('Creating new root...');
       try {
         // Set root using plain object literal - Jazz will convert to CoMap
-        // Use empty arrays [] as shorthand for creating CoLists
+        // New structure with nodes array
         account.$jazz.set('root', {
-          myLists: [],
-          sharedLists: [],
+          nodes: [],
         });
-        console.log('Root set successfully');
+        console.log('Root set successfully with new schema');
       } catch (error) {
         console.error('Error setting root:', error);
       }
     } else {
-      console.log('Root already exists, skipping initialization');
+      console.log('Root already exists');
+      // TODO: Migration from old schema (myLists/sharedLists) to new schema (nodes)
+      // Will be implemented when we have data to migrate
     }
   });
+
+// Wire up the forward reference from tree.ts to GroceriesAccount
+setGroceriesAccountReference(GroceriesAccount);
 
 // Default categories with display information
 export const CATEGORIES: Record<Category, { name: string; icon: string; color: string }> = {
@@ -108,45 +121,55 @@ export const CATEGORIES: Record<Category, { name: string; icon: string; color: s
 export function autoCategorize(itemName: string): Category {
   const name = itemName.toLowerCase();
 
-  // Produce keywords
-  if (/apple|banana|orange|lettuce|tomato|carrot|onion|potato|fruit|vegetable/.test(name)) {
-    return 'produce';
-  }
+  // Check more specific categories first to avoid false matches
 
-  // Dairy keywords
-  if (/milk|cheese|yogurt|butter|cream|dairy/.test(name)) {
-    return 'dairy';
-  }
-
-  // Meat keywords
-  if (/chicken|beef|pork|fish|meat|turkey|steak|bacon/.test(name)) {
-    return 'meat';
-  }
-
-  // Frozen keywords
-  if (/frozen|ice cream|popsicle/.test(name)) {
+  // Frozen keywords (check before dairy/meat to catch "ice cream", "frozen chicken")
+  if (/\b(frozen|ice cream|popsicles?)\b/.test(name)) {
     return 'frozen';
   }
 
-  // Bakery keywords
-  if (/bread|bagel|muffin|cake|cookie|pastry/.test(name)) {
-    return 'bakery';
-  }
-
-  // Beverages keywords
-  if (/coffee|tea|soda|juice|water|beer|wine|drink|beverage/.test(name)) {
+  // Beverages keywords (check before produce to catch "orange juice")
+  // Using \b at start but not end to allow plurals and compound words
+  if (/\b(coffee|tea|soda|juices?|water|beer|wine|drinks?|beverages?)\b/.test(name)) {
     return 'beverages';
   }
 
+  // Pantry keywords (check before produce to catch "tomato sauce")
+  if (/\b(rice|pastas?|cereals?|flour|sugar|salt|oils?|sauces?|cans?|canned)\b/.test(name)) {
+    return 'pantry';
+  }
+
+  // Bakery keywords
+  if (/\b(breads?|bagels?|muffins?|cakes?|cookies?|pastr(?:y|ies))\b/.test(name)) {
+    return 'bakery';
+  }
+
   // Household keywords
-  if (/soap|detergent|cleaner|paper|toilet|towel|trash|bag/.test(name)) {
+  if (/\b(soaps?|detergents?|cleaners?|papers?|toilet|towels?|trash|bags?)\b/.test(name)) {
     return 'household';
   }
 
-  // Pantry keywords (default for common items)
-  if (/rice|pasta|cereal|flour|sugar|salt|oil|sauce|can/.test(name)) {
-    return 'pantry';
+  // Produce keywords
+  if (
+    /\b(apples?|bananas?|oranges?|lettuce|tomatoes?|carrots?|onions?|potatoes?|fruits?|vegetables?)\b/.test(
+      name,
+    )
+  ) {
+    return 'produce';
+  }
+
+  // Dairy keywords (check after frozen to avoid "ice cream" false match)
+  if (/\b(milk|cheeses?|yogurts?|butter|creams?|dairy)\b/.test(name)) {
+    return 'dairy';
+  }
+
+  // Meat keywords (check after frozen to avoid "frozen chicken" false match)
+  if (/\b(chickens?|beef|pork|fish|meats?|turkeys?|steaks?|bacon)\b/.test(name)) {
+    return 'meat';
   }
 
   return 'other';
 }
+
+// Re-export tree schemas for easy importing
+export { FolderNode, TemplateFolderNode, TemplateItem, ShoppingSession, ItemState };

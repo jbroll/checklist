@@ -1,10 +1,10 @@
 import { List, LogOut, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { GroceryList, GroceryItem } from '@/schemas';
+import type { GroceriesAccount, GroceryList } from '../../schemas';
 import { ListView } from './ListView';
 
 interface ListsViewProps {
-  account: any;
+  account: typeof GroceriesAccount;
   onSignOut: () => void;
 }
 
@@ -37,7 +37,7 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
     try {
       // Generate a unique name like "New List 1", "New List 2", etc.
       const existingNumbers = allLists
-        .map((list: any) => {
+        .map((list) => {
           const match = list?.name?.match(/^New List (\d+)$/);
           return match ? parseInt(match[1], 10) : 0;
         })
@@ -66,18 +66,18 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
 
   const handleDeleteList = (listId: string, listName: string) => {
     if (window.confirm(`Are you sure you want to delete "${listName}"?`)) {
-      const list = myLists.find((l: any) => l?.id === listId);
+      const list = myLists.find((l) => l?.$jazz.id === listId);
       if (list) {
-        // Soft delete by setting archived flag
-        (list as any).archived = true;
-        (list as any).updatedAt = new Date();
+        // Soft delete by setting archived flag using Jazz's $jazz.set method
+        list.$jazz.set('archived', true);
+        list.$jazz.set('updatedAt', new Date());
       }
     }
   };
 
-  const getItemCount = (list: any): number => {
+  const getItemCount = (list: typeof GroceryList): number => {
     if (!list || !list.items) return 0;
-    return list.items.filter((item: any) => item && !item.archived).length;
+    return list.items.filter((item) => item && !item.archived).length;
   };
 
   const formatDate = (date: Date | undefined): string => {
@@ -144,16 +144,16 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
             {allLists.map((list) => {
               if (!list) return null;
               const itemCount = getItemCount(list);
-              const isOwned = myLists.some((l: any) => l?.id === (list as any).id);
+              const isOwned = myLists.some((l) => l?.$jazz.id === list.$jazz.id);
 
               return (
                 <div
-                  key={(list as any).id}
+                  key={list.$jazz.id}
                   className="group relative rounded-lg border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <button
                     type="button"
-                    onClick={() => setSelectedListId((list as any).id)}
+                    onClick={() => setSelectedListId(list.$jazz.id)}
                     className="w-full text-left"
                   >
                     <div className="mb-2 flex items-start justify-between">
@@ -179,7 +179,7 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteList((list as any).id, list.name);
+                        handleDeleteList(list.$jazz.id, list.name);
                       }}
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-opacity"
                       aria-label="Delete list"

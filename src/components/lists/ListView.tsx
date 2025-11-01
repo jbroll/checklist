@@ -1,13 +1,19 @@
 import { ArrowLeft, Check, Edit2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useCoState } from '@/lib/jazz';
-import { CATEGORIES, type Category, GroceryList } from '@/schemas';
+import {
+  CATEGORIES,
+  type Category,
+  type GroceriesAccount,
+  type GroceryItem,
+  GroceryList,
+} from '@/schemas';
 import { AddItemForm } from '../items/AddItemForm';
 import { ItemRow } from '../items/ItemRow';
 
 interface ListViewProps {
   listId: string;
-  account: any;
+  account: typeof GroceriesAccount;
   onBack: () => void;
 }
 
@@ -33,10 +39,10 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
 
   // Separate checked and unchecked items
   const uncheckedItems = activeItems.filter((item) => item && !item.checked);
-  const checkedItems = activeItems.filter((item) => item && item.checked);
+  const checkedItems = activeItems.filter((item) => item?.checked);
 
   // Group unchecked items by category
-  const groupedItems: Record<Category, any[]> = {
+  const groupedItems: Record<Category, (typeof GroceryItem)[]> = {
     produce: [],
     dairy: [],
     meat: [],
@@ -49,7 +55,7 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
   };
 
   uncheckedItems.forEach((item) => {
-    if (item && item.category) {
+    if (item?.category) {
       groupedItems[item.category].push(item);
     }
   });
@@ -61,8 +67,8 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
 
   const saveListName = () => {
     if (editedName.trim() && editedName !== list.name) {
-      (list as any).name = editedName.trim();
-      (list as any).updatedAt = new Date();
+      list.$jazz.set('name', editedName.trim());
+      list.$jazz.set('updatedAt', new Date());
     }
     setIsEditingName(false);
   };
@@ -82,22 +88,23 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    const item = items.find((i: any) => i?.id === itemId);
+    const item = items.find((i) => i?.$jazz.id === itemId);
     if (item) {
-      // Soft delete
-      (item as any).archived = true;
-      (item as any).updatedAt = new Date();
-      (list as any).updatedAt = new Date();
+      // Soft delete using Jazz's $jazz.set method
+      item.$jazz.set('archived', true);
+      item.$jazz.set('updatedAt', new Date());
+      list.$jazz.set('updatedAt', new Date());
     }
   };
 
   const handleToggleCheck = (itemId: string) => {
-    const item = items.find((i: any) => i?.id === itemId);
+    const item = items.find((i) => i?.$jazz.id === itemId);
     if (item) {
-      (item as any).checked = !item.checked;
-      (item as any).checkedBy = item.checked ? null : account;
-      (item as any).updatedAt = new Date();
-      (list as any).updatedAt = new Date();
+      const newCheckedState = !item.checked;
+      item.$jazz.set('checked', newCheckedState);
+      item.$jazz.set('checkedBy', newCheckedState ? account : undefined);
+      item.$jazz.set('updatedAt', new Date());
+      list.$jazz.set('updatedAt', new Date());
     }
   };
 
@@ -129,7 +136,6 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  autoFocus
                   className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-xl font-bold text-neutral-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 />
                 <button
@@ -206,9 +212,9 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
                   <span className="text-neutral-400">({categoryItems.length})</span>
                 </h2>
                 <div className="space-y-2">
-                  {categoryItems.map((item: any) => (
+                  {categoryItems.map((item) => (
                     <ItemRow
-                      key={item.id}
+                      key={item.$jazz.id}
                       item={item}
                       onToggleCheck={handleToggleCheck}
                       onDelete={handleDeleteItem}
@@ -228,9 +234,9 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
                 <span className="text-neutral-400">({checkedItems.length})</span>
               </h2>
               <div className="space-y-2">
-                {checkedItems.map((item: any) => (
+                {checkedItems.map((item) => (
                   <ItemRow
-                    key={item.id}
+                    key={item.$jazz.id}
                     item={item}
                     onToggleCheck={handleToggleCheck}
                     onDelete={handleDeleteItem}

@@ -1,16 +1,14 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { autoCategorize, GroceryItem } from '@/schemas';
+import { autoCategorize, type GroceriesAccount, type GroceryList } from '@/schemas';
 
 interface AddItemFormProps {
-  list: any;
-  account: any;
+  list: typeof GroceryList;
+  account: typeof GroceriesAccount;
 }
 
 export function AddItemForm({ list, account }: AddItemFormProps) {
   const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [showQuantity, setShowQuantity] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +21,6 @@ export function AddItemForm({ list, account }: AddItemFormProps) {
     const newItem = GroceryItem.create(
       {
         name: name.trim(),
-        quantity: quantity.trim() || undefined,
         category,
         checked: false,
         archived: false,
@@ -36,11 +33,10 @@ export function AddItemForm({ list, account }: AddItemFormProps) {
 
     // Add to list using Jazz's push method
     list.items.$jazz.push(newItem);
-    list.updatedAt = new Date();
+    list.$jazz.set('updatedAt', new Date());
 
     // Reset form
     setName('');
-    setQuantity('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -75,28 +71,6 @@ export function AddItemForm({ list, account }: AddItemFormProps) {
           Add
         </button>
       </div>
-
-      {/* Optional Quantity Field */}
-      {showQuantity ? (
-        <div className="mt-3">
-          <input
-            type="text"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Quantity (optional)"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-          />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowQuantity(true)}
-          className="mt-2 text-xs text-neutral-500 hover:text-neutral-700"
-        >
-          + Add quantity
-        </button>
-      )}
     </form>
   );
 }
