@@ -34,9 +34,9 @@ export function AddItemForm({ list, account }: AddItemFormProps) {
       { owner: account },
     );
 
-    // Add to list
-    (list.items as any).push(newItem);
-    (list as any).updatedAt = new Date();
+    // Add to list using Jazz's push method
+    list.items.$jazz.push(newItem);
+    list.updatedAt = new Date();
 
     // Reset form
     setName('');

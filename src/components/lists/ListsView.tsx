@@ -1,7 +1,8 @@
 import { List, LogOut, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { co } from 'jazz-tools';
 import { useCoState } from '@/lib/jazz';
-import { GroceryList, ListsRoot } from '@/schemas';
+import { GroceryList, GroceryItem, ListsRoot } from '@/schemas';
 import { ListView } from './ListView';
 
 interface ListsViewProps {
@@ -27,34 +28,52 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
   const allLists = [...myLists, ...sharedLists].filter((list) => list && !list.archived);
 
   const handleCreateList = () => {
-    if (!root) return;
+    console.log('handleCreateList called', { root, account });
 
-    // Generate a unique name like "New List 1", "New List 2", etc.
-    const existingNumbers = allLists
-      .map((list: any) => {
-        const match = list?.name?.match(/^New List (\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((n: number) => n > 0);
+    if (!root) {
+      console.error('Root is null, cannot create list');
+      return;
+    }
 
-    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-    const listName = `New List ${nextNumber}`;
+    try {
+      // Generate a unique name like "New List 1", "New List 2", etc.
+      const existingNumbers = allLists
+        .map((list: any) => {
+          const match = list?.name?.match(/^New List (\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((n: number) => n > 0);
 
-    // Create new list
-    const newList = GroceryList.create(
-      {
-        name: listName,
-        items: [],
-        owner: account,
-        archived: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      { owner: account }
-    );
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      const listName = `New List ${nextNumber}`;
 
-    // Add to user's lists
-    (root.myLists as any).push(newList);
+      console.log('Creating list with name:', listName);
+
+      // Create new list with properly initialized items CoList
+      const newList = GroceryList.create(
+        {
+          name: listName,
+          items: co.list(GroceryItem).create([]),
+          owner: account,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { owner: account }
+      );
+
+      console.log('New list created:', newList);
+
+      // Add to user's lists using Jazz's push method
+      if (root.myLists) {
+        root.myLists.$jazz.push(newList);
+        console.log('List added to root.myLists');
+      } else {
+        console.error('root.myLists is null');
+      }
+    } catch (error) {
+      console.error('Error creating list:', error);
+    }
   };
 
   const handleDeleteList = (listId: string, listName: string) => {

@@ -61,10 +61,20 @@ export const ListsRoot = co.map({
 });
 
 // Account Schema (must be defined after ListsRoot)
-export const GroceriesAccount = co.account({
-  root: ListsRoot,
-  profile: co.profile(),
-});
+export const GroceriesAccount = co
+  .account({
+    root: ListsRoot,
+    profile: co.profile(),
+  })
+  .withMigration((account) => {
+    // Initialize root for new accounts
+    if (!account.$jazz.has('root')) {
+      account.$jazz.set('root', {
+        myLists: co.list(GroceryList).create([]),
+        sharedLists: co.list(GroceryList).create([]),
+      });
+    }
+  });
 
 // Default categories with display information
 export const CATEGORIES: Record<Category, { name: string; icon: string; color: string }> = {

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
-import { GroceriesAccount, ListsRoot } from '@/schemas';
+import { GroceriesAccount } from '@/schemas';
 import { ListsView } from './lists/ListsView';
 
 export function Dashboard() {
@@ -39,7 +39,7 @@ export function Dashboard() {
   };
 
   // Show loading state while account is being loaded
-  if (me === undefined) {
+  if (!me) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="text-center">
@@ -50,34 +50,8 @@ export function Dashboard() {
     );
   }
 
-  // Initialize root for new users
-  useEffect(() => {
-    if (me && !me.root) {
-      const root = ListsRoot.create(
-        {
-          myLists: [],
-          sharedLists: [],
-        },
-        { owner: me }
-      );
-      (me as any).root = root;
-    }
-  }, [me]);
-
-  // Show setup message if root is being initialized
-  if (me && !me.root) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto"></div>
-          <p className="mt-4 text-neutral-600">Setting up your account...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show lists view if authenticated and account is ready
-  if (me && me.root) {
+  // Show lists view if authenticated (root is initialized by migration)
+  if (me) {
     return <ListsView account={me} onSignOut={handleSignOut} />;
   }
 
