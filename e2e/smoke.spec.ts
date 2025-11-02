@@ -14,11 +14,11 @@ test.describe('Application Smoke Tests', () => {
     await expect(page.locator('h1')).toBeVisible();
   });
 
-  test('should display Template Editor after loading', async ({ page }) => {
+  test('should display BubbleList after loading', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the template editor heading
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    // Wait for the BubbleList heading
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
   });
@@ -27,7 +27,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -39,28 +39,33 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Check for Export button
-    await expect(page.getByRole('button', { name: /export/i })).toBeVisible();
+    // Open the More options dropdown
+    await page.getByLabel('More options').click();
 
-    // Check for Import button
-    await expect(page.getByRole('button', { name: /import/i })).toBeVisible();
+    // Check for Export option in dropdown
+    await expect(page.getByRole('menuitem', { name: /export/i })).toBeVisible();
+
+    // Check for Import option in dropdown
+    await expect(page.getByRole('menuitem', { name: /import/i })).toBeVisible();
   });
 
   test('should not crash when clicking Export button', async ({ page }) => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Click Export button
-    const exportButton = page.getByRole('button', { name: /^export$/i });
-    await exportButton.click();
+    // Open the More options dropdown
+    await page.getByLabel('More options').click();
+
+    // Click Export menu item
+    await page.getByRole('menuitem', { name: /export/i }).click();
 
     // Should show export dialog
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -71,13 +76,15 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Click Import button
-    const importButton = page.getByRole('button', { name: /^import$/i });
-    await importButton.click();
+    // Open the More options dropdown
+    await page.getByLabel('More options').click();
+
+    // Click Import menu item
+    await page.getByRole('menuitem', { name: /import/i }).click();
 
     // Should show import dialog
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -88,12 +95,13 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Open Export dialog
-    await page.getByRole('button', { name: /^export$/i }).click();
+    // Open the More options dropdown and click Export
+    await page.getByLabel('More options').click();
+    await page.getByRole('menuitem', { name: /export/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Click Cancel
@@ -107,12 +115,13 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /template editor/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Open Import dialog
-    await page.getByRole('button', { name: /^import$/i }).click();
+    // Open the More options dropdown and click Import
+    await page.getByLabel('More options').click();
+    await page.getByRole('menuitem', { name: /import/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Click Cancel
