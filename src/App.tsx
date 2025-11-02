@@ -1,12 +1,33 @@
 import { Dashboard } from './components/Dashboard';
 import { JazzProvider } from './lib/jazz';
+import { TestPage } from './TestPage';
 
 function App() {
+  // Check if we're on the test page route
+  const isTestPage = window.location.pathname === '/test';
+
+  // Block test page in production
+  if (isTestPage && import.meta.env.PROD) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-red-50">
+        <div className="max-w-md rounded-lg border-4 border-red-500 bg-white p-8 text-center shadow-lg">
+          <div className="mb-4 text-6xl">🚫</div>
+          <h1 className="mb-2 text-2xl font-bold text-red-900">Access Denied</h1>
+          <p className="mb-4 text-neutral-600">Test page is not available in production.</p>
+          <a
+            href="/"
+            className="inline-block rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+          >
+            Go to Home
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <JazzProvider>
-      <div className="min-h-screen bg-neutral-50">
-        <Dashboard />
-      </div>
+      <div className="min-h-screen bg-neutral-50">{isTestPage ? <TestPage /> : <Dashboard />}</div>
     </JazzProvider>
   );
 }
