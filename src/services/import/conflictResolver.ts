@@ -13,8 +13,13 @@ import { findFolderByPath } from './validators';
  * Resolve path conflict by generating a unique path
  *
  * Strategy:
- * 1. First try: append " (imported)" to name and "/imported" to path
- * 2. If still conflicts: append timestamp " (imported YYYY-MM-DD HH:MM)"
+ * Append numbered suffix " (N)" to name and "-(N)" to path
+ * where N is 1, 2, 3, etc. until a unique path is found
+ *
+ * Examples:
+ * - "Wegmans" → "Wegmans (1)"
+ * - "Wegmans (1)" exists → "Wegmans (2)"
+ * - "Wegmans (2)" exists → "Wegmans (3)"
  *
  * @param originalPath - Original path that conflicts
  * @param originalName - Original name
@@ -26,26 +31,15 @@ export function resolvePathConflict(
   originalName: string,
   account: InstanceOfSchema<typeof GroceriesAccount>,
 ): { path: string; name: string } {
-  // Try simple "(imported)" suffix first
-  let newName = `${originalName} (imported)`;
-  let newPath = `${originalPath}/imported`;
-
-  if (!findFolderByPath(newPath, account)) {
-    return { path: newPath, name: newName };
-  }
-
-  // If still conflicts, add timestamp
-  const timestamp = formatTimestamp(new Date());
-  newName = `${originalName} (imported ${timestamp})`;
-  newPath = `${originalPath}/imported-${timestamp.replace(/[: ]/g, '-')}`;
-
-  // This should virtually always be unique due to timestamp
-  // But check anyway and add counter if needed
+  // Start with suffix (1) and increment until unique
   let counter = 1;
+  let newName = `${originalName} (${counter})`;
+  let newPath = `${originalPath}-(${counter})`;
+
   while (findFolderByPath(newPath, account)) {
-    newName = `${originalName} (imported ${timestamp} ${counter})`;
-    newPath = `${originalPath}/imported-${timestamp.replace(/[: ]/g, '-')}-${counter}`;
     counter++;
+    newName = `${originalName} (${counter})`;
+    newPath = `${originalPath}-(${counter})`;
 
     // Safety limit
     if (counter > 100) {
@@ -54,22 +48,6 @@ export function resolvePathConflict(
   }
 
   return { path: newPath, name: newName };
-}
-
-/**
- * Format timestamp for conflict resolution
- *
- * @param date - Date to format
- * @returns Formatted string (YYYY-MM-DD HH:MM)
- */
-function formatTimestamp(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
 /**

@@ -200,10 +200,10 @@ Cheese,dairy,true,true,2025-11-01T10:10:00Z,2025-11-01T10:35:00Z
 Import complete folder structure with sessions.
 
 **Conflict Resolution:**
-When a folder path already exists:
-1. Append suffix to folder name: `" (imported)"`
-2. Append to path: `"/imported"`
-3. If still conflicts, add timestamp: `" (imported 2025-11-01 12:00)"`
+When a folder path already exists, append numbered suffix:
+1. Start with suffix `" (1)"` for name and `"-(1)"` for path
+2. Increment number until unique path is found: `(2)`, `(3)`, `(4)`, etc.
+3. This allows unlimited duplicate imports without timestamp clutter
 
 **Example:**
 ```
@@ -213,8 +213,12 @@ Existing: path = "grocery-stores/wegmans"
 Import:   path = "grocery-stores/wegmans"
           name = "Wegmans"
 
-Result:   path = "grocery-stores/wegmans/imported"
-          name = "Wegmans (imported)"
+Result:   path = "grocery-stores/wegmans-(1)"
+          name = "Wegmans (1)"
+
+Second Import:
+Result:   path = "grocery-stores/wegmans-(2)"
+          name = "Wegmans (2)"
 ```
 
 **Features:**
@@ -392,7 +396,7 @@ Eggs,dairy,false,false,,
 │                                     │
 │  Conflicts:                         │
 │  ⚠ 2 folders exist                 │
-│     → Will create as "(imported)"  │
+│     → Will create as "(1)", "(2)"  │
 │                                     │
 │  [Cancel]  [Import]                │
 └─────────────────────────────────────┘
