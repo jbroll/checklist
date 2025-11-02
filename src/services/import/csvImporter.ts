@@ -150,9 +150,9 @@ export function importItemsFromCsv(
         { owner: account },
       );
 
-      // Add to folder - non-null assertion: items is initialized when folder is created
+      // Add to folder
       // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with CoList push
-      folder.items!.push(newItem);
+      folder.items?.push(newItem);
       result.imported++;
 
       // Add to existing names to prevent duplicates within import

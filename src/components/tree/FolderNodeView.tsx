@@ -1,8 +1,19 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Download, Folder, FolderOpen, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
+import {
+  Download,
+  FileText,
+  Folder,
+  FolderOpen,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
+import { TemplateItemsExportDialog } from '@/components/export/TemplateItemsExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
+import { TemplateItemsImportDialog } from '@/components/import/TemplateItemsImportDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +47,8 @@ export function FolderNodeView({
   const [editedName, setEditedName] = useState(node.name);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showTemplateExportDialog, setShowTemplateExportDialog] = useState(false);
+  const [showTemplateImportDialog, setShowTemplateImportDialog] = useState(false);
 
   const hasChildren = (node.items?.length ?? 0) > 0;
   const isTemplate = node.type === 'template-folder';
@@ -132,12 +145,25 @@ export function FolderNodeView({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
                   <Download className="mr-2 h-4 w-4" />
-                  Export folder
+                  Export folder (JSON)
                 </DropdownMenuItem>
+                {isTemplate && (
+                  <DropdownMenuItem onClick={() => setShowTemplateExportDialog(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export items list (TXT/CSV)
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Import items
+                  Import folder (JSON)
                 </DropdownMenuItem>
+                {isTemplate && (
+                  <DropdownMenuItem onClick={() => setShowTemplateImportDialog(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Import items list (TXT/CSV)
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600">
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -152,7 +178,7 @@ export function FolderNodeView({
       {/* Child Nodes */}
       {node.expanded && children}
 
-      {/* Export Dialog */}
+      {/* Full Folder Export Dialog (JSON) */}
       <ExportDialog
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
@@ -160,8 +186,28 @@ export function FolderNodeView({
         selectedFolderId={node.$jazz.id}
       />
 
-      {/* Import Dialog */}
+      {/* Full Folder Import Dialog (JSON) */}
       <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={account} />
+
+      {/* Template Items Export Dialog (TXT/CSV) */}
+      {isTemplate && (
+        <TemplateItemsExportDialog
+          open={showTemplateExportDialog}
+          onOpenChange={setShowTemplateExportDialog}
+          folder={node}
+          account={account}
+        />
+      )}
+
+      {/* Template Items Import Dialog (TXT/CSV) */}
+      {isTemplate && (
+        <TemplateItemsImportDialog
+          open={showTemplateImportDialog}
+          onOpenChange={setShowTemplateImportDialog}
+          folder={node}
+          account={account}
+        />
+      )}
     </div>
   );
 }
