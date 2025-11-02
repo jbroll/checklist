@@ -9,6 +9,11 @@ import type { FolderNode, GroceriesAccount } from '../../schemas';
 import { isValidFileSize, isValidFileType, readFileAsText } from '../../utils/fileUpload';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { importJson } from './jsonImporter';
+import {
+  importSessionFromCsv,
+  type SessionImportOptions,
+  type SessionImportResult,
+} from './sessionImporter';
 import { importItemsFromText, type TxtImportResult } from './txtImporter';
 import type { ImportFileType, ImportResult } from './types';
 
@@ -209,6 +214,49 @@ export class ImportService {
 
     // Import items
     return importItemsFromCsv(content, folder, account);
+  }
+
+  /**
+   * Import session from CSV file
+   *
+   * @param file - CSV file with session data
+   * @param folder - Folder to import session into
+   * @param account - User's GroceriesAccount
+   * @param options - Import options (session name, add missing items)
+   * @returns Import result with statistics
+   */
+  static async importSessionFromCsvFile(
+    file: File,
+    folder: InstanceOfSchema<typeof FolderNode>,
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    options: SessionImportOptions = {},
+  ): Promise<SessionImportResult> {
+    // Validate file
+    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+      return {
+        imported: false,
+        matched: 0,
+        unmatched: 0,
+        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
+        unmatchedItems: [],
+      };
+    }
+
+    if (!isValidFileType(file, ['csv'])) {
+      return {
+        imported: false,
+        matched: 0,
+        unmatched: 0,
+        errors: ['Invalid file type. Expected: .csv'],
+        unmatchedItems: [],
+      };
+    }
+
+    // Read file content
+    const content = await readFileAsText(file);
+
+    // Import session
+    return importSessionFromCsv(content, folder, account, options);
   }
 
   /**

@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { useAccount } from '@/lib/jazz';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { SessionZone } from './SessionZone';
@@ -18,6 +19,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     cart: true,
     completed: false,
   });
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Find session first (before any early returns)
   const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
@@ -185,14 +187,24 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
               <p className="mt-1 text-neutral-600">{folder.name}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleFinishSession}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-          >
-            <Check className="h-4 w-4" />
-            Finish Shopping
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowExportDialog(true)}
+              className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+            <button
+              type="button"
+              onClick={handleFinishSession}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <Check className="h-4 w-4" />
+              Finish Shopping
+            </button>
+          </div>
         </div>
 
         {/* Three Zones */}
@@ -243,6 +255,19 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             count={inventoryItems.length}
           />
         </div>
+
+        {/* Export Dialog */}
+        {me && (
+          <SessionExportDialog
+            open={showExportDialog}
+            onOpenChange={setShowExportDialog}
+            folder={folder}
+            sessionId={sessionId}
+            sessionName={session.name}
+            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with account types
+            account={me}
+          />
+        )}
       </div>
     </div>
   );
