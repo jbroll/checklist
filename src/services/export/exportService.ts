@@ -6,7 +6,9 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { FolderNode, GroceriesAccount } from '../../schemas';
+import { exportSessionToCsv, exportTemplateItemsToCsv } from './csvExporter';
 import { exportAllFolders, exportFolder, toJsonString } from './jsonExporter';
+import { exportSessionToText, exportTemplateItemsToText } from './txtExporter';
 import type { ExportedData, ExportScope } from './types';
 
 /**
@@ -83,6 +85,96 @@ export class ExportService {
     // Single folder - use folder name
     const safeName = folderName ? folderName.toLowerCase().replace(/[^a-z0-9-]/g, '-') : 'folder';
     return `${safeName}-${timestamp}.${format}`;
+  }
+
+  /**
+   * Export template items to TXT format
+   *
+   * @param account - User's GroceriesAccount
+   * @param folderId - ID of the folder to export
+   * @returns Plain text string with one item per line
+   */
+  static exportTemplateItemsToText(
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    folderId: string,
+  ): string {
+    const folder = ExportService.findFolderById(account, folderId);
+    if (!folder) {
+      throw new Error(`Folder not found: ${folderId}`);
+    }
+
+    return exportTemplateItemsToText(folder);
+  }
+
+  /**
+   * Export template items to CSV format
+   *
+   * @param account - User's GroceriesAccount
+   * @param folderId - ID of the folder to export
+   * @returns CSV string with header row
+   */
+  static exportTemplateItemsToCsv(
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    folderId: string,
+  ): string {
+    const folder = ExportService.findFolderById(account, folderId);
+    if (!folder) {
+      throw new Error(`Folder not found: ${folderId}`);
+    }
+
+    return exportTemplateItemsToCsv(folder);
+  }
+
+  /**
+   * Export session to TXT format
+   *
+   * @param account - User's GroceriesAccount
+   * @param folderId - ID of the folder containing the session
+   * @param sessionId - ID of the session to export
+   * @returns Plain text string with checkmarks
+   */
+  static exportSessionToText(
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    folderId: string,
+    sessionId: string,
+  ): string {
+    const folder = ExportService.findFolderById(account, folderId);
+    if (!folder) {
+      throw new Error(`Folder not found: ${folderId}`);
+    }
+
+    const result = exportSessionToText(folder, sessionId);
+    if (!result) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Export session to CSV format
+   *
+   * @param account - User's GroceriesAccount
+   * @param folderId - ID of the folder containing the session
+   * @param sessionId - ID of the session to export
+   * @returns CSV string with header row
+   */
+  static exportSessionToCsv(
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    folderId: string,
+    sessionId: string,
+  ): string {
+    const folder = ExportService.findFolderById(account, folderId);
+    if (!folder) {
+      throw new Error(`Folder not found: ${folderId}`);
+    }
+
+    const result = exportSessionToCsv(folder, sessionId);
+    if (!result) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    return result;
   }
 
   /**

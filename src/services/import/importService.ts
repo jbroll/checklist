@@ -5,10 +5,11 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { GroceriesAccount } from '../../schemas';
+import type { FolderNode, GroceriesAccount } from '../../schemas';
 import { isValidFileSize, isValidFileType, readFileAsText } from '../../utils/fileUpload';
+import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { importJson } from './jsonImporter';
-// GroceriesAccount type imported via InstanceOfSchema from '../../schemas';
+import { importItemsFromText, type TxtImportResult } from './txtImporter';
 import type { ImportFileType, ImportResult } from './types';
 
 // Maximum file size: 10MB
@@ -130,6 +131,84 @@ export class ImportService {
     if (filename.endsWith('.csv')) return 'csv';
 
     return null;
+  }
+
+  /**
+   * Import template items from TXT file
+   *
+   * @param file - TXT file with one item per line
+   * @param folder - Folder to import items into
+   * @param account - User's GroceriesAccount
+   * @returns Import result with statistics
+   */
+  static async importItemsFromTxtFile(
+    file: File,
+    folder: InstanceOfSchema<typeof FolderNode>,
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+  ): Promise<TxtImportResult> {
+    // Validate file
+    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+      return {
+        imported: 0,
+        skipped: 0,
+        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
+        duplicates: [],
+      };
+    }
+
+    if (!isValidFileType(file, ['txt'])) {
+      return {
+        imported: 0,
+        skipped: 0,
+        errors: ['Invalid file type. Expected: .txt'],
+        duplicates: [],
+      };
+    }
+
+    // Read file content
+    const content = await readFileAsText(file);
+
+    // Import items
+    return importItemsFromText(content, folder, account);
+  }
+
+  /**
+   * Import template items from CSV file
+   *
+   * @param file - CSV file with header row
+   * @param folder - Folder to import items into
+   * @param account - User's GroceriesAccount
+   * @returns Import result with statistics
+   */
+  static async importItemsFromCsvFile(
+    file: File,
+    folder: InstanceOfSchema<typeof FolderNode>,
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+  ): Promise<CsvImportResult> {
+    // Validate file
+    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+      return {
+        imported: 0,
+        skipped: 0,
+        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
+        duplicates: [],
+      };
+    }
+
+    if (!isValidFileType(file, ['csv'])) {
+      return {
+        imported: 0,
+        skipped: 0,
+        errors: ['Invalid file type. Expected: .csv'],
+        duplicates: [],
+      };
+    }
+
+    // Read file content
+    const content = await readFileAsText(file);
+
+    // Import items
+    return importItemsFromCsv(content, folder, account);
   }
 
   /**
