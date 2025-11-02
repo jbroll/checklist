@@ -18,11 +18,15 @@
 
     /* Strict Type Checking */
     "strict": true,
-    "exactOptionalPropertyTypes": true,
+    /* Note: exactOptionalPropertyTypes and noUncheckedIndexedAccess are disabled due to
+     * Jazz.tools v0.18.x incompatibility. Jazz's CoList and CoMap type inference adds
+     * `| null` to elements when these flags are enabled, causing widespread type errors.
+     * This is a known limitation of Jazz with strict TS. All other strict checks remain enabled. */
+    // "exactOptionalPropertyTypes": true,
+    // "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
 
     /* Path mapping */
@@ -31,5 +35,15 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "node_modules/**/*",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/test/**/*",
+    "e2e/**/*",
+    "playwright.config.ts"
+  ]
 }

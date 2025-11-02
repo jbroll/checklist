@@ -1,10 +1,11 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { autoCategorize, type GroceriesAccount, type GroceryList } from '@/schemas';
+import { autoCategorize, type GroceriesAccount, GroceryItem, type GroceryList } from '@/schemas';
 
 interface AddItemFormProps {
-  list: typeof GroceryList;
-  account: typeof GroceriesAccount;
+  list: InstanceOfSchema<typeof GroceryList>;
+  account: InstanceOfSchema<typeof GroceriesAccount>;
 }
 
 export function AddItemForm({ list, account }: AddItemFormProps) {

@@ -62,11 +62,13 @@ export const GroceryList = co.map({
 
 // Root Schema for user's lists
 // New structure: flat list of folder nodes (both organizational and template folders)
+// Note: All CoLists are non-optional to avoid TypeScript inference issues with `| null`
+// Empty arrays are used instead of undefined for lists with no items
 export const ListsRoot = co.map({
   nodes: co.list(FolderNode),
   // Keep old lists for migration (will be removed after migration completes)
-  myLists: co.optional(co.list(GroceryList)),
-  sharedLists: co.optional(co.list(GroceryList)),
+  myLists: co.list(GroceryList),
+  sharedLists: co.list(GroceryList),
 });
 
 // Account Schema (must be defined after ListsRoot)
@@ -86,9 +88,11 @@ export const GroceriesAccount = co
       console.log('Creating new root...');
       try {
         // Set root using plain object literal - Jazz will convert to CoMap
-        // New structure with nodes array
+        // New structure with nodes array - initialize all lists as empty
         account.$jazz.set('root', {
           nodes: [],
+          myLists: [],
+          sharedLists: [],
         });
         console.log('Root set successfully with new schema');
       } catch (error) {

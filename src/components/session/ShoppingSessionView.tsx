@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { ArrowLeft, Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
@@ -5,7 +6,7 @@ import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { SessionZone } from './SessionZone';
 
 interface ShoppingSessionViewProps {
-  folder: typeof FolderNode;
+  folder: InstanceOfSchema<typeof FolderNode>;
   sessionId: string;
   onBack: () => void;
 }
@@ -95,14 +96,17 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     const currentState = itemStates[itemId];
 
     if (!currentState) {
-      // Create new state by setting the record entry
-      itemStates[itemId] = {
+      // Create new ItemState CoMap first
+      const newState = {
         itemId,
         inCart: true,
         purchased: false,
         addedToCartAt: new Date(),
         checkedBy: me,
       };
+      // Assign to record - Jazz will handle the CoMap conversion
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz CoMap record assignment requires any
+      (itemStates as Record<string, any>)[itemId] = newState;
     } else {
       // Toggle inCart
       currentState.$jazz.set('inCart', !currentState.inCart);
@@ -122,10 +126,13 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     const currentState = session.itemStates?.[itemId];
     if (!currentState) return;
 
-    currentState.$jazz.set('purchased', !currentState.purchased);
-    if (!currentState.purchased) {
+    const newPurchasedState = !currentState.purchased;
+    currentState.$jazz.set('purchased', newPurchasedState);
+    if (newPurchasedState) {
       currentState.$jazz.set('purchasedAt', new Date());
       currentState.$jazz.set('checkedBy', me);
+    } else {
+      currentState.$jazz.set('purchasedAt', undefined);
     }
 
     session.$jazz.set('lastActivityAt', new Date());

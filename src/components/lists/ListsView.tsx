@@ -1,10 +1,11 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { List, LogOut, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { GroceriesAccount, GroceryList } from '../../schemas';
 import { ListView } from './ListView';
 
 interface ListsViewProps {
-  account: typeof GroceriesAccount;
+  account: InstanceOfSchema<typeof GroceriesAccount>;
   onSignOut: () => void;
 }
 
@@ -22,8 +23,8 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
   }
 
   // Get all lists (both owned and shared)
-  const myLists = root?.myLists || [];
-  const sharedLists = root?.sharedLists || [];
+  const myLists = root?.myLists ?? [];
+  const sharedLists = root?.sharedLists ?? [];
   const allLists = [...myLists, ...sharedLists].filter((list) => list && !list.archived);
 
   const handleCreateList = () => {
@@ -38,7 +39,8 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
       // Generate a unique name like "New List 1", "New List 2", etc.
       const existingNumbers = allLists
         .map((list) => {
-          const match = list?.name?.match(/^New List (\d+)$/);
+          if (!list?.name) return 0;
+          const match = list.name.match(/^New List (\d+)$/);
           return match ? parseInt(match[1], 10) : 0;
         })
         .filter((n: number) => n > 0);
@@ -75,7 +77,7 @@ export function ListsView({ account, onSignOut }: ListsViewProps) {
     }
   };
 
-  const getItemCount = (list: typeof GroceryList): number => {
+  const getItemCount = (list: InstanceOfSchema<typeof GroceryList>): number => {
     if (!list || !list.items) return 0;
     return list.items.filter((item) => item && !item.archived).length;
   };

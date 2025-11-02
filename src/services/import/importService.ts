@@ -1,0 +1,153 @@
+/**
+ * Main import service
+ *
+ * Orchestrates all import operations (JSON, TXT, CSV).
+ */
+
+import type { InstanceOfSchema } from 'jazz-tools';
+import type { GroceriesAccount } from '../../schemas';
+import { isValidFileSize, isValidFileType, readFileAsText } from '../../utils/fileUpload';
+import { importJson } from './jsonImporter';
+// GroceriesAccount type imported via InstanceOfSchema from '../../schemas';
+import type { ImportFileType, ImportResult } from './types';
+
+// Maximum file size: 10MB
+const MAX_FILE_SIZE_MB = 10;
+
+/**
+ * Import Service
+ *
+ * Provides methods for importing grocery data in various formats.
+ */
+// biome-ignore lint/complexity/noStaticOnlyClass: Service class pattern
+export class ImportService {
+  /**
+   * Import data from a file
+   *
+   * @param file - File object from input or drag-and-drop
+   * @param account - User's GroceriesAccount
+   * @param fileType - Expected file type (optional, auto-detected from extension)
+   * @returns Import result with success/failure info
+   */
+  static async importFromFile(
+    file: File,
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    fileType?: ImportFileType,
+  ): Promise<ImportResult> {
+    // Validate file size
+    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+      return {
+        success: false,
+        errors: [`File size exceeds maximum allowed size of ${MAX_FILE_SIZE_MB}MB`],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Determine file type
+    const detectedType = fileType || ImportService.detectFileType(file);
+    if (!detectedType) {
+      return {
+        success: false,
+        errors: ['Unable to determine file type. Expected .json, .txt, or .csv'],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Validate file extension
+    const validExtensions = ImportService.getValidExtensions(detectedType);
+    if (!isValidFileType(file, validExtensions)) {
+      return {
+        success: false,
+        errors: [
+          `Invalid file type. Expected ${validExtensions.map((ext) => `.${ext}`).join(' or ')}`,
+        ],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Read file content
+    let content: string;
+    try {
+      content = await readFileAsText(file);
+    } catch (error) {
+      return {
+        success: false,
+        errors: [
+          `Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Import based on type
+    switch (detectedType) {
+      case 'json':
+        return await importJson(content, account);
+
+      case 'txt':
+        // TODO: Phase 2 - Template list import from TXT
+        return {
+          success: false,
+          errors: ['TXT import not yet implemented'],
+          warnings: [],
+          stats: {},
+        };
+
+      case 'csv':
+        // TODO: Phase 2/3 - Template list or session import from CSV
+        return {
+          success: false,
+          errors: ['CSV import not yet implemented'],
+          warnings: [],
+          stats: {},
+        };
+
+      default:
+        return {
+          success: false,
+          errors: [`Unsupported file type: ${detectedType}`],
+          warnings: [],
+          stats: {},
+        };
+    }
+  }
+
+  /**
+   * Detect file type from filename
+   *
+   * @param file - File object
+   * @returns Detected file type or null
+   */
+  private static detectFileType(file: File): ImportFileType | null {
+    const filename = file.name.toLowerCase();
+
+    if (filename.endsWith('.json')) return 'json';
+    if (filename.endsWith('.txt')) return 'txt';
+    if (filename.endsWith('.csv')) return 'csv';
+
+    return null;
+  }
+
+  /**
+   * Get valid file extensions for a file type
+   *
+   * @param fileType - File type
+   * @returns Array of valid extensions
+   */
+  private static getValidExtensions(fileType: ImportFileType): string[] {
+    switch (fileType) {
+      case 'json':
+        return ['json'];
+      case 'txt':
+        return ['txt'];
+      case 'csv':
+        return ['csv'];
+      default:
+        return [];
+    }
+  }
+}

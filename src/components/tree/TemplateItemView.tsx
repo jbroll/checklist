@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { MoreVertical, Pencil, ShoppingCart, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -10,7 +11,7 @@ import { CATEGORIES, type TemplateItem as TemplateItemType } from '@/schemas';
 import { TreeNode } from './TreeNode';
 
 interface TemplateItemViewProps {
-  item: typeof TemplateItemType;
+  item: InstanceOfSchema<typeof TemplateItemType>;
   level: number;
   onRename?: (itemId: string, newName: string) => void;
   onDelete?: (itemId: string) => void;

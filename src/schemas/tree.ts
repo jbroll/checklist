@@ -1,4 +1,4 @@
-import { type Account, co, z } from 'jazz-tools';
+import { co, z } from 'jazz-tools';
 
 // Forward reference to GroceriesAccount (defined in index.ts)
 // Use getter pattern for forward references
@@ -6,7 +6,8 @@ import { type Account, co, z } from 'jazz-tools';
 let GroceriesAccount: any;
 
 // Helper to set the account reference (called from index.ts)
-export function setGroceriesAccountReference(account: typeof Account) {
+// biome-ignore lint/suspicious/noExplicitAny: This accepts any account schema type
+export function setGroceriesAccountReference(account: any) {
   GroceriesAccount = account;
 }
 
@@ -30,6 +31,7 @@ export const TemplateItem = co.map({
   ] as const),
   sortOrder: z.number(),
   archived: z.boolean(), // Soft delete flag - never hard delete items
+  defaultQuantity: z.string(), // Default quantity for the item
 
   // References
   get addedBy() {
@@ -140,14 +142,16 @@ export const FolderNode = co.map({
   type: z.enum(['folder', 'template-folder']),
   path: z.string(), // e.g., "grocery-stores" or "grocery-stores/wegmans"
   expanded: z.boolean(),
+  archived: z.boolean(), // Soft delete flag
 
   // For organizational folders only
   // Children are implicit via path hierarchy
 
-  // For template-folders only (these will be undefined for type="folder")
-  items: co.optional(co.list(TemplateItem)),
-  sessions: co.optional(co.list(ShoppingSession)),
-  currentSessionId: z.optional(z.string()),
+  // For template-folders only (these will be empty arrays for type="folder")
+  // Note: Using non-optional CoLists with empty arrays avoids TypeScript inference issues
+  items: co.list(TemplateItem),
+  sessions: co.list(ShoppingSession),
+  currentSessionId: z.string(), // Empty string if no current session
 
   // Sharing (to be implemented in Phase 6)
   // permissions: PathPermissions,

@@ -1,22 +1,18 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { Plus } from 'lucide-react';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { FolderNodeView } from './FolderNodeView';
 import { TemplateItemView } from './TemplateItemView';
 
 interface TreeViewProps {
-  nodes: (typeof FolderNode)[];
-  account: typeof GroceriesAccount;
+  nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
+  account: InstanceOfSchema<typeof GroceriesAccount>;
   onAddFolder?: () => void;
   onAddItem?: (parentNodeId: string) => void;
 }
 
-export function TreeView({
-  nodes,
-  account: _account,
-  onAddFolder,
-  onAddItem: _onAddItem,
-}: TreeViewProps) {
-  const handleToggleExpand = (node: typeof FolderNode) => {
+export function TreeView({ nodes, account, onAddFolder, onAddItem: _onAddItem }: TreeViewProps) {
+  const handleToggleExpand = (node: InstanceOfSchema<typeof FolderNode>) => {
     node.$jazz.set('expanded', !node.expanded);
     node.$jazz.set('updatedAt', new Date());
   };
@@ -64,7 +60,7 @@ export function TreeView({
     console.log('Add to session:', itemId);
   };
 
-  const renderNode = (node: typeof FolderNode, level = 0): React.ReactNode => {
+  const renderNode = (node: InstanceOfSchema<typeof FolderNode>, level = 0): React.ReactNode => {
     if (!node || node.archived) return null;
 
     const items = node.items || [];
@@ -78,6 +74,7 @@ export function TreeView({
         onToggleExpand={() => handleToggleExpand(node)}
         onRename={handleRenameNode}
         onDelete={handleDeleteNode}
+        account={account}
       >
         {activeItems.map((item) => (
           <TemplateItemView
@@ -120,7 +117,7 @@ export function TreeView({
             <p className="mt-1 text-sm">Create a folder to organize your template items.</p>
           </div>
         ) : (
-          <div className="p-2">{activeNodes.map((node) => renderNode(node))}</div>
+          <div className="p-2">{activeNodes.map((node) => node && renderNode(node))}</div>
         )}
       </div>
     </div>

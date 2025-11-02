@@ -29,8 +29,23 @@ npm install              # Install dependencies
 npm run dev             # Start development server (http://localhost:5173)
 npm run build           # Build for production
 npm run preview         # Preview production build
-npm run lint            # Run ESLint
+npm run lint            # Run Biome linting
+npm run type-check      # Run TypeScript type checking
+npm run test:run        # Run unit tests (Vitest)
+npm run test:e2e        # Run E2E tests (Playwright)
+npm run check           # Run type-check + lint + tests
 ```
+
+## Git Hooks
+
+**IMPORTANT**: This project has strict git hooks that run before every commit.
+
+- **Pre-commit hook**: Runs type-check, lint, unit tests, and E2E tests (~6-10 minutes)
+- **Commit-msg hook**: Enforces subject (10-72 chars) and body (max 10 lines) limits
+
+See [GIT_HOOKS.md](./GIT_HOOKS.md) for complete documentation and examples.
+
+**All checks must pass before committing** - there is no bypass option.
 
 ## Project Structure
 

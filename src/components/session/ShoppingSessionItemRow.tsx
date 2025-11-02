@@ -1,11 +1,12 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { useAccount } from '@/lib/jazz';
 import type { GroceriesAccount } from '@/schemas';
 import { CATEGORIES } from '@/schemas';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 
 interface ShoppingSessionItemRowProps {
-  item: typeof TemplateItem;
-  state: typeof ItemState | null;
+  item: InstanceOfSchema<typeof TemplateItem>;
+  state: InstanceOfSchema<typeof ItemState> | null;
   zone: 'inventory' | 'cart' | 'completed';
   onToggleCart: (itemId: string) => void;
   onTogglePurchased: (itemId: string) => void;

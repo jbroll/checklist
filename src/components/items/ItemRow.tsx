@@ -1,8 +1,9 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { Trash2 } from 'lucide-react';
 import { CATEGORIES, type GroceryItem } from '@/schemas';
 
 interface ItemRowProps {
-  item: typeof GroceryItem;
+  item: InstanceOfSchema<typeof GroceryItem>;
   onToggleCheck: (itemId: string) => void;
   onDelete: (itemId: string) => void;
 }

@@ -1,21 +1,26 @@
-import { Folder, FolderOpen, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import type { InstanceOfSchema } from 'jazz-tools';
+import { Download, Folder, FolderOpen, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { ExportDialog } from '@/components/export/ExportDialog';
+import { ImportDialog } from '@/components/import/ImportDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { FolderNode as FolderNodeType } from '@/schemas';
+import type { FolderNode as FolderNodeType, GroceriesAccount } from '@/schemas';
 import { TreeNode } from './TreeNode';
 
 interface FolderNodeViewProps {
-  node: typeof FolderNodeType;
+  node: InstanceOfSchema<typeof FolderNodeType>;
   level: number;
   onToggleExpand: () => void;
   onRename?: (nodeId: string, newName: string) => void;
   onDelete?: (nodeId: string) => void;
   children?: React.ReactNode;
+  account: InstanceOfSchema<typeof GroceriesAccount>;
 }
 
 export function FolderNodeView({
@@ -25,9 +30,12 @@ export function FolderNodeView({
   onRename,
   onDelete,
   children,
+  account,
 }: FolderNodeViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(node.name);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   const hasChildren = (node.items?.length ?? 0) > 0;
   const isTemplate = node.type === 'template-folder';
@@ -121,6 +129,16 @@ export function FolderNodeView({
                   <Pencil className="mr-2 h-4 w-4" />
                   Rename
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export folder
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import items
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -133,6 +151,17 @@ export function FolderNodeView({
 
       {/* Child Nodes */}
       {node.expanded && children}
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        account={account}
+        selectedFolderId={node.$jazz.id}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={account} />
     </div>
   );
 }

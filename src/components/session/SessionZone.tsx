@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 import { ShoppingSessionItemRow } from './ShoppingSessionItemRow';
@@ -6,8 +7,8 @@ interface SessionZoneProps {
   title: string;
   icon: string;
   zone: 'inventory' | 'cart' | 'completed';
-  items: (typeof TemplateItem)[];
-  itemStates: Record<string, typeof ItemState>;
+  items: InstanceOfSchema<typeof TemplateItem>[];
+  itemStates: Record<string, InstanceOfSchema<typeof ItemState>>;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleCart: (itemId: string) => void;

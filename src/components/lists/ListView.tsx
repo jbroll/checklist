@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { ArrowLeft, Check, Edit2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useCoState } from '@/lib/jazz';
@@ -13,7 +14,7 @@ import { ItemRow } from '../items/ItemRow';
 
 interface ListViewProps {
   listId: string;
-  account: typeof GroceriesAccount;
+  account: InstanceOfSchema<typeof GroceriesAccount>;
   onBack: () => void;
 }
 
@@ -42,7 +43,7 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
   const checkedItems = activeItems.filter((item) => item?.checked);
 
   // Group unchecked items by category
-  const groupedItems: Record<Category, (typeof GroceryItem)[]> = {
+  const groupedItems: Record<Category, InstanceOfSchema<typeof GroceryItem>[]> = {
     produce: [],
     dairy: [],
     meat: [],
@@ -56,6 +57,7 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
 
   uncheckedItems.forEach((item) => {
     if (item?.category) {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
       groupedItems[item.category].push(item);
     }
   });
@@ -102,7 +104,12 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
     if (item) {
       const newCheckedState = !item.checked;
       item.$jazz.set('checked', newCheckedState);
-      item.$jazz.set('checkedBy', newCheckedState ? account : undefined);
+      // Set checkedBy to account when checking, or explicitly set to null when unchecking
+      if (newCheckedState) {
+        item.$jazz.set('checkedBy', account);
+      } else {
+        item.$jazz.set('checkedBy', null);
+      }
       item.$jazz.set('updatedAt', new Date());
       list.$jazz.set('updatedAt', new Date());
     }
@@ -194,6 +201,7 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
       <main className="mx-auto max-w-4xl px-4 py-6">
         {/* Add Item Form */}
         <div className="mb-6">
+          {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
           <AddItemForm list={list} account={account} />
         </div>
 
@@ -212,14 +220,16 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
                   <span className="text-neutral-400">({categoryItems.length})</span>
                 </h2>
                 <div className="space-y-2">
-                  {categoryItems.map((item) => (
-                    <ItemRow
-                      key={item.$jazz.id}
-                      item={item}
-                      onToggleCheck={handleToggleCheck}
-                      onDelete={handleDeleteItem}
-                    />
-                  ))}
+                  {categoryItems.map((item) =>
+                    item ? (
+                      <ItemRow
+                        key={item.$jazz.id}
+                        item={item}
+                        onToggleCheck={handleToggleCheck}
+                        onDelete={handleDeleteItem}
+                      />
+                    ) : null,
+                  )}
                 </div>
               </div>
             );
@@ -234,14 +244,17 @@ export function ListView({ listId, account, onBack }: ListViewProps) {
                 <span className="text-neutral-400">({checkedItems.length})</span>
               </h2>
               <div className="space-y-2">
-                {checkedItems.map((item) => (
-                  <ItemRow
-                    key={item.$jazz.id}
-                    item={item}
-                    onToggleCheck={handleToggleCheck}
-                    onDelete={handleDeleteItem}
-                  />
-                ))}
+                {checkedItems.map((item) =>
+                  item ? (
+                    <ItemRow
+                      key={item.$jazz.id}
+                      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+                      item={item}
+                      onToggleCheck={handleToggleCheck}
+                      onDelete={handleDeleteItem}
+                    />
+                  ) : null,
+                )}
               </div>
             </div>
           )}
