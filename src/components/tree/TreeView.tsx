@@ -8,10 +8,17 @@ interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
   account: InstanceOfSchema<typeof GroceriesAccount>;
   onAddFolder?: () => void;
+  onAddTemplate?: () => void;
   onAddItem?: (parentNodeId: string) => void;
 }
 
-export function TreeView({ nodes, account, onAddFolder, onAddItem: _onAddItem }: TreeViewProps) {
+export function TreeView({
+  nodes,
+  account,
+  onAddFolder,
+  onAddTemplate,
+  onAddItem: _onAddItem,
+}: TreeViewProps) {
   const handleToggleExpand = (node: InstanceOfSchema<typeof FolderNode>) => {
     node.$jazz.set('expanded', !node.expanded);
     node.$jazz.set('updatedAt', new Date());
@@ -97,16 +104,28 @@ export function TreeView({ nodes, account, onAddFolder, onAddItem: _onAddItem }:
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-neutral-900">Templates</h2>
-        {onAddFolder && (
-          <button
-            type="button"
-            onClick={onAddFolder}
-            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4" />
-            New Folder
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onAddFolder && (
+            <button
+              type="button"
+              onClick={onAddFolder}
+              className="flex items-center gap-1 rounded-lg border border-green-600 bg-white px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50"
+            >
+              <Plus className="h-4 w-4" />
+              New Folder
+            </button>
+          )}
+          {onAddTemplate && (
+            <button
+              type="button"
+              onClick={onAddTemplate}
+              className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              New Template
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tree */}

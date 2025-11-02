@@ -15,6 +15,7 @@ interface TemplateEditorProps {
 export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const { me } = useAccount<typeof GroceriesAccount>();
   const [showAddFolder, setShowAddFolder] = useState(false);
+  const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -141,6 +142,7 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           account={me}
           onAddFolder={() => setShowAddFolder(true)}
+          onAddTemplate={() => setShowAddTemplate(true)}
           onAddItem={handleOpenAddItem}
         />
 
@@ -148,6 +150,15 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           open={showAddFolder}
           onOpenChange={setShowAddFolder}
           onAdd={handleAddFolder}
+        />
+
+        <AddFolderDialog
+          open={showAddTemplate}
+          onOpenChange={setShowAddTemplate}
+          onAdd={handleAddFolder}
+          defaultIsTemplate={true}
+          title="New Template"
+          description="Create a new template folder for frequently purchased items."
         />
 
         <AddItemDialog

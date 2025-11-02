@@ -13,25 +13,35 @@ interface AddFolderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (name: string, isTemplate: boolean) => void;
+  defaultIsTemplate?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function AddFolderDialog({ open, onOpenChange, onAdd }: AddFolderDialogProps) {
+export function AddFolderDialog({
+  open,
+  onOpenChange,
+  onAdd,
+  defaultIsTemplate = false,
+  title = 'Create New Folder',
+  description = 'Create a folder to organize your template items.',
+}: AddFolderDialogProps) {
   const [folderName, setFolderName] = useState('');
-  const [isTemplate, setIsTemplate] = useState(false);
+  const [isTemplate, setIsTemplate] = useState(defaultIsTemplate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (folderName.trim()) {
       onAdd(folderName.trim(), isTemplate);
       setFolderName('');
-      setIsTemplate(false);
+      setIsTemplate(defaultIsTemplate);
       onOpenChange(false);
     }
   };
 
   const handleCancel = () => {
     setFolderName('');
-    setIsTemplate(false);
+    setIsTemplate(defaultIsTemplate);
     onOpenChange(false);
   };
 
@@ -39,8 +49,8 @@ export function AddFolderDialog({ open, onOpenChange, onAdd }: AddFolderDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Folder</DialogTitle>
-          <DialogDescription>Create a folder to organize your template items.</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
