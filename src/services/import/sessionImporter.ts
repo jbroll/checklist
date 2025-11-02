@@ -199,8 +199,7 @@ export function importSessionFromCsv(
     );
 
     // Add session to folder
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with CoList push
-    folder.sessions?.push(session);
+    folder.sessions?.$jazz.push(session);
 
     // Update folder timestamp
     folder.$jazz.set('updatedAt', new Date());

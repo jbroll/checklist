@@ -346,8 +346,7 @@ export class ImportService {
       };
     }
 
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    account.root.nodes.push(newFolder);
+    account.root.nodes.$jazz.push(newFolder);
 
     return {
       success: true,

@@ -151,8 +151,7 @@ export function importItemsFromCsv(
       );
 
       // Add to folder
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with CoList push
-      folder.items?.push(newItem);
+      folder.items?.$jazz.push(newItem);
       result.imported++;
 
       // Add to existing names to prevent duplicates within import
