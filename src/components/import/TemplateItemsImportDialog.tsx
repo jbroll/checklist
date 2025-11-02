@@ -140,9 +140,9 @@ export function TemplateItemsImportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Import Items to: {folder.name}</DialogTitle>
+          <DialogTitle>Import Template Items</DialogTitle>
           <DialogDescription>
-            Import template items from a TXT or CSV file. Duplicate items will be skipped.
+            Import items into {folder.name} from a TXT or CSV file.
           </DialogDescription>
         </DialogHeader>
 
@@ -179,7 +179,7 @@ export function TemplateItemsImportDialog({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <p className="mt-2 text-xs text-neutral-500">TXT or CSV files, up to 10MB</p>
+              <p className="mt-2 text-xs text-neutral-500">TXT or CSV files only, up to 10MB</p>
             </div>
           )}
 
@@ -288,16 +288,20 @@ export function TemplateItemsImportDialog({
           {/* Info box */}
           {!importResult && (
             <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">Format requirements:</div>
+              <div className="font-medium">File format:</div>
               <ul className="ml-4 mt-2 list-disc space-y-1">
                 <li>
                   <strong>TXT:</strong> One item name per line
                 </li>
                 <li>
-                  <strong>CSV:</strong> Header row: name, category, sortOrder, defaultQuantity
+                  <strong>CSV:</strong> Columns: name, category, sortOrder, defaultQuantity
                 </li>
+              </ul>
+              <div className="mt-3 font-medium">Import rules:</div>
+              <ul className="ml-4 mt-2 list-disc space-y-1">
                 <li>Items will be auto-categorized if category not provided</li>
                 <li>Duplicate items (by name) will be skipped</li>
+                <li>Existing template items will never be overwritten</li>
               </ul>
             </div>
           )}

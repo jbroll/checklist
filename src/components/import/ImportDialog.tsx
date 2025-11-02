@@ -244,9 +244,9 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
           {/* Info box */}
           {!importResult && (
             <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">Conflict resolution:</div>
+              <div className="font-medium">Import rules:</div>
               <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>Duplicate folders will be renamed with "(imported)" suffix</li>
+                <li>Duplicate folders will be renamed with numbered suffix (1), (2), (3)...</li>
                 <li>Existing data will never be overwritten</li>
                 <li>All sessions and history will be preserved</li>
               </ul>

@@ -139,9 +139,9 @@ export function SessionImportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Import Session to: {folder.name}</DialogTitle>
+          <DialogTitle>Import Shopping Session</DialogTitle>
           <DialogDescription>
-            Import a shopping session from CSV. Items will be matched by name to your template.
+            Import a session into {folder.name} from a CSV file.
           </DialogDescription>
         </DialogHeader>
 
@@ -300,12 +300,19 @@ export function SessionImportDialog({
           {/* Info box */}
           {!importResult && (
             <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">CSV format requirements:</div>
+              <div className="font-medium">File format:</div>
               <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>Header row: name, category, inCart, purchased, addedToCartAt, purchasedAt</li>
+                <li>
+                  <strong>CSV:</strong> Columns: name, category, inCart, purchased, addedToCartAt,
+                  purchasedAt
+                </li>
+              </ul>
+              <div className="mt-3 font-medium">Import rules:</div>
+              <ul className="ml-4 mt-2 list-disc space-y-1">
                 <li>Items are matched by name (case-insensitive)</li>
                 <li>Items not in template will be skipped</li>
                 <li>Timestamps are optional</li>
+                <li>Creates new session, never overwrites existing sessions</li>
               </ul>
             </div>
           )}
