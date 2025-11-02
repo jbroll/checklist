@@ -23,6 +23,8 @@ interface ImportDialogProps {
 
 export function ImportDialog({ open, onOpenChange, account, onImportComplete }: ImportDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
+  const [templateName, setTemplateName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -54,9 +56,9 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
   };
 
   const validateAndSetFile = (file: File) => {
-    // Validate file type
-    if (!isValidFileType(file, ['json'])) {
-      alert('Please select a JSON file (.json)');
+    // Validate file type - accept JSON, TXT, or CSV
+    if (!isValidFileType(file, ['json', 'txt', 'csv'])) {
+      alert('Please select a JSON, TXT, or CSV file');
       return;
     }
 
@@ -66,18 +68,56 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
       return;
     }
 
+    // Determine file type from extension
+    const fileName = file.name.toLowerCase();
+    let detectedType: 'json' | 'txt' | 'csv';
+    if (fileName.endsWith('.json')) {
+      detectedType = 'json';
+    } else if (fileName.endsWith('.csv')) {
+      detectedType = 'csv';
+    } else {
+      detectedType = 'txt';
+    }
+
+    setFileType(detectedType);
     setSelectedFile(file);
     setImportResult(null);
+
+    // Auto-generate template name from filename (for TXT/CSV)
+    if (detectedType !== 'json' && !templateName) {
+      const baseName = file.name.replace(/\.(txt|csv)$/i, '');
+      setTemplateName(baseName);
+    }
   };
 
   const handleImport = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !fileType) return;
+
+    // For TXT/CSV, require template name
+    if (fileType !== 'json' && !templateName.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
 
     setIsImporting(true);
     setImportResult(null);
 
     try {
-      const result = await ImportService.importFromFile(selectedFile, account, 'json');
+      let result: ImportResult;
+
+      if (fileType === 'json') {
+        // JSON import: Full folder structure
+        result = await ImportService.importFromFile(selectedFile, account, 'json');
+      } else {
+        // TXT/CSV import: Create new template at root
+        result = await ImportService.importAsNewTemplate(
+          selectedFile,
+          account,
+          templateName.trim(),
+          fileType,
+        );
+      }
+
       setImportResult(result);
 
       if (result.success) {
@@ -102,6 +142,8 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
 
   const handleReset = () => {
     setSelectedFile(null);
+    setFileType(null);
+    setTemplateName('');
     setImportResult(null);
     setIsDragging(false);
   };
@@ -117,11 +159,28 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
         <DialogHeader>
           <DialogTitle>Import Grocery Data</DialogTitle>
           <DialogDescription>
-            Import folders, items, and sessions from a JSON export file.
+            Import full backup (JSON) or create new template from items list (TXT/CSV).
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* Template name input for TXT/CSV */}
+          {selectedFile && fileType !== 'json' && !importResult && (
+            <div className="grid gap-2">
+              <label htmlFor="template-name" className="text-sm font-medium text-neutral-700">
+                Template name
+              </label>
+              <input
+                id="template-name"
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Enter template name..."
+                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+              />
+            </div>
+          )}
+
           {/* File upload area */}
           {!selectedFile && (
             // biome-ignore lint/a11y/useSemanticElements: Drag-drop zone, not a clickable button
@@ -139,7 +198,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
                 className={`mb-3 h-12 w-12 ${isDragging ? 'text-green-600' : 'text-neutral-400'}`}
               />
               <p className="mb-2 text-sm font-medium text-neutral-700">
-                {isDragging ? 'Drop file here' : 'Drop JSON file here or'}
+                {isDragging ? 'Drop file here' : 'Drop JSON, TXT, or CSV file here or'}
               </p>
               <label
                 htmlFor="file-upload"
@@ -150,11 +209,11 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
               <input
                 id="file-upload"
                 type="file"
-                accept=".json"
+                accept=".json,.txt,.csv"
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <p className="mt-2 text-xs text-neutral-500">JSON files only, up to 10MB</p>
+              <p className="mt-2 text-xs text-neutral-500">JSON, TXT, or CSV files, up to 10MB</p>
             </div>
           )}
 
@@ -244,11 +303,20 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
           {/* Info box */}
           {!importResult && (
             <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">Import rules:</div>
+              <div className="font-medium">File formats:</div>
               <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>Duplicate folders will be renamed with numbered suffix (1), (2), (3)...</li>
+                <li>
+                  <strong>JSON:</strong> Full backup with folders, items, and sessions
+                </li>
+                <li>
+                  <strong>TXT/CSV:</strong> Creates new template at root with imported items
+                </li>
+              </ul>
+              <div className="mt-3 font-medium">Import rules:</div>
+              <ul className="ml-4 mt-2 list-disc space-y-1">
+                <li>Duplicate folders renamed with numbered suffix (1), (2), (3)...</li>
+                <li>Items auto-categorized if category not provided</li>
                 <li>Existing data will never be overwritten</li>
-                <li>All sessions and history will be preserved</li>
               </ul>
             </div>
           )}

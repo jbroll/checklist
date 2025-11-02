@@ -111,11 +111,11 @@ test.describe('Import Functionality', () => {
     await expect(dialog.getByText(/import grocery data/i)).toBeVisible();
 
     // Check for upload elements
-    await expect(dialog.getByText(/drop json file here/i)).toBeVisible();
+    await expect(dialog.getByText(/drop json, txt, or csv file here/i)).toBeVisible();
     await expect(dialog.getByText(/browse files/i)).toBeVisible();
 
-    // Check info about conflict resolution
-    await expect(dialog.getByText(/duplicate folders will be renamed/i)).toBeVisible();
+    // Check info about file formats
+    await expect(dialog.getByText(/file formats:/i)).toBeVisible();
   });
 
   test('should show file size and type restrictions', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('Import Functionality', () => {
     await page.getByRole('button', { name: /^import$/i }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/json files only/i)).toBeVisible();
+    await expect(dialog.getByText(/json, txt, or csv files/i)).toBeVisible();
     await expect(dialog.getByText(/up to 10mb/i)).toBeVisible();
   });
 

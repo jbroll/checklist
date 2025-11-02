@@ -260,6 +260,108 @@ export class ImportService {
   }
 
   /**
+   * Import TXT/CSV file as a new template folder at root
+   *
+   * Creates a new template folder with the given name and imports all items into it.
+   *
+   * @param file - TXT or CSV file with items
+   * @param account - User's GroceriesAccount
+   * @param templateName - Name for the new template folder
+   * @param fileType - File type ('txt' or 'csv')
+   * @returns Import result with statistics
+   */
+  static async importAsNewTemplate(
+    file: File,
+    account: InstanceOfSchema<typeof GroceriesAccount>,
+    templateName: string,
+    fileType: 'txt' | 'csv',
+  ): Promise<ImportResult> {
+    // Validate file
+    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+      return {
+        success: false,
+        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    if (!isValidFileType(file, [fileType])) {
+      return {
+        success: false,
+        errors: [`Invalid file type. Expected: .${fileType}`],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Read file content
+    const content = await readFileAsText(file);
+
+    // Create new template folder at root
+    const { FolderNode } = await import('../../schemas/tree');
+
+    const newFolder = FolderNode.create(
+      {
+        name: templateName,
+        type: 'template-folder',
+        path: `/${templateName}`,
+        expanded: true,
+        archived: false,
+        items: [],
+        sessions: [],
+        currentSessionId: '',
+        owner: account,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { owner: account },
+    );
+
+    // Import items into the new folder
+    let importResult: TxtImportResult | CsvImportResult;
+    if (fileType === 'txt') {
+      importResult = importItemsFromText(content, newFolder, account);
+    } else {
+      importResult = importItemsFromCsv(content, newFolder, account);
+    }
+
+    // Check if import succeeded
+    if (importResult.errors.length > 0 && importResult.imported === 0) {
+      return {
+        success: false,
+        errors: importResult.errors,
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // Add folder to root
+    if (!account.root) {
+      return {
+        success: false,
+        errors: ['Account root not found'],
+        warnings: [],
+        stats: {},
+      };
+    }
+
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    account.root.nodes.push(newFolder);
+
+    return {
+      success: true,
+      errors: [],
+      warnings: importResult.duplicates.length > 0 ? ['Some duplicate items were skipped'] : [],
+      stats: {
+        foldersCreated: 1,
+        itemsAdded: importResult.imported,
+        itemsSkipped: importResult.skipped,
+      },
+    };
+  }
+
+  /**
    * Get valid file extensions for a file type
    *
    * @param fileType - File type
