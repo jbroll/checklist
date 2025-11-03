@@ -1,19 +1,11 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import {
-  Download,
-  FileText,
-  Folder,
-  FolderOpen,
-  MoreVertical,
-  Pencil,
-  Trash2,
-  Upload,
-} from 'lucide-react';
+import { Download, FileText, Folder, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { TemplateItemsExportDialog } from '@/components/export/TemplateItemsExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { TemplateItemsImportDialog } from '@/components/import/TemplateItemsImportDialog';
+import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +22,8 @@ interface FolderNodeViewProps {
   onToggleExpand: () => void;
   onRename?: (nodeId: string, newName: string) => void;
   onDelete?: (nodeId: string) => void;
+  onUseTemplate?: (nodeId: string) => void;
+  onEditTemplate?: (nodeId: string) => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof GroceriesAccount>;
 }
@@ -40,6 +34,8 @@ export function FolderNodeView({
   onToggleExpand,
   onRename,
   onDelete,
+  onUseTemplate,
+  onEditTemplate,
   children,
   account,
 }: FolderNodeViewProps) {
@@ -96,12 +92,10 @@ export function FolderNodeView({
       >
         <div className="flex flex-1 items-center gap-2">
           {/* Folder Icon */}
-          {node.expanded ? (
-            <FolderOpen
-              className={`h-4 w-4 ${isTemplate ? 'text-purple-600' : 'text-yellow-600'}`}
-            />
+          {isTemplate ? (
+            <BubbleListIcon className="h-4 w-4" size={16} />
           ) : (
-            <Folder className={`h-4 w-4 ${isTemplate ? 'text-purple-600' : 'text-yellow-600'}`} />
+            <Folder className="h-4 w-4 text-yellow-600" />
           )}
 
           {/* Name (Editable) */}
@@ -119,10 +113,31 @@ export function FolderNodeView({
               className={`flex-1 text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
             >
               {node.name}
-              {isTemplate && (
-                <span className="ml-2 text-xs font-normal text-purple-600">(Template)</span>
-              )}
             </span>
+          )}
+
+          {/* Action Buttons - Only for template folders */}
+          {!isEditing && isTemplate && (
+            <div className="flex items-center gap-2">
+              {onEditTemplate && (
+                <button
+                  type="button"
+                  onClick={() => onEditTemplate(node.$jazz.id)}
+                  className="rounded border border-green-600 bg-white px-3 py-1 text-xs font-medium text-green-600 transition-colors hover:bg-green-50"
+                >
+                  Edit List
+                </button>
+              )}
+              {onUseTemplate && (
+                <button
+                  type="button"
+                  onClick={() => onUseTemplate(node.$jazz.id)}
+                  className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-700"
+                >
+                  Use List
+                </button>
+              )}
+            </div>
           )}
 
           {/* Actions Menu */}

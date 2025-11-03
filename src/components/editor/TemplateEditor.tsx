@@ -1,10 +1,22 @@
-import { Download, Upload } from 'lucide-react';
+import { Download, LogOut, MoreVertical, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
+import { ShoppingSessionView } from '@/components/session/ShoppingSessionView';
 import { TreeView } from '@/components/tree';
+import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
-import { type Category, FolderNode, type GroceriesAccount, TemplateItem } from '@/schemas';
+import type { Category, GroceriesAccount } from '@/schemas';
+import * as FolderService from '@/services/folderService';
+import * as ItemService from '@/services/itemService';
+import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { AddItemDialog } from './AddItemDialog';
 
@@ -20,6 +32,10 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+
+  // Navigation state for shopping session view
+  const [activeSessionFolderId, setActiveSessionFolderId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   if (!me) {
     return (
@@ -37,55 +53,17 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
-    // Create new folder node using Jazz's create method
-    const newFolder = FolderNode.create(
-      {
-        name,
-        type: isTemplate ? 'template-folder' : 'folder',
-        path: `/${name}`,
-        expanded: true,
-        archived: false, // Start unarchived
-        // Always initialize items and sessions as empty arrays
-        items: [],
-        sessions: [],
-        currentSessionId: '', // Empty string for no current session
-        owner: me,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      { owner: me },
-    );
-
-    // Add to nodes array
+    // Use folder service to create folder with proper Jazz CoList mutation
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    me.root.nodes.push(newFolder);
+    FolderService.createFolder(me, name, isTemplate);
   };
 
   const handleAddItem = (name: string, category: Category, defaultQuantity?: string) => {
     if (!selectedFolderId) return;
 
-    const folder = nodes.find((n) => n?.$jazz.id === selectedFolderId);
-    if (!folder || !folder.items) return;
-
-    // Create new template item
-    const newItem = TemplateItem.create(
-      {
-        name,
-        category,
-        sortOrder: folder.items.length,
-        archived: false,
-        defaultQuantity: defaultQuantity || '', // Use empty string if not provided
-        addedBy: me,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      { owner: me },
-    );
-
-    // Add to folder's items
+    // Use item service to create item with proper Jazz CoList mutation
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    folder.items.push(newItem);
-    folder.$jazz.set('updatedAt', new Date());
+    ItemService.createItem(me, selectedFolderId, name, category, defaultQuantity);
   };
 
   const handleOpenAddItem = (folderId: string) => {
@@ -93,46 +71,105 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     setShowAddItem(true);
   };
 
+  const handleUseTemplate = (folderId: string) => {
+    // Create session using service
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    const sessionId = SessionService.createSession(me, folderId);
+
+    // Navigate to shopping session view
+    setActiveSessionFolderId(folderId);
+    setActiveSessionId(sessionId);
+  };
+
+  const handleEditTemplate = (folderId: string) => {
+    // Expand the folder to show sessions and allow editing
+    const folder = nodes.find((n) => n?.$jazz.id === folderId);
+    if (folder) {
+      folder.$jazz.set('expanded', true);
+      folder.$jazz.set('updatedAt', new Date());
+    }
+  };
+
+  const handleBackToTemplates = () => {
+    setActiveSessionFolderId(null);
+    setActiveSessionId(null);
+  };
+
   const selectedFolder = selectedFolderId
     ? nodes.find((n) => n?.$jazz.id === selectedFolderId)
     : null;
 
+  // If viewing a shopping session, show ShoppingSessionView
+  if (activeSessionFolderId && activeSessionId) {
+    const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
+    if (sessionFolder) {
+      return (
+        <ShoppingSessionView
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          folder={sessionFolder}
+          sessionId={activeSessionId}
+          onBack={handleBackToTemplates}
+        />
+      );
+    }
+  }
+
+  // Otherwise show Template Editor
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900">Template Editor</h1>
-            <p className="mt-2 text-neutral-600">
-              Organize your frequently purchased items into reusable templates.
-            </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BubbleListIcon className="h-8 w-8" size={32} />
+            <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+              onClick={() => setShowAddFolder(true)}
+              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50"
             >
-              <Download className="h-4 w-4" />
-              Export
+              <Plus className="h-4 w-4" />
+              New Folder
             </button>
             <button
               type="button"
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+              onClick={() => setShowAddTemplate(true)}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
             >
-              <Upload className="h-4 w-4" />
-              Import
+              <Plus className="h-4 w-4" />
+              New List
             </button>
-            {onSignOut && (
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-              >
-                Sign Out
-              </button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="h-5 w-5 text-neutral-600" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </DropdownMenuItem>
+                {onSignOut && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -141,9 +178,13 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           nodes={nodes}
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           account={me}
-          onAddFolder={() => setShowAddFolder(true)}
-          onAddTemplate={() => setShowAddTemplate(true)}
           onAddItem={handleOpenAddItem}
+          onUseTemplate={handleUseTemplate}
+          onEditTemplate={handleEditTemplate}
+          onOpenSession={(folderId, sessionId) => {
+            setActiveSessionFolderId(folderId);
+            setActiveSessionId(sessionId);
+          }}
         />
 
         <AddFolderDialog
@@ -157,8 +198,8 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           onOpenChange={setShowAddTemplate}
           onAdd={handleAddFolder}
           defaultIsTemplate={true}
-          title="New Template"
-          description="Create a new template folder for frequently purchased items."
+          title="New List"
+          description="Create a new list folder for frequently purchased items."
         />
 
         <AddItemDialog

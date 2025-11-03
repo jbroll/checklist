@@ -24,7 +24,7 @@ export function AddFolderDialog({
   onAdd,
   defaultIsTemplate = false,
   title = 'Create New Folder',
-  description = 'Create a folder to organize your template items.',
+  description = 'Create a folder to organize your list items.',
 }: AddFolderDialogProps) {
   const [folderName, setFolderName] = useState('');
   const [isTemplate, setIsTemplate] = useState(defaultIsTemplate);
@@ -55,33 +55,41 @@ export function AddFolderDialog({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="folder-name">Folder Name</Label>
+              <Label htmlFor="folder-name">{defaultIsTemplate ? 'List Name' : 'Folder Name'}</Label>
               <input
                 id="folder-name"
                 type="text"
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
-                placeholder="e.g., Weekly Staples, Special Occasions"
+                placeholder={
+                  defaultIsTemplate
+                    ? 'e.g., Weekly Staples, Monthly Shopping'
+                    : 'e.g., Groceries, Household'
+                }
                 className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is-template"
-                checked={isTemplate}
-                onChange={(e) => setIsTemplate(e.target.checked)}
-                className="h-4 w-4 rounded border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
-              />
-              <Label htmlFor="is-template" className="cursor-pointer">
-                Template Folder
-              </Label>
-            </div>
-            {isTemplate && (
-              <p className="text-xs text-neutral-600">
-                Template folders can be used to quickly create shopping sessions.
-              </p>
+            {!defaultIsTemplate && (
+              <>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is-template"
+                    checked={isTemplate}
+                    onChange={(e) => setIsTemplate(e.target.checked)}
+                    className="h-4 w-4 rounded border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
+                  />
+                  <Label htmlFor="is-template" className="cursor-pointer">
+                    Make this a list folder
+                  </Label>
+                </div>
+                {isTemplate && (
+                  <p className="text-xs text-neutral-600">
+                    List folders contain reusable item templates for quick shopping sessions.
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -98,7 +106,7 @@ export function AddFolderDialog({
               disabled={!folderName.trim()}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Create Folder
+              {defaultIsTemplate ? 'Create List' : 'Create Folder'}
             </button>
           </DialogFooter>
         </form>
