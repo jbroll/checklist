@@ -140,7 +140,7 @@ export function TemplateItemsImportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Import Template Items</DialogTitle>
+          <DialogTitle>Import List Items</DialogTitle>
           <DialogDescription>
             Import items into {folder.name} from a TXT or CSV file.
           </DialogDescription>
@@ -301,7 +301,7 @@ export function TemplateItemsImportDialog({
               <ul className="ml-4 mt-2 list-disc space-y-1">
                 <li>Items will be auto-categorized if category not provided</li>
                 <li>Duplicate items (by name) will be skipped</li>
-                <li>Existing template items will never be overwritten</li>
+                <li>Existing list items will never be overwritten</li>
               </ul>
             </div>
           )}

@@ -93,9 +93,9 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
   const handleImport = async () => {
     if (!selectedFile || !fileType) return;
 
-    // For TXT/CSV, require template name
+    // For TXT/CSV, require list name
     if (fileType !== 'json' && !templateName.trim()) {
-      alert('Please enter a template name');
+      alert('Please enter a list name');
       return;
     }
 
@@ -159,7 +159,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
         <DialogHeader>
           <DialogTitle>Import Grocery Data</DialogTitle>
           <DialogDescription>
-            Import full backup (JSON) or create new template from items list (TXT/CSV).
+            Import full backup (JSON) or create new list from items list (TXT/CSV).
           </DialogDescription>
         </DialogHeader>
 
@@ -168,14 +168,14 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
           {selectedFile && fileType !== 'json' && !importResult && (
             <div className="grid gap-2">
               <label htmlFor="template-name" className="text-sm font-medium text-neutral-700">
-                Template name
+                List name
               </label>
               <input
                 id="template-name"
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Enter template name..."
+                placeholder="Enter list name..."
                 className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
@@ -309,7 +309,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
                   <strong>JSON:</strong> Full backup with folders, items, and sessions
                 </li>
                 <li>
-                  <strong>TXT/CSV:</strong> Creates new template at root with imported items
+                  <strong>TXT/CSV:</strong> Creates new list at root with imported items
                 </li>
               </ul>
               <div className="mt-3 font-medium">Import rules:</div>

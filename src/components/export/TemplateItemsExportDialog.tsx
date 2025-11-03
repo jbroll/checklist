@@ -75,7 +75,7 @@ export function TemplateItemsExportDialog({
         <DialogHeader>
           <DialogTitle>Export Items: {folder.name}</DialogTitle>
           <DialogDescription>
-            Export template items to a text or CSV file for sharing or backup.
+            Export list items to a text or CSV file for sharing or backup.
           </DialogDescription>
         </DialogHeader>
 
@@ -124,7 +124,7 @@ export function TemplateItemsExportDialog({
             <div className="font-medium">What will be exported:</div>
             <ul className="ml-4 mt-2 list-disc space-y-1">
               <li>
-                {itemCount} template item{itemCount !== 1 ? 's' : ''}
+                {itemCount} list item{itemCount !== 1 ? 's' : ''}
               </li>
               <li>Active items only (archived items excluded)</li>
               {format === 'csv' && <li>Category and sort order information</li>}

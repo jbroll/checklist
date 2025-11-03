@@ -64,8 +64,8 @@ export function ShoppingSessionItemRow({
         </div>
       </div>
 
-      {/* Right checkbox - Purchased (only visible in cart zone) */}
-      {zone === 'cart' && (
+      {/* Right checkbox - Purchased (visible in cart and completed zones) */}
+      {(zone === 'cart' || zone === 'completed') && (
         <button
           type="button"
           onClick={() => onTogglePurchased(item.$jazz.id)}

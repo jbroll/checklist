@@ -1,23 +1,24 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Plus } from 'lucide-react';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { FolderNodeView } from './FolderNodeView';
-import { TemplateItemView } from './TemplateItemView';
+import { SessionRowView } from './SessionRowView';
 
 interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
   account: InstanceOfSchema<typeof GroceriesAccount>;
-  onAddFolder?: () => void;
-  onAddTemplate?: () => void;
   onAddItem?: (parentNodeId: string) => void;
+  onUseTemplate?: (nodeId: string) => void;
+  onEditTemplate?: (nodeId: string) => void;
+  onOpenSession?: (folderId: string, sessionId: string) => void;
 }
 
 export function TreeView({
   nodes,
   account,
-  onAddFolder,
-  onAddTemplate,
   onAddItem: _onAddItem,
+  onUseTemplate,
+  onEditTemplate,
+  onOpenSession,
 }: TreeViewProps) {
   const handleToggleExpand = (node: InstanceOfSchema<typeof FolderNode>) => {
     node.$jazz.set('expanded', !node.expanded);
@@ -40,38 +41,24 @@ export function TreeView({
     }
   };
 
-  const handleRenameItem = (nodeId: string, itemId: string, newName: string) => {
+  const handleDeleteSession = (nodeId: string, sessionId: string) => {
     const node = nodes.find((n) => n?.$jazz.id === nodeId);
-    if (node) {
-      const item = node.items?.find((i) => i?.$jazz.id === itemId);
-      if (item) {
-        item.$jazz.set('name', newName);
-        item.$jazz.set('updatedAt', new Date());
+    if (node?.sessions) {
+      const session = node.sessions.find((s) => s?.$jazz.id === sessionId);
+      if (session) {
+        // Soft delete by setting status to abandoned
+        session.$jazz.set('status', 'abandoned');
+        session.$jazz.set('lastActivityAt', new Date());
       }
     }
-  };
-
-  const handleDeleteItem = (nodeId: string, itemId: string) => {
-    const node = nodes.find((n) => n?.$jazz.id === nodeId);
-    if (node) {
-      const item = node.items?.find((i) => i?.$jazz.id === itemId);
-      if (item) {
-        item.$jazz.set('archived', true);
-        item.$jazz.set('updatedAt', new Date());
-      }
-    }
-  };
-
-  const handleAddToSession = (itemId: string) => {
-    // TODO: Implement in Phase 4
-    console.log('Add to session:', itemId);
   };
 
   const renderNode = (node: InstanceOfSchema<typeof FolderNode>, level = 0): React.ReactNode => {
     if (!node || node.archived) return null;
 
-    const items = node.items || [];
-    const activeItems = items.filter((item) => item && !item.archived);
+    // Show sessions under template folders
+    const sessions = node.sessions || [];
+    const activeSessions = sessions.filter((s) => s && s.status !== 'abandoned');
 
     return (
       <FolderNodeView
@@ -81,16 +68,17 @@ export function TreeView({
         onToggleExpand={() => handleToggleExpand(node)}
         onRename={handleRenameNode}
         onDelete={handleDeleteNode}
+        onUseTemplate={onUseTemplate}
+        onEditTemplate={onEditTemplate}
         account={account}
       >
-        {activeItems.map((item) => (
-          <TemplateItemView
-            key={item.$jazz.id}
-            item={item}
+        {activeSessions.map((session) => (
+          <SessionRowView
+            key={session.$jazz.id}
+            session={session}
             level={level + 1}
-            onRename={(itemId, newName) => handleRenameItem(node.$jazz.id, itemId, newName)}
-            onDelete={(itemId) => handleDeleteItem(node.$jazz.id, itemId)}
-            onAddToSession={handleAddToSession}
+            onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
+            onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
           />
         ))}
       </FolderNodeView>
@@ -100,45 +88,15 @@ export function TreeView({
   const activeNodes = nodes.filter((node) => node && !node.archived);
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* Header */}
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-neutral-900">Templates</h2>
-        <div className="flex items-center gap-2">
-          {onAddFolder && (
-            <button
-              type="button"
-              onClick={onAddFolder}
-              className="flex items-center gap-1 rounded-lg border border-green-600 bg-white px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50"
-            >
-              <Plus className="h-4 w-4" />
-              New Folder
-            </button>
-          )}
-          {onAddTemplate && (
-            <button
-              type="button"
-              onClick={onAddTemplate}
-              className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              New Template
-            </button>
-          )}
+    <div className="rounded-lg border border-neutral-200 bg-white">
+      {activeNodes.length === 0 ? (
+        <div className="p-8 text-center text-neutral-500">
+          <p>No lists yet.</p>
+          <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
         </div>
-      </div>
-
-      {/* Tree */}
-      <div className="rounded-lg border border-neutral-200 bg-white">
-        {activeNodes.length === 0 ? (
-          <div className="p-8 text-center text-neutral-500">
-            <p>No templates yet.</p>
-            <p className="mt-1 text-sm">Create a folder to organize your template items.</p>
-          </div>
-        ) : (
-          <div className="p-2">{activeNodes.map((node) => node && renderNode(node))}</div>
-        )}
-      </div>
+      ) : (
+        <div className="p-2">{activeNodes.map((node) => node && renderNode(node))}</div>
+      )}
     </div>
   );
 }

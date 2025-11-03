@@ -6,7 +6,13 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Category, FolderNode, GroceriesAccount, TemplateItem } from '../schemas';
+import type {
+  Category,
+  FolderNode,
+  GroceriesAccount,
+  ShoppingSession,
+  TemplateItem,
+} from '../schemas';
 import * as ExportService from './export/exportService';
 import * as FolderService from './folderService';
 import { importJson } from './import/jsonImporter';
@@ -14,6 +20,7 @@ import type { TxtImportResult } from './import/txtImporter';
 import { importItemsFromText } from './import/txtImporter';
 import type { ImportResult } from './import/types';
 import * as ItemService from './itemService';
+import * as SessionService from './sessionService';
 
 /**
  * Expose all services to window for E2E tests
@@ -83,6 +90,25 @@ export function exposeServicesToWindow(
         }),
     },
 
+    // Session operations
+    session: {
+      create: (folderId: string, sessionName?: string) =>
+        withAccount((acc) => SessionService.createSession(acc, folderId, sessionName)),
+      get: (folderId: string, sessionId: string) =>
+        withAccount((acc) => SessionService.getSession(acc, folderId, sessionId)),
+      getAll: (folderId: string) => withAccount((acc) => SessionService.getSessions(acc, folderId)),
+      toggleItemInCart: (folderId: string, sessionId: string, itemId: string) =>
+        withAccount((acc) => SessionService.toggleItemInCart(acc, folderId, sessionId, itemId)),
+      toggleItemPurchased: (folderId: string, sessionId: string, itemId: string) =>
+        withAccount((acc) => SessionService.toggleItemPurchased(acc, folderId, sessionId, itemId)),
+      updateCounts: (folderId: string, sessionId: string) =>
+        withAccount((acc) => SessionService.updateSessionCounts(acc, folderId, sessionId)),
+      complete: (folderId: string, sessionId: string) =>
+        withAccount((acc) => SessionService.completeSession(acc, folderId, sessionId)),
+      abandon: (folderId: string, sessionId: string) =>
+        withAccount((acc) => SessionService.abandonSession(acc, folderId, sessionId)),
+    },
+
     // Utility operations
     util: {
       waitForSync: async () => {
@@ -127,6 +153,19 @@ declare global {
       import: {
         fromJson: (jsonData: string) => Promise<ImportResult>;
         itemsFromTxt: (folderId: string, txtContent: string) => Promise<TxtImportResult>;
+      };
+      session: {
+        create: (folderId: string, sessionName?: string) => string;
+        get: (
+          folderId: string,
+          sessionId: string,
+        ) => InstanceOfSchema<typeof ShoppingSession> | null;
+        getAll: (folderId: string) => Array<InstanceOfSchema<typeof ShoppingSession>>;
+        toggleItemInCart: (folderId: string, sessionId: string, itemId: string) => void;
+        toggleItemPurchased: (folderId: string, sessionId: string, itemId: string) => void;
+        updateCounts: (folderId: string, sessionId: string) => void;
+        complete: (folderId: string, sessionId: string) => void;
+        abandon: (folderId: string, sessionId: string) => void;
       };
       util: {
         waitForSync: () => Promise<void>;

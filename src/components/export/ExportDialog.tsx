@@ -79,7 +79,7 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
         <DialogHeader>
           <DialogTitle>Export Grocery Data</DialogTitle>
           <DialogDescription>
-            Export your grocery lists and templates to a JSON file for backup or transfer.
+            Export your grocery lists to a JSON file for backup or transfer.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,7 +137,7 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
           <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
             <div className="font-medium">What will be exported:</div>
             <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>All template items</li>
+              <li>All list items</li>
               <li>All sessions (active and completed)</li>
               <li>Session history and states</li>
             </ul>
