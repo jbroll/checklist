@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Check, Download, LayoutGrid, MoreVertical } from 'lucide-react';
+import { Check, Download, MoreVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -9,12 +9,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
-import type { Category, FolderNode, GroceriesAccount } from '@/schemas';
-import { CATEGORIES } from '@/schemas';
+import type { FolderNode, GroceriesAccount } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import { SessionZone } from './SessionZone';
-
-type ViewMode = 'flat' | 'grouped-in-zones' | 'zoned-in-groups';
 
 interface ShoppingSessionViewProps {
   folder: InstanceOfSchema<typeof FolderNode>;
@@ -24,33 +21,18 @@ interface ShoppingSessionViewProps {
 
 export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessionViewProps) {
   const { me } = useAccount<typeof GroceriesAccount>();
-  const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [zoneExpanded, setZoneExpanded] = useState({
     inventory: true,
     cart: true,
     completed: false,
   });
-  const [categoryExpanded, setCategoryExpanded] = useState<Record<string, boolean>>({});
   const [showExportDialog, setShowExportDialog] = useState(false);
-
-  const cycleViewMode = () => {
-    setViewMode((current) => {
-      if (current === 'flat') return 'grouped-in-zones';
-      if (current === 'grouped-in-zones') return 'zoned-in-groups';
-      return 'flat';
-    });
-  };
-
-  const getViewModeLabel = () => {
-    if (viewMode === 'flat') return 'Flat View';
-    if (viewMode === 'grouped-in-zones') return 'Grouped in Zones';
-    return 'Zoned in Groups';
-  };
 
   // Find session first (before any early returns)
   const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
   const items = folder.items || [];
-  const activeItems = items.filter((item) => item && !item.archived);
+  // Only show leaf items (not categories) in shopping sessions
+  const activeItems = items.filter((item) => item && !item.archived && item.type === 'item');
 
   // Partition items into three zones based on their state (must be called before early returns)
   const { inventoryItems, cartItems, completedItems } = useMemo(() => {
@@ -83,27 +65,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
       completedItems: completed,
     };
   }, [activeItems, session]);
-
-  // Group items by category for category-based views
-  const itemsByCategory = useMemo(() => {
-    const grouped: Record<Category, typeof activeItems> = {
-      produce: [],
-      dairy: [],
-      meat: [],
-      pantry: [],
-      frozen: [],
-      household: [],
-      bakery: [],
-      beverages: [],
-      other: [],
-    };
-
-    activeItems.forEach((item) => {
-      grouped[item.category].push(item);
-    });
-
-    return grouped;
-  }, [activeItems]);
 
   // Now handle early returns after hooks
   if (!me || !folder.sessions) {
@@ -163,6 +124,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             {session.name} <span className="text-neutral-500">· {folder.name}</span>
           </h1>
           <div className="flex items-center gap-2">
+            {/* TODO: Implement hierarchy view modes
             <button
               type="button"
               onClick={cycleViewMode}
@@ -172,6 +134,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
               <LayoutGrid className="h-4 w-4" />
               {getViewModeLabel()}
             </button>
+            */}
             <button
               type="button"
               onClick={handleFinishSession}
@@ -200,251 +163,48 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
           </div>
         </div>
 
-        {/* Content based on view mode */}
+        {/* Content: Simple flat zones view */}
         <div className="flex flex-col gap-4">
-          {viewMode === 'flat' && (
-            <>
-              {/* Flat View: Simple zones */}
-              <SessionZone
-                title="In Cart"
-                icon="🛒"
-                zone="cart"
-                items={cartItems}
-                itemStates={session.itemStates || {}}
-                expanded={zoneExpanded.cart}
-                onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, cart: !prev.cart }))}
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
-                count={cartItems.length}
-              />
-              <SessionZone
-                title="Completed"
-                icon="✅"
-                zone="completed"
-                items={completedItems}
-                itemStates={session.itemStates || {}}
-                expanded={zoneExpanded.completed}
-                onToggleExpand={() =>
-                  setZoneExpanded((prev) => ({ ...prev, completed: !prev.completed }))
-                }
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
-                count={completedItems.length}
-              />
-              <SessionZone
-                title="List Inventory"
-                icon="📦"
-                zone="inventory"
-                items={inventoryItems}
-                itemStates={session.itemStates || {}}
-                expanded={zoneExpanded.inventory}
-                onToggleExpand={() =>
-                  setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
-                }
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
-                count={inventoryItems.length}
-              />
-            </>
-          )}
-
-          {viewMode === 'grouped-in-zones' && (
-            <>
-              {/* Grouped in Zones: Each zone shows category groups */}
-              {['cart', 'completed', 'inventory'].map((zone) => {
-                const zoneItems =
-                  zone === 'cart'
-                    ? cartItems
-                    : zone === 'completed'
-                      ? completedItems
-                      : inventoryItems;
-                const zoneIcon = zone === 'cart' ? '🛒' : zone === 'completed' ? '✅' : '📦';
-                const zoneTitle =
-                  zone === 'cart'
-                    ? 'In Cart'
-                    : zone === 'completed'
-                      ? 'Completed'
-                      : 'List Inventory';
-
-                // Group zone items by category
-                const zoneByCategory: Record<Category, typeof zoneItems> = {
-                  produce: [],
-                  dairy: [],
-                  meat: [],
-                  pantry: [],
-                  frozen: [],
-                  household: [],
-                  bakery: [],
-                  beverages: [],
-                  other: [],
-                };
-                zoneItems.forEach((item) => {
-                  zoneByCategory[item.category].push(item);
-                });
-
-                const isZoneExpanded = zoneExpanded[zone as keyof typeof zoneExpanded];
-                // Total items = sum of all items in all categories (leaf count)
-                const totalItems = zoneItems.length;
-                return (
-                  <div key={zone}>
-                    <SessionZone
-                      title={zoneTitle}
-                      icon={zoneIcon}
-                      zone={zone as 'cart' | 'completed' | 'inventory'}
-                      items={[]}
-                      itemStates={{}}
-                      expanded={isZoneExpanded}
-                      onToggleExpand={() =>
-                        setZoneExpanded((prev) => ({
-                          ...prev,
-                          [zone]: !prev[zone as keyof typeof prev],
-                        }))
-                      }
-                      onToggleCart={handleToggleCart}
-                      onTogglePurchased={handleTogglePurchased}
-                      count={totalItems}
-                    >
-                      <div className="flex flex-col gap-2">
-                        {Object.entries(zoneByCategory).map(([category, items]) => {
-                          if (items.length === 0) return null;
-                          const catInfo = CATEGORIES[category as Category];
-                          const catKey = `${zone}-${category}`;
-                          return (
-                            <SessionZone
-                              key={category}
-                              title={catInfo.name}
-                              icon={catInfo.icon}
-                              zone={zone as 'cart' | 'completed' | 'inventory'}
-                              items={items}
-                              itemStates={session.itemStates || {}}
-                              expanded={categoryExpanded[catKey] ?? true}
-                              onToggleExpand={() =>
-                                setCategoryExpanded((prev) => ({
-                                  ...prev,
-                                  [catKey]: !prev[catKey],
-                                }))
-                              }
-                              onToggleCart={handleToggleCart}
-                              onTogglePurchased={handleTogglePurchased}
-                              count={items.length}
-                            />
-                          );
-                        })}
-                      </div>
-                    </SessionZone>
-                  </div>
-                );
-              })}
-            </>
-          )}
-
-          {viewMode === 'zoned-in-groups' && (
-            <>
-              {/* Zoned in Groups: Categories first, then zone status within each */}
-              {Object.entries(itemsByCategory).map(([category, items]) => {
-                if (items.length === 0) return null;
-                const catInfo = CATEGORIES[category as Category];
-
-                // Split items by zone
-                const catInventory = items.filter((item) => {
-                  const state = session.itemStates?.[item.$jazz.id];
-                  return !state || (!state.inCart && !state.purchased);
-                });
-                const catCart = items.filter((item) => {
-                  const state = session.itemStates?.[item.$jazz.id];
-                  return state?.inCart && !state.purchased;
-                });
-                const catCompleted = items.filter((item) => {
-                  const state = session.itemStates?.[item.$jazz.id];
-                  return state?.purchased;
-                });
-
-                // Total items = sum of items across all zones (leaf count)
-                const totalItems = catInventory.length + catCart.length + catCompleted.length;
-
-                return (
-                  <SessionZone
-                    key={category}
-                    title={catInfo.name}
-                    icon={catInfo.icon}
-                    zone="inventory"
-                    items={[]}
-                    itemStates={{}}
-                    expanded={categoryExpanded[`category-${category}`] ?? true}
-                    onToggleExpand={() =>
-                      setCategoryExpanded((prev) => ({
-                        ...prev,
-                        [`category-${category}`]: !prev[`category-${category}`],
-                      }))
-                    }
-                    onToggleCart={handleToggleCart}
-                    onTogglePurchased={handleTogglePurchased}
-                    count={totalItems}
-                  >
-                    <div className="flex flex-col gap-2">
-                      {catCart.length > 0 && (
-                        <SessionZone
-                          title="In Cart"
-                          icon="🛒"
-                          zone="cart"
-                          items={catCart}
-                          itemStates={session.itemStates || {}}
-                          expanded={categoryExpanded[`${category}-cart`] ?? true}
-                          onToggleExpand={() =>
-                            setCategoryExpanded((prev) => ({
-                              ...prev,
-                              [`${category}-cart`]: !prev[`${category}-cart`],
-                            }))
-                          }
-                          onToggleCart={handleToggleCart}
-                          onTogglePurchased={handleTogglePurchased}
-                          count={catCart.length}
-                        />
-                      )}
-                      {catCompleted.length > 0 && (
-                        <SessionZone
-                          title="Completed"
-                          icon="✅"
-                          zone="completed"
-                          items={catCompleted}
-                          itemStates={session.itemStates || {}}
-                          expanded={categoryExpanded[`${category}-completed`] ?? true}
-                          onToggleExpand={() =>
-                            setCategoryExpanded((prev) => ({
-                              ...prev,
-                              [`${category}-completed`]: !prev[`${category}-completed`],
-                            }))
-                          }
-                          onToggleCart={handleToggleCart}
-                          onTogglePurchased={handleTogglePurchased}
-                          count={catCompleted.length}
-                        />
-                      )}
-                      {catInventory.length > 0 && (
-                        <SessionZone
-                          title="List Inventory"
-                          icon="📦"
-                          zone="inventory"
-                          items={catInventory}
-                          itemStates={session.itemStates || {}}
-                          expanded={categoryExpanded[`${category}-inventory`] ?? true}
-                          onToggleExpand={() =>
-                            setCategoryExpanded((prev) => ({
-                              ...prev,
-                              [`${category}-inventory`]: !prev[`${category}-inventory`],
-                            }))
-                          }
-                          onToggleCart={handleToggleCart}
-                          onTogglePurchased={handleTogglePurchased}
-                          count={catInventory.length}
-                        />
-                      )}
-                    </div>
-                  </SessionZone>
-                );
-              })}
-            </>
-          )}
+          <SessionZone
+            title="In Cart"
+            icon="🛒"
+            zone="cart"
+            items={cartItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.cart}
+            onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, cart: !prev.cart }))}
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={cartItems.length}
+          />
+          <SessionZone
+            title="Completed"
+            icon="✅"
+            zone="completed"
+            items={completedItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.completed}
+            onToggleExpand={() =>
+              setZoneExpanded((prev) => ({ ...prev, completed: !prev.completed }))
+            }
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={completedItems.length}
+          />
+          <SessionZone
+            title="List Inventory"
+            icon="📦"
+            zone="inventory"
+            items={inventoryItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.inventory}
+            onToggleExpand={() =>
+              setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
+            }
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={inventoryItems.length}
+          />
         </div>
 
         {/* Export Dialog */}

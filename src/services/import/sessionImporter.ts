@@ -186,6 +186,7 @@ export function importSessionFromCsv(
         templateFolderId: folder.$jazz?.id || '',
         itemStates: itemStatesRecord,
         status,
+        viewMode: 'hierarchy-in-zones', // Default view mode
         categoryExpanded: {},
         inCartCount: totalInCart,
         completedCount: totalPurchased,

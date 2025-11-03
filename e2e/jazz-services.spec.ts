@@ -99,9 +99,9 @@ test.describe('Jazz Services - Item Operations', () => {
     const { folderId, itemIds } = await page.evaluate(() => {
       const folderId = window.__testServices!.folder.create('Grocery List', true);
       const itemIds = [
-        window.__testServices!.item.create(folderId, 'Milk', 'dairy'),
-        window.__testServices!.item.create(folderId, 'Bread', 'bakery'),
-        window.__testServices!.item.create(folderId, 'Apples', 'produce'),
+        window.__testServices!.item.createItem(folderId, 'Milk'),
+        window.__testServices!.item.createItem(folderId, 'Bread'),
+        window.__testServices!.item.createItem(folderId, 'Apples'),
       ];
       return { folderId, itemIds };
     });
@@ -122,7 +122,7 @@ test.describe('Jazz Services - Item Operations', () => {
   test('should rename an item', async ({ page }) => {
     const { folderId, itemId } = await page.evaluate(() => {
       const folderId = window.__testServices!.folder.create('List', true);
-      const itemId = window.__testServices!.item.create(folderId, 'Old Name', 'other');
+      const itemId = window.__testServices!.item.createItem(folderId, 'Old Name');
       return { folderId, itemId };
     });
 
@@ -140,7 +140,7 @@ test.describe('Jazz Services - Item Operations', () => {
   test('should archive an item', async ({ page }) => {
     const { folderId, itemId } = await page.evaluate(() => {
       const folderId = window.__testServices!.folder.create('List', true);
-      const itemId = window.__testServices!.item.create(folderId, 'To Archive', 'other');
+      const itemId = window.__testServices!.item.createItem(folderId, 'To Archive');
       return { folderId, itemId };
     });
 
@@ -163,22 +163,22 @@ test.describe('Jazz Services - Item Operations', () => {
     expect(item.archived).toBe(true);
   });
 
-  test('should update item category', async ({ page }) => {
+  test('should update item icon', async ({ page }) => {
     const { folderId, itemId } = await page.evaluate(() => {
       const folderId = window.__testServices!.folder.create('List', true);
-      const itemId = window.__testServices!.item.create(folderId, 'Milk', 'other');
+      const itemId = window.__testServices!.item.createItem(folderId, 'Milk');
       return { folderId, itemId };
     });
 
     await page.evaluate(({ folderId, itemId }) => {
-      window.__testServices!.item.updateCategory(folderId, itemId, 'dairy');
+      window.__testServices!.item.updateIcon(folderId, itemId, '🥛');
     }, { folderId, itemId });
 
     const item = await page.evaluate(({ folderId, itemId }) => {
       return window.__testServices!.item.get(folderId, itemId);
     }, { folderId, itemId });
 
-    expect(item.category).toBe('dairy');
+    expect(item.icon).toBe('🥛');
   });
 });
 
@@ -193,8 +193,8 @@ test.describe('Jazz Services - Data Persistence', () => {
   test('should verify data exists in Jazz database', async ({ page }) => {
     const folderId = await page.evaluate(() => {
       const folderId = window.__testServices!.folder.create('Database Test', true);
-      window.__testServices!.item.create(folderId, 'Item 1', 'dairy');
-      window.__testServices!.item.create(folderId, 'Item 2', 'bakery');
+      window.__testServices!.item.createItem(folderId, 'Item 1');
+      window.__testServices!.item.createItem(folderId, 'Item 2');
       return folderId;
     });
 
@@ -232,11 +232,11 @@ test.describe('Jazz Services - Import/Export', () => {
     // Create test data
     await page.evaluate(() => {
       const folder1 = window.__testServices!.folder.create('Export Test 1', true);
-      window.__testServices!.item.create(folder1, 'Milk', 'dairy');
-      window.__testServices!.item.create(folder1, 'Bread', 'bakery');
+      window.__testServices!.item.createItem(folder1, 'Milk');
+      window.__testServices!.item.createItem(folder1, 'Bread');
 
       const folder2 = window.__testServices!.folder.create('Export Test 2', true);
-      window.__testServices!.item.create(folder2, 'Apples', 'produce');
+      window.__testServices!.item.createItem(folder2, 'Apples');
     });
 
     await page.evaluate(() => window.__testServices!.util.waitForSync());

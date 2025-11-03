@@ -6,13 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type {
-  Category,
-  FolderNode,
-  GroceriesAccount,
-  ShoppingSession,
-  TemplateItem,
-} from '../schemas';
+import type { FolderNode, GroceriesAccount, ShoppingSession, TemplateItem } from '../schemas';
 import * as ExportService from './export/exportService';
 import * as FolderService from './folderService';
 import { importJson } from './import/jsonImporter';
@@ -56,9 +50,25 @@ export function exposeServicesToWindow(
 
     // Item operations
     item: {
-      create: (folderId: string, name: string, category: Category, defaultQuantity?: string) =>
+      createItem: (
+        folderId: string,
+        name: string,
+        parentPath?: string,
+        defaultQuantity?: string,
+        icon?: string,
+      ) =>
         withAccount((acc) =>
-          ItemService.createItem(acc, folderId, name, category, defaultQuantity),
+          ItemService.createItem(acc, folderId, name, parentPath, defaultQuantity, icon),
+        ),
+      createCategory: (
+        folderId: string,
+        name: string,
+        parentPath?: string,
+        icon?: string,
+        color?: string,
+      ) =>
+        withAccount((acc) =>
+          ItemService.createCategory(acc, folderId, name, parentPath, icon, color),
         ),
       get: (folderId: string, itemId: string) =>
         withAccount((acc) => ItemService.getItem(acc, folderId, itemId)),
@@ -67,8 +77,10 @@ export function exposeServicesToWindow(
         withAccount((acc) => ItemService.renameItem(acc, folderId, itemId, newName)),
       archive: (folderId: string, itemId: string) =>
         withAccount((acc) => ItemService.archiveItem(acc, folderId, itemId)),
-      updateCategory: (folderId: string, itemId: string, category: Category) =>
-        withAccount((acc) => ItemService.updateItemCategory(acc, folderId, itemId, category)),
+      updateIcon: (folderId: string, itemId: string, icon: string) =>
+        withAccount((acc) => ItemService.updateItemIcon(acc, folderId, itemId, icon)),
+      updateColor: (folderId: string, itemId: string, color: string) =>
+        withAccount((acc) => ItemService.updateItemColor(acc, folderId, itemId, color)),
     },
 
     // Export operations
@@ -135,17 +147,26 @@ declare global {
         exists: (folderId: string) => boolean;
       };
       item: {
-        create: (
+        createItem: (
           folderId: string,
           name: string,
-          category: Category,
+          parentPath?: string,
           defaultQuantity?: string,
+          icon?: string,
+        ) => string;
+        createCategory: (
+          folderId: string,
+          name: string,
+          parentPath?: string,
+          icon?: string,
+          color?: string,
         ) => string;
         get: (folderId: string, itemId: string) => InstanceOfSchema<typeof TemplateItem> | null;
         getAll: (folderId: string) => Array<InstanceOfSchema<typeof TemplateItem>>;
         rename: (folderId: string, itemId: string, newName: string) => void;
         archive: (folderId: string, itemId: string) => void;
-        updateCategory: (folderId: string, itemId: string, category: Category) => void;
+        updateIcon: (folderId: string, itemId: string, icon: string) => void;
+        updateColor: (folderId: string, itemId: string, color: string) => void;
       };
       export: {
         toJson: () => string;

@@ -4,8 +4,6 @@
  * These interfaces define the structure for exporting grocery list data.
  */
 
-import type { Category } from '../../schemas';
-
 /**
  * Main export data structure
  *
@@ -49,17 +47,25 @@ export interface ExportedFolder {
 /**
  * Exported template item
  *
- * Represents a reusable grocery item in a template folder.
+ * Represents a reusable grocery item or category in a template folder.
  */
 export interface ExportedTemplateItem {
   /** Item name */
   name: string;
-  /** Item category */
-  category: Category;
+  /** Item type: 'category' (folder) or 'item' (leaf) */
+  type: 'category' | 'item';
+  /** Hierarchical path (e.g., "produce/fruits/apples") */
+  path: string;
+  /** Whether the category is expanded in the UI (categories only) */
+  expanded?: boolean;
   /** Sort order within the template list */
   sortOrder: number;
-  /** Default quantity for the item (empty string if not set) */
+  /** Default quantity for the item (items only) */
   defaultQuantity?: string;
+  /** Icon emoji */
+  icon: string;
+  /** Color hex code */
+  color: string;
   /** ISO 8601 timestamp when item was created */
   createdAt: string;
   /** ISO 8601 timestamp when item was last updated */
@@ -76,6 +82,8 @@ export interface ExportedSession {
   name: string;
   /** Session status */
   status: 'active' | 'completed' | 'abandoned';
+  /** View mode for displaying items */
+  viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat';
   /** Map of template item IDs to their shopping state */
   itemStates: Record<string, ExportedItemState>;
   /** ISO 8601 timestamp when session started */

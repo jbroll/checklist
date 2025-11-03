@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CATEGORIES, type FolderNode, type GroceriesAccount } from '../../schemas';
+import type { FolderNode, GroceriesAccount } from '../../schemas';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
@@ -199,10 +199,13 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
   if (!typedItem.name || typeof typedItem.name !== 'string') {
     errors.push(`${itemPrefix}: Missing or invalid "name"`);
   }
-  if (!typedItem.category || typeof typedItem.category !== 'string') {
-    errors.push(`${itemPrefix}: Missing or invalid "category"`);
-  } else if (!isValidCategory(typedItem.category)) {
-    errors.push(`${itemPrefix}: Invalid category "${typedItem.category}"`);
+  if (!typedItem.type || typeof typedItem.type !== 'string') {
+    errors.push(`${itemPrefix}: Missing or invalid "type"`);
+  } else if (typedItem.type !== 'category' && typedItem.type !== 'item') {
+    errors.push(`${itemPrefix}: Invalid type "${typedItem.type}". Must be "category" or "item"`);
+  }
+  if (!typedItem.path || typeof typedItem.path !== 'string') {
+    errors.push(`${itemPrefix}: Missing or invalid "path"`);
   }
   if (typeof typedItem.sortOrder !== 'number') {
     errors.push(`${itemPrefix}: Missing or invalid "sortOrder"`);
@@ -267,16 +270,6 @@ function validateSession(session: unknown, index: number, prefix: string): strin
 function isValidISODate(dateString: string): boolean {
   const date = new Date(dateString);
   return !Number.isNaN(date.getTime());
-}
-
-/**
- * Check if a category is valid
- *
- * @param category - Category string to validate
- * @returns true if category exists in CATEGORIES
- */
-function isValidCategory(category: string): boolean {
-  return category in CATEGORIES;
 }
 
 /**

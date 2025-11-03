@@ -12,26 +12,31 @@ export function setGroceriesAccountReference(account: any) {
 }
 
 /**
- * TemplateItem - Clean grocery item without shopping state
- * These are reusable template items that live in a template folder.
+ * TemplateItem - Hierarchical category or item node
+ *
+ * Templates now support hierarchical organization using path-based structure.
+ * Categories are just TemplateItems with type='category'.
  * Shopping state is tracked separately in ShoppingSession.
+ *
+ * Examples:
+ * - { type: 'category', path: 'produce', name: 'Produce' }
+ * - { type: 'category', path: 'produce/fruits', name: 'Fruits' }
+ * - { type: 'item', path: 'produce/fruits/apples', name: 'Apples' }
  */
 export const TemplateItem = co.map({
   name: z.string(),
-  category: z.literal([
-    'produce',
-    'dairy',
-    'meat',
-    'pantry',
-    'frozen',
-    'household',
-    'bakery',
-    'beverages',
-    'other',
-  ] as const),
+  type: z.enum(['category', 'item']), // category = folder node, item = leaf node
+  path: z.string(), // Hierarchical path like FolderNode: "produce/fruits/apples"
+  expanded: z.boolean(), // For category nodes - UI state
   sortOrder: z.number(),
   archived: z.boolean(), // Soft delete flag - never hard delete items
+
+  // Item-specific fields (empty/ignored for categories)
   defaultQuantity: z.string(), // Default quantity for the item
+
+  // Optional customization per template
+  icon: z.string(), // Emoji or icon identifier
+  color: z.string(), // Hex color for UI
 
   // References
   get addedBy() {
@@ -81,8 +86,14 @@ export const ShoppingSession = co.map({
   // Session status
   status: z.enum(['active', 'completed', 'abandoned']),
 
-  // UI state - which categories are expanded
+  // UI state - which categories are expanded (by path or ID)
   categoryExpanded: co.record(z.string(), z.boolean()),
+
+  // UI state - view mode preference
+  // - 'zone-in-hierarchy': Shows category hierarchy with zones nested inside
+  // - 'hierarchy-in-zones': Shows zones with category hierarchy inside each zone
+  // - 'flat': Simple list grouped by zone only
+  viewMode: z.enum(['zone-in-hierarchy', 'hierarchy-in-zones', 'flat']),
 
   // Cached counts for UI performance
   inCartCount: z.number(),

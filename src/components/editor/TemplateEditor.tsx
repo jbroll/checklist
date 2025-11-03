@@ -13,12 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
-import type { Category, GroceriesAccount } from '@/schemas';
+import type { GroceriesAccount } from '@/schemas';
 import * as FolderService from '@/services/folderService';
-import * as ItemService from '@/services/itemService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
-import { AddItemDialog } from './AddItemDialog';
+import { TemplateItemsView } from './TemplateItemsView';
 
 interface TemplateEditorProps {
   onSignOut?: () => void;
@@ -28,7 +27,6 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const { me } = useAccount<typeof GroceriesAccount>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
-  const [showAddItem, setShowAddItem] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
@@ -38,6 +36,9 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   // Navigation state for shopping session view
   const [activeSessionFolderId, setActiveSessionFolderId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // Navigation state for template editing view
+  const [activeEditFolderId, setActiveEditFolderId] = useState<string | null>(null);
 
   if (!me) {
     return (
@@ -63,14 +64,6 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     FolderService.createFolder(me, name, isTemplate, parentPath);
   };
 
-  const handleAddItem = (name: string, category: Category, defaultQuantity?: string) => {
-    if (!selectedNodeId) return;
-
-    // Use item service to create item with proper Jazz CoList mutation
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createItem(me, selectedNodeId, name, category, defaultQuantity);
-  };
-
   const handleUseTemplate = () => {
     if (!selectedNodeId) return;
 
@@ -86,17 +79,17 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const handleEditTemplate = () => {
     if (!selectedNodeId) return;
 
-    // Expand the folder to show sessions and allow editing
-    const folder = nodes.find((n) => n?.$jazz.id === selectedNodeId);
-    if (folder) {
-      folder.$jazz.set('expanded', true);
-      folder.$jazz.set('updatedAt', new Date());
-    }
+    // Navigate to template editing view
+    setActiveEditFolderId(selectedNodeId);
   };
 
   const handleBackToTemplates = () => {
     setActiveSessionFolderId(null);
     setActiveSessionId(null);
+  };
+
+  const handleBackFromEdit = () => {
+    setActiveEditFolderId(null);
   };
 
   const handleNodeSelect = (nodeId: string) => {
@@ -117,6 +110,20 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const canCreateFolderOrList = !selectedNodeId || isFolder;
   // Edit List/Use List: enabled only when a template is selected
   const canEditOrUse = selectedNodeId && isTemplate;
+
+  // If editing a template, show TemplateItemsView
+  if (activeEditFolderId) {
+    const editFolder = nodes.find((n) => n?.$jazz.id === activeEditFolderId);
+    if (editFolder) {
+      return (
+        <TemplateItemsView
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          folder={editFolder}
+          onBack={handleBackFromEdit}
+        />
+      );
+    }
+  }
 
   // If viewing a shopping session, show ShoppingSessionView
   if (activeSessionFolderId && activeSessionId) {
@@ -221,6 +228,8 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           account={me}
           selectedNodeId={selectedNodeId}
           onNodeSelect={handleNodeSelect}
+          onUseTemplate={handleUseTemplate}
+          onEditTemplate={handleEditTemplate}
           onOpenSession={(folderId, sessionId) => {
             setActiveSessionFolderId(folderId);
             setActiveSessionId(sessionId);
@@ -240,13 +249,6 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           defaultIsTemplate={true}
           title="New List"
           description="Create a new list folder for frequently purchased items."
-        />
-
-        <AddItemDialog
-          open={showAddItem}
-          onOpenChange={setShowAddItem}
-          onAdd={handleAddItem}
-          folderName={selectedNode?.name ?? ''}
         />
 
         {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}

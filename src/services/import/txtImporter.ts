@@ -6,8 +6,9 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { FolderNode, GroceriesAccount } from '../../schemas';
-import { autoCategorize, TemplateItem } from '../../schemas';
+import { TemplateItem } from '../../schemas';
 import { parseTextList } from '../../utils/csvParser';
+import { normalizePathSegment } from '../../utils/pathUtils';
 
 export interface TxtImportResult {
   imported: number;
@@ -20,6 +21,9 @@ export interface TxtImportResult {
  * Import template items from plain text
  *
  * Format: One item name per line
+ *
+ * All imported items are created as leaf items (type='item').
+ * Items are created at top level with path generated from name.
  *
  * @param textContent - Plain text content
  * @param folder - Folder to import items into
@@ -46,12 +50,12 @@ export function importItemsFromText(
     return result;
   }
 
-  // Get existing item names (case-insensitive)
-  const existingNames = new Set<string>();
+  // Get existing item paths (case-insensitive)
+  const existingPaths = new Set<string>();
   if (folder.items) {
     for (const item of folder.items) {
       if (item && !item.archived) {
-        existingNames.add(item.name.toLowerCase());
+        existingPaths.add(item.path.toLowerCase());
       }
     }
   }
@@ -68,25 +72,29 @@ export function importItemsFromText(
 
   // Import each item
   for (const name of itemNames) {
-    // Skip if already exists
-    if (existingNames.has(name.toLowerCase())) {
+    // Generate path from name
+    const path = normalizePathSegment(name);
+
+    // Skip if already exists at this path
+    if (existingPaths.has(path.toLowerCase())) {
       result.skipped++;
       result.duplicates.push(name);
       continue;
     }
 
     try {
-      // Auto-categorize based on name
-      const category = autoCategorize(name);
-
-      // Create new template item
+      // Create new template item (always type='item' for text imports)
       const newItem = TemplateItem.create(
         {
           name,
-          category,
+          type: 'item',
+          path,
+          expanded: false,
           sortOrder: nextSortOrder++,
           archived: false,
           defaultQuantity: '',
+          icon: '📦',
+          color: '#6b7280',
           addedBy: account,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -98,8 +106,8 @@ export function importItemsFromText(
       folder.items?.$jazz.push(newItem);
       result.imported++;
 
-      // Add to existing names to prevent duplicates within import
-      existingNames.add(name.toLowerCase());
+      // Add to existing paths to prevent duplicates within import
+      existingPaths.add(path.toLowerCase());
     } catch (error) {
       result.errors.push(`Failed to import "${name}": ${String(error)}`);
     }

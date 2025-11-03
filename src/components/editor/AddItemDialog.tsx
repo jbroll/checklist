@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
 import {
   Dialog,
@@ -8,43 +9,72 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { autoCategorize, CATEGORIES, type Category } from '@/schemas';
+import type { TemplateItem } from '@/schemas';
 
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (name: string, category: Category, defaultQuantity?: string) => void;
+  onAddItem: (name: string, parentPath?: string, defaultQuantity?: string, icon?: string) => void;
+  onAddCategory: (name: string, parentPath?: string, icon?: string, color?: string) => void;
   folderName?: string;
+  // Available categories to select as parent
+  categories?: readonly (InstanceOfSchema<typeof TemplateItem> | null)[];
 }
 
-export function AddItemDialog({ open, onOpenChange, onAdd, folderName }: AddItemDialogProps) {
-  const [itemName, setItemName] = useState('');
-  const [category, setCategory] = useState<Category>('other');
+export function AddItemDialog({
+  open,
+  onOpenChange,
+  onAddItem,
+  onAddCategory,
+  folderName,
+  categories = [],
+}: AddItemDialogProps) {
+  const [itemType, setItemType] = useState<'item' | 'category'>('item');
+  const [name, setName] = useState('');
+  const [parentPath, setParentPath] = useState<string>('');
   const [defaultQuantity, setDefaultQuantity] = useState('');
+  const [icon, setIcon] = useState('');
+  const [color, setColor] = useState('#6b7280');
 
-  const handleItemNameChange = (name: string) => {
-    setItemName(name);
-    // Auto-categorize as user types
-    if (name.trim()) {
-      setCategory(autoCategorize(name));
-    }
-  };
+  // Filter valid categories
+  const validCategories = categories.filter((cat): cat is InstanceOfSchema<typeof TemplateItem> => {
+    return cat !== null && !cat.archived && cat.type === 'category';
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (itemName.trim()) {
-      onAdd(itemName.trim(), category, defaultQuantity.trim() || undefined);
-      setItemName('');
-      setCategory('other');
-      setDefaultQuantity('');
+    if (name.trim()) {
+      if (itemType === 'item') {
+        onAddItem(
+          name.trim(),
+          parentPath || undefined,
+          defaultQuantity.trim() || undefined,
+          icon.trim() || undefined,
+        );
+      } else {
+        onAddCategory(
+          name.trim(),
+          parentPath || undefined,
+          icon.trim() || undefined,
+          color || undefined,
+        );
+      }
+      handleReset();
       onOpenChange(false);
     }
   };
 
-  const handleCancel = () => {
-    setItemName('');
-    setCategory('other');
+  const handleReset = () => {
+    setName('');
+    setParentPath('');
     setDefaultQuantity('');
+    setIcon('');
+    setColor('#6b7280');
+    setItemType('item');
+  };
+
+  const handleCancel = () => {
+    handleReset();
     onOpenChange(false);
   };
 
@@ -52,55 +82,131 @@ export function AddItemDialog({ open, onOpenChange, onAdd, folderName }: AddItem
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Template Item</DialogTitle>
+          <DialogTitle>Add {itemType === 'item' ? 'Item' : 'Category'}</DialogTitle>
           <DialogDescription>
-            {folderName ? `Add an item to "${folderName}"` : 'Add a new item to your templates'}
+            {folderName
+              ? `Add a ${itemType} to "${folderName}"`
+              : `Add a new ${itemType} to your template`}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* Type Toggle */}
             <div className="grid gap-2">
-              <Label htmlFor="item-name">Item Name</Label>
+              <Label>Type</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setItemType('item')}
+                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    itemType === 'item'
+                      ? 'border-green-600 bg-green-50 text-green-700'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                  }`}
+                >
+                  Item
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemType('category')}
+                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    itemType === 'category'
+                      ? 'border-green-600 bg-green-50 text-green-700'
+                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                  }`}
+                >
+                  Category
+                </button>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
               <input
-                id="item-name"
+                id="name"
                 type="text"
-                value={itemName}
-                onChange={(e) => handleItemNameChange(e.target.value)}
-                placeholder="e.g., Milk, Bananas, Bread"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={
+                  itemType === 'item' ? 'e.g., Apples, Milk, Bread' : 'e.g., Produce, Dairy'
+                }
                 className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                autoFocus
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
-              <select
-                id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-              >
-                {(Object.keys(CATEGORIES) as Category[]).map((cat) => (
-                  <option key={cat} value={cat}>
-                    {CATEGORIES[cat].icon} {CATEGORIES[cat].name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-neutral-500">
-                Category is auto-detected but you can change it
-              </p>
-            </div>
+            {/* Parent Category */}
+            {validCategories.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="parent">Parent Category (Optional)</Label>
+                <select
+                  id="parent"
+                  value={parentPath}
+                  onChange={(e) => setParentPath(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                >
+                  <option value="">-- None (Top Level) --</option>
+                  {validCategories.map((cat) => (
+                    <option key={cat.$jazz.id} value={cat.path}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
+            {/* Icon */}
             <div className="grid gap-2">
-              <Label htmlFor="default-quantity">Default Quantity (Optional)</Label>
+              <Label htmlFor="icon">Icon (Optional)</Label>
               <input
-                id="default-quantity"
+                id="icon"
                 type="text"
-                value={defaultQuantity}
-                onChange={(e) => setDefaultQuantity(e.target.value)}
-                placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
+                value={icon}
+                onChange={(e) => setIcon(e.target.value)}
+                placeholder="e.g., 🍎, 🥛, 📦"
                 className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                maxLength={4}
               />
             </div>
+
+            {/* Item-specific: Default Quantity */}
+            {itemType === 'item' && (
+              <div className="grid gap-2">
+                <Label htmlFor="default-quantity">Default Quantity (Optional)</Label>
+                <input
+                  id="default-quantity"
+                  type="text"
+                  value={defaultQuantity}
+                  onChange={(e) => setDefaultQuantity(e.target.value)}
+                  placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
+                  className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                />
+              </div>
+            )}
+
+            {/* Category-specific: Color */}
+            {itemType === 'category' && (
+              <div className="grid gap-2">
+                <Label htmlFor="color">Color (Optional)</Label>
+                <div className="flex gap-2">
+                  <input
+                    id="color"
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="h-10 w-16 rounded-md border border-neutral-300 bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    placeholder="#6b7280"
+                    className="flex h-10 flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -113,10 +219,10 @@ export function AddItemDialog({ open, onOpenChange, onAdd, folderName }: AddItem
             </button>
             <button
               type="submit"
-              disabled={!itemName.trim()}
+              disabled={!name.trim()}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add Item
+              Add {itemType === 'item' ? 'Item' : 'Category'}
             </button>
           </DialogFooter>
         </form>

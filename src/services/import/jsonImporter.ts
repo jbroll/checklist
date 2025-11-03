@@ -219,10 +219,14 @@ async function importTemplateFolder(
       const item = TemplateItem.create(
         {
           name: exportedItem.name,
-          category: exportedItem.category,
+          type: exportedItem.type,
+          path: exportedItem.path,
+          expanded: exportedItem.expanded ?? false,
           sortOrder: exportedItem.sortOrder,
           archived: false,
-          defaultQuantity: exportedItem.defaultQuantity || '', // Use empty string if not present
+          defaultQuantity: exportedItem.defaultQuantity || '',
+          icon: exportedItem.icon || '📦',
+          color: exportedItem.color || '#6b7280',
           addedBy: account,
           createdAt: new Date(exportedItem.createdAt),
           updatedAt: new Date(exportedItem.updatedAt),
@@ -351,6 +355,7 @@ function importSession(
       templateFolderId,
       itemStates, // Already a Record of ItemStates
       status: exportedSession.status,
+      viewMode: exportedSession.viewMode || 'hierarchy-in-zones', // Default if not present
       categoryExpanded: {}, // Reset UI state - empty record
       inCartCount,
       completedCount,

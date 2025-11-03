@@ -1,7 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useAccount } from '@/lib/jazz';
 import type { GroceriesAccount } from '@/schemas';
-import { CATEGORIES } from '@/schemas';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 
 interface ShoppingSessionItemRowProps {
@@ -23,7 +22,9 @@ export function ShoppingSessionItemRow({
 
   if (!me) return null;
 
-  const categoryInfo = CATEGORIES[item.category];
+  // Only leaf items should be shown in shopping sessions
+  if (item.type === 'category') return null;
+
   const inCart = state?.inCart || false;
   const purchased = state?.purchased || false;
 
@@ -54,13 +55,16 @@ export function ShoppingSessionItemRow({
         )}
       </button>
 
-      {/* Item name with category icon */}
+      {/* Item name with icon */}
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{categoryInfo.icon}</span>
+          <span className="text-lg">{item.icon || '📦'}</span>
           <span className={`text-neutral-900 ${purchased ? 'line-through opacity-50' : ''}`}>
             {item.name}
           </span>
+          {item.defaultQuantity && (
+            <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
+          )}
         </div>
       </div>
 

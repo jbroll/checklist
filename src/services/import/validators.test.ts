@@ -187,8 +187,12 @@ describe('validators', () => {
             items: [
               {
                 name: 'Apple',
-                category: 'produce',
+                type: 'item',
+                path: 'apple',
+                expanded: false,
                 sortOrder: 0,
+                icon: '🍎',
+                color: '#ff0000',
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },
@@ -204,7 +208,7 @@ describe('validators', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should reject item with invalid category', () => {
+    it('should reject item with invalid type', () => {
       const account = createMockAccount();
       const invalidData = {
         version: '1.0',
@@ -215,11 +219,18 @@ describe('validators', () => {
             name: 'Test',
             type: 'template-folder',
             path: '/test',
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
               {
                 name: 'Item',
-                category: 'invalid-category',
+                type: 'invalid-type',
+                path: 'item',
                 sortOrder: 0,
+                icon: '📦',
+                color: '#000000',
+                createdAt: '2024-11-01T00:00:00.000Z',
+                updatedAt: '2024-11-01T00:00:00.000Z',
               },
             ],
             sessions: [],
@@ -230,7 +241,7 @@ describe('validators', () => {
       const result = validateJsonData(invalidData, account);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some((err) => err.includes('category'))).toBe(true);
+      expect(result.errors.some((err) => err.includes('type'))).toBe(true);
     });
 
     it('should accept optional defaultQuantity field', () => {
@@ -249,9 +260,13 @@ describe('validators', () => {
             items: [
               {
                 name: 'Item',
-                category: 'produce',
+                type: 'item',
+                path: 'item',
+                expanded: false,
                 sortOrder: 0,
                 defaultQuantity: '2 lbs',
+                icon: '📦',
+                color: '#6b7280',
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },

@@ -21,7 +21,7 @@ function escapeCsvField(value: string): string {
 /**
  * Export template items to CSV format
  *
- * Format: name,category,sortOrder,defaultQuantity
+ * Format: name,defaultQuantity,icon,path
  *
  * @param folder - Folder to export items from
  * @returns CSV string with header row
@@ -30,15 +30,15 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
   const lines: string[] = [];
 
   // Header row
-  lines.push('name,category,sortOrder,defaultQuantity');
+  lines.push('name,defaultQuantity,icon,path');
 
   if (!folder.items || folder.items.length === 0) {
     return lines.join('\n');
   }
 
-  // Get non-archived items, sorted by sortOrder
+  // Get non-archived leaf items (not categories), sorted by sortOrder
   const items = Array.from(folder.items)
-    .filter((item) => item && !item.archived)
+    .filter((item) => item && !item.archived && item.type === 'item')
     .sort((a, b) => {
       if (!a || !b) return 0;
       return a.sortOrder - b.sortOrder;
@@ -49,11 +49,11 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
     if (!item) continue;
 
     const name = escapeCsvField(item.name);
-    const category = item.category;
-    const sortOrder = item.sortOrder.toString();
-    const defaultQuantity = item.defaultQuantity || '';
+    const defaultQuantity = escapeCsvField(item.defaultQuantity || '');
+    const icon = escapeCsvField(item.icon || '📦');
+    const path = escapeCsvField(item.path);
 
-    lines.push(`${name},${category},${sortOrder},${defaultQuantity}`);
+    lines.push(`${name},${defaultQuantity},${icon},${path}`);
   }
 
   return lines.join('\n');
@@ -62,7 +62,7 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
 /**
  * Export session to CSV format
  *
- * Format: name,category,inCart,purchased,addedToCartAt,purchasedAt
+ * Format: name,path,icon,inCart,purchased,addedToCartAt,purchasedAt
  *
  * @param folder - Folder containing the session
  * @param sessionId - ID of the session to export
@@ -84,15 +84,15 @@ export function exportSessionToCsv(
   const lines: string[] = [];
 
   // Header row
-  lines.push('name,category,inCart,purchased,addedToCartAt,purchasedAt');
+  lines.push('name,path,icon,inCart,purchased,addedToCartAt,purchasedAt');
 
   if (!folder.items) {
     return lines.join('\n');
   }
 
-  // Get all items from the template, sorted by sortOrder
+  // Get all leaf items (not categories) from the template, sorted by sortOrder
   const items = Array.from(folder.items)
-    .filter((item) => item && !item.archived)
+    .filter((item) => item && !item.archived && item.type === 'item')
     .sort((a, b) => {
       if (!a || !b) return 0;
       return a.sortOrder - b.sortOrder;
@@ -106,13 +106,14 @@ export function exportSessionToCsv(
     const itemState = session.itemStates?.[itemId];
 
     const name = escapeCsvField(item.name);
-    const category = item.category;
+    const path = escapeCsvField(item.path);
+    const icon = escapeCsvField(item.icon || '📦');
     const inCart = itemState?.inCart ? 'true' : 'false';
     const purchased = itemState?.purchased ? 'true' : 'false';
     const addedToCartAt = itemState?.addedToCartAt?.toISOString() || '';
     const purchasedAt = itemState?.purchasedAt?.toISOString() || '';
 
-    lines.push(`${name},${category},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
+    lines.push(`${name},${path},${icon},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
   }
 
   return lines.join('\n');

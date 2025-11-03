@@ -49,6 +49,7 @@ export function createSession(
       itemStates: {},
       status: 'active',
       categoryExpanded: {},
+      viewMode: 'hierarchy-in-zones', // Default view mode
       inCartCount: 0,
       completedCount: 0,
       remainingCount,

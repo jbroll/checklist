@@ -17,6 +17,7 @@ import { getParentPath } from '@/utils/pathUtils';
 import { buildTreeStructure, type TreeNode } from '@/utils/treeHelpers';
 import { FolderNodeView } from './FolderNodeView';
 import { SessionRowView } from './SessionRowView';
+import { TemplateItemView } from './TemplateItemView';
 
 interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
@@ -79,6 +80,26 @@ export function TreeView({
         // Soft delete by setting status to abandoned
         session.$jazz.set('status', 'abandoned');
         session.$jazz.set('lastActivityAt', new Date());
+      }
+    }
+  };
+
+  const handleRenameItem = (nodeId: string, itemId: string, newName: string) => {
+    const node = nodes.find((n) => n?.$jazz.id === nodeId);
+    if (node?.items) {
+      const item = node.items.find((i) => i?.$jazz.id === itemId);
+      if (item) {
+        item.$jazz.set('name', newName);
+      }
+    }
+  };
+
+  const handleDeleteItem = (nodeId: string, itemId: string) => {
+    const node = nodes.find((n) => n?.$jazz.id === nodeId);
+    if (node?.items) {
+      const item = node.items.find((i) => i?.$jazz.id === itemId);
+      if (item) {
+        item.$jazz.set('archived', true);
       }
     }
   };
@@ -210,8 +231,12 @@ export function TreeView({
     const sessions = node.sessions || [];
     const activeSessions = sessions.filter((s) => s && s.status !== 'abandoned');
 
-    // A node has children if it has child folders/templates OR sessions
-    const hasChildren = children.length > 0 || activeSessions.length > 0;
+    // Show items under template folders
+    const items = node.items || [];
+    const activeItems = items.filter((i) => i && !i.archived);
+
+    // A node has children if it has child folders/templates OR sessions OR items
+    const hasChildren = children.length > 0 || activeSessions.length > 0 || activeItems.length > 0;
 
     return (
       <FolderNodeView
@@ -231,6 +256,17 @@ export function TreeView({
         {/* Render children only when expanded */}
         {node.expanded && (
           <>
+            {/* Render template items for template folders */}
+            {node.type === 'template-folder' &&
+              activeItems.map((item) => (
+                <TemplateItemView
+                  key={item.$jazz.id}
+                  item={item}
+                  level={level + 1}
+                  onRename={(itemId, newName) => handleRenameItem(node.$jazz.id, itemId, newName)}
+                  onDelete={(itemId) => handleDeleteItem(node.$jazz.id, itemId)}
+                />
+              ))}
             {/* Render sessions for template folders */}
             {activeSessions.map((session) => (
               <SessionRowView

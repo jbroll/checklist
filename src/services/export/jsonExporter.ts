@@ -101,16 +101,16 @@ function exportTemplateItems(
 
     const exportedItem: ExportedTemplateItem = {
       name: item.name,
-      category: item.category,
+      type: item.type,
+      path: item.path,
+      expanded: item.expanded,
       sortOrder: item.sortOrder,
+      defaultQuantity: item.defaultQuantity,
+      icon: item.icon,
+      color: item.color,
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     };
-
-    // Include defaultQuantity only if it's not empty
-    if (item.defaultQuantity && item.defaultQuantity !== '') {
-      exportedItem.defaultQuantity = item.defaultQuantity;
-    }
 
     exportedItems.push(exportedItem);
   }
@@ -152,6 +152,7 @@ function exportSessions(
     const exportedSession: ExportedSession = {
       name: session.name,
       status: session.status,
+      viewMode: session.viewMode,
       itemStates,
       startedAt: session.startedAt.toISOString(),
       lastActivityAt: session.lastActivityAt.toISOString(),

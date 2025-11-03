@@ -6,8 +6,9 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { FolderNode, GroceriesAccount } from '../../schemas';
-import { autoCategorize, type Category, TemplateItem } from '../../schemas';
+import { TemplateItem } from '../../schemas';
 import { parseCsv } from '../../utils/csvParser';
+import { normalizePathSegment } from '../../utils/pathUtils';
 
 export interface CsvImportResult {
   imported: number;
@@ -17,31 +18,13 @@ export interface CsvImportResult {
 }
 
 /**
- * Validate category value
- */
-function isValidCategory(value: string): value is Category {
-  const validCategories: Category[] = [
-    'produce',
-    'dairy',
-    'meat',
-    'pantry',
-    'frozen',
-    'household',
-    'bakery',
-    'beverages',
-    'other',
-  ];
-  return validCategories.includes(value as Category);
-}
-
-/**
  * Import template items from CSV
  *
- * Expected CSV format:
- * name,category,sortOrder,defaultQuantity
+ * Expected CSV format (new schema):
+ * name,defaultQuantity,icon,path
  *
- * If category is missing or invalid, auto-categorize by name.
- * If sortOrder is missing or invalid, assign sequentially.
+ * All imported items are created as leaf items (type='item').
+ * If path is not provided, items are created at top level.
  *
  * @param csvContent - CSV content string
  * @param folder - Folder to import items into
@@ -74,12 +57,12 @@ export function importItemsFromCsv(
     return result;
   }
 
-  // Get existing item names (case-insensitive)
-  const existingNames = new Set<string>();
+  // Get existing item paths (case-insensitive)
+  const existingPaths = new Set<string>();
   if (folder.items) {
     for (const item of folder.items) {
       if (item && !item.archived) {
-        existingNames.add(item.name.toLowerCase());
+        existingPaths.add(item.path.toLowerCase());
       }
     }
   }
@@ -107,42 +90,34 @@ export function importItemsFromCsv(
 
     const name = row.name.trim();
 
-    // Skip if already exists
-    if (existingNames.has(name.toLowerCase())) {
+    // Generate path from name if not provided
+    const pathSegment = normalizePathSegment(name);
+    const path = row.path?.trim() || pathSegment;
+
+    // Skip if already exists at this path
+    if (existingPaths.has(path.toLowerCase())) {
       result.skipped++;
       result.duplicates.push(name);
       continue;
     }
 
     try {
-      // Get or auto-categorize
-      let category: Category;
-      if (row.category && isValidCategory(row.category)) {
-        category = row.category as Category;
-      } else {
-        category = autoCategorize(name);
-      }
-
-      // Get sort order or use next sequential
-      let sortOrder: number;
-      if (row.sortOrder) {
-        const parsed = Number.parseInt(row.sortOrder, 10);
-        sortOrder = Number.isNaN(parsed) ? nextSortOrder++ : parsed;
-      } else {
-        sortOrder = nextSortOrder++;
-      }
-
       // Get default quantity (optional)
       const defaultQuantity = row.defaultQuantity?.trim() || '';
+      const icon = row.icon?.trim() || '📦';
 
-      // Create new template item
+      // Create new template item (always type='item' for CSV imports)
       const newItem = TemplateItem.create(
         {
           name,
-          category,
-          sortOrder,
+          type: 'item',
+          path,
+          expanded: false,
+          sortOrder: nextSortOrder++,
           archived: false,
           defaultQuantity,
+          icon,
+          color: '#6b7280',
           addedBy: account,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -154,8 +129,8 @@ export function importItemsFromCsv(
       folder.items?.$jazz.push(newItem);
       result.imported++;
 
-      // Add to existing names to prevent duplicates within import
-      existingNames.add(name.toLowerCase());
+      // Add to existing paths to prevent duplicates within import
+      existingPaths.add(path.toLowerCase());
     } catch (error) {
       result.errors.push(`Row ${rowNum} ("${name}"): ${String(error)}`);
     }
