@@ -1,12 +1,24 @@
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { ArrowLeft, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { FolderNode, GroceriesAccount, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/itemService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
+import { getParentPath } from '@/utils/pathUtils';
 import { AddItemDialog } from './AddItemDialog';
+import { RootDropZone } from './RootDropZone';
 
 interface TemplateItemsViewProps {
   folder: InstanceOfSchema<typeof FolderNode>;
@@ -16,6 +28,16 @@ interface TemplateItemsViewProps {
 export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
   const { me } = useAccount<typeof GroceriesAccount>();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [activeItem, setActiveItem] = useState<InstanceOfSchema<typeof TemplateItem> | null>(null);
+
+  // Configure sensors for drag detection
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before activating drag
+      },
+    }),
+  );
 
   if (!me) {
     return (
@@ -66,6 +88,75 @@ export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const draggedItem = event.active.data.current?.item as InstanceOfSchema<typeof TemplateItem>;
+    setActiveItem(draggedItem);
+  };
+
+  const handleDragOver = (_event: DragOverEvent) => {
+    // Optional: Add visual feedback during drag
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveItem(null);
+
+    if (!over || !active.data.current) {
+      return;
+    }
+
+    const draggedItem = active.data.current.item as InstanceOfSchema<typeof TemplateItem>;
+    const overData = over.data.current;
+
+    // Don't allow dropping on itself
+    if (over.id === active.id) {
+      return;
+    }
+
+    // Determine the new parent path
+    let newParentPath: string | undefined;
+
+    // IMPORTANT: Check virtual root zone FIRST
+    if (overData?.path === '__ROOT_DROP_ZONE__') {
+      newParentPath = undefined; // Move to root level
+    } else if (overData?.isCategory) {
+      // Dropped on a category - move inside it
+      newParentPath = overData.path as string;
+    } else if (overData?.item) {
+      // Dropped on another item - move to same parent as that item
+      const targetItem = overData.item as InstanceOfSchema<typeof TemplateItem>;
+      newParentPath = getParentPath(targetItem.path);
+    } else {
+      // No valid drop target
+      return;
+    }
+
+    // Don't move if dropped on same location
+    const currentParentPath = getParentPath(draggedItem.path);
+    if (newParentPath === currentParentPath) {
+      return;
+    }
+
+    // Prevent moving a category into itself or its descendants
+    if (draggedItem.type === 'category' && newParentPath?.startsWith(draggedItem.path)) {
+      return;
+    }
+
+    try {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+      ItemService.moveItem(me, folder.$jazz.id, draggedItem.$jazz.id, newParentPath);
+    } catch (error) {
+      console.error('Failed to move item:', error);
+      // Silently ignore expected validation errors
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveItem(null);
+  };
+
   // Recursive function to render item tree
   const renderItemNode = (node: ReturnType<typeof buildItemTree>[number], depth = 0) => {
     const { item, children } = node;
@@ -89,57 +180,61 @@ export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onBack}
-              className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5 text-neutral-600" />
-            </button>
-            <h1 className="text-3xl font-bold text-neutral-900">{folder.name}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddDialog(true)}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              Add Item
-            </button>
-          </div>
-        </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="mx-auto max-w-4xl">
+          {/* Items Tree */}
+          <div className="rounded-lg border border-neutral-200 bg-white">
+            {/* Root-level drop zone with header */}
+            <RootDropZone
+              isDragging={!!activeItem}
+              folderName={folder.name}
+              onBack={onBack}
+              onAddItem={() => setShowAddDialog(true)}
+            />
 
-        {/* Items Tree */}
-        <div className="rounded-lg border border-neutral-200 bg-white">
-          {itemTree.length === 0 ? (
-            <div className="p-8 text-center text-neutral-500">
-              <p>No items in this list yet.</p>
-              <p className="mt-1 text-sm">Click "Add Item" to get started.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-100">
-              {itemTree.map((node) => renderItemNode(node, 0))}
-            </div>
-          )}
-        </div>
+            {itemTree.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">
+                <p>No items in this list yet.</p>
+                <p className="mt-1 text-sm">Click "Add Item" to get started.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {itemTree.map((node) => renderItemNode(node, 0))}
+              </div>
+            )}
+          </div>
 
-        {/* Add Item Dialog */}
-        <AddItemDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-          onAddItem={handleAddItem}
-          onAddCategory={handleAddCategory}
-          folderName={folder.name}
-          categories={activeItems}
-        />
+          {/* Add Item Dialog */}
+          <AddItemDialog
+            open={showAddDialog}
+            onOpenChange={setShowAddDialog}
+            onAddItem={handleAddItem}
+            onAddCategory={handleAddCategory}
+            folderName={folder.name}
+            categories={activeItems}
+          />
+        </div>
       </div>
-    </div>
+
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {activeItem ? (
+          <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90 flex items-center gap-2">
+            <span className="text-sm">
+              {activeItem.icon || (activeItem.type === 'category' ? '📁' : '📦')}
+            </span>
+            <span className="font-medium">{activeItem.name}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
