@@ -9,7 +9,7 @@ export interface TreeNode {
 
 /**
  * Build hierarchical tree structure from flat path-based list of nodes
- * Following pin-maker pattern
+ * Simple: group by parent path and build recursively
  */
 export function buildTreeStructure(
   allNodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[],
@@ -22,8 +22,8 @@ export function buildTreeStructure(
 
   validNodes.forEach((node) => {
     if (!node) return;
-
     const parentKey = getParentPath(node.path);
+
     if (!nodesByParent.has(parentKey)) {
       nodesByParent.set(parentKey, []);
     }

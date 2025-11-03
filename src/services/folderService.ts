@@ -7,6 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { FolderNode, type GroceriesAccount } from '../schemas';
+import { calculateDescendantPaths, calculateNewPath } from '../utils/pathManipulation';
 
 /**
  * Create a new folder
@@ -123,4 +124,67 @@ export function folderExists(
 ): boolean {
   const folder = getFolder(account, folderId);
   return folder != null && !folder.archived;
+}
+
+/**
+ * Move a folder to a new parent location
+ * @param account - User account
+ * @param nodeToMove - The folder node to move
+ * @param newParentPath - New parent path (undefined for root level)
+ */
+export function moveFolder(
+  account: InstanceOfSchema<typeof GroceriesAccount>,
+  nodeToMove: InstanceOfSchema<typeof FolderNode>,
+  newParentPath: string | undefined,
+): void {
+  const oldPath = nodeToMove.path;
+
+  console.log('📦 moveFolder called', {
+    nodeName: nodeToMove.name,
+    nodeType: nodeToMove.type,
+    oldPath,
+    newParentPath,
+  });
+
+  // Use pure function to calculate new path and validate
+  const pathResult = calculateNewPath(nodeToMove.name, oldPath, newParentPath);
+
+  if (!pathResult.isValid) {
+    if (pathResult.error === 'Already at this location') {
+      console.log('⏭️ Same location, skipping move');
+      return;
+    }
+    console.error('❌', pathResult.error);
+    throw new Error(pathResult.error);
+  }
+
+  const newPath = pathResult.newPath;
+  console.log('✅ New path calculated:', newPath);
+
+  // Update the moved node's path
+  nodeToMove.$jazz.set('path', newPath);
+  nodeToMove.$jazz.set('updatedAt', new Date());
+
+  // Calculate descendant path updates using pure function
+  const allNodes = getAllFolders(account);
+  const allPaths = allNodes.map((node) => ({
+    id: node.$jazz.id,
+    path: node.path,
+  }));
+
+  const descendantUpdates = calculateDescendantPaths(oldPath, newPath, allPaths);
+
+  // Apply the calculated updates
+  for (const update of descendantUpdates) {
+    const node = allNodes.find((n) => n.$jazz.id === update.id);
+    if (node) {
+      console.log(
+        `🔄 Updating descendant "${node.name}": "${update.oldPath}" → "${update.newPath}"`,
+      );
+      node.$jazz.set('path', update.newPath);
+      node.$jazz.set('updatedAt', new Date());
+    }
+  }
+
+  console.log('✅ Move completed');
 }
