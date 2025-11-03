@@ -27,21 +27,18 @@ export function AddFolderDialog({
   description = 'Create a folder to organize your list items.',
 }: AddFolderDialogProps) {
   const [folderName, setFolderName] = useState('');
-  const [isTemplate, setIsTemplate] = useState(defaultIsTemplate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (folderName.trim()) {
-      onAdd(folderName.trim(), isTemplate);
+      onAdd(folderName.trim(), defaultIsTemplate);
       setFolderName('');
-      setIsTemplate(defaultIsTemplate);
       onOpenChange(false);
     }
   };
 
   const handleCancel = () => {
     setFolderName('');
-    setIsTemplate(defaultIsTemplate);
     onOpenChange(false);
   };
 
@@ -69,28 +66,6 @@ export function AddFolderDialog({
                 className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
-
-            {!defaultIsTemplate && (
-              <>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is-template"
-                    checked={isTemplate}
-                    onChange={(e) => setIsTemplate(e.target.checked)}
-                    className="h-4 w-4 rounded border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
-                  />
-                  <Label htmlFor="is-template" className="cursor-pointer">
-                    Make this a list folder
-                  </Label>
-                </div>
-                {isTemplate && (
-                  <p className="text-xs text-neutral-600">
-                    List folders contain reusable item templates for quick shopping sessions.
-                  </p>
-                )}
-              </>
-            )}
           </div>
 
           <DialogFooter>
