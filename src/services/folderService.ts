@@ -10,20 +10,33 @@ import { FolderNode, type GroceriesAccount } from '../schemas';
 
 /**
  * Create a new folder
+ * @param account - User account
+ * @param name - Folder name
+ * @param isTemplate - Whether this is a template folder (leaf) or organizational folder
+ * @param parentPath - Optional parent folder path (e.g., "stores" or "stores/wegmans")
  */
 export function createFolder(
   account: InstanceOfSchema<typeof GroceriesAccount>,
   name: string,
   isTemplate = false,
+  parentPath?: string | null,
 ): string {
   if (!account.root) throw new Error('Account root not initialized');
+
+  // Normalize name for path (replace spaces with hyphens)
+  const normalizedName = name.trim().replace(/\s+/g, '-');
+
+  // Construct path based on parent
+  // Pin-maker pattern: parentPath ? `${parentPath}/${normalizedName}` : normalizedName
+  const path = parentPath ? `${parentPath}/${normalizedName}` : normalizedName;
 
   const newFolder = FolderNode.create(
     {
       name,
       type: isTemplate ? 'template-folder' : 'folder',
-      path: `/${name}`,
-      expanded: true,
+      path,
+      // Folders start expanded, templates start collapsed
+      expanded: !isTemplate,
       archived: false,
       items: [],
       sessions: [],

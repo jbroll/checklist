@@ -19,6 +19,9 @@ import { TreeNode } from './TreeNode';
 interface FolderNodeViewProps {
   node: InstanceOfSchema<typeof FolderNodeType>;
   level: number;
+  hasChildren?: boolean;
+  isSelected?: boolean;
+  onSelect?: (nodeId: string) => void;
   onToggleExpand: () => void;
   onRename?: (nodeId: string, newName: string) => void;
   onDelete?: (nodeId: string) => void;
@@ -31,11 +34,14 @@ interface FolderNodeViewProps {
 export function FolderNodeView({
   node,
   level,
+  hasChildren = false,
+  isSelected = false,
+  onSelect,
   onToggleExpand,
   onRename,
   onDelete,
-  onUseTemplate,
-  onEditTemplate,
+  onUseTemplate: _onUseTemplate,
+  onEditTemplate: _onEditTemplate,
   children,
   account,
 }: FolderNodeViewProps) {
@@ -46,7 +52,6 @@ export function FolderNodeView({
   const [showTemplateExportDialog, setShowTemplateExportDialog] = useState(false);
   const [showTemplateImportDialog, setShowTemplateImportDialog] = useState(false);
 
-  const hasChildren = (node.items?.length ?? 0) > 0;
   const isTemplate = node.type === 'template-folder';
 
   const handleStartEdit = () => {
@@ -81,6 +86,12 @@ export function FolderNodeView({
     }
   };
 
+  const handleClick = () => {
+    if (!isEditing && onSelect) {
+      onSelect(node.$jazz.id);
+    }
+  };
+
   return (
     <div>
       <TreeNode
@@ -90,55 +101,40 @@ export function FolderNodeView({
         hasChildren={hasChildren}
         className="group"
       >
-        <div className="flex flex-1 items-center gap-2">
-          {/* Folder Icon */}
-          {isTemplate ? (
-            <BubbleListIcon className="h-4 w-4" size={16} />
-          ) : (
-            <Folder className="h-4 w-4 text-yellow-600" />
-          )}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={handleClick}
+            className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 flex-1 min-w-0 transition-colors ${
+              isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
+            }`}
+          >
+            {/* Folder Icon */}
+            {isTemplate ? (
+              <BubbleListIcon className="h-4 w-4 shrink-0" size={16} />
+            ) : (
+              <Folder className="h-4 w-4 shrink-0 text-yellow-600" />
+            )}
 
-          {/* Name (Editable) */}
-          {isEditing ? (
-            <input
-              type="text"
-              value={editedName}
-              onChange={(e) => setEditedName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={handleSaveEdit}
-              className="flex-1 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
-            />
-          ) : (
-            <span
-              className={`flex-1 text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
-            >
-              {node.name}
-            </span>
-          )}
-
-          {/* Action Buttons - Only for template folders */}
-          {!isEditing && isTemplate && (
-            <div className="flex items-center gap-2">
-              {onEditTemplate && (
-                <button
-                  type="button"
-                  onClick={() => onEditTemplate(node.$jazz.id)}
-                  className="rounded border border-green-600 bg-white px-3 py-1 text-xs font-medium text-green-600 transition-colors hover:bg-green-50"
-                >
-                  Edit List
-                </button>
-              )}
-              {onUseTemplate && (
-                <button
-                  type="button"
-                  onClick={() => onUseTemplate(node.$jazz.id)}
-                  className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-700"
-                >
-                  Use List
-                </button>
-              )}
-            </div>
-          )}
+            {/* Name (Editable) */}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSaveEdit}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
+              />
+            ) : (
+              <span
+                className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+              >
+                {node.name}
+              </span>
+            )}
+          </button>
 
           {/* Actions Menu */}
           {!isEditing && (
@@ -146,7 +142,8 @@ export function FolderNodeView({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="invisible rounded p-1 hover:bg-neutral-200 group-hover:visible"
+                  onClick={(e) => e.stopPropagation()}
+                  className="invisible shrink-0 rounded p-1 hover:bg-neutral-200 group-hover:visible"
                   aria-label="More options"
                 >
                   <MoreVertical className="h-4 w-4 text-neutral-600" />
@@ -190,8 +187,8 @@ export function FolderNodeView({
         </div>
       </TreeNode>
 
-      {/* Child Nodes */}
-      {node.expanded && children}
+      {/* Child Nodes - rendered by parent TreeView */}
+      {children}
 
       {/* Full Folder Export Dialog (JSON) */}
       <ExportDialog

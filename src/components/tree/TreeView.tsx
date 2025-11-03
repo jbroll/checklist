@@ -1,11 +1,15 @@
 import type { InstanceOfSchema } from 'jazz-tools';
+import { useMemo } from 'react';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
+import { buildTreeStructure, type TreeNode } from '@/utils/treeHelpers';
 import { FolderNodeView } from './FolderNodeView';
 import { SessionRowView } from './SessionRowView';
 
 interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
   account: InstanceOfSchema<typeof GroceriesAccount>;
+  selectedNodeId?: string | null;
+  onNodeSelect?: (nodeId: string) => void;
   onAddItem?: (parentNodeId: string) => void;
   onUseTemplate?: (nodeId: string) => void;
   onEditTemplate?: (nodeId: string) => void;
@@ -15,6 +19,8 @@ interface TreeViewProps {
 export function TreeView({
   nodes,
   account,
+  selectedNodeId,
+  onNodeSelect,
   onAddItem: _onAddItem,
   onUseTemplate,
   onEditTemplate,
@@ -53,18 +59,27 @@ export function TreeView({
     }
   };
 
-  const renderNode = (node: InstanceOfSchema<typeof FolderNode>, level = 0): React.ReactNode => {
-    if (!node || node.archived) return null;
+  // Build hierarchical tree structure from flat node list
+  const treeStructure = useMemo(() => buildTreeStructure(nodes), [nodes]);
+
+  const renderTreeNode = (treeNode: TreeNode, level = 0): React.ReactNode => {
+    const { node, children } = treeNode;
 
     // Show sessions under template folders
     const sessions = node.sessions || [];
     const activeSessions = sessions.filter((s) => s && s.status !== 'abandoned');
+
+    // A node has children if it has child folders/templates OR sessions
+    const hasChildren = children.length > 0 || activeSessions.length > 0;
 
     return (
       <FolderNodeView
         key={node.$jazz.id}
         node={node}
         level={level}
+        hasChildren={hasChildren}
+        isSelected={selectedNodeId === node.$jazz.id}
+        onSelect={onNodeSelect}
         onToggleExpand={() => handleToggleExpand(node)}
         onRename={handleRenameNode}
         onDelete={handleDeleteNode}
@@ -72,30 +87,36 @@ export function TreeView({
         onEditTemplate={onEditTemplate}
         account={account}
       >
-        {activeSessions.map((session) => (
-          <SessionRowView
-            key={session.$jazz.id}
-            session={session}
-            level={level + 1}
-            onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
-            onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
-          />
-        ))}
+        {/* Render children only when expanded */}
+        {node.expanded && (
+          <>
+            {/* Render sessions for template folders */}
+            {activeSessions.map((session) => (
+              <SessionRowView
+                key={session.$jazz.id}
+                session={session}
+                level={level + 1}
+                onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
+                onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
+              />
+            ))}
+            {/* Render child folders/templates recursively */}
+            {children.map((childNode) => renderTreeNode(childNode, level + 1))}
+          </>
+        )}
       </FolderNodeView>
     );
   };
 
-  const activeNodes = nodes.filter((node) => node && !node.archived);
-
   return (
     <div className="rounded-lg border border-neutral-200 bg-white">
-      {activeNodes.length === 0 ? (
+      {treeStructure.length === 0 ? (
         <div className="p-8 text-center text-neutral-500">
           <p>No lists yet.</p>
           <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
         </div>
       ) : (
-        <div className="p-2">{activeNodes.map((node) => node && renderNode(node))}</div>
+        <div className="p-2">{treeStructure.map((treeNode) => renderTreeNode(treeNode))}</div>
       )}
     </div>
   );

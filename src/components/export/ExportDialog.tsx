@@ -30,8 +30,8 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
   const [folderId, setFolderId] = useState(selectedFolderId || '');
   const [isExporting, setIsExporting] = useState(false);
 
-  // Get list of folders for dropdown
-  const folders = account.root?.nodes || [];
+  // Get list of folders for dropdown - filter out null values
+  const folders = (account.root?.nodes || []).filter((f) => f != null);
 
   const handleExport = () => {
     setIsExporting(true);
@@ -48,7 +48,7 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
       // Generate filename
       const folderName =
         exportType === 'single-folder'
-          ? folders.find((f) => f.$jazz?.id === folderId)?.name
+          ? folders.find((f) => f?.$jazz?.id === folderId)?.name
           : undefined;
       const filename = ExportService.generateFilename(scope, 'json', folderName);
 
@@ -124,7 +124,7 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
                 >
                   <option value="">Select a folder...</option>
                   {folders.map((folder) => (
-                    <option key={folder.$jazz?.id} value={folder.$jazz?.id}>
+                    <option key={folder.$jazz.id} value={folder.$jazz.id}>
                       {folder.name}
                     </option>
                   ))}

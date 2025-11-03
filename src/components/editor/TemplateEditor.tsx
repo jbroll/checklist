@@ -29,9 +29,11 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+
+  // Selection state - tracks currently selected folder/template
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Navigation state for shopping session view
   const [activeSessionFolderId, setActiveSessionFolderId] = useState<string | null>(null);
@@ -53,37 +55,39 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
+    // If a folder is selected, use its path as parent
+    const parentPath = isFolder ? selectedNode?.path : undefined;
+
     // Use folder service to create folder with proper Jazz CoList mutation
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    FolderService.createFolder(me, name, isTemplate);
+    FolderService.createFolder(me, name, isTemplate, parentPath);
   };
 
   const handleAddItem = (name: string, category: Category, defaultQuantity?: string) => {
-    if (!selectedFolderId) return;
+    if (!selectedNodeId) return;
 
     // Use item service to create item with proper Jazz CoList mutation
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createItem(me, selectedFolderId, name, category, defaultQuantity);
+    ItemService.createItem(me, selectedNodeId, name, category, defaultQuantity);
   };
 
-  const handleOpenAddItem = (folderId: string) => {
-    setSelectedFolderId(folderId);
-    setShowAddItem(true);
-  };
+  const handleUseTemplate = () => {
+    if (!selectedNodeId) return;
 
-  const handleUseTemplate = (folderId: string) => {
     // Create session using service
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    const sessionId = SessionService.createSession(me, folderId);
+    const sessionId = SessionService.createSession(me, selectedNodeId);
 
     // Navigate to shopping session view
-    setActiveSessionFolderId(folderId);
+    setActiveSessionFolderId(selectedNodeId);
     setActiveSessionId(sessionId);
   };
 
-  const handleEditTemplate = (folderId: string) => {
+  const handleEditTemplate = () => {
+    if (!selectedNodeId) return;
+
     // Expand the folder to show sessions and allow editing
-    const folder = nodes.find((n) => n?.$jazz.id === folderId);
+    const folder = nodes.find((n) => n?.$jazz.id === selectedNodeId);
     if (folder) {
       folder.$jazz.set('expanded', true);
       folder.$jazz.set('updatedAt', new Date());
@@ -95,9 +99,24 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     setActiveSessionId(null);
   };
 
-  const selectedFolder = selectedFolderId
-    ? nodes.find((n) => n?.$jazz.id === selectedFolderId)
-    : null;
+  const handleNodeSelect = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+  };
+
+  const handleHeaderClick = () => {
+    // Clicking on BubbleList header deselects everything
+    setSelectedNodeId(null);
+  };
+
+  const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
+  const isTemplate = selectedNode?.type === 'template-folder';
+  const isFolder = selectedNode?.type === 'folder';
+
+  // Button enabling logic
+  // New Folder/New List: enabled when nothing selected OR when a folder (not template) is selected
+  const canCreateFolderOrList = !selectedNodeId || isFolder;
+  // Edit List/Use List: enabled only when a template is selected
+  const canEditOrUse = selectedNodeId && isTemplate;
 
   // If viewing a shopping session, show ShoppingSessionView
   if (activeSessionFolderId && activeSessionId) {
@@ -119,15 +138,36 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleHeaderClick}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
             <BubbleListIcon className="h-8 w-8" size={32} />
             <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={handleEditTemplate}
+              disabled={!canEditOrUse}
+              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              Edit List
+            </button>
+            <button
+              type="button"
+              onClick={handleUseTemplate}
+              disabled={!canEditOrUse}
+              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              Use List
+            </button>
+            <button
+              type="button"
               onClick={() => setShowAddFolder(true)}
-              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50"
+              disabled={!canCreateFolderOrList}
+              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
             >
               <Plus className="h-4 w-4" />
               New Folder
@@ -135,7 +175,8 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
             <button
               type="button"
               onClick={() => setShowAddTemplate(true)}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+              disabled={!canCreateFolderOrList}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-600"
             >
               <Plus className="h-4 w-4" />
               New List
@@ -178,9 +219,8 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           nodes={nodes}
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           account={me}
-          onAddItem={handleOpenAddItem}
-          onUseTemplate={handleUseTemplate}
-          onEditTemplate={handleEditTemplate}
+          selectedNodeId={selectedNodeId}
+          onNodeSelect={handleNodeSelect}
           onOpenSession={(folderId, sessionId) => {
             setActiveSessionFolderId(folderId);
             setActiveSessionId(sessionId);
@@ -206,7 +246,7 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
           open={showAddItem}
           onOpenChange={setShowAddItem}
           onAdd={handleAddItem}
-          folderName={selectedFolder?.name ?? ''}
+          folderName={selectedNode?.name ?? ''}
         />
 
         {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
