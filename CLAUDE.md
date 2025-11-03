@@ -36,16 +36,17 @@ npm run test:e2e        # Run E2E tests (Playwright)
 npm run check           # Run type-check + lint + tests
 ```
 
-## Git Hooks
+## Git Commit Rules
 
-**IMPORTANT**: This project has strict git hooks that run before every commit.
+**Pre-commit**: Runs type-check, lint, unit tests, E2E tests (6-10 min). All must pass, no bypass.
 
-- **Pre-commit hook**: Runs type-check, lint, unit tests, and E2E tests (~6-10 minutes)
-- **Commit-msg hook**: Enforces subject (10-72 chars) and body (max 10 lines) limits
+**Commit message format**:
+- Subject: 10-72 characters
+- Body: ONLY `Co-Authored-By: Claude <noreply@anthropic.com>` allowed
+- ASCII only (no emoji)
+- Example: `fix: improve dialog clarity and add branding`
 
-See [GIT_HOOKS.md](./GIT_HOOKS.md) for complete documentation and examples.
-
-**All checks must pass before committing** - there is no bypass option.
+**DO NOT write verbose commit messages**. Subject line only + Co-Authored-By.
 
 ## Project Structure
 
