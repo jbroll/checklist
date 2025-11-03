@@ -38,9 +38,11 @@ npm run check           # Run type-check + lint + tests
 
 ## Git Commit Rules
 
-**Pre-commit**: Runs type-check, lint, unit tests, E2E tests (6-10 min). All must pass, no bypass.
+**Pre-commit**: Runs type-check, lint, unit tests, E2E tests (6-10 min). 
+    ALL HOOK CHECKS MUST PASS 
+    YOU MAY NOT BYPASS THE COMMIT HOOKS
 
-**Commit message format**:
+**YOU MUST FOLLOW THIS Commit message format**:
 - Subject: 10-72 characters
 - Body: ONLY `Co-Authored-By: Claude <noreply@anthropic.com>` allowed
 - ASCII only (no emoji)
