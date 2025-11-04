@@ -47,7 +47,7 @@ export function SessionZone({
           className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full hover:bg-neutral-100 transition-colors"
         >
           {Icon && <Icon className="h-4 w-4" />}
-          <span className="flex-1 text-sm font-semibold text-neutral-900">{title}</span>
+          <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>
           {count !== undefined && (
             <motion.span
               initial={{ scale: 0.8 }}

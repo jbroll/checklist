@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, Download, MoreVertical, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, Download, MoreVertical, Package, ShoppingCart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -193,6 +193,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             />
             <SessionZone
               title="List Inventory"
+              icon={Package}
               zone="inventory"
               items={inventoryItems}
               itemStates={session.itemStates || {}}
