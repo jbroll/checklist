@@ -8,8 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface StartSessionDialogProps {
   open: boolean;
@@ -60,8 +60,11 @@ export function StartSessionDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="session-name">Session Name (Optional)</Label>
+            <FormField
+              label="Session Name (Optional)"
+              htmlFor="session-name"
+              helperText="Auto-generated names use the format [YYYY-MM-DD HH:MM]"
+            >
               <Input
                 id="session-name"
                 type="text"
@@ -69,10 +72,7 @@ export function StartSessionDialog({
                 onChange={(e) => setSessionName(e.target.value)}
                 placeholder={`Leave empty for auto-generated name: ${generateDefaultName()}`}
               />
-              <p className="text-xs text-neutral-500">
-                Auto-generated names use the format [YYYY-MM-DD HH:MM]
-              </p>
-            </div>
+            </FormField>
           </div>
 
           <DialogFooter>

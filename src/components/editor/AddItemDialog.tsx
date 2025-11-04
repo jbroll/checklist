@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { TemplateItem } from '@/schemas';
@@ -123,8 +124,7 @@ export function AddItemDialog({
             </div>
 
             {/* Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+            <FormField label="Name" htmlFor="name" required>
               <Input
                 id="name"
                 type="text"
@@ -135,7 +135,7 @@ export function AddItemDialog({
                 }
                 autoFocus
               />
-            </div>
+            </FormField>
 
             {/* Parent Category */}
             {validCategories.length > 0 && (
@@ -158,8 +158,7 @@ export function AddItemDialog({
             )}
 
             {/* Icon */}
-            <div className="grid gap-2">
-              <Label htmlFor="icon">Icon (Optional)</Label>
+            <FormField label="Icon (Optional)" htmlFor="icon">
               <Input
                 id="icon"
                 type="text"
@@ -168,12 +167,11 @@ export function AddItemDialog({
                 placeholder="e.g., 🍎, 🥛, 📦"
                 maxLength={4}
               />
-            </div>
+            </FormField>
 
             {/* Item-specific: Default Quantity */}
             {itemType === 'item' && (
-              <div className="grid gap-2">
-                <Label htmlFor="default-quantity">Default Quantity (Optional)</Label>
+              <FormField label="Default Quantity (Optional)" htmlFor="default-quantity">
                 <Input
                   id="default-quantity"
                   type="text"
@@ -181,7 +179,7 @@ export function AddItemDialog({
                   onChange={(e) => setDefaultQuantity(e.target.value)}
                   placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
                 />
-              </div>
+              </FormField>
             )}
 
             {/* Category-specific: Color */}

@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { GroceriesAccount } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
@@ -168,10 +169,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
         <div className="grid gap-4 py-4">
           {/* Template name input for TXT/CSV */}
           {selectedFile && fileType !== 'json' && !importResult && (
-            <div className="grid gap-2">
-              <label htmlFor="template-name" className="text-sm font-medium text-neutral-700">
-                List name
-              </label>
+            <FormField label="List name" htmlFor="template-name" required>
               <Input
                 id="template-name"
                 type="text"
@@ -179,7 +177,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="Enter list name..."
               />
-            </div>
+            </FormField>
           )}
 
           {/* File upload area */}

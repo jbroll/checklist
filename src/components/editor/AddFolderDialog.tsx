@@ -8,8 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface AddFolderDialogProps {
   open: boolean;
@@ -53,8 +53,11 @@ export function AddFolderDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="folder-name">{defaultIsTemplate ? 'List Name' : 'Folder Name'}</Label>
+            <FormField
+              label={defaultIsTemplate ? 'List Name' : 'Folder Name'}
+              htmlFor="folder-name"
+              required
+            >
               <Input
                 id="folder-name"
                 type="text"
@@ -66,7 +69,7 @@ export function AddFolderDialog({
                     : 'e.g., Groceries, Household'
                 }
               />
-            </div>
+            </FormField>
           </div>
 
           <DialogFooter>

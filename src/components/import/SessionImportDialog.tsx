@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
 import type { SessionImportResult } from '@/services/import/sessionImporter';
@@ -150,8 +150,7 @@ export function SessionImportDialog({
         <div className="grid gap-4 py-4">
           {/* Session name input */}
           {!importResult && (
-            <div className="grid gap-2">
-              <Label htmlFor="session-name">Session name</Label>
+            <FormField label="Session name" htmlFor="session-name" required>
               <Input
                 id="session-name"
                 type="text"
@@ -159,7 +158,7 @@ export function SessionImportDialog({
                 onChange={(e) => setSessionName(e.target.value)}
                 placeholder="[2025-11-01] or custom name..."
               />
-            </div>
+            </FormField>
           )}
 
           {/* File upload area */}
