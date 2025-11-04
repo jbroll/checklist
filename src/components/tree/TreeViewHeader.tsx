@@ -1,5 +1,14 @@
 import { useDroppable } from '@dnd-kit/core';
-import { Download, LogOut, MoreVertical, Plus, Upload } from 'lucide-react';
+import {
+  CheckSquare,
+  Download,
+  FolderPlus,
+  ListPlus,
+  LogOut,
+  MoreVertical,
+  Pencil,
+  Upload,
+} from 'lucide-react';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TreeViewHeaderProps {
   isDragging: boolean;
@@ -69,58 +79,108 @@ export function TreeViewHeader({
           <BubbleListIcon className="h-8 w-8" size={32} />
           <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
         </button>
-        <div className="flex items-center gap-2">
-          <Button type="button" onClick={onEditTemplate} disabled={!canEditOrUse} variant="outline">
-            Edit List
-          </Button>
-          <Button type="button" onClick={onUseTemplate} disabled={!canEditOrUse} variant="outline">
-            Use List
-          </Button>
-          <Button
-            type="button"
-            onClick={onAddFolder}
-            disabled={!canCreateFolderOrList}
-            variant="outline"
-          >
-            <Plus className="h-4 w-4" />
-            New Folder
-          </Button>
-          <Button
-            type="button"
-            onClick={onAddTemplate}
-            disabled={!canCreateFolderOrList}
-            variant="primary"
-          >
-            <Plus className="h-4 w-4" />
-            New List
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="More options">
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onImport}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import
-              </DropdownMenuItem>
-              {onSignOut && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <TooltipProvider>
+          <div className="flex items-center gap-2">
+            {canEditOrUse && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={onEditTemplate}
+                      variant="outline"
+                      size="icon"
+                      aria-label="Edit list"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit List</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={onUseTemplate}
+                      variant="outline"
+                      size="icon"
+                      aria-label="Use list"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Use List</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+            {canCreateFolderOrList && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={onAddFolder}
+                      variant="outline"
+                      size="icon"
+                      aria-label="New folder"
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New Folder</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={onAddTemplate}
+                      variant="primary"
+                      size="icon"
+                      aria-label="New list"
+                    >
+                      <ListPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>New List</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" aria-label="More options">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onImport}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </DropdownMenuItem>
+                {onSignOut && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </TooltipProvider>
       </div>
     </header>
   );
