@@ -1,4 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
+import { memo } from 'react';
 import { useAccount } from '@/lib/jazz';
 import type { GroceriesAccount } from '@/schemas';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
@@ -11,7 +12,7 @@ interface ShoppingSessionItemRowProps {
   onTogglePurchased: (itemId: string) => void;
 }
 
-export function ShoppingSessionItemRow({
+export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
   item,
   state,
   zone,
@@ -107,4 +108,4 @@ export function ShoppingSessionItemRow({
       )}
     </div>
   );
-}
+});

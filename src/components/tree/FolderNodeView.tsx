@@ -1,7 +1,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Download, FileText, Folder, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { TemplateItemsExportDialog } from '@/components/export/TemplateItemsExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
@@ -32,7 +32,7 @@ interface FolderNodeViewProps {
   account: InstanceOfSchema<typeof GroceriesAccount>;
 }
 
-export function FolderNodeView({
+export const FolderNodeView = memo(function FolderNodeView({
   node,
   level,
   hasChildren = false,
@@ -258,4 +258,4 @@ export function FolderNodeView({
       )}
     </div>
   );
-}
+});

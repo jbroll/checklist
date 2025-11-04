@@ -1,6 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Calendar, MoreVertical, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,12 @@ interface SessionRowViewProps {
   onDelete?: (sessionId: string) => void;
 }
 
-export function SessionRowView({ session, level, onOpen, onDelete }: SessionRowViewProps) {
+export const SessionRowView = memo(function SessionRowView({
+  session,
+  level,
+  onOpen,
+  onDelete,
+}: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const handleDelete = () => {
@@ -72,4 +77,4 @@ export function SessionRowView({ session, level, onOpen, onDelete }: SessionRowV
       </div>
     </TreeNode>
   );
-}
+});
