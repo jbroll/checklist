@@ -18,6 +18,7 @@ import { buildTreeStructure, type TreeNode } from '@/utils/treeHelpers';
 import { FolderNodeView } from './FolderNodeView';
 import { SessionRowView } from './SessionRowView';
 import { TemplateItemView } from './TemplateItemView';
+import { TreeViewHeader } from './TreeViewHeader';
 
 interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
@@ -28,6 +29,13 @@ interface TreeViewProps {
   onUseTemplate?: (nodeId: string) => void;
   onEditTemplate?: (nodeId: string) => void;
   onOpenSession?: (folderId: string, sessionId: string) => void;
+  // Header action handlers
+  onHeaderClick?: () => void;
+  onAddFolder?: () => void;
+  onAddTemplate?: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
+  onSignOut?: () => void;
 }
 
 export function TreeView({
@@ -39,6 +47,12 @@ export function TreeView({
   onUseTemplate,
   onEditTemplate,
   onOpenSession,
+  onHeaderClick,
+  onAddFolder,
+  onAddTemplate,
+  onExport,
+  onImport,
+  onSignOut,
 }: TreeViewProps) {
   const [activeNode, setActiveNode] = useState<InstanceOfSchema<typeof FolderNode> | null>(null);
 
@@ -177,7 +191,11 @@ export function TreeView({
       overPath: overData?.path,
     });
 
-    if (overData?.isFolder) {
+    // IMPORTANT: Check virtual root zone FIRST
+    if (overData?.path === '__ROOT_DROP_ZONE__') {
+      newParentPath = undefined; // Move to root level
+      console.log('📍 Dropping into ROOT zone');
+    } else if (overData?.isFolder) {
       // Dropped on an organizational folder - move inside it
       newParentPath = overData.path as string;
       console.log(`📂 Dropping INTO folder: "${newParentPath}"`);
@@ -285,6 +303,13 @@ export function TreeView({
     );
   };
 
+  // Determine button states
+  const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
+  const isTemplate = selectedNode?.type === 'template-folder';
+  const isFolder = selectedNode?.type === 'folder';
+  const canCreateFolderOrList = !selectedNodeId || isFolder;
+  const canEditOrUse = !!(selectedNodeId && isTemplate);
+
   return (
     <DndContext
       sensors={sensors}
@@ -295,6 +320,29 @@ export function TreeView({
       onDragCancel={handleDragCancel}
     >
       <div className="rounded-lg border border-neutral-200 bg-white">
+        {/* Root-level drop zone with header */}
+        <TreeViewHeader
+          isDragging={!!activeNode}
+          canCreateFolderOrList={canCreateFolderOrList}
+          canEditOrUse={canEditOrUse}
+          onHeaderClick={onHeaderClick || (() => {})}
+          onEditTemplate={() => {
+            if (selectedNodeId && onEditTemplate) {
+              onEditTemplate(selectedNodeId);
+            }
+          }}
+          onUseTemplate={() => {
+            if (selectedNodeId && onUseTemplate) {
+              onUseTemplate(selectedNodeId);
+            }
+          }}
+          onAddFolder={onAddFolder || (() => {})}
+          onAddTemplate={onAddTemplate || (() => {})}
+          onExport={onExport || (() => {})}
+          onImport={onImport || (() => {})}
+          onSignOut={onSignOut}
+        />
+
         {treeStructure.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">
             <p>No lists yet.</p>

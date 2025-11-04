@@ -1,17 +1,8 @@
-import { Download, LogOut, MoreVertical, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { ShoppingSessionView } from '@/components/session/ShoppingSessionView';
 import { TreeView } from '@/components/tree';
-import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
 import type { GroceriesAccount } from '@/schemas';
 import * as FolderService from '@/services/folderService';
@@ -57,6 +48,8 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     if (!me.root) return;
 
     // If a folder is selected, use its path as parent
+    const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
+    const isFolder = selectedNode?.type === 'folder';
     const parentPath = isFolder ? selectedNode?.path : undefined;
 
     // Use folder service to create folder with proper Jazz CoList mutation
@@ -101,16 +94,6 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     setSelectedNodeId(null);
   };
 
-  const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
-  const isTemplate = selectedNode?.type === 'template-folder';
-  const isFolder = selectedNode?.type === 'folder';
-
-  // Button enabling logic
-  // New Folder/New List: enabled when nothing selected OR when a folder (not template) is selected
-  const canCreateFolderOrList = !selectedNodeId || isFolder;
-  // Edit List/Use List: enabled only when a template is selected
-  const canEditOrUse = selectedNodeId && isTemplate;
-
   // If editing a template, show TemplateItemsView
   if (activeEditFolderId) {
     const editFolder = nodes.find((n) => n?.$jazz.id === activeEditFolderId);
@@ -144,83 +127,6 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleHeaderClick}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          >
-            <BubbleListIcon className="h-8 w-8" size={32} />
-            <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
-          </button>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleEditTemplate}
-              disabled={!canEditOrUse}
-              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              Edit List
-            </button>
-            <button
-              type="button"
-              onClick={handleUseTemplate}
-              disabled={!canEditOrUse}
-              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              Use List
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddFolder(true)}
-              disabled={!canCreateFolderOrList}
-              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              <Plus className="h-4 w-4" />
-              New Folder
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddTemplate(true)}
-              disabled={!canCreateFolderOrList}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-            >
-              <Plus className="h-4 w-4" />
-              New List
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
-                  aria-label="More options"
-                >
-                  <MoreVertical className="h-5 w-5 text-neutral-600" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </DropdownMenuItem>
-                {onSignOut && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
         <TreeView
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           nodes={nodes}
@@ -234,6 +140,12 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
             setActiveSessionFolderId(folderId);
             setActiveSessionId(sessionId);
           }}
+          onHeaderClick={handleHeaderClick}
+          onAddFolder={() => setShowAddFolder(true)}
+          onAddTemplate={() => setShowAddTemplate(true)}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onSignOut={onSignOut}
         />
 
         <AddFolderDialog
