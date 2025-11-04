@@ -245,3 +245,19 @@ export function abandonSession(
   session.$jazz.set('status', 'abandoned');
   session.$jazz.set('lastActivityAt', new Date());
 }
+
+/**
+ * Update session view mode
+ */
+export function updateViewMode(
+  account: InstanceOfSchema<typeof GroceriesAccount>,
+  folderId: string,
+  sessionId: string,
+  viewMode: 'flat' | 'hierarchy-in-zones' | 'zone-in-hierarchy',
+): void {
+  const session = getSession(account, folderId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+
+  session.$jazz.set('viewMode', viewMode);
+  session.$jazz.set('lastActivityAt', new Date());
+}

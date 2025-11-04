@@ -1,5 +1,14 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, Download, MoreVertical, Package, ShoppingCart } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  FolderTree,
+  Layers,
+  List,
+  MoreVertical,
+  Package,
+  ShoppingCart,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -10,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { TemplateItem } from '@/schemas/tree';
 import * as SessionService from '@/services/sessionService';
 import { SessionZone } from './SessionZone';
 
@@ -26,6 +36,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     cart: true,
     completed: false,
   });
+  const [categoryExpanded, setCategoryExpanded] = useState<Record<string, boolean>>({});
   const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Find session first (before any early returns)
@@ -95,6 +106,33 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     );
   }
 
+  const cycleViewMode = () => {
+    if (!session || !me) return;
+    const current = session.viewMode || 'flat';
+    const next =
+      current === 'flat'
+        ? 'hierarchy-in-zones'
+        : current === 'hierarchy-in-zones'
+          ? 'zone-in-hierarchy'
+          : 'flat';
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    SessionService.updateViewMode(me, folder.$jazz.id, sessionId, next);
+  };
+
+  const getViewModeLabel = () => {
+    const mode = session?.viewMode || 'flat';
+    if (mode === 'flat') return 'Flat';
+    if (mode === 'hierarchy-in-zones') return 'Categories in Zones';
+    return 'Zones in Categories';
+  };
+
+  const getViewModeIcon = () => {
+    const mode = session?.viewMode || 'flat';
+    if (mode === 'flat') return List;
+    if (mode === 'hierarchy-in-zones') return Layers;
+    return FolderTree;
+  };
+
   const handleToggleCart = (itemId: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     SessionService.toggleItemInCart(me, folder.$jazz.id, sessionId, itemId);
@@ -115,6 +153,280 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     onBack();
   };
 
+  // Helper to build category tree structure
+  const buildCategoryTree = (items: InstanceOfSchema<typeof TemplateItem>[]) => {
+    const categoryNodes = new Map<
+      string,
+      { name: string; path: string; items: InstanceOfSchema<typeof TemplateItem>[] }
+    >();
+
+    items.forEach((item) => {
+      const pathParts = item.path.split('/');
+      const parentPath = pathParts.slice(0, -1).join('/');
+
+      if (parentPath && !categoryNodes.has(parentPath)) {
+        // Create category node from path
+        const categoryName = pathParts[pathParts.length - 2] || 'Uncategorized';
+        categoryNodes.set(parentPath, {
+          name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
+          path: parentPath,
+          items: [],
+        });
+      }
+
+      if (parentPath) {
+        categoryNodes.get(parentPath)?.items.push(item);
+      }
+    });
+
+    return Array.from(categoryNodes.values());
+  };
+
+  // Render function for different view modes
+  const renderViewMode = () => {
+    const viewMode = session?.viewMode || 'flat';
+
+    // Flat view: Simple zones
+    if (viewMode === 'flat') {
+      return (
+        <>
+          <SessionZone
+            title="In Cart"
+            icon={ShoppingCart}
+            zone="cart"
+            items={cartItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.cart}
+            onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, cart: !prev.cart }))}
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={cartItems.length}
+          />
+          <SessionZone
+            title="Completed"
+            icon={CheckCircle2}
+            zone="completed"
+            items={completedItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.completed}
+            onToggleExpand={() =>
+              setZoneExpanded((prev) => ({ ...prev, completed: !prev.completed }))
+            }
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={completedItems.length}
+          />
+          <SessionZone
+            title="List Inventory"
+            icon={Package}
+            zone="inventory"
+            items={inventoryItems}
+            itemStates={session.itemStates || {}}
+            expanded={zoneExpanded.inventory}
+            onToggleExpand={() =>
+              setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
+            }
+            onToggleCart={handleToggleCart}
+            onTogglePurchased={handleTogglePurchased}
+            count={inventoryItems.length}
+          />
+        </>
+      );
+    }
+
+    // Hierarchy in Zones: Each zone shows category groups
+    if (viewMode === 'hierarchy-in-zones') {
+      const zones = [
+        { key: 'cart', title: 'In Cart', icon: ShoppingCart, items: cartItems },
+        { key: 'completed', title: 'Completed', icon: CheckCircle2, items: completedItems },
+        { key: 'inventory', title: 'List Inventory', icon: Package, items: inventoryItems },
+      ] as const;
+
+      return (
+        <>
+          {zones.map((zone) => {
+            const categories = buildCategoryTree(zone.items);
+            const isZoneExpanded = zoneExpanded[zone.key as keyof typeof zoneExpanded];
+
+            return (
+              <SessionZone
+                key={zone.key}
+                title={zone.title}
+                icon={zone.icon}
+                zone={zone.key}
+                items={[]}
+                itemStates={{}}
+                expanded={isZoneExpanded}
+                onToggleExpand={() =>
+                  setZoneExpanded((prev) => ({
+                    ...prev,
+                    [zone.key]: !prev[zone.key as keyof typeof prev],
+                  }))
+                }
+                onToggleCart={handleToggleCart}
+                onTogglePurchased={handleTogglePurchased}
+                count={zone.items.length}
+              >
+                {categories.length === 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {zone.items.map((item) => (
+                      <SessionZone
+                        key={item.$jazz.id}
+                        title={item.name}
+                        zone={zone.key}
+                        items={[item]}
+                        itemStates={session.itemStates || {}}
+                        expanded={true}
+                        onToggleExpand={() => {}}
+                        onToggleCart={handleToggleCart}
+                        onTogglePurchased={handleTogglePurchased}
+                        count={1}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {categories.map((category) => {
+                      const catKey = `${zone.key}-${category.path}`;
+                      return (
+                        <SessionZone
+                          key={category.path}
+                          title={category.name}
+                          zone={zone.key}
+                          items={category.items}
+                          itemStates={session.itemStates || {}}
+                          expanded={categoryExpanded[catKey] ?? true}
+                          onToggleExpand={() =>
+                            setCategoryExpanded((prev) => ({
+                              ...prev,
+                              [catKey]: !prev[catKey],
+                            }))
+                          }
+                          onToggleCart={handleToggleCart}
+                          onTogglePurchased={handleTogglePurchased}
+                          count={category.items.length}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </SessionZone>
+            );
+          })}
+        </>
+      );
+    }
+
+    // Zone in Hierarchy: Categories first, then zones within each
+    if (viewMode === 'zone-in-hierarchy') {
+      const allCategories = buildCategoryTree(activeItems);
+
+      return (
+        <>
+          {allCategories.map((category) => {
+            // Split category items by zone
+            const catInventory = category.items.filter((item) => {
+              const state = session.itemStates?.[item.$jazz.id];
+              return !state || (!state.inCart && !state.purchased);
+            });
+            const catCart = category.items.filter((item) => {
+              const state = session.itemStates?.[item.$jazz.id];
+              return state?.inCart && !state.purchased;
+            });
+            const catCompleted = category.items.filter((item) => {
+              const state = session.itemStates?.[item.$jazz.id];
+              return state?.purchased;
+            });
+
+            const totalItems = category.items.length;
+
+            return (
+              <SessionZone
+                key={category.path}
+                title={category.name}
+                zone="inventory"
+                items={[]}
+                itemStates={{}}
+                expanded={categoryExpanded[`category-${category.path}`] ?? true}
+                onToggleExpand={() =>
+                  setCategoryExpanded((prev) => ({
+                    ...prev,
+                    [`category-${category.path}`]: !prev[`category-${category.path}`],
+                  }))
+                }
+                onToggleCart={handleToggleCart}
+                onTogglePurchased={handleTogglePurchased}
+                count={totalItems}
+              >
+                <div className="flex flex-col gap-2">
+                  {catCart.length > 0 && (
+                    <SessionZone
+                      title="In Cart"
+                      icon={ShoppingCart}
+                      zone="cart"
+                      items={catCart}
+                      itemStates={session.itemStates || {}}
+                      expanded={categoryExpanded[`${category.path}-cart`] ?? true}
+                      onToggleExpand={() =>
+                        setCategoryExpanded((prev) => ({
+                          ...prev,
+                          [`${category.path}-cart`]: !prev[`${category.path}-cart`],
+                        }))
+                      }
+                      onToggleCart={handleToggleCart}
+                      onTogglePurchased={handleTogglePurchased}
+                      count={catCart.length}
+                    />
+                  )}
+                  {catCompleted.length > 0 && (
+                    <SessionZone
+                      title="Completed"
+                      icon={CheckCircle2}
+                      zone="completed"
+                      items={catCompleted}
+                      itemStates={session.itemStates || {}}
+                      expanded={categoryExpanded[`${category.path}-completed`] ?? true}
+                      onToggleExpand={() =>
+                        setCategoryExpanded((prev) => ({
+                          ...prev,
+                          [`${category.path}-completed`]: !prev[`${category.path}-completed`],
+                        }))
+                      }
+                      onToggleCart={handleToggleCart}
+                      onTogglePurchased={handleTogglePurchased}
+                      count={catCompleted.length}
+                    />
+                  )}
+                  {catInventory.length > 0 && (
+                    <SessionZone
+                      title="List Inventory"
+                      icon={Package}
+                      zone="inventory"
+                      items={catInventory}
+                      itemStates={session.itemStates || {}}
+                      expanded={categoryExpanded[`${category.path}-inventory`] ?? true}
+                      onToggleExpand={() =>
+                        setCategoryExpanded((prev) => ({
+                          ...prev,
+                          [`${category.path}-inventory`]: !prev[`${category.path}-inventory`],
+                        }))
+                      }
+                      onToggleCart={handleToggleCart}
+                      onTogglePurchased={handleTogglePurchased}
+                      count={catInventory.length}
+                    />
+                  )}
+                </div>
+              </SessionZone>
+            );
+          })}
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <div className="mx-auto max-w-4xl">
@@ -126,17 +438,18 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
               {session.name} <span className="text-neutral-500">· {folder.name}</span>
             </h1>
             <div className="flex items-center gap-2">
-              {/* TODO: Implement hierarchy view modes
               <button
                 type="button"
                 onClick={cycleViewMode}
-                className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-                title="Cycle view mode"
+                className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
+                title={`Cycle view - ${getViewModeLabel()}`}
+                aria-label={`Cycle view - ${getViewModeLabel()}`}
               >
-                <LayoutGrid className="h-4 w-4" />
-                {getViewModeLabel()}
+                {(() => {
+                  const Icon = getViewModeIcon();
+                  return <Icon className="h-4 w-4" />;
+                })()}
               </button>
-              */}
               <button
                 type="button"
                 onClick={handleFinishSession}
@@ -164,48 +477,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             </div>
           </div>
 
-          <div className="divide-y divide-neutral-100 p-2">
-            <SessionZone
-              title="In Cart"
-              icon={ShoppingCart}
-              zone="cart"
-              items={cartItems}
-              itemStates={session.itemStates || {}}
-              expanded={zoneExpanded.cart}
-              onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, cart: !prev.cart }))}
-              onToggleCart={handleToggleCart}
-              onTogglePurchased={handleTogglePurchased}
-              count={cartItems.length}
-            />
-            <SessionZone
-              title="Completed"
-              icon={CheckCircle2}
-              zone="completed"
-              items={completedItems}
-              itemStates={session.itemStates || {}}
-              expanded={zoneExpanded.completed}
-              onToggleExpand={() =>
-                setZoneExpanded((prev) => ({ ...prev, completed: !prev.completed }))
-              }
-              onToggleCart={handleToggleCart}
-              onTogglePurchased={handleTogglePurchased}
-              count={completedItems.length}
-            />
-            <SessionZone
-              title="List Inventory"
-              icon={Package}
-              zone="inventory"
-              items={inventoryItems}
-              itemStates={session.itemStates || {}}
-              expanded={zoneExpanded.inventory}
-              onToggleExpand={() =>
-                setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
-              }
-              onToggleCart={handleToggleCart}
-              onTogglePurchased={handleTogglePurchased}
-              count={inventoryItems.length}
-            />
-          </div>
+          <div className="divide-y divide-neutral-100 p-2">{renderViewMode()}</div>
         </div>
 
         {/* Export Dialog */}

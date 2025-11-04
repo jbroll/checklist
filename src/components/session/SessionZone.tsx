@@ -77,15 +77,6 @@ export function SessionZone({
             <div className="pl-2">
               {children ? (
                 children
-              ) : items.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="py-8 text-center text-neutral-500"
-                >
-                  <p>No items in this zone</p>
-                </motion.div>
               ) : (
                 <div className="flex flex-col gap-2">
                   <AnimatePresence mode="popLayout">
