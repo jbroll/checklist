@@ -164,7 +164,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
         </div>
 
         {/* Content: Simple flat zones view */}
-        <div className="flex flex-col gap-4">
+        <div className="rounded-lg border border-neutral-200 bg-white p-2">
           <SessionZone
             title="In Cart"
             icon="🛒"

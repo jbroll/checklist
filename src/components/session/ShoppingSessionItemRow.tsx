@@ -29,7 +29,7 @@ export function ShoppingSessionItemRow({
   const purchased = state?.purchased || false;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3 hover:bg-neutral-50">
+    <div className="flex items-center gap-3 rounded px-2 py-1 hover:bg-neutral-100">
       {/* Left checkbox - Add to cart */}
       <button
         type="button"

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { ChevronRight } from 'lucide-react';
+import { TreeNode } from '@/components/tree/TreeNode';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 import { ShoppingSessionItemRow } from './ShoppingSessionItemRow';
 
@@ -34,30 +34,31 @@ export function SessionZone({
   return (
     <div>
       {/* Zone header */}
-      <button
-        type="button"
-        onClick={onToggleExpand}
-        className="flex w-full items-center gap-2 p-4 text-left hover:bg-neutral-50"
+      <TreeNode
+        level={0}
+        expanded={expanded}
+        onToggleExpand={onToggleExpand}
+        hasChildren={items.length > 0 || !!children}
       >
-        <motion.div
-          animate={{ rotate: expanded ? 90 : 0 }}
-          transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full hover:bg-neutral-100 transition-colors"
         >
-          <ChevronRight className="h-5 w-5 text-neutral-500" />
-        </motion.div>
-        <span className="text-xl">{icon}</span>
-        <span className="flex-1 text-lg font-semibold text-neutral-900">{title}</span>
-        {count !== undefined && (
-          <motion.span
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700"
-          >
-            {count}
-          </motion.span>
-        )}
-      </button>
+          <span className="text-base">{icon}</span>
+          <span className="flex-1 text-sm font-semibold text-neutral-900">{title}</span>
+          {count !== undefined && (
+            <motion.span
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700"
+            >
+              {count}
+            </motion.span>
+          )}
+        </button>
+      </TreeNode>
 
       {/* Zone items with expand/collapse animation */}
       <AnimatePresence initial={false}>
@@ -72,7 +73,7 @@ export function SessionZone({
             }}
             className="overflow-hidden"
           >
-            <div className="pl-8">
+            <div className="pl-2">
               {children ? (
                 children
               ) : items.length === 0 ? (
