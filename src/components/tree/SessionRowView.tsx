@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Calendar, MoreVertical, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
@@ -49,10 +49,14 @@ export const SessionRowView = memo(function SessionRowView({
           <span className="flex-1 text-left text-sm text-neutral-900">{session.name}</span>
 
           {/* Session stats */}
-          <div className="flex items-center gap-2 text-xs text-neutral-500">
-            <span>{session.completedCount || 0} completed</span>
-            <Calendar className="h-4 w-4" />
-            <span>{new Date(session.startedAt).toLocaleDateString()}</span>
+          <div className="flex items-center gap-1 text-sm">
+            <span className="text-green-600">{session.completedCount || 0}</span>
+            <span className="text-neutral-900">/</span>
+            <span className="text-neutral-900">
+              {(session.completedCount || 0) +
+                (session.inCartCount || 0) +
+                (session.remainingCount || 0)}
+            </span>
           </div>
         </button>
 
