@@ -46,7 +46,7 @@ export function SessionRowView({ session, level, onOpen, onDelete }: SessionRowV
           {/* Session stats */}
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span>{session.completedCount || 0} completed</span>
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-4 w-4" />
             <span>{new Date(session.startedAt).toLocaleDateString()}</span>
           </div>
         </button>

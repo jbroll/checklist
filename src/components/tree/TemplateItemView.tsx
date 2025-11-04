@@ -111,7 +111,7 @@ export function TemplateItemView({
             className="cursor-grab active:cursor-grabbing flex-1 flex items-center gap-2 min-w-0"
           >
             {/* Icon */}
-            <span className="text-sm shrink-0">{item.icon || (isCategory ? '📁' : '📦')}</span>
+            <span className="text-base shrink-0">{item.icon || (isCategory ? '📁' : '📦')}</span>
 
             {/* Name (Editable) */}
             {isEditing ? (

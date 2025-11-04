@@ -150,7 +150,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                   className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
                   aria-label="More options"
                 >
-                  <MoreVertical className="h-5 w-5 text-neutral-600" />
+                  <MoreVertical className="h-4 w-4 text-neutral-600" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
