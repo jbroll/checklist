@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Check, Download, MoreVertical } from 'lucide-react';
+import { Download, MoreVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -140,10 +140,9 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
               <button
                 type="button"
                 onClick={handleFinishSession}
-                className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
               >
-                <Check className="h-4 w-4" />
-                Finish Shopping
+                Done
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
