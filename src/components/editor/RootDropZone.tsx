@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import { Check, Plus } from 'lucide-react';
+import { CheckSquare, Plus } from 'lucide-react';
 
 interface RootDropZoneProps {
   isDragging: boolean;
@@ -39,18 +39,17 @@ export function RootDropZone({ isDragging, folderName, onBack, onAddItem }: Root
           <button
             type="button"
             onClick={onAddItem}
-            className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+            className="flex items-center gap-1 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
           >
             <Plus className="h-4 w-4" />
-            Add Item
+            <CheckSquare className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
-            <Check className="h-4 w-4" />
-            Finish Editing
+            Done
           </button>
         </div>
       </div>
