@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface StartSessionDialogProps {
@@ -60,13 +62,12 @@ export function StartSessionDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="session-name">Session Name (Optional)</Label>
-              <input
+              <Input
                 id="session-name"
                 type="text"
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
                 placeholder={`Leave empty for auto-generated name: ${generateDefaultName()}`}
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
               <p className="text-xs text-neutral-500">
                 Auto-generated names use the format [YYYY-MM-DD HH:MM]
@@ -75,19 +76,12 @@ export function StartSessionDialog({
           </div>
 
           <DialogFooter>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-            >
+            <Button type="button" onClick={handleCancel} variant="secondary">
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               Start Shopping
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

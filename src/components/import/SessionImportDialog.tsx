@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
@@ -150,13 +152,12 @@ export function SessionImportDialog({
           {!importResult && (
             <div className="grid gap-2">
               <Label htmlFor="session-name">Session name</Label>
-              <input
+              <Input
                 id="session-name"
                 type="text"
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
                 placeholder="[2025-11-01] or custom name..."
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
           )}
@@ -319,24 +320,19 @@ export function SessionImportDialog({
         </div>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isImporting}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="button" onClick={handleCancel} disabled={isImporting} variant="secondary">
             {importResult ? 'Close' : 'Cancel'}
-          </button>
+          </Button>
           {!importResult && (
-            <button
+            <Button
               type="button"
               onClick={handleImport}
               disabled={!selectedFile || isImporting || !sessionName.trim()}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
             >
               <Upload className="h-4 w-4" />
               {isImporting ? 'Importing...' : 'Import Session'}
-            </button>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

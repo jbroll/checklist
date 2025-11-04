@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import type { GroceriesAccount } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
 import type { ImportResult } from '@/services/import/types';
@@ -170,13 +172,12 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
               <label htmlFor="template-name" className="text-sm font-medium text-neutral-700">
                 List name
               </label>
-              <input
+              <Input
                 id="template-name"
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="Enter list name..."
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
           )}
@@ -227,13 +228,14 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </div>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={handleReset}
-                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                  variant="link"
+                  className="text-neutral-500 hover:text-neutral-700"
                 >
                   Change
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -323,24 +325,19 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
         </div>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isImporting}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="button" onClick={handleCancel} disabled={isImporting} variant="secondary">
             {importResult?.success ? 'Close' : 'Cancel'}
-          </button>
+          </Button>
           {!importResult && (
-            <button
+            <Button
               type="button"
               onClick={handleImport}
               disabled={!selectedFile || isImporting}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
             >
               <Upload className="h-4 w-4" />
               {isImporting ? 'Importing...' : 'Import'}
-            </button>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

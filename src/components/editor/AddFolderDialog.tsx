@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface AddFolderDialogProps {
@@ -53,7 +55,7 @@ export function AddFolderDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="folder-name">{defaultIsTemplate ? 'List Name' : 'Folder Name'}</Label>
-              <input
+              <Input
                 id="folder-name"
                 type="text"
                 value={folderName}
@@ -63,26 +65,17 @@ export function AddFolderDialog({
                     ? 'e.g., Weekly Staples, Monthly Shopping'
                     : 'e.g., Groceries, Household'
                 }
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-            >
+            <Button type="button" onClick={handleCancel} variant="secondary">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!folderName.trim()}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={!folderName.trim()} variant="primary">
               {defaultIsTemplate ? 'Create List' : 'Create Folder'}
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

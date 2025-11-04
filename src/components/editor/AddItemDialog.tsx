@@ -1,5 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { TemplateItem } from '@/schemas';
 
@@ -123,7 +125,7 @@ export function AddItemDialog({
             {/* Name */}
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
-              <input
+              <Input
                 id="name"
                 type="text"
                 value={name}
@@ -131,7 +133,6 @@ export function AddItemDialog({
                 placeholder={
                   itemType === 'item' ? 'e.g., Apples, Milk, Bread' : 'e.g., Produce, Dairy'
                 }
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 autoFocus
               />
             </div>
@@ -159,13 +160,12 @@ export function AddItemDialog({
             {/* Icon */}
             <div className="grid gap-2">
               <Label htmlFor="icon">Icon (Optional)</Label>
-              <input
+              <Input
                 id="icon"
                 type="text"
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 placeholder="e.g., 🍎, 🥛, 📦"
-                className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 maxLength={4}
               />
             </div>
@@ -174,13 +174,12 @@ export function AddItemDialog({
             {itemType === 'item' && (
               <div className="grid gap-2">
                 <Label htmlFor="default-quantity">Default Quantity (Optional)</Label>
-                <input
+                <Input
                   id="default-quantity"
                   type="text"
                   value={defaultQuantity}
                   onChange={(e) => setDefaultQuantity(e.target.value)}
                   placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
-                  className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 />
               </div>
             )}
@@ -197,12 +196,12 @@ export function AddItemDialog({
                     onChange={(e) => setColor(e.target.value)}
                     className="h-10 w-16 rounded-md border border-neutral-300 bg-white"
                   />
-                  <input
+                  <Input
                     type="text"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#6b7280"
-                    className="flex h-10 flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                    className="flex-1"
                   />
                 </div>
               </div>
@@ -210,20 +209,12 @@ export function AddItemDialog({
           </div>
 
           <DialogFooter>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-            >
+            <Button type="button" onClick={handleCancel} variant="secondary">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!name.trim()}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={!name.trim()} variant="primary">
               Add {itemType === 'item' ? 'Item' : 'Category'}
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

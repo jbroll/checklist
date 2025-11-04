@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -148,23 +149,18 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
         </div>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isExporting}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="button" onClick={handleCancel} disabled={isExporting} variant="secondary">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleExport}
             disabled={!canExport || isExporting}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="primary"
           >
             <Download className="h-4 w-4" />
             {isExporting ? 'Exporting...' : 'Export & Download'}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

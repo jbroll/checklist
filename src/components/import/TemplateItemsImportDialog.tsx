@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -308,24 +309,19 @@ export function TemplateItemsImportDialog({
         </div>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isImporting}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="button" onClick={handleCancel} disabled={isImporting} variant="secondary">
             {importResult ? 'Close' : 'Cancel'}
-          </button>
+          </Button>
           {!importResult && (
-            <button
+            <Button
               type="button"
               onClick={handleImport}
               disabled={!selectedFile || isImporting}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
             >
               <Upload className="h-4 w-4" />
               {isImporting ? 'Importing...' : 'Import Items'}
-            </button>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
