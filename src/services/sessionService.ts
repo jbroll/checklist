@@ -37,8 +37,8 @@ export function createSession(
   const timeStr = now.toTimeString().slice(0, 5); // HH:MM
   const name = sessionName || `${dateStr} ${timeStr}`;
 
-  // Count non-archived items
-  const activeItems = folder.items.filter((item) => item && !item.archived);
+  // Count non-archived leaf items only (exclude categories)
+  const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
   const remainingCount = activeItems.length;
 
   // Create new shopping session
@@ -193,7 +193,8 @@ export function updateSessionCounts(
   const folder = getFolder(account, folderId);
   if (!folder?.items) return;
 
-  const activeItems = folder.items.filter((item) => item && !item.archived);
+  // Only count leaf items, not categories
+  const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
 
   let inCartCount = 0;
   let completedCount = 0;
