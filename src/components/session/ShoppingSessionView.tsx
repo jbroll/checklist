@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Download, MoreVertical } from 'lucide-react';
+import { CheckCircle2, Download, MoreVertical, ShoppingCart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -167,7 +167,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
           <div className="divide-y divide-neutral-100 p-2">
             <SessionZone
               title="In Cart"
-              icon="🛒"
+              icon={ShoppingCart}
               zone="cart"
               items={cartItems}
               itemStates={session.itemStates || {}}
@@ -179,7 +179,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             />
             <SessionZone
               title="Completed"
-              icon="✅"
+              icon={CheckCircle2}
               zone="completed"
               items={completedItems}
               itemStates={session.itemStates || {}}
@@ -193,7 +193,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             />
             <SessionZone
               title="List Inventory"
-              icon="📦"
               zone="inventory"
               items={inventoryItems}
               itemStates={session.itemStates || {}}

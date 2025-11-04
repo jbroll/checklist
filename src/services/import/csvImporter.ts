@@ -104,7 +104,6 @@ export function importItemsFromCsv(
     try {
       // Get default quantity (optional)
       const defaultQuantity = row.defaultQuantity?.trim() || '';
-      const icon = row.icon?.trim() || '📦';
 
       // Create new template item (always type='item' for CSV imports)
       const newItem = TemplateItem.create(
@@ -116,7 +115,6 @@ export function importItemsFromCsv(
           sortOrder: nextSortOrder++,
           archived: false,
           defaultQuantity,
-          icon,
           color: '#6b7280',
           addedBy: account,
           createdAt: new Date(),

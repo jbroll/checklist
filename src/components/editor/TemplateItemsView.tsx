@@ -10,6 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { Folder } from 'lucide-react';
 import { useState } from 'react';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
@@ -56,19 +57,14 @@ export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
   // Build hierarchical tree structure
   const itemTree = buildItemTree(activeItems);
 
-  const handleAddItem = (
-    name: string,
-    parentPath?: string,
-    defaultQuantity?: string,
-    icon?: string,
-  ) => {
+  const handleAddItem = (name: string, parentPath?: string, defaultQuantity?: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createItem(me, folder.$jazz.id, name, parentPath, defaultQuantity, icon);
+    ItemService.createItem(me, folder.$jazz.id, name, parentPath, defaultQuantity);
   };
 
-  const handleAddCategory = (name: string, parentPath?: string, icon?: string, color?: string) => {
+  const handleAddCategory = (name: string, parentPath?: string, color?: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createCategory(me, folder.$jazz.id, name, parentPath, icon, color);
+    ItemService.createCategory(me, folder.$jazz.id, name, parentPath, color);
   };
 
   const handleRenameItem = (itemId: string, newName: string) => {
@@ -228,9 +224,7 @@ export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
       <DragOverlay>
         {activeItem ? (
           <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90 flex items-center gap-2">
-            <span className="text-sm">
-              {activeItem.icon || (activeItem.type === 'category' ? '📁' : '📦')}
-            </span>
+            {activeItem.type === 'category' && <Folder className="h-4 w-4" />}
             <span className="font-medium">{activeItem.name}</span>
           </div>
         ) : null}

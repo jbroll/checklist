@@ -162,24 +162,6 @@ test.describe('Jazz Services - Item Operations', () => {
 
     expect(item.archived).toBe(true);
   });
-
-  test('should update item icon', async ({ page }) => {
-    const { folderId, itemId } = await page.evaluate(() => {
-      const folderId = window.__testServices!.folder.create('List', true);
-      const itemId = window.__testServices!.item.createItem(folderId, 'Milk');
-      return { folderId, itemId };
-    });
-
-    await page.evaluate(({ folderId, itemId }) => {
-      window.__testServices!.item.updateIcon(folderId, itemId, '🥛');
-    }, { folderId, itemId });
-
-    const item = await page.evaluate(({ folderId, itemId }) => {
-      return window.__testServices!.item.get(folderId, itemId);
-    }, { folderId, itemId });
-
-    expect(item.icon).toBe('🥛');
-  });
 });
 
 test.describe('Jazz Services - Data Persistence', () => {

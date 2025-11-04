@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { CheckCircle2, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
@@ -31,8 +31,12 @@ export const SessionRowView = memo(function SessionRowView({
     }
   };
 
-  const statusIcon =
-    session.status === 'completed' ? '✅' : session.status === 'active' ? '🛒' : '⏸️';
+  const StatusIcon =
+    session.status === 'completed'
+      ? CheckCircle2
+      : session.status === 'active'
+        ? ShoppingCart
+        : Pause;
 
   return (
     <TreeNode level={level} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
@@ -43,7 +47,7 @@ export const SessionRowView = memo(function SessionRowView({
           className="flex flex-1 items-center gap-2"
         >
           {/* Status icon */}
-          <span className="text-base">{statusIcon}</span>
+          <StatusIcon className="h-4 w-4" />
 
           {/* Session name */}
           <span className="flex-1 text-left text-sm text-neutral-900">{session.name}</span>

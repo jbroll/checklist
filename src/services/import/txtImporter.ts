@@ -93,7 +93,6 @@ export function importItemsFromText(
           sortOrder: nextSortOrder++,
           archived: false,
           defaultQuantity: '',
-          icon: '📦',
           color: '#6b7280',
           addedBy: account,
           createdAt: new Date(),

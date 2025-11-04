@@ -225,7 +225,6 @@ async function importTemplateFolder(
           sortOrder: exportedItem.sortOrder,
           archived: false,
           defaultQuantity: exportedItem.defaultQuantity || '',
-          icon: exportedItem.icon || '📦',
           color: exportedItem.color || '#6b7280',
           addedBy: account,
           createdAt: new Date(exportedItem.createdAt),

@@ -1,6 +1,11 @@
+import { XCircle } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { Dashboard } from './components/Dashboard';
+import { LoadingScreen } from './components/ui/loading';
 import { JazzProvider } from './lib/jazz';
-import { TestPage } from './TestPage';
+
+// Lazy load TestPage only in development to avoid bundling it in production
+const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
 
 function App() {
   // Check if we're on the test page route
@@ -11,7 +16,9 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-red-50">
         <div className="max-w-md rounded-lg border-4 border-red-500 bg-white p-8 text-center shadow-lg">
-          <div className="mb-4 text-6xl">🚫</div>
+          <div className="mb-4 flex justify-center">
+            <XCircle className="h-16 w-16 text-red-500" />
+          </div>
           <h1 className="mb-2 text-2xl font-bold text-red-900">Access Denied</h1>
           <p className="mb-4 text-neutral-600">Test page is not available in production.</p>
           <a
@@ -33,7 +40,15 @@ function App() {
       >
         Skip to main content
       </a>
-      <div className="min-h-screen bg-neutral-50">{isTestPage ? <TestPage /> : <Dashboard />}</div>
+      <div className="min-h-screen bg-neutral-50">
+        {isTestPage ? (
+          <Suspense fallback={<LoadingScreen />}>
+            <TestPage />
+          </Suspense>
+        ) : (
+          <Dashboard />
+        )}
+      </div>
     </JazzProvider>
   );
 }

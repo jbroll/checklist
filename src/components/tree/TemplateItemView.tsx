@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -111,7 +111,7 @@ export function TemplateItemView({
             className="cursor-grab active:cursor-grabbing flex-1 flex items-center gap-2 min-w-0"
           >
             {/* Icon */}
-            <span className="text-base shrink-0">{item.icon || (isCategory ? '📁' : '📦')}</span>
+            {isCategory && <Folder className="h-4 w-4 shrink-0" />}
 
             {/* Name (Editable) */}
             {isEditing ? (
