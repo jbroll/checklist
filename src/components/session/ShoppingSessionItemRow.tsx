@@ -70,10 +70,9 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
         )}
       </button>
 
-      {/* Item name with icon */}
+      {/* Item name */}
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-base">{item.icon || '📦'}</span>
           <span className={`text-neutral-900 ${purchased ? 'line-through opacity-50' : ''}`}>
             {item.name}
           </span>

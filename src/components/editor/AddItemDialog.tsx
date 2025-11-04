@@ -17,8 +17,8 @@ import type { TemplateItem } from '@/schemas';
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddItem: (name: string, parentPath?: string, defaultQuantity?: string, icon?: string) => void;
-  onAddCategory: (name: string, parentPath?: string, icon?: string, color?: string) => void;
+  onAddItem: (name: string, parentPath?: string, defaultQuantity?: string) => void;
+  onAddCategory: (name: string, parentPath?: string, color?: string) => void;
   folderName?: string;
   // Available categories to select as parent
   categories?: readonly (InstanceOfSchema<typeof TemplateItem> | null)[];
@@ -36,7 +36,6 @@ export function AddItemDialog({
   const [name, setName] = useState('');
   const [parentPath, setParentPath] = useState<string>('');
   const [defaultQuantity, setDefaultQuantity] = useState('');
-  const [icon, setIcon] = useState('');
   const [color, setColor] = useState('#6b7280');
 
   // Filter valid categories
@@ -48,19 +47,9 @@ export function AddItemDialog({
     e.preventDefault();
     if (name.trim()) {
       if (itemType === 'item') {
-        onAddItem(
-          name.trim(),
-          parentPath || undefined,
-          defaultQuantity.trim() || undefined,
-          icon.trim() || undefined,
-        );
+        onAddItem(name.trim(), parentPath || undefined, defaultQuantity.trim() || undefined);
       } else {
-        onAddCategory(
-          name.trim(),
-          parentPath || undefined,
-          icon.trim() || undefined,
-          color || undefined,
-        );
+        onAddCategory(name.trim(), parentPath || undefined, color || undefined);
       }
       handleReset();
       onOpenChange(false);
@@ -71,7 +60,6 @@ export function AddItemDialog({
     setName('');
     setParentPath('');
     setDefaultQuantity('');
-    setIcon('');
     setColor('#6b7280');
     setItemType('item');
   };
@@ -150,24 +138,12 @@ export function AddItemDialog({
                   <option value="">-- None (Top Level) --</option>
                   {validCategories.map((cat) => (
                     <option key={cat.$jazz.id} value={cat.path}>
-                      {cat.icon} {cat.name}
+                      {cat.name}
                     </option>
                   ))}
                 </select>
               </div>
             )}
-
-            {/* Icon */}
-            <FormField label="Icon (Optional)" htmlFor="icon">
-              <Input
-                id="icon"
-                type="text"
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                placeholder="e.g., 🍎, 🥛, 📦"
-                maxLength={4}
-              />
-            </FormField>
 
             {/* Item-specific: Default Quantity */}
             {itemType === 'item' && (

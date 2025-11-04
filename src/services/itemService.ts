@@ -20,7 +20,6 @@ export function createCategory(
   folderId: string,
   name: string,
   parentPath?: string,
-  icon?: string,
   color?: string,
 ): string {
   const folder = getFolder(account, folderId);
@@ -46,7 +45,6 @@ export function createCategory(
       sortOrder: folder.items.length,
       archived: false,
       defaultQuantity: '',
-      icon: icon || '📁',
       color: color || '#6b7280',
       addedBy: account,
       createdAt: new Date(),
@@ -70,7 +68,6 @@ export function createItem(
   name: string,
   parentPath?: string,
   defaultQuantity?: string,
-  icon?: string,
   color?: string,
 ): string {
   const folder = getFolder(account, folderId);
@@ -96,7 +93,6 @@ export function createItem(
       sortOrder: folder.items.length,
       archived: false,
       defaultQuantity: defaultQuantity || '',
-      icon: icon || '📦',
       color: color || '#6b7280',
       addedBy: account,
       createdAt: new Date(),
@@ -281,27 +277,6 @@ export function moveItem(
   }
 
   folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Update item icon
- */
-export function updateItemIcon(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
-  folderId: string,
-  itemId: string,
-  icon: string,
-): void {
-  const item = getItem(account, folderId, itemId);
-  if (!item) throw new Error(`Item ${itemId} not found in folder ${folderId}`);
-
-  item.$jazz.set('icon', icon);
-  item.$jazz.set('updatedAt', new Date());
-
-  const folder = getFolder(account, folderId);
-  if (folder) {
-    folder.$jazz.set('updatedAt', new Date());
-  }
 }
 
 /**

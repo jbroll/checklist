@@ -10,19 +10,15 @@ interface EmptyStateProps {
 /**
  * Empty state component for displaying when no data is available
  *
+ * Note: This component accepts emoji strings for the icon prop for backward compatibility.
+ * For new implementations, consider using Lucide React icon components directly instead.
+ *
  * @example
  * ```tsx
  * <EmptyState
  *   icon="📋"
  *   title="No templates yet"
  *   description="Create your first template to get started."
- * />
- *
- * <EmptyState
- *   icon="🛒"
- *   title="No active session"
- *   description="Start a shopping session to begin tracking items."
- *   action={<Button>Start Session</Button>}
  * />
  * ```
  */

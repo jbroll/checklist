@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
+import type { LucideIcon } from 'lucide-react';
 import { TreeNode } from '@/components/tree/TreeNode';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 import { ShoppingSessionItemRow } from './ShoppingSessionItemRow';
 
 interface SessionZoneProps {
   title: string;
-  icon: string;
+  icon?: LucideIcon;
   zone: 'inventory' | 'cart' | 'completed';
   items: InstanceOfSchema<typeof TemplateItem>[];
   itemStates: Record<string, InstanceOfSchema<typeof ItemState>>;
@@ -20,7 +21,7 @@ interface SessionZoneProps {
 
 export function SessionZone({
   title,
-  icon,
+  icon: Icon,
   zone,
   items,
   itemStates,
@@ -45,7 +46,7 @@ export function SessionZone({
           onClick={onToggleExpand}
           className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full hover:bg-neutral-100 transition-colors"
         >
-          <span className="text-base">{icon}</span>
+          {Icon && <Icon className="h-4 w-4" />}
           <span className="flex-1 text-sm font-semibold text-neutral-900">{title}</span>
           {count !== undefined && (
             <motion.span

@@ -50,26 +50,12 @@ export function exposeServicesToWindow(
 
     // Item operations
     item: {
-      createItem: (
-        folderId: string,
-        name: string,
-        parentPath?: string,
-        defaultQuantity?: string,
-        icon?: string,
-      ) =>
+      createItem: (folderId: string, name: string, parentPath?: string, defaultQuantity?: string) =>
         withAccount((acc) =>
-          ItemService.createItem(acc, folderId, name, parentPath, defaultQuantity, icon),
+          ItemService.createItem(acc, folderId, name, parentPath, defaultQuantity),
         ),
-      createCategory: (
-        folderId: string,
-        name: string,
-        parentPath?: string,
-        icon?: string,
-        color?: string,
-      ) =>
-        withAccount((acc) =>
-          ItemService.createCategory(acc, folderId, name, parentPath, icon, color),
-        ),
+      createCategory: (folderId: string, name: string, parentPath?: string, color?: string) =>
+        withAccount((acc) => ItemService.createCategory(acc, folderId, name, parentPath, color)),
       get: (folderId: string, itemId: string) =>
         withAccount((acc) => ItemService.getItem(acc, folderId, itemId)),
       getAll: (folderId: string) => withAccount((acc) => ItemService.getItems(acc, folderId)),
@@ -77,8 +63,6 @@ export function exposeServicesToWindow(
         withAccount((acc) => ItemService.renameItem(acc, folderId, itemId, newName)),
       archive: (folderId: string, itemId: string) =>
         withAccount((acc) => ItemService.archiveItem(acc, folderId, itemId)),
-      updateIcon: (folderId: string, itemId: string, icon: string) =>
-        withAccount((acc) => ItemService.updateItemIcon(acc, folderId, itemId, icon)),
       updateColor: (folderId: string, itemId: string, color: string) =>
         withAccount((acc) => ItemService.updateItemColor(acc, folderId, itemId, color)),
     },
@@ -152,20 +136,17 @@ declare global {
           name: string,
           parentPath?: string,
           defaultQuantity?: string,
-          icon?: string,
         ) => string;
         createCategory: (
           folderId: string,
           name: string,
           parentPath?: string,
-          icon?: string,
           color?: string,
         ) => string;
         get: (folderId: string, itemId: string) => InstanceOfSchema<typeof TemplateItem> | null;
         getAll: (folderId: string) => Array<InstanceOfSchema<typeof TemplateItem>>;
         rename: (folderId: string, itemId: string, newName: string) => void;
         archive: (folderId: string, itemId: string) => void;
-        updateIcon: (folderId: string, itemId: string, icon: string) => void;
         updateColor: (folderId: string, itemId: string, color: string) => void;
       };
       export: {

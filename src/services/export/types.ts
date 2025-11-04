@@ -62,8 +62,6 @@ export interface ExportedTemplateItem {
   sortOrder: number;
   /** Default quantity for the item (items only) */
   defaultQuantity?: string;
-  /** Icon emoji */
-  icon: string;
   /** Color hex code */
   color: string;
   /** ISO 8601 timestamp when item was created */

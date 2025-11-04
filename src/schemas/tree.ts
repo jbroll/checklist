@@ -35,7 +35,6 @@ export const TemplateItem = co.map({
   defaultQuantity: z.string(), // Default quantity for the item
 
   // Optional customization per template
-  icon: z.string(), // Emoji or icon identifier
   color: z.string(), // Hex color for UI
 
   // References

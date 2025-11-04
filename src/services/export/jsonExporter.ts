@@ -106,7 +106,6 @@ function exportTemplateItems(
       expanded: item.expanded,
       sortOrder: item.sortOrder,
       defaultQuantity: item.defaultQuantity,
-      icon: item.icon,
       color: item.color,
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),

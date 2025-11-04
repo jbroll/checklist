@@ -21,7 +21,7 @@ function escapeCsvField(value: string): string {
 /**
  * Export template items to CSV format
  *
- * Format: name,defaultQuantity,icon,path
+ * Format: name,defaultQuantity,path
  *
  * @param folder - Folder to export items from
  * @returns CSV string with header row
@@ -30,7 +30,7 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
   const lines: string[] = [];
 
   // Header row
-  lines.push('name,defaultQuantity,icon,path');
+  lines.push('name,defaultQuantity,path');
 
   if (!folder.items || folder.items.length === 0) {
     return lines.join('\n');
@@ -50,10 +50,9 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
 
     const name = escapeCsvField(item.name);
     const defaultQuantity = escapeCsvField(item.defaultQuantity || '');
-    const icon = escapeCsvField(item.icon || '📦');
     const path = escapeCsvField(item.path);
 
-    lines.push(`${name},${defaultQuantity},${icon},${path}`);
+    lines.push(`${name},${defaultQuantity},${path}`);
   }
 
   return lines.join('\n');
@@ -62,7 +61,7 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
 /**
  * Export session to CSV format
  *
- * Format: name,path,icon,inCart,purchased,addedToCartAt,purchasedAt
+ * Format: name,path,inCart,purchased,addedToCartAt,purchasedAt
  *
  * @param folder - Folder containing the session
  * @param sessionId - ID of the session to export
@@ -84,7 +83,7 @@ export function exportSessionToCsv(
   const lines: string[] = [];
 
   // Header row
-  lines.push('name,path,icon,inCart,purchased,addedToCartAt,purchasedAt');
+  lines.push('name,path,inCart,purchased,addedToCartAt,purchasedAt');
 
   if (!folder.items) {
     return lines.join('\n');
@@ -107,13 +106,12 @@ export function exportSessionToCsv(
 
     const name = escapeCsvField(item.name);
     const path = escapeCsvField(item.path);
-    const icon = escapeCsvField(item.icon || '📦');
     const inCart = itemState?.inCart ? 'true' : 'false';
     const purchased = itemState?.purchased ? 'true' : 'false';
     const addedToCartAt = itemState?.addedToCartAt?.toISOString() || '';
     const purchasedAt = itemState?.purchasedAt?.toISOString() || '';
 
-    lines.push(`${name},${path},${icon},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
+    lines.push(`${name},${path},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
   }
 
   return lines.join('\n');

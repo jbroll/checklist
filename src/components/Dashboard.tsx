@@ -1,3 +1,4 @@
+import { ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
@@ -98,7 +99,10 @@ export function Dashboard() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-neutral-900">🛒 GroceryList</h1>
+          <h1 className="flex items-center justify-center gap-3 text-4xl font-bold text-neutral-900">
+            <ShoppingCart className="h-10 w-10" />
+            GroceryList
+          </h1>
           <p className="mt-2 text-neutral-600">
             Collaborative shopping lists that sync in real-time
           </p>
