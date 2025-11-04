@@ -50,12 +50,12 @@ export function TreeViewHeader({
   return (
     <div
       ref={setDropRef}
-      className={`px-4 py-4 border-b border-neutral-100 transition-all ${
+      className={`px-4 py-4 border-b transition-all ${
         isDragging && isOver
           ? 'bg-green-50 border-green-500 border-2 border-dashed'
           : isDragging
             ? 'bg-neutral-50 border-neutral-200 border-2 border-dashed'
-            : 'bg-white border-transparent'
+            : 'bg-white border-neutral-100'
       }`}
     >
       <div className="flex items-center justify-between">

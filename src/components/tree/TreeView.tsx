@@ -313,7 +313,9 @@ export function TreeView({
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
           </div>
         ) : (
-          <div className="p-2">{treeStructure.map((treeNode) => renderTreeNode(treeNode))}</div>
+          <div className="divide-y divide-neutral-100 p-2">
+            {treeStructure.map((treeNode) => renderTreeNode(treeNode))}
+          </div>
         )}
       </div>
 
