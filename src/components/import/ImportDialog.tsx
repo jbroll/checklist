@@ -240,16 +240,18 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
 
           {/* Import result */}
           {importResult && (
-            <div
+            <output
+              aria-live="polite"
+              aria-atomic="true"
               className={`rounded-lg border p-4 ${
                 importResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
               }`}
             >
               <div className="flex items-start gap-3">
                 {importResult.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <AlertCircle className="h-5 w-5 text-red-600" aria-hidden="true" />
                 )}
                 <div className="flex-1">
                   <div
@@ -297,7 +299,7 @@ export function ImportDialog({ open, onOpenChange, account, onImportComplete }: 
                   )}
                 </div>
               </div>
-            </div>
+            </output>
           )}
 
           {/* Info box */}

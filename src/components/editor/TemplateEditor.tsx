@@ -126,7 +126,7 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   // Otherwise show Template Editor
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
-      <div className="mx-auto max-w-4xl">
+      <main id="main-content" className="mx-auto max-w-4xl">
         <TreeView
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           nodes={nodes}
@@ -168,7 +168,7 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
 
         {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
         <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={me} />
-      </div>
+      </main>
     </div>
   );
 }

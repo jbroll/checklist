@@ -49,7 +49,7 @@ export function TreeViewHeader({
   });
 
   return (
-    <div
+    <header
       ref={setDropRef}
       className={`px-4 py-4 border-b transition-all ${
         isDragging && isOver
@@ -64,6 +64,7 @@ export function TreeViewHeader({
           type="button"
           onClick={onHeaderClick}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          aria-label="Return to main view"
         >
           <BubbleListIcon className="h-8 w-8" size={32} />
           <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
@@ -121,6 +122,6 @@ export function TreeViewHeader({
           </DropdownMenu>
         </div>
       </div>
-    </div>
+    </header>
   );
 }
