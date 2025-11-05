@@ -80,6 +80,8 @@ export interface ExportedSession {
   name: string;
   /** Session status */
   status: 'active' | 'completed' | 'abandoned';
+  /** Soft delete flag - archived sessions are hidden by default */
+  archived: boolean;
   /** View mode for displaying items */
   viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat';
   /** Map of template item IDs to their shopping state */

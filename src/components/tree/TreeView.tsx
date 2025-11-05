@@ -54,6 +54,7 @@ export function TreeView({
   onSignOut,
 }: TreeViewProps) {
   const [activeNode, setActiveNode] = useState<InstanceOfSchema<typeof FolderNode> | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -226,7 +227,11 @@ export function TreeView({
 
     // Show sessions under template folders
     const sessions = node.sessions || [];
-    const activeSessions = sessions.filter((s) => s && s.status !== 'abandoned');
+    const activeSessions = sessions.filter((s) => {
+      if (!s || s.status === 'abandoned') return false;
+      if (!showArchived && s.archived) return false;
+      return true;
+    });
 
     // A node has children if it has child folders/templates OR sessions (but NOT template items)
     const hasChildren = children.length > 0 || activeSessions.length > 0;
@@ -289,6 +294,7 @@ export function TreeView({
           isDragging={!!activeNode}
           canCreateFolderOrList={canCreateFolderOrList}
           canEditOrUse={canEditOrUse}
+          showArchived={showArchived}
           onHeaderClick={onHeaderClick || (() => {})}
           onEditTemplate={() => {
             if (selectedNodeId && onEditTemplate) {
@@ -304,6 +310,7 @@ export function TreeView({
           onAddTemplate={onAddTemplate || (() => {})}
           onExport={onExport || (() => {})}
           onImport={onImport || (() => {})}
+          onToggleShowArchived={() => setShowArchived(!showArchived)}
           onSignOut={onSignOut}
         />
 

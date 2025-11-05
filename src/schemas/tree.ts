@@ -84,6 +84,7 @@ export const ShoppingSession = co.map({
 
   // Session status
   status: z.enum(['active', 'completed', 'abandoned']),
+  archived: z.boolean(), // Soft delete flag - never hard delete sessions
 
   // UI state - which categories are expanded (by path or ID)
   categoryExpanded: co.record(z.string(), z.boolean()),
