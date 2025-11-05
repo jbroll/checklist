@@ -98,7 +98,10 @@ export function SessionZone({
       >
         <button
           type="button"
-          onClick={onToggleExpand}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand();
+          }}
           className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full hover:bg-neutral-100 transition-colors"
         >
           {Icon && <Icon className="h-4 w-4" />}
