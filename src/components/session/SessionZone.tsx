@@ -17,6 +17,7 @@ interface SessionZoneProps {
   onTogglePurchased: (itemId: string) => void;
   count?: number;
   children?: React.ReactNode;
+  showHeading?: boolean; // Controls whether to show the zone heading
 }
 
 export function SessionZone({
@@ -31,7 +32,61 @@ export function SessionZone({
   onTogglePurchased,
   count,
   children,
+  showHeading = true,
 }: SessionZoneProps) {
+  // Content to render (items or children)
+  const content = (
+    <div className={showHeading ? 'pl-2' : ''}>
+      {children ? (
+        children
+      ) : (
+        <div className="flex flex-col gap-2">
+          <AnimatePresence mode="popLayout">
+            {items.map((item) => (
+              <motion.div
+                key={item.$jazz.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, x: 30 }}
+                transition={{
+                  layout: {
+                    type: 'spring',
+                    stiffness: 150,
+                    damping: 25,
+                  },
+                  opacity: { duration: 0.8, ease: 'easeInOut' },
+                  scale: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
+                  y: { duration: 1.0, ease: [0.34, 1.56, 0.64, 1] },
+                  x: { duration: 0.8, ease: 'easeInOut' },
+                }}
+              >
+                <ShoppingSessionItemRow
+                  item={item}
+                  state={itemStates[item.$jazz.id] || null}
+                  zone={zone}
+                  onToggleCart={onToggleCart}
+                  onTogglePurchased={onTogglePurchased}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  );
+
+  // If headings are disabled, show content directly with a divider
+  if (!showHeading) {
+    return (
+      <div>
+        <div className="border-t border-neutral-100 my-1" />
+        {content}
+      </div>
+    );
+  }
+
+  // Normal mode with collapsible header
   return (
     <div>
       {/* Zone header */}
@@ -74,44 +129,7 @@ export function SessionZone({
             }}
             className="overflow-hidden"
           >
-            <div className="pl-2">
-              {children ? (
-                children
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <AnimatePresence mode="popLayout">
-                    {items.map((item) => (
-                      <motion.div
-                        key={item.$jazz.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, x: 30 }}
-                        transition={{
-                          layout: {
-                            type: 'spring',
-                            stiffness: 150,
-                            damping: 25,
-                          },
-                          opacity: { duration: 0.8, ease: 'easeInOut' },
-                          scale: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
-                          y: { duration: 1.0, ease: [0.34, 1.56, 0.64, 1] },
-                          x: { duration: 0.8, ease: 'easeInOut' },
-                        }}
-                      >
-                        <ShoppingSessionItemRow
-                          item={item}
-                          state={itemStates[item.$jazz.id] || null}
-                          zone={zone}
-                          onToggleCart={onToggleCart}
-                          onTogglePurchased={onTogglePurchased}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </div>
+            {content}
           </motion.div>
         )}
       </AnimatePresence>
