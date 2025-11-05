@@ -38,7 +38,8 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
       {/* Left checkbox - Controls inCart (inventory) or purchased (cart/completed) */}
       <button
         type="button"
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           if (leftCheckboxControlsPurchased) {
             onTogglePurchased(item.$jazz.id);
           } else {
@@ -86,7 +87,10 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
       {(zone === 'cart' || zone === 'completed') && (
         <button
           type="button"
-          onClick={() => onToggleCart(item.$jazz.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCart(item.$jazz.id);
+          }}
           className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
           aria-label="Remove from cart"
         >
