@@ -188,7 +188,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
       }
     });
 
-    return Array.from(categoryNodes.values());
+    // Sort categories alphabetically by name
+    return Array.from(categoryNodes.values()).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   // Render In Cart and Completed zones based on view mode
