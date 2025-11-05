@@ -50,7 +50,7 @@ export function createSession(
       status: 'active',
       archived: false,
       categoryExpanded: {},
-      viewMode: 'hierarchy-in-zones', // Default view mode
+      viewMode: 'zone-in-hierarchy', // Default view mode
       inCartCount: 0,
       completedCount: 0,
       remainingCount,
