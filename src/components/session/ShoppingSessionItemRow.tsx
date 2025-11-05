@@ -96,6 +96,8 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
+            role="img"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
