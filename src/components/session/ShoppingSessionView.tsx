@@ -194,7 +194,9 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   // Render In Cart and Completed zones based on view mode
   const renderInCartAndCompleted = () => {
     const viewMode = session?.viewMode || 'flat';
-    const showHeadings = folder.showZoneHeadings ?? false;
+    const showZoneHeadings = folder.showZoneHeadings ?? false;
+    // showZoneHeadings controls zone headers only, categories always show
+    const showHeadings = showZoneHeadings;
 
     // Flat view: Simple zones
     if (viewMode === 'flat') {
@@ -411,7 +413,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
 
   // Render inventory zone - always at bottom with categories
   const renderInventoryZone = () => {
-    const showHeadings = folder.showZoneHeadings ?? false;
+    const showZoneHeadings = folder.showZoneHeadings ?? false;
+    const showHeadings = showZoneHeadings;
     const inventoryCategories = buildCategoryTree(inventoryItems);
 
     return (
