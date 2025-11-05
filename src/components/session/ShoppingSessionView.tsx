@@ -279,7 +279,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                         onToggleCart={handleToggleCart}
                         onTogglePurchased={handleTogglePurchased}
                         count={1}
-                        showHeading={showHeadings}
                       />
                     ))}
                   </div>
@@ -304,7 +303,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                           onToggleCart={handleToggleCart}
                           onTogglePurchased={handleTogglePurchased}
                           count={category.items.length}
-                          showHeading={showHeadings}
                         />
                       );
                     })}
@@ -358,7 +356,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                 onToggleCart={handleToggleCart}
                 onTogglePurchased={handleTogglePurchased}
                 count={totalItems}
-                showHeading={showHeadings}
               >
                 <div className="flex flex-col gap-2">
                   {catCart.length > 0 && (
@@ -447,7 +444,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                 onToggleCart={handleToggleCart}
                 onTogglePurchased={handleTogglePurchased}
                 count={1}
-                showHeading={showHeadings}
               />
             ))}
           </div>
@@ -472,7 +468,6 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                   onToggleCart={handleToggleCart}
                   onTogglePurchased={handleTogglePurchased}
                   count={category.items.length}
-                  showHeading={showHeadings}
                 />
               );
             })}
