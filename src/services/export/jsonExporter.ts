@@ -151,6 +151,7 @@ function exportSessions(
     const exportedSession: ExportedSession = {
       name: session.name,
       status: session.status,
+      archived: session.archived || false,
       viewMode: session.viewMode,
       itemStates,
       startedAt: session.startedAt.toISOString(),

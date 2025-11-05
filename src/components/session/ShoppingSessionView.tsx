@@ -1,5 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import {
+  Archive,
   CheckCircle2,
   Download,
   FolderTree,
@@ -13,8 +14,10 @@ import { useMemo, useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
@@ -151,6 +154,12 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     SessionService.completeSession(me, folder.$jazz.id, sessionId);
     onBack();
+  };
+
+  const handleToggleArchived = () => {
+    if (!session || !me) return;
+    session.$jazz.set('archived', !session.archived);
+    session.$jazz.set('lastActivityAt', new Date());
   };
 
   // Helper to build category tree structure
@@ -472,6 +481,14 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                     <Download className="mr-2 h-4 w-4" />
                     Export
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={session?.archived || false}
+                    onCheckedChange={handleToggleArchived}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Archived
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

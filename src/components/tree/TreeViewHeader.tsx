@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import {
+  Archive,
   CheckSquare,
   Download,
   FolderPlus,
@@ -13,6 +14,7 @@ import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -24,6 +26,7 @@ interface TreeViewHeaderProps {
   isDragging: boolean;
   canCreateFolderOrList: boolean;
   canEditOrUse: boolean;
+  showArchived: boolean;
   onHeaderClick: () => void;
   onEditTemplate: () => void;
   onUseTemplate: () => void;
@@ -31,6 +34,7 @@ interface TreeViewHeaderProps {
   onAddTemplate: () => void;
   onExport: () => void;
   onImport: () => void;
+  onToggleShowArchived: () => void;
   onSignOut?: () => void;
 }
 
@@ -43,6 +47,7 @@ export function TreeViewHeader({
   isDragging,
   canCreateFolderOrList,
   canEditOrUse,
+  showArchived,
   onHeaderClick,
   onEditTemplate,
   onUseTemplate,
@@ -50,6 +55,7 @@ export function TreeViewHeader({
   onAddTemplate,
   onExport,
   onImport,
+  onToggleShowArchived,
   onSignOut,
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops
@@ -168,6 +174,14 @@ export function TreeViewHeader({
                   <Upload className="mr-2 h-4 w-4" />
                   Import
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={showArchived}
+                  onCheckedChange={onToggleShowArchived}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Show Archived Sessions
+                </DropdownMenuCheckboxItem>
                 {onSignOut && (
                   <>
                     <DropdownMenuSeparator />

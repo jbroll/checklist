@@ -48,6 +48,7 @@ export function createSession(
       templateFolderId: folderId,
       itemStates: {},
       status: 'active',
+      archived: false,
       categoryExpanded: {},
       viewMode: 'hierarchy-in-zones', // Default view mode
       inCartCount: 0,

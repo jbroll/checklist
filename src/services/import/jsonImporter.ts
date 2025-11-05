@@ -354,6 +354,7 @@ function importSession(
       templateFolderId,
       itemStates, // Already a Record of ItemStates
       status: exportedSession.status,
+      archived: exportedSession.archived ?? false, // Use exported value or default to false
       viewMode: exportedSession.viewMode || 'hierarchy-in-zones', // Default if not present
       categoryExpanded: {}, // Reset UI state - empty record
       inCartCount,
