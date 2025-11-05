@@ -192,9 +192,9 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     // Sort categories alphabetically by name, and items within each category
     return Array.from(categoryNodes.values())
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map(category => ({
+      .map((category) => ({
         ...category,
-        items: category.items.sort((a, b) => a.name.localeCompare(b.name))
+        items: category.items.sort((a, b) => a.name.localeCompare(b.name)),
       }));
   };
 
@@ -245,7 +245,12 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     if (viewMode === 'hierarchy-in-zones') {
       const zones = [
         { key: 'cart' as const, title: 'In Cart', icon: ShoppingCart, items: cartItems },
-        { key: 'completed' as const, title: 'Completed', icon: CheckCircle2, items: completedItems },
+        {
+          key: 'completed' as const,
+          title: 'Completed',
+          icon: CheckCircle2,
+          items: completedItems,
+        },
       ];
 
       return (
@@ -432,9 +437,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
         items={[]}
         itemStates={{}}
         expanded={zoneExpanded.inventory}
-        onToggleExpand={() =>
-          setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
-        }
+        onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))}
         onToggleCart={handleToggleCart}
         onTogglePurchased={handleTogglePurchased}
         count={inventoryItems.length}
