@@ -175,7 +175,7 @@ async function importFolder(
       path: finalPath,
       expanded: false,
       archived: false, // New folders start unarchived
-      showZoneHeadings: true, // Show zone headings by default
+      showZoneHeadings: false, // Hide zone headings by default
       items: [], // Always initialize even for regular folders
       sessions: [], // Always initialize even for regular folders
       currentSessionId: '', // Empty string for no session
@@ -246,7 +246,7 @@ async function importTemplateFolder(
       path,
       expanded: false,
       archived: false, // New folders start unarchived
-      showZoneHeadings: true, // Show zone headings by default
+      showZoneHeadings: false, // Hide zone headings by default
       items,
       sessions: [],
       currentSessionId: '', // Empty string for no current session

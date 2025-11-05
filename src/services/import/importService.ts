@@ -308,7 +308,7 @@ export class ImportService {
         path: `/${templateName}`,
         expanded: true,
         archived: false,
-        showZoneHeadings: true, // Show zone headings by default
+        showZoneHeadings: false, // Hide zone headings by default
         items: [],
         sessions: [],
         currentSessionId: '',
