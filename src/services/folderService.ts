@@ -39,6 +39,7 @@ export function createFolder(
       // Folders start expanded, templates start collapsed
       expanded: !isTemplate,
       archived: false,
+      showZoneHeadings: false, // Hide zone headings by default
       items: [],
       sessions: [],
       currentSessionId: '',
