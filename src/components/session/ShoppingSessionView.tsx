@@ -111,7 +111,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
 
   const cycleViewMode = () => {
     if (!session || !me) return;
-    const current = session.viewMode || 'flat';
+    const current = session.viewMode || 'zone-in-hierarchy';
     const next =
       current === 'flat'
         ? 'hierarchy-in-zones'
@@ -123,14 +123,14 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   };
 
   const getViewModeLabel = () => {
-    const mode = session?.viewMode || 'flat';
+    const mode = session?.viewMode || 'zone-in-hierarchy';
     if (mode === 'flat') return 'Flat';
     if (mode === 'hierarchy-in-zones') return 'Categories in Zones';
     return 'Zones in Categories';
   };
 
   const getViewModeIcon = () => {
-    const mode = session?.viewMode || 'flat';
+    const mode = session?.viewMode || 'zone-in-hierarchy';
     if (mode === 'flat') return List;
     if (mode === 'hierarchy-in-zones') return Layers;
     return FolderTree;
@@ -193,7 +193,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
 
   // Render In Cart and Completed zones based on view mode
   const renderInCartAndCompleted = () => {
-    const viewMode = session?.viewMode || 'flat';
+    const viewMode = session?.viewMode || 'zone-in-hierarchy';
     const showZoneHeadings = folder.showZoneHeadings ?? false;
     // showZoneHeadings controls zone headers only, categories always show
     const showHeadings = showZoneHeadings;
