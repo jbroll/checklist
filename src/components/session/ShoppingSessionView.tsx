@@ -39,11 +39,14 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
     cart: true,
     completed: false,
   });
-  const [categoryExpanded, setCategoryExpanded] = useState<Record<string, boolean>>({});
   const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Find session first (before any early returns)
   const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
+
+  // Initialize category expanded state from session data
+  // Use session.categoryExpanded as the source of truth
+  const categoryExpanded: Record<string, boolean> = session?.categoryExpanded || {};
   const items = folder.items || [];
   // Only show leaf items (not categories) in shopping sessions
   const activeItems = items.filter((item) => item && !item.archived && item.type === 'item');
@@ -308,12 +311,15 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                           items={category.items}
                           itemStates={session.itemStates || {}}
                           expanded={categoryExpanded[catKey] ?? true}
-                          onToggleExpand={() =>
-                            setCategoryExpanded((prev) => ({
-                              ...prev,
-                              [catKey]: !prev[catKey],
-                            }))
-                          }
+                          onToggleExpand={() => {
+                            if (session?.categoryExpanded) {
+                              const currentValue = categoryExpanded[catKey] ?? true;
+                              session.$jazz.set('categoryExpanded', {
+                                ...categoryExpanded,
+                                [catKey]: !currentValue,
+                              });
+                            }
+                          }}
                           onToggleCart={handleToggleCart}
                           onTogglePurchased={handleTogglePurchased}
                           count={category.items.length}
@@ -361,12 +367,16 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                 items={[]}
                 itemStates={{}}
                 expanded={categoryExpanded[`category-${category.path}`] ?? true}
-                onToggleExpand={() =>
-                  setCategoryExpanded((prev) => ({
-                    ...prev,
-                    [`category-${category.path}`]: !prev[`category-${category.path}`],
-                  }))
-                }
+                onToggleExpand={() => {
+                  if (session?.categoryExpanded) {
+                    const catKey = `category-${category.path}`;
+                    const currentValue = categoryExpanded[catKey] ?? true;
+                    session.$jazz.set('categoryExpanded', {
+                      ...categoryExpanded,
+                      [catKey]: !currentValue,
+                    });
+                  }
+                }}
                 onToggleCart={handleToggleCart}
                 onTogglePurchased={handleTogglePurchased}
                 count={totalItems}
@@ -380,12 +390,16 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                       items={catCart}
                       itemStates={session.itemStates || {}}
                       expanded={categoryExpanded[`${category.path}-cart`] ?? true}
-                      onToggleExpand={() =>
-                        setCategoryExpanded((prev) => ({
-                          ...prev,
-                          [`${category.path}-cart`]: !prev[`${category.path}-cart`],
-                        }))
-                      }
+                      onToggleExpand={() => {
+                        if (session?.categoryExpanded) {
+                          const catKey = `${category.path}-cart`;
+                          const currentValue = categoryExpanded[catKey] ?? true;
+                          session.$jazz.set('categoryExpanded', {
+                            ...categoryExpanded,
+                            [catKey]: !currentValue,
+                          });
+                        }
+                      }}
                       onToggleCart={handleToggleCart}
                       onTogglePurchased={handleTogglePurchased}
                       count={catCart.length}
@@ -400,12 +414,16 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                       items={catCompleted}
                       itemStates={session.itemStates || {}}
                       expanded={categoryExpanded[`${category.path}-completed`] ?? true}
-                      onToggleExpand={() =>
-                        setCategoryExpanded((prev) => ({
-                          ...prev,
-                          [`${category.path}-completed`]: !prev[`${category.path}-completed`],
-                        }))
-                      }
+                      onToggleExpand={() => {
+                        if (session?.categoryExpanded) {
+                          const catKey = `${category.path}-completed`;
+                          const currentValue = categoryExpanded[catKey] ?? true;
+                          session.$jazz.set('categoryExpanded', {
+                            ...categoryExpanded,
+                            [catKey]: !currentValue,
+                          });
+                        }
+                      }}
                       onToggleCart={handleToggleCart}
                       onTogglePurchased={handleTogglePurchased}
                       count={catCompleted.length}
@@ -472,12 +490,15 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                   items={category.items}
                   itemStates={session.itemStates || {}}
                   expanded={categoryExpanded[catKey] ?? true}
-                  onToggleExpand={() =>
-                    setCategoryExpanded((prev) => ({
-                      ...prev,
-                      [catKey]: !prev[catKey],
-                    }))
-                  }
+                  onToggleExpand={() => {
+                    if (session?.categoryExpanded) {
+                      const currentValue = categoryExpanded[catKey] ?? true;
+                      session.$jazz.set('categoryExpanded', {
+                        ...categoryExpanded,
+                        [catKey]: !currentValue,
+                      });
+                    }
+                  }}
                   onToggleCart={handleToggleCart}
                   onTogglePurchased={handleTogglePurchased}
                   count={category.items.length}

@@ -29,7 +29,10 @@ export function TreeNode({
       {hasChildren ? (
         <button
           type="button"
-          onClick={onToggleExpand}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand();
+          }}
           className="flex h-5 w-5 items-center justify-center rounded hover:bg-neutral-200"
           aria-label={expanded ? 'Collapse' : 'Expand'}
         >

@@ -96,11 +96,7 @@ export function SessionZone({
         onToggleExpand={onToggleExpand}
         hasChildren={items.length > 0 || !!children}
       >
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full hover:bg-neutral-100 transition-colors"
-        >
+        <div className="flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full">
           {Icon && <Icon className="h-4 w-4" />}
           <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>
           {count !== undefined && (
@@ -113,7 +109,7 @@ export function SessionZone({
               {count}
             </motion.span>
           )}
-        </button>
+        </div>
       </TreeNode>
 
       {/* Zone items with expand/collapse animation */}
