@@ -73,10 +73,11 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
       }
     });
 
+    // Sort all items alphabetically by name
     return {
-      inventoryItems: inventory,
-      cartItems: cart,
-      completedItems: completed,
+      inventoryItems: inventory.sort((a, b) => a.name.localeCompare(b.name)),
+      cartItems: cart.sort((a, b) => a.name.localeCompare(b.name)),
+      completedItems: completed.sort((a, b) => a.name.localeCompare(b.name)),
     };
   }, [activeItems, session]);
 
@@ -188,8 +189,13 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
       }
     });
 
-    // Sort categories alphabetically by name
-    return Array.from(categoryNodes.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // Sort categories alphabetically by name, and items within each category
+    return Array.from(categoryNodes.values())
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(category => ({
+        ...category,
+        items: category.items.sort((a, b) => a.name.localeCompare(b.name))
+      }));
   };
 
   // Render In Cart and Completed zones based on view mode
