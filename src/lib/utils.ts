@@ -106,9 +106,9 @@ export function hasMultipleSessionsOnSameDay(
     sessionDate.getDate(),
   );
 
-  // Count sessions on the same day (excluding archived and abandoned sessions)
+  // Count sessions on the same day (excluding abandoned sessions)
   const sessionsOnSameDay = allSessions.filter((s) => {
-    if (!s || s.archived || s.status === 'abandoned') return false;
+    if (!s || s.status === 'abandoned') return false;
     const sDate = s.startedAt;
     const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
     return sDay.getTime() === sessionDay.getTime();
