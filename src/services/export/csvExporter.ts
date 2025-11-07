@@ -108,8 +108,12 @@ export function exportSessionToCsv(
     const path = escapeCsvField(item.path);
     const inCart = itemState?.inCart ? 'true' : 'false';
     const purchased = itemState?.purchased ? 'true' : 'false';
-    const addedToCartAt = itemState?.addedToCartAt?.toISOString() || '';
-    const purchasedAt = itemState?.purchasedAt?.toISOString() || '';
+    const addedToCartAt = itemState?.addedToCartAt
+      ? new Date(itemState.addedToCartAt * 1000).toISOString()
+      : '';
+    const purchasedAt = itemState?.purchasedAt
+      ? new Date(itemState.purchasedAt * 1000).toISOString()
+      : '';
 
     lines.push(`${name},${path},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
   }

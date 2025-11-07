@@ -93,7 +93,7 @@ export function TreeView({
       if (session) {
         // Soft delete by setting status to abandoned
         session.$jazz.set('status', 'abandoned');
-        session.$jazz.set('lastActivityAt', new Date());
+        session.$jazz.set('lastActivityAt', Math.floor(Date.now() / 1000));
       }
     }
   };
@@ -259,6 +259,7 @@ export function TreeView({
               <SessionRowView
                 key={session.$jazz.id}
                 session={session}
+                templateName={node.name}
                 level={level + 1}
                 onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}

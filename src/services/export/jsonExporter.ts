@@ -65,7 +65,7 @@ function exportFolderNode(node: InstanceOfSchema<typeof FolderNode>): ExportedFo
     name: node.name,
     path: node.path,
     type: node.type,
-    createdAt: node.createdAt.toISOString(),
+    createdAt: node.createdAt.toISOString(), // FolderNode still uses Date objects
     updatedAt: node.updatedAt.toISOString(),
   };
 
@@ -131,7 +131,7 @@ function exportSessions(
   for (const session of sessions) {
     const itemStates: Record<string, ExportedItemState> = {};
 
-    // Export item states
+    // Export item states (Unix timestamps as numbers)
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
         inCart: state.inCart,
@@ -139,10 +139,10 @@ function exportSessions(
       };
 
       if (state.addedToCartAt !== undefined) {
-        exportedState.addedToCartAt = state.addedToCartAt.toISOString();
+        exportedState.addedToCartAt = state.addedToCartAt as unknown as string; // Unix seconds (number) stored as string in export type
       }
       if (state.purchasedAt !== undefined) {
-        exportedState.purchasedAt = state.purchasedAt.toISOString();
+        exportedState.purchasedAt = state.purchasedAt as unknown as string;
       }
 
       itemStates[itemId] = exportedState;
@@ -154,12 +154,12 @@ function exportSessions(
       archived: session.archived || false,
       viewMode: session.viewMode,
       itemStates,
-      startedAt: session.startedAt.toISOString(),
-      lastActivityAt: session.lastActivityAt.toISOString(),
+      startedAt: session.startedAt as unknown as string, // Unix seconds (number) stored as string in export type
+      lastActivityAt: session.lastActivityAt as unknown as string,
     };
 
     if (session.completedAt !== undefined) {
-      exportedSession.completedAt = session.completedAt.toISOString();
+      exportedSession.completedAt = session.completedAt as unknown as string;
     }
 
     exportedSessions.push(exportedSession);

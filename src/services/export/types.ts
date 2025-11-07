@@ -86,12 +86,12 @@ export interface ExportedSession {
   viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat';
   /** Map of template item IDs to their shopping state */
   itemStates: Record<string, ExportedItemState>;
-  /** ISO 8601 timestamp when session started */
-  startedAt: string;
-  /** ISO 8601 timestamp of last activity */
-  lastActivityAt: string;
-  /** ISO 8601 timestamp when session was completed (if completed) */
-  completedAt?: string;
+  /** Unix timestamp (seconds) when session started - can also be ISO 8601 string for backward compatibility */
+  startedAt: string | number;
+  /** Unix timestamp (seconds) of last activity - can also be ISO 8601 string for backward compatibility */
+  lastActivityAt: string | number;
+  /** Unix timestamp (seconds) when session was completed (if completed) - can also be ISO 8601 string for backward compatibility */
+  completedAt?: string | number;
 }
 
 /**
@@ -104,10 +104,10 @@ export interface ExportedItemState {
   inCart: boolean;
   /** Whether item has been purchased */
   purchased: boolean;
-  /** ISO 8601 timestamp when added to cart (if in cart) */
-  addedToCartAt?: string;
-  /** ISO 8601 timestamp when purchased (if purchased) */
-  purchasedAt?: string;
+  /** Unix timestamp (seconds) when added to cart - can also be ISO 8601 string for backward compatibility */
+  addedToCartAt?: string | number;
+  /** Unix timestamp (seconds) when purchased - can also be ISO 8601 string for backward compatibility */
+  purchasedAt?: string | number;
 }
 
 /**
