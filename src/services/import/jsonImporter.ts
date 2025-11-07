@@ -333,16 +333,8 @@ function importSession(
           itemId,
           inCart: foundState.inCart,
           purchased: foundState.purchased,
-          addedToCartAt: foundState.addedToCartAt
-            ? typeof foundState.addedToCartAt === 'number'
-              ? foundState.addedToCartAt
-              : Math.floor(new Date(foundState.addedToCartAt).getTime() / 1000)
-            : undefined,
-          purchasedAt: foundState.purchasedAt
-            ? typeof foundState.purchasedAt === 'number'
-              ? foundState.purchasedAt
-              : Math.floor(new Date(foundState.purchasedAt).getTime() / 1000)
-            : undefined,
+          addedToCartAt: foundState.addedToCartAt ? new Date(foundState.addedToCartAt) : undefined,
+          purchasedAt: foundState.purchasedAt ? new Date(foundState.purchasedAt) : undefined,
           checkedBy: undefined,
         },
         { owner: account },
@@ -357,7 +349,7 @@ function importSession(
   const completedCount = Object.values(itemStates).filter((s) => s.purchased).length;
   const remainingCount = items.length - completedCount;
 
-  // Create session - handle Unix timestamps (numbers) or legacy ISO strings
+  // Create session
   const session = ShoppingSession.create(
     {
       name: exportedSession.name,
@@ -371,19 +363,9 @@ function importSession(
       completedCount,
       remainingCount,
       owner: account,
-      startedAt:
-        typeof exportedSession.startedAt === 'number'
-          ? exportedSession.startedAt
-          : Math.floor(new Date(exportedSession.startedAt).getTime() / 1000),
-      lastActivityAt:
-        typeof exportedSession.lastActivityAt === 'number'
-          ? exportedSession.lastActivityAt
-          : Math.floor(new Date(exportedSession.lastActivityAt).getTime() / 1000),
-      completedAt: exportedSession.completedAt
-        ? typeof exportedSession.completedAt === 'number'
-          ? exportedSession.completedAt
-          : Math.floor(new Date(exportedSession.completedAt).getTime() / 1000)
-        : undefined,
+      startedAt: new Date(exportedSession.startedAt),
+      lastActivityAt: new Date(exportedSession.lastActivityAt),
+      completedAt: exportedSession.completedAt ? new Date(exportedSession.completedAt) : undefined,
     },
     { owner: account },
   );
