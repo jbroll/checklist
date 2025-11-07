@@ -263,6 +263,7 @@ export function TreeView({
                 level={level + 1}
                 onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
+                allSessions={activeSessions}
               />
             ))}
             {/* Render child folders/templates recursively */}

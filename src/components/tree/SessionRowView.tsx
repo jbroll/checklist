@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatSessionDate } from '@/lib/utils';
+import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { ShoppingSession } from '@/schemas/tree';
 import { TreeNode } from './TreeNode';
 
@@ -17,6 +17,7 @@ interface SessionRowViewProps {
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
+  allSessions: readonly (InstanceOfSchema<typeof ShoppingSession> | null)[];
 }
 
 export const SessionRowView = memo(function SessionRowView({
@@ -25,11 +26,14 @@ export const SessionRowView = memo(function SessionRowView({
   level,
   onOpen,
   onDelete,
+  allSessions,
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
 
+  const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
+
   const handleDelete = () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.startedAt)}`;
+    const displayName = `${templateName} - ${formatSessionDate(session.startedAt, showTime)}`;
     if (onDelete && confirm(`Delete session "${displayName}"?`)) {
       onDelete(session.$jazz.id);
     }
@@ -56,7 +60,7 @@ export const SessionRowView = memo(function SessionRowView({
           {/* Template name and relative date */}
           <span className="flex-1 text-left text-sm text-neutral-900">
             {templateName}{' '}
-            <span className="text-neutral-500">· {formatSessionDate(session.startedAt)}</span>
+            <span className="text-neutral-500">· {formatSessionDate(session.startedAt, showTime)}</span>
           </span>
 
           {/* Session stats */}
