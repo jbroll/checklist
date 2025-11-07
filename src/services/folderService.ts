@@ -23,6 +23,10 @@ export function createFolder(
   parentPath?: string | null,
 ): string {
   if (!account.root) throw new Error('Account root not initialized');
+  if (!account.root.nodes)
+    throw new Error(
+      'Account root.nodes not initialized - please clear browser data and log in again',
+    );
 
   // Normalize name for path (replace spaces with hyphens)
   const normalizedName = name.trim().replace(/\s+/g, '-');
