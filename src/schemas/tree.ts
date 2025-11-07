@@ -59,9 +59,9 @@ export const ItemState = co.map({
   inCart: z.boolean(), // Left checkbox - item added to cart
   purchased: z.boolean(), // Right checkbox - item marked as purchased
 
-  // Timestamps for state changes
-  addedToCartAt: z.optional(z.date()),
-  purchasedAt: z.optional(z.date()),
+  // Timestamps for state changes (Unix seconds)
+  addedToCartAt: z.optional(z.number()),
+  purchasedAt: z.optional(z.number()),
 
   // Track who checked the item
   get checkedBy() {
@@ -104,9 +104,9 @@ export const ShoppingSession = co.map({
   get owner() {
     return GroceriesAccount;
   },
-  startedAt: z.date(),
-  lastActivityAt: z.date(),
-  completedAt: z.optional(z.date()),
+  startedAt: z.number(), // Unix timestamp in seconds
+  lastActivityAt: z.number(), // Unix timestamp in seconds
+  completedAt: z.optional(z.number()), // Unix timestamp in seconds
 });
 
 /**

@@ -7,11 +7,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { formatSessionDate } from '@/lib/utils';
 import type { ShoppingSession } from '@/schemas/tree';
 import { TreeNode } from './TreeNode';
 
 interface SessionRowViewProps {
   session: InstanceOfSchema<typeof ShoppingSession>;
+  templateName: string;
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
@@ -19,6 +21,7 @@ interface SessionRowViewProps {
 
 export const SessionRowView = memo(function SessionRowView({
   session,
+  templateName,
   level,
   onOpen,
   onDelete,
@@ -26,7 +29,8 @@ export const SessionRowView = memo(function SessionRowView({
   const [showMenu, setShowMenu] = useState(false);
 
   const handleDelete = () => {
-    if (onDelete && confirm(`Delete session "${session.name}"?`)) {
+    const displayName = `${templateName} - ${formatSessionDate(session.startedAt)}`;
+    if (onDelete && confirm(`Delete session "${displayName}"?`)) {
       onDelete(session.$jazz.id);
     }
   };
@@ -49,8 +53,11 @@ export const SessionRowView = memo(function SessionRowView({
           {/* Status icon */}
           <StatusIcon className="h-4 w-4" />
 
-          {/* Session name */}
-          <span className="flex-1 text-left text-sm text-neutral-900">{session.name}</span>
+          {/* Template name and relative date */}
+          <span className="flex-1 text-left text-sm text-neutral-900">
+            {templateName}{' '}
+            <span className="text-neutral-500">· {formatSessionDate(session.startedAt)}</span>
+          </span>
 
           {/* Session stats */}
           <div className="flex items-center gap-1 text-sm">
