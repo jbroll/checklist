@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
+import { formatSessionDate } from '@/lib/utils';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import type { TemplateItem } from '@/schemas/tree';
 import * as SessionService from '@/services/sessionService';
@@ -516,10 +517,11 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
       <div className="mx-auto max-w-4xl">
         {/* Content: Simple flat zones view */}
         <div className="rounded-lg border border-neutral-200 bg-white">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-4">
-            <h1 className="text-3xl font-bold text-neutral-900">
-              {session.name} <span className="text-neutral-500">· {folder.name}</span>
+          {/* Header - Mobile responsive: stacks on small screens */}
+          <div className="flex flex-col gap-3 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
+              {folder.name}{' '}
+              <span className="text-neutral-500">· {formatSessionDate(session.startedAt)}</span>
             </h1>
             <div className="flex items-center gap-2">
               <button

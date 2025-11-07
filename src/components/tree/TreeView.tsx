@@ -259,6 +259,7 @@ export function TreeView({
               <SessionRowView
                 key={session.$jazz.id}
                 session={session}
+                templateName={node.name}
                 level={level + 1}
                 onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
