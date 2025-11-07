@@ -33,13 +33,13 @@ export function formatRelativeTime(date: Date): string {
 
 /**
  * Format Date object for session display
- * - "today" for today without specific time
- * - "today @11:54" for today with time
+ * - "today" for today without specific time (or with time if showTime is true)
+ * - "today @11:54" for today with time (if showTime is true and not midnight)
  * - "yesterday" for yesterday
  * - "MM/DD" for dates within the last year
  * - Full date for older dates
  */
-export function formatSessionDate(date: Date): string {
+export function formatSessionDate(date: Date, showTime = true): string {
   const now = new Date();
 
   // Reset hours for day comparison
@@ -52,8 +52,8 @@ export function formatSessionDate(date: Date): string {
     const hours = date.getHours();
     const minutes = date.getMinutes();
 
-    // If time is midnight (00:00), just show "today"
-    if (hours === 0 && minutes === 0) {
+    // If time is midnight (00:00) or showTime is false, just show "today"
+    if (!showTime || (hours === 0 && minutes === 0)) {
       return 'today';
     }
 

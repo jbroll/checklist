@@ -45,6 +45,28 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   // Find session first (before any early returns)
   const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
 
+  // Check if there are multiple sessions on the same day
+  const hasMultipleSessionsToday = useMemo(() => {
+    if (!session || !folder.sessions) return false;
+
+    const sessionDate = session.startedAt;
+    const sessionDay = new Date(
+      sessionDate.getFullYear(),
+      sessionDate.getMonth(),
+      sessionDate.getDate(),
+    );
+
+    // Count sessions on the same day (excluding archived sessions)
+    const sessionsOnSameDay = folder.sessions.filter((s) => {
+      if (!s || s.archived) return false;
+      const sDate = s.startedAt;
+      const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
+      return sDay.getTime() === sessionDay.getTime();
+    });
+
+    return sessionsOnSameDay.length > 1;
+  }, [session, folder.sessions]);
+
   // Initialize category expanded state from session data
   // Use session.categoryExpanded as the source of truth
   const categoryExpanded: Record<string, boolean> = session?.categoryExpanded || {};
@@ -521,7 +543,9 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
           <div className="flex flex-col gap-3 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
               {folder.name}{' '}
-              <span className="text-neutral-500">· {formatSessionDate(session.startedAt)}</span>
+              <span className="text-neutral-500">
+                · {formatSessionDate(session.startedAt, hasMultipleSessionsToday)}
+              </span>
             </h1>
             <div className="flex items-center gap-2">
               <button
