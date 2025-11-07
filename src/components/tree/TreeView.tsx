@@ -227,11 +227,18 @@ export function TreeView({
 
     // Show sessions under template folders
     const sessions = node.sessions || [];
-    const activeSessions = sessions.filter((s) => {
-      if (!s || s.status === 'abandoned') return false;
-      if (!showArchived && s.archived) return false;
-      return true;
-    });
+    const activeSessions = sessions
+      .filter((s) => {
+        if (!s || s.status === 'abandoned') return false;
+        if (!showArchived && s.archived) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort in reverse chronological order (newest first)
+        const dateA = a?.startedAt?.getTime() || 0;
+        const dateB = b?.startedAt?.getTime() || 0;
+        return dateB - dateA;
+      });
 
     // A node has children if it has child folders/templates OR sessions (but NOT template items)
     const hasChildren = children.length > 0 || activeSessions.length > 0;
