@@ -1,6 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ interface SessionRowViewProps {
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
+  allSessions: readonly (InstanceOfSchema<typeof ShoppingSession> | null)[];
 }
 
 export const SessionRowView = memo(function SessionRowView({
@@ -25,11 +26,34 @@ export const SessionRowView = memo(function SessionRowView({
   level,
   onOpen,
   onDelete,
+  allSessions,
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
 
+  // Check if there are multiple sessions on the same day
+  const hasMultipleSessionsOnSameDay = useMemo(() => {
+    if (!session || !allSessions) return false;
+
+    const sessionDate = session.startedAt;
+    const sessionDay = new Date(
+      sessionDate.getFullYear(),
+      sessionDate.getMonth(),
+      sessionDate.getDate(),
+    );
+
+    // Count sessions on the same day (excluding archived and abandoned sessions)
+    const sessionsOnSameDay = allSessions.filter((s) => {
+      if (!s || s.archived || s.status === 'abandoned') return false;
+      const sDate = s.startedAt;
+      const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
+      return sDay.getTime() === sessionDay.getTime();
+    });
+
+    return sessionsOnSameDay.length > 1;
+  }, [session, allSessions]);
+
   const handleDelete = () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.startedAt)}`;
+    const displayName = `${templateName} - ${formatSessionDate(session.startedAt, hasMultipleSessionsOnSameDay)}`;
     if (onDelete && confirm(`Delete session "${displayName}"?`)) {
       onDelete(session.$jazz.id);
     }
@@ -56,7 +80,7 @@ export const SessionRowView = memo(function SessionRowView({
           {/* Template name and relative date */}
           <span className="flex-1 text-left text-sm text-neutral-900">
             {templateName}{' '}
-            <span className="text-neutral-500">· {formatSessionDate(session.startedAt)}</span>
+            <span className="text-neutral-500">· {formatSessionDate(session.startedAt, hasMultipleSessionsOnSameDay)}</span>
           </span>
 
           {/* Session stats */}
