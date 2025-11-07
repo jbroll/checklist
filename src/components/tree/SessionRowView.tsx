@@ -1,13 +1,13 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatSessionDate } from '@/lib/utils';
+import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { ShoppingSession } from '@/schemas/tree';
 import { TreeNode } from './TreeNode';
 
@@ -30,30 +30,10 @@ export const SessionRowView = memo(function SessionRowView({
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Check if there are multiple sessions on the same day
-  const hasMultipleSessionsOnSameDay = useMemo(() => {
-    if (!session || !allSessions) return false;
-
-    const sessionDate = session.startedAt;
-    const sessionDay = new Date(
-      sessionDate.getFullYear(),
-      sessionDate.getMonth(),
-      sessionDate.getDate(),
-    );
-
-    // Count sessions on the same day (excluding archived and abandoned sessions)
-    const sessionsOnSameDay = allSessions.filter((s) => {
-      if (!s || s.archived || s.status === 'abandoned') return false;
-      const sDate = s.startedAt;
-      const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-      return sDay.getTime() === sessionDay.getTime();
-    });
-
-    return sessionsOnSameDay.length > 1;
-  }, [session, allSessions]);
+  const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
 
   const handleDelete = () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.startedAt, hasMultipleSessionsOnSameDay)}`;
+    const displayName = `${templateName} - ${formatSessionDate(session.startedAt, showTime)}`;
     if (onDelete && confirm(`Delete session "${displayName}"?`)) {
       onDelete(session.$jazz.id);
     }
@@ -80,7 +60,7 @@ export const SessionRowView = memo(function SessionRowView({
           {/* Template name and relative date */}
           <span className="flex-1 text-left text-sm text-neutral-900">
             {templateName}{' '}
-            <span className="text-neutral-500">· {formatSessionDate(session.startedAt, hasMultipleSessionsOnSameDay)}</span>
+            <span className="text-neutral-500">· {formatSessionDate(session.startedAt, showTime)}</span>
           </span>
 
           {/* Session stats */}
