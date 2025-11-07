@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
-import { formatSessionDate } from '@/lib/utils';
+import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { FolderNode, GroceriesAccount } from '@/schemas';
 import type { TemplateItem } from '@/schemas/tree';
 import * as SessionService from '@/services/sessionService';
@@ -46,26 +46,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
 
   // Check if there are multiple sessions on the same day
-  const hasMultipleSessionsToday = useMemo(() => {
-    if (!session || !folder.sessions) return false;
-
-    const sessionDate = session.startedAt;
-    const sessionDay = new Date(
-      sessionDate.getFullYear(),
-      sessionDate.getMonth(),
-      sessionDate.getDate(),
-    );
-
-    // Count sessions on the same day (excluding archived sessions)
-    const sessionsOnSameDay = folder.sessions.filter((s) => {
-      if (!s || s.archived) return false;
-      const sDate = s.startedAt;
-      const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-      return sDay.getTime() === sessionDay.getTime();
-    });
-
-    return sessionsOnSameDay.length > 1;
-  }, [session, folder.sessions]);
+  const showTime = hasMultipleSessionsOnSameDay(session || null, folder.sessions || []);
 
   // Initialize category expanded state from session data
   // Use session.categoryExpanded as the source of truth
@@ -544,7 +525,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
               {folder.name}{' '}
               <span className="text-neutral-500">
-                · {formatSessionDate(session.startedAt, hasMultipleSessionsToday)}
+                · {formatSessionDate(session.startedAt, showTime)}
               </span>
             </h1>
             <div className="flex items-center gap-2">

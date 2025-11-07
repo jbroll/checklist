@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { twMerge } from 'tailwind-merge';
+import type { ShoppingSession } from '@/schemas/tree';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -85,4 +87,32 @@ export function formatSessionDate(date: Date, showTime = true): string {
     month: 'numeric',
     day: 'numeric',
   });
+}
+
+/**
+ * Check if there are multiple sessions on the same day as the given session
+ * Used to determine whether to show time in session display
+ */
+export function hasMultipleSessionsOnSameDay(
+  session: InstanceOfSchema<typeof ShoppingSession> | null,
+  allSessions: readonly (InstanceOfSchema<typeof ShoppingSession> | null)[],
+): boolean {
+  if (!session || !allSessions) return false;
+
+  const sessionDate = session.startedAt;
+  const sessionDay = new Date(
+    sessionDate.getFullYear(),
+    sessionDate.getMonth(),
+    sessionDate.getDate(),
+  );
+
+  // Count sessions on the same day (excluding archived and abandoned sessions)
+  const sessionsOnSameDay = allSessions.filter((s) => {
+    if (!s || s.archived || s.status === 'abandoned') return false;
+    const sDate = s.startedAt;
+    const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
+    return sDay.getTime() === sessionDay.getTime();
+  });
+
+  return sessionsOnSameDay.length > 1;
 }
