@@ -72,21 +72,53 @@ export function formatSessionDate(date: Date, showTime = true): string {
 
   // Yesterday
   if (diffDays === 1) {
+    if (showTime) {
+      const timeStr = date
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .toLowerCase();
+      return `yesterday @${timeStr}`;
+    }
     return 'yesterday';
   }
 
   // Within last year - show MM/DD
   const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
   if (date > oneYearAgo) {
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+    if (showTime) {
+      const timeStr = date
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .toLowerCase();
+      return `${dateStr} @${timeStr}`;
+    }
+    return dateStr;
   }
 
   // Older than a year - show full date
-  return date.toLocaleDateString('en-US', {
+  const dateStr = date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
   });
+  if (showTime) {
+    const timeStr = date
+      .toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+      .toLowerCase();
+    return `${dateStr} @${timeStr}`;
+  }
+  return dateStr;
 }
 
 /**
