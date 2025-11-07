@@ -156,7 +156,7 @@ export const FolderNode = co.map({
   archived: z.boolean(), // Soft delete flag
 
   // Template-folder configuration
-  showZoneHeadings: z.boolean().default(false), // Controls zone heading visibility in session view
+  showZoneHeadings: z.optional(z.boolean()), // Controls zone heading visibility in session view
 
   // For organizational folders only
   // Children are implicit via path hierarchy
