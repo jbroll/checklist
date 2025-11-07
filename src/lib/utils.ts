@@ -32,15 +32,14 @@ export function formatRelativeTime(date: Date): string {
 }
 
 /**
- * Format Unix timestamp (seconds) for session display
+ * Format Date object for session display
  * - "today" for today without specific time
  * - "today @11:54" for today with time
  * - "yesterday" for yesterday
  * - "MM/DD" for dates within the last year
  * - Full date for older dates
  */
-export function formatSessionDate(unixSeconds: number): string {
-  const date = new Date(unixSeconds * 1000);
+export function formatSessionDate(date: Date): string {
   const now = new Date();
 
   // Reset hours for day comparison

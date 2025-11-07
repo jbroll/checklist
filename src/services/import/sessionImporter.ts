@@ -113,15 +113,15 @@ export function importSessionFromCsv(
     const inCart = row.inCart?.toLowerCase() === 'true';
     const purchased = row.purchased?.toLowerCase() === 'true';
 
-    // Parse timestamps if provided (convert to Unix seconds)
-    let addedToCartAt: number | undefined;
-    let purchasedAt: number | undefined;
+    // Parse timestamps if provided
+    let addedToCartAt: Date | undefined;
+    let purchasedAt: Date | undefined;
 
     if (row.addedToCartAt && row.addedToCartAt.trim().length > 0) {
       try {
-        const date = new Date(row.addedToCartAt);
-        if (!Number.isNaN(date.getTime())) {
-          addedToCartAt = Math.floor(date.getTime() / 1000);
+        addedToCartAt = new Date(row.addedToCartAt);
+        if (Number.isNaN(addedToCartAt.getTime())) {
+          addedToCartAt = undefined;
         }
       } catch {
         // Invalid date, skip
@@ -130,9 +130,9 @@ export function importSessionFromCsv(
 
     if (row.purchasedAt && row.purchasedAt.trim().length > 0) {
       try {
-        const date = new Date(row.purchasedAt);
-        if (!Number.isNaN(date.getTime())) {
-          purchasedAt = Math.floor(date.getTime() / 1000);
+        purchasedAt = new Date(row.purchasedAt);
+        if (Number.isNaN(purchasedAt.getTime())) {
+          purchasedAt = undefined;
         }
       } catch {
         // Invalid date, skip
@@ -180,7 +180,6 @@ export function importSessionFromCsv(
 
   // Create shopping session
   try {
-    const unixSeconds = Math.floor(Date.now() / 1000);
     const session = ShoppingSession.create(
       {
         name: sessionName,
@@ -194,9 +193,9 @@ export function importSessionFromCsv(
         completedCount: totalPurchased,
         remainingCount,
         owner: account,
-        startedAt: unixSeconds,
-        lastActivityAt: unixSeconds,
-        completedAt: status === 'completed' ? unixSeconds : undefined,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+        completedAt: status === 'completed' ? new Date() : undefined,
       },
       { owner: account },
     );

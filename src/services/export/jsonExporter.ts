@@ -131,7 +131,7 @@ function exportSessions(
   for (const session of sessions) {
     const itemStates: Record<string, ExportedItemState> = {};
 
-    // Export item states (Unix timestamps as numbers)
+    // Export item states
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
         inCart: state.inCart,
@@ -139,10 +139,10 @@ function exportSessions(
       };
 
       if (state.addedToCartAt !== undefined) {
-        exportedState.addedToCartAt = state.addedToCartAt as unknown as string; // Unix seconds (number) stored as string in export type
+        exportedState.addedToCartAt = state.addedToCartAt.toISOString();
       }
       if (state.purchasedAt !== undefined) {
-        exportedState.purchasedAt = state.purchasedAt as unknown as string;
+        exportedState.purchasedAt = state.purchasedAt.toISOString();
       }
 
       itemStates[itemId] = exportedState;
@@ -154,12 +154,12 @@ function exportSessions(
       archived: session.archived || false,
       viewMode: session.viewMode,
       itemStates,
-      startedAt: session.startedAt as unknown as string, // Unix seconds (number) stored as string in export type
-      lastActivityAt: session.lastActivityAt as unknown as string,
+      startedAt: session.startedAt.toISOString(),
+      lastActivityAt: session.lastActivityAt.toISOString(),
     };
 
     if (session.completedAt !== undefined) {
-      exportedSession.completedAt = session.completedAt as unknown as string;
+      exportedSession.completedAt = session.completedAt.toISOString();
     }
 
     exportedSessions.push(exportedSession);

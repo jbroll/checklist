@@ -31,11 +31,8 @@ export function createSession(
     folder.$jazz.set('items', []);
   }
 
-  // Generate Unix timestamp (seconds)
+  // Generate auto-generated session name with timestamp if not provided
   const now = new Date();
-  const unixSeconds = Math.floor(now.getTime() / 1000);
-
-  // Session name is just a fallback - display will use startedAt timestamp
   const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
   const timeStr = now.toTimeString().slice(0, 5); // HH:MM
   const name = sessionName || `${dateStr} ${timeStr}`;
@@ -58,8 +55,8 @@ export function createSession(
       completedCount: 0,
       remainingCount,
       owner: account,
-      startedAt: unixSeconds,
-      lastActivityAt: unixSeconds,
+      startedAt: now,
+      lastActivityAt: now,
     },
     { owner: account },
   );
@@ -122,8 +119,6 @@ export function toggleItemInCart(
 
   const currentState = itemStates[itemId];
 
-  const unixSeconds = Math.floor(Date.now() / 1000);
-
   if (!currentState) {
     // Create new ItemState
     const newState = ItemState.create(
@@ -131,7 +126,7 @@ export function toggleItemInCart(
         itemId,
         inCart: true,
         purchased: false,
-        addedToCartAt: unixSeconds,
+        addedToCartAt: new Date(),
         checkedBy: account,
       },
       { owner: account },
@@ -146,7 +141,7 @@ export function toggleItemInCart(
     const newInCart = !currentState.inCart;
     currentState.$jazz.set('inCart', newInCart);
     if (newInCart) {
-      currentState.$jazz.set('addedToCartAt', unixSeconds);
+      currentState.$jazz.set('addedToCartAt', new Date());
     } else {
       // If removing from cart, also clear purchased state
       currentState.$jazz.set('purchased', false);
@@ -155,7 +150,7 @@ export function toggleItemInCart(
   }
 
   // Update session activity
-  session.$jazz.set('lastActivityAt', unixSeconds);
+  session.$jazz.set('lastActivityAt', new Date());
 }
 
 /**
@@ -173,17 +168,16 @@ export function toggleItemPurchased(
   const currentState = session.itemStates?.[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
-  const unixSeconds = Math.floor(Date.now() / 1000);
   const newPurchasedState = !currentState.purchased;
   currentState.$jazz.set('purchased', newPurchasedState);
   if (newPurchasedState) {
-    currentState.$jazz.set('purchasedAt', unixSeconds);
+    currentState.$jazz.set('purchasedAt', new Date());
     currentState.$jazz.set('checkedBy', account);
   } else {
     currentState.$jazz.set('purchasedAt', undefined);
   }
 
-  session.$jazz.set('lastActivityAt', unixSeconds);
+  session.$jazz.set('lastActivityAt', new Date());
 }
 
 /**
@@ -234,9 +228,8 @@ export function completeSession(
   const session = getSession(account, folderId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
 
-  const unixSeconds = Math.floor(Date.now() / 1000);
   session.$jazz.set('status', 'completed');
-  session.$jazz.set('completedAt', unixSeconds);
+  session.$jazz.set('completedAt', new Date());
 }
 
 /**
@@ -250,9 +243,8 @@ export function abandonSession(
   const session = getSession(account, folderId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
 
-  const unixSeconds = Math.floor(Date.now() / 1000);
   session.$jazz.set('status', 'abandoned');
-  session.$jazz.set('lastActivityAt', unixSeconds);
+  session.$jazz.set('lastActivityAt', new Date());
 }
 
 /**
@@ -267,7 +259,6 @@ export function updateViewMode(
   const session = getSession(account, folderId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
 
-  const unixSeconds = Math.floor(Date.now() / 1000);
   session.$jazz.set('viewMode', viewMode);
-  session.$jazz.set('lastActivityAt', unixSeconds);
+  session.$jazz.set('lastActivityAt', new Date());
 }

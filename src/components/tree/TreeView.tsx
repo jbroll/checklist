@@ -93,7 +93,7 @@ export function TreeView({
       if (session) {
         // Soft delete by setting status to abandoned
         session.$jazz.set('status', 'abandoned');
-        session.$jazz.set('lastActivityAt', Math.floor(Date.now() / 1000));
+        session.$jazz.set('lastActivityAt', new Date());
       }
     }
   };

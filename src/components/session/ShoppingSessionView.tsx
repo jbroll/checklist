@@ -164,7 +164,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   const handleToggleArchived = () => {
     if (!session || !me) return;
     session.$jazz.set('archived', !session.archived);
-    session.$jazz.set('lastActivityAt', Math.floor(Date.now() / 1000));
+    session.$jazz.set('lastActivityAt', new Date());
   };
 
   // Helper to build category tree structure
