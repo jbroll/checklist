@@ -65,7 +65,7 @@ function exportFolderNode(node: InstanceOfSchema<typeof FolderNode>): ExportedFo
     name: node.name,
     path: node.path,
     type: node.type,
-    createdAt: node.createdAt.toISOString(),
+    createdAt: node.createdAt.toISOString(), // FolderNode still uses Date objects
     updatedAt: node.updatedAt.toISOString(),
   };
 
