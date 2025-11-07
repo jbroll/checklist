@@ -27,7 +27,9 @@ A collaborative grocery list application built with Jazz.tools and BetterAuth.
 
 ```bash
 npm install              # Install dependencies
-npm run dev             # Start development server (http://localhost:5173)
+npm run dev             # Start BOTH frontend (5173) and backend (3001)
+npm run dev:frontend    # Start frontend only
+npm run dev:backend     # Start backend only
 npm run build           # Build for production
 npm run preview         # Preview production build
 npm run lint            # Run Biome linting
@@ -36,6 +38,8 @@ npm run test:run        # Run unit tests (Vitest)
 npm run test:e2e        # Run E2E tests (Playwright)
 npm run check           # Run type-check + lint + tests
 ```
+
+**IMPORTANT**: The app requires BOTH frontend and backend to be running for authentication and data persistence to work. Always use `npm run dev` to start both servers.
 
 ## Git Commit Rules
 

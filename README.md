@@ -22,12 +22,19 @@ A real-time collaborative grocery list app built with Jazz.tools and BetterAuth.
 
 ```bash
 npm install
+cd backend && npm install && cd ..
 cp .env.example .env
-# Edit .env with your OAuth credentials
-npm run dev
+cp backend/.env.example backend/.env
+# Edit both .env files with your OAuth credentials
+npm run dev  # Runs both frontend and backend
 ```
 
 Visit http://localhost:5173
+
+**Available dev commands**:
+- `npm run dev` - Run both frontend (port 5173) and backend (port 3001)
+- `npm run dev:frontend` - Run only frontend
+- `npm run dev:backend` - Run only backend
 
 ### OAuth Setup
 

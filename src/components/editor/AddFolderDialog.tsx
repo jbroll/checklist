@@ -68,6 +68,7 @@ export function AddFolderDialog({
                     ? 'e.g., Weekly Staples, Monthly Shopping'
                     : 'e.g., Groceries, Household'
                 }
+                autoFocus
               />
             </FormField>
           </div>

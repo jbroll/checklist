@@ -34,7 +34,7 @@ export function Dashboard() {
     };
 
     syncProfileName();
-  }, [me?.profile, me?.profile?.name]); // Run when account profile becomes available or name changes
+  }, [me?.profile]); // Only run when profile becomes available, not on name changes
 
   const handleGoogleSignIn = async () => {
     // Clear the signed-out flag when user signs in
@@ -65,22 +65,20 @@ export function Dashboard() {
     // Set a flag to prevent auto-login after sign out
     localStorage.setItem('user-signed-out', 'true');
 
-    // Sign out from Jazz first (this clears the local account)
-    try {
-      await logOut();
-    } catch (error) {
-      console.log('Jazz logOut error:', error);
-    }
-
-    // Sign out from BetterAuth (clear server session)
+    // Sign out from BetterAuth first (clear server session)
     try {
       await betterAuthClient.signOut();
     } catch (error) {
       console.log('BetterAuth signOut error:', error);
     }
 
-    // Force reload to show sign-in screen
-    window.location.href = '/';
+    // Sign out from Jazz (this clears the local account and triggers state change)
+    // The state change will automatically show the login screen, no reload needed
+    try {
+      await logOut();
+    } catch (error) {
+      console.log('Jazz logOut error:', error);
+    }
   };
 
   // If user explicitly signed out, show sign-in screen even if still authenticated

@@ -71,6 +71,7 @@ export function StartSessionDialog({
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
                 placeholder={`Leave empty for auto-generated name: ${generateDefaultName()}`}
+                autoFocus
               />
             </FormField>
           </div>

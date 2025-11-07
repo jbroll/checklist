@@ -21,12 +21,19 @@ export const GroceriesAccount = co
     root: ListsRoot,
     profile: co.profile(),
   })
-  .withMigration((account) => {
+  .withMigration(async (account) => {
     // Initialize root for new accounts
     if (!account.$jazz.has('root')) {
-      account.$jazz.set('root', {
-        nodes: [],
-      });
+      const nodes = co.list(FolderNode).create([], { owner: account });
+      account.$jazz.set('root', ListsRoot.create({ nodes }, { owner: account }));
+      return;
+    }
+
+    // Fix existing accounts with broken root.nodes (migration from old initialization)
+    const { root } = await account.$jazz.ensureLoaded({ resolve: { root: {} } });
+    if (root && !root.$jazz.has('nodes')) {
+      const nodes = co.list(FolderNode).create([], { owner: account });
+      root.$jazz.set('nodes', nodes);
     }
   });
 
