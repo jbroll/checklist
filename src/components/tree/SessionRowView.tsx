@@ -57,10 +57,9 @@ export const SessionRowView = memo(function SessionRowView({
           {/* Status icon */}
           <StatusIcon className="h-4 w-4" />
 
-          {/* Template name and relative date */}
-          <span className="flex-1 text-left text-sm text-neutral-900">
-            {templateName}{' '}
-            <span className="text-neutral-500">· {formatSessionDate(session.startedAt, showTime)}</span>
+          {/* Relative date */}
+          <span className="flex-1 text-left text-sm text-neutral-500">
+            {formatSessionDate(session.startedAt, showTime)}
           </span>
 
           {/* Session stats */}
