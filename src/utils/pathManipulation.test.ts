@@ -5,7 +5,7 @@ import {
   getNameFromPath,
   getParentPath,
   normalizeNameForPath,
-} from './pathManipulation';
+} from './pathUtils';
 
 describe('pathManipulation', () => {
   describe('calculateNewPath', () => {

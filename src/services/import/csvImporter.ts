@@ -6,16 +6,11 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
-import { TemplateItem } from '../../schemas';
 import { parseCsv } from '../../utils/csvParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
+import { type BaseImportResult, importItems } from './baseImporter';
 
-export interface CsvImportResult {
-  imported: number;
-  skipped: number;
-  errors: string[];
-  duplicates: string[];
-}
+export type CsvImportResult = BaseImportResult;
 
 /**
  * Import template items from CSV
@@ -36,106 +31,43 @@ export function importItemsFromCsv(
   folder: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): CsvImportResult {
-  const result: CsvImportResult = {
-    imported: 0,
-    skipped: 0,
-    errors: [],
-    duplicates: [],
-  };
-
   // Parse CSV
   let rows: Record<string, string>[];
   try {
     rows = parseCsv(csvContent);
   } catch (error) {
-    result.errors.push(`Failed to parse CSV: ${String(error)}`);
-    return result;
+    return {
+      imported: 0,
+      skipped: 0,
+      errors: [`Failed to parse CSV: ${String(error)}`],
+      duplicates: [],
+    };
   }
 
-  if (rows.length === 0) {
-    result.errors.push('No items found in CSV file');
-    return result;
-  }
-
-  // Get existing item paths (case-insensitive)
-  const existingPaths = new Set<string>();
-  if (folder.items) {
-    for (const item of folder.items) {
-      if (item && !item.archived) {
-        existingPaths.add(item.path.toLowerCase());
-      }
-    }
-  }
-
-  // Calculate next sort order
-  let nextSortOrder = 0;
-  if (folder.items) {
-    for (const item of folder.items) {
-      if (item && item.sortOrder >= nextSortOrder) {
-        nextSortOrder = item.sortOrder + 1;
-      }
-    }
-  }
-
-  // Import each row
+  // Convert CSV rows to items
+  const itemsToImport = [];
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNum = i + 2; // +2 because row 1 is header, and humans count from 1
 
     // Validate required fields
     if (!row || !row.name || row.name.trim().length === 0) {
-      result.errors.push(`Row ${rowNum}: Missing item name`);
-      continue;
+      continue; // Skip invalid rows - let base importer handle the empty check
     }
 
     const name = row.name.trim();
-
-    // Generate path from name if not provided
     const pathSegment = normalizePathSegment(name);
     const path = row.path?.trim() || pathSegment;
+    const defaultQuantity = row.defaultQuantity?.trim() || '';
 
-    // Skip if already exists at this path
-    if (existingPaths.has(path.toLowerCase())) {
-      result.skipped++;
-      result.duplicates.push(name);
-      continue;
-    }
-
-    try {
-      // Get default quantity (optional)
-      const defaultQuantity = row.defaultQuantity?.trim() || '';
-
-      // Create new template item (always type='item' for CSV imports)
-      const newItem = TemplateItem.create(
-        {
-          name,
-          type: 'item',
-          path,
-          expanded: false,
-          sortOrder: nextSortOrder++,
-          archived: false,
-          defaultQuantity,
-          color: '#6b7280',
-          addedBy: account,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { owner: account },
-      );
-
-      // Add to folder
-      folder.items?.$jazz.push(newItem);
-      result.imported++;
-
-      // Add to existing paths to prevent duplicates within import
-      existingPaths.add(path.toLowerCase());
-    } catch (error) {
-      result.errors.push(`Row ${rowNum} ("${name}"): ${String(error)}`);
-    }
+    itemsToImport.push({
+      name,
+      path,
+      defaultQuantity,
+      context: `Row ${rowNum}`,
+    });
   }
 
-  // Update folder timestamp
-  folder.$jazz.set('updatedAt', new Date());
-
-  return result;
+  // Use base importer to handle the actual import
+  return importItems(itemsToImport, folder, account);
 }
