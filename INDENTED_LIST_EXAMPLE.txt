@@ -1,0 +1,29 @@
+# Sample Indented List Format
+# This demonstrates the new hierarchical import/export feature
+
+Produce
+  Fruits
+    Apples
+    Bananas
+    Oranges
+  Vegetables
+    Carrots
+    Broccoli
+    Spinach
+
+Dairy
+  Milk
+  Cheese
+  Yogurt
+
+Bakery
+  Bread
+  Bagels
+
+# Comments are ignored
+# Blank lines are also ignored
+
+Beverages
+  Coffee
+  Tea
+  Juice
