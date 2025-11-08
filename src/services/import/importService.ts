@@ -6,9 +6,11 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
-import { isValidFileSize, isValidFileType, readFileAsText } from '../../utils/fileUpload';
+import { readFileAsText } from '../../utils/fileUpload';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
+import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
 import { importJson } from './jsonImporter';
+import { createErrorResult, createSuccessResult } from './resultHelpers';
 import {
   importSessionFromCsv,
   type SessionImportOptions,
@@ -16,9 +18,6 @@ import {
 } from './sessionImporter';
 import { importItemsFromText, type TxtImportResult } from './txtImporter';
 import type { ImportFileType, ImportResult } from './types';
-
-// Maximum file size: 10MB
-const MAX_FILE_SIZE_MB = 10;
 
 /**
  * Import Service
@@ -40,38 +39,18 @@ export class ImportService {
     account: InstanceOfSchema<typeof Account>,
     fileType?: ImportFileType,
   ): Promise<ImportResult> {
-    // Validate file size
-    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
-      return {
-        success: false,
-        errors: [`File size exceeds maximum allowed size of ${MAX_FILE_SIZE_MB}MB`],
-        warnings: [],
-        stats: {},
-      };
-    }
-
     // Determine file type
     const detectedType = fileType || ImportService.detectFileType(file);
     if (!detectedType) {
-      return {
-        success: false,
-        errors: ['Unable to determine file type. Expected .json, .txt, or .csv'],
-        warnings: [],
-        stats: {},
-      };
+      return createErrorResult('Unable to determine file type. Expected .json, .txt, or .csv');
     }
 
-    // Validate file extension
+    // Validate file
     const validExtensions = ImportService.getValidExtensions(detectedType);
-    if (!isValidFileType(file, validExtensions)) {
-      return {
-        success: false,
-        errors: [
-          `Invalid file type. Expected ${validExtensions.map((ext) => `.${ext}`).join(' or ')}`,
-        ],
-        warnings: [],
-        stats: {},
-      };
+    try {
+      validateImportFile(file, validExtensions, MAX_FILE_SIZE_MB);
+    } catch (error) {
+      return createErrorResult(error instanceof Error ? error : 'Validation failed');
     }
 
     // Read file content
@@ -79,14 +58,9 @@ export class ImportService {
     try {
       content = await readFileAsText(file);
     } catch (error) {
-      return {
-        success: false,
-        errors: [
-          `Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ],
-        warnings: [],
-        stats: {},
-      };
+      return createErrorResult(
+        `Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
 
     // Import based on type
@@ -96,29 +70,14 @@ export class ImportService {
 
       case 'txt':
         // TODO: Phase 2 - Template list import from TXT
-        return {
-          success: false,
-          errors: ['TXT import not yet implemented'],
-          warnings: [],
-          stats: {},
-        };
+        return createErrorResult('TXT import not yet implemented');
 
       case 'csv':
         // TODO: Phase 2/3 - Template list or session import from CSV
-        return {
-          success: false,
-          errors: ['CSV import not yet implemented'],
-          warnings: [],
-          stats: {},
-        };
+        return createErrorResult('CSV import not yet implemented');
 
       default:
-        return {
-          success: false,
-          errors: [`Unsupported file type: ${detectedType}`],
-          warnings: [],
-          stats: {},
-        };
+        return createErrorResult(`Unsupported file type: ${detectedType}`);
     }
   }
 
@@ -152,20 +111,13 @@ export class ImportService {
     account: InstanceOfSchema<typeof Account>,
   ): Promise<TxtImportResult> {
     // Validate file
-    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+    try {
+      validateImportFile(file, ['txt'], MAX_FILE_SIZE_MB);
+    } catch (error) {
       return {
         imported: 0,
         skipped: 0,
-        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
-        duplicates: [],
-      };
-    }
-
-    if (!isValidFileType(file, ['txt'])) {
-      return {
-        imported: 0,
-        skipped: 0,
-        errors: ['Invalid file type. Expected: .txt'],
+        errors: [error instanceof Error ? error.message : 'Validation failed'],
         duplicates: [],
       };
     }
@@ -191,20 +143,13 @@ export class ImportService {
     account: InstanceOfSchema<typeof Account>,
   ): Promise<CsvImportResult> {
     // Validate file
-    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+    try {
+      validateImportFile(file, ['csv'], MAX_FILE_SIZE_MB);
+    } catch (error) {
       return {
         imported: 0,
         skipped: 0,
-        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
-        duplicates: [],
-      };
-    }
-
-    if (!isValidFileType(file, ['csv'])) {
-      return {
-        imported: 0,
-        skipped: 0,
-        errors: ['Invalid file type. Expected: .csv'],
+        errors: [error instanceof Error ? error.message : 'Validation failed'],
         duplicates: [],
       };
     }
@@ -232,22 +177,14 @@ export class ImportService {
     options: SessionImportOptions = {},
   ): Promise<SessionImportResult> {
     // Validate file
-    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+    try {
+      validateImportFile(file, ['csv'], MAX_FILE_SIZE_MB);
+    } catch (error) {
       return {
         imported: false,
         matched: 0,
         unmatched: 0,
-        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
-        unmatchedItems: [],
-      };
-    }
-
-    if (!isValidFileType(file, ['csv'])) {
-      return {
-        imported: false,
-        matched: 0,
-        unmatched: 0,
-        errors: ['Invalid file type. Expected: .csv'],
+        errors: [error instanceof Error ? error.message : 'Validation failed'],
         unmatchedItems: [],
       };
     }
@@ -277,19 +214,12 @@ export class ImportService {
     fileType: 'txt' | 'csv',
   ): Promise<ImportResult> {
     // Validate file
-    if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
+    try {
+      validateImportFile(file, [fileType], MAX_FILE_SIZE_MB);
+    } catch (error) {
       return {
         success: false,
-        errors: [`File too large. Maximum size: ${MAX_FILE_SIZE_MB}MB`],
-        warnings: [],
-        stats: {},
-      };
-    }
-
-    if (!isValidFileType(file, [fileType])) {
-      return {
-        success: false,
-        errors: [`Invalid file type. Expected: .${fileType}`],
+        errors: [error instanceof Error ? error.message : 'Validation failed'],
         warnings: [],
         stats: {},
       };
@@ -329,36 +259,24 @@ export class ImportService {
 
     // Check if import succeeded
     if (importResult.errors.length > 0 && importResult.imported === 0) {
-      return {
-        success: false,
-        errors: importResult.errors,
-        warnings: [],
-        stats: {},
-      };
+      return createErrorResult(importResult.errors[0]);
     }
 
     // Add folder to root
     if (!account.root) {
-      return {
-        success: false,
-        errors: ['Account root not found'],
-        warnings: [],
-        stats: {},
-      };
+      return createErrorResult('Account root not found');
     }
 
     account.root.nodes.$jazz.push(newFolder);
 
-    return {
-      success: true,
-      errors: [],
-      warnings: importResult.duplicates.length > 0 ? ['Some duplicate items were skipped'] : [],
-      stats: {
+    return createSuccessResult(
+      {
         foldersCreated: 1,
         itemsAdded: importResult.imported,
         itemsSkipped: importResult.skipped,
       },
-    };
+      importResult.duplicates.length > 0 ? ['Some duplicate items were skipped'] : [],
+    );
   }
 
   /**

@@ -7,7 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
-import { calculateDescendantPaths, calculateNewPath } from '../utils/pathManipulation';
+import { calculateDescendantPaths, calculateNewPath } from '../utils/pathUtils';
 
 /**
  * Create a new folder
