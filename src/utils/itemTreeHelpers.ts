@@ -20,39 +20,25 @@ export interface ItemTreeNode {
 export function buildItemTree(
   items: readonly (InstanceOfSchema<typeof TemplateItem> | null)[],
 ): ItemTreeNode[] {
-  // Filter out null items and archived items
-  const validItems = items.filter((item): item is InstanceOfSchema<typeof TemplateItem> => {
-    return item !== null && !item.archived;
-  });
-
-  // Build a map of path → item for quick lookup
-  const itemMap = new Map<string, InstanceOfSchema<typeof TemplateItem>>();
-  for (const item of validItems) {
-    itemMap.set(item.path, item);
-  }
-
-  // Build the tree structure
-  const rootNodes: ItemTreeNode[] = [];
-  const nodeMap = new Map<string, ItemTreeNode>();
-
-  // Sort items by sortOrder and path for consistent rendering
-  const sortedItems = [...validItems].sort((a, b) => {
-    // First compare by parent path to group siblings
-    const parentA = getParentPath(a.path) || '';
-    const parentB = getParentPath(b.path) || '';
-    if (parentA !== parentB) {
-      return parentA.localeCompare(parentB);
-    }
-    // Then by sortOrder
+  // Helper to sort items by sortOrder and name
+  const sortItems = (
+    a: InstanceOfSchema<typeof TemplateItem>,
+    b: InstanceOfSchema<typeof TemplateItem>,
+  ) => {
     if (a.sortOrder !== b.sortOrder) {
       return a.sortOrder - b.sortOrder;
     }
-    // Finally by name
     return a.name.localeCompare(b.name);
-  });
+  };
 
-  // Create tree nodes
-  for (const item of sortedItems) {
+  // Single-pass: filter, build map, and group by parent
+  const nodeMap = new Map<string, ItemTreeNode>();
+  const childrenByParent = new Map<string | undefined, ItemTreeNode[]>();
+
+  for (const item of items) {
+    // Filter out null and archived items
+    if (!item || item.archived) continue;
+
     const node: ItemTreeNode = {
       item,
       children: [],
@@ -60,31 +46,28 @@ export function buildItemTree(
     nodeMap.set(item.path, node);
 
     const parentPath = getParentPath(item.path);
-    if (!parentPath) {
-      // Root level item
-      rootNodes.push(node);
-    } else {
-      // Child item - add to parent's children
-      const parentNode = nodeMap.get(parentPath);
-      if (parentNode) {
-        parentNode.children.push(node);
-      } else {
-        // Parent doesn't exist in the tree yet (might come later in iteration)
-        // Add to root for now, will be reorganized if parent appears
-        rootNodes.push(node);
-      }
+    if (!childrenByParent.has(parentPath)) {
+      childrenByParent.set(parentPath, []);
     }
+    childrenByParent.get(parentPath)?.push(node);
   }
 
-  // Sort root nodes by sortOrder
-  rootNodes.sort((a, b) => {
-    if (a.item.sortOrder !== b.item.sortOrder) {
-      return a.item.sortOrder - b.item.sortOrder;
-    }
-    return a.item.name.localeCompare(b.item.name);
-  });
+  // Recursively build and sort children
+  const buildChildren = (parentPath: string | undefined): ItemTreeNode[] => {
+    const children = childrenByParent.get(parentPath) || [];
+    const sorted = children.sort((a, b) => sortItems(a.item, b.item));
 
-  return rootNodes;
+    // Recursively build children for categories
+    for (const node of sorted) {
+      if (node.item.type === 'category') {
+        node.children = buildChildren(node.item.path);
+      }
+    }
+
+    return sorted;
+  };
+
+  return buildChildren(undefined); // Start with root nodes
 }
 
 /**

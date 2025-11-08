@@ -15,31 +15,31 @@ export function buildTreeStructure(
   allNodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[],
 ): TreeNode[] {
   // Filter out null/undefined and archived nodes
-  const validNodes = allNodes.filter((node) => node?.name && node.path && !node.archived);
+  const validNodes = allNodes.filter(
+    (node): node is InstanceOfSchema<typeof FolderNode> =>
+      node != null && !!node.name && !!node.path && !node.archived,
+  );
 
   // Group by parent path to create hierarchy
   const nodesByParent = new Map<string | undefined, InstanceOfSchema<typeof FolderNode>[]>();
 
-  validNodes.forEach((node) => {
-    if (!node) return;
+  for (const node of validNodes) {
     const parentKey = getParentPath(node.path);
 
     if (!nodesByParent.has(parentKey)) {
       nodesByParent.set(parentKey, []);
     }
     nodesByParent.get(parentKey)?.push(node);
-  });
+  }
 
   // Build recursive structure
   const buildChildren = (parentPath: string | undefined): TreeNode[] => {
     const children = nodesByParent.get(parentPath) || [];
-    return children
-      .filter((node) => node?.name)
-      .map((node) => ({
-        node,
-        // Only folders can have children, templates are leaf nodes
-        children: node.type === 'folder' ? buildChildren(node.path) : [],
-      }));
+    return children.map((node) => ({
+      node,
+      // Only folders can have children, templates are leaf nodes
+      children: node.type === 'folder' ? buildChildren(node.path) : [],
+    }));
   };
 
   return buildChildren(undefined); // Start with root nodes (no parent path)

@@ -10,6 +10,38 @@ import type { Account } from '../../schemas';
 import { findFolderByPath } from './validators';
 
 /**
+ * Generic helper to resolve naming conflicts by appending numbered suffixes
+ *
+ * @param baseName - Original name
+ * @param exists - Function to check if a candidate name already exists
+ * @param formatCandidate - Function to format the candidate name with counter
+ * @param startCounter - Starting counter value (default: 1)
+ * @param maxAttempts - Maximum resolution attempts (default: 100)
+ * @returns Unique name that doesn't conflict
+ */
+function resolveNameConflict(
+  baseName: string,
+  exists: (candidate: string) => boolean,
+  formatCandidate: (base: string, counter: number) => string,
+  startCounter = 1,
+  maxAttempts = 100,
+): string {
+  let counter = startCounter;
+  let candidate = formatCandidate(baseName, counter);
+
+  while (exists(candidate)) {
+    counter++;
+    candidate = formatCandidate(baseName, counter);
+
+    if (counter > maxAttempts) {
+      throw new Error(`Unable to resolve name conflict after ${maxAttempts} attempts`);
+    }
+  }
+
+  return candidate;
+}
+
+/**
  * Resolve path conflict by generating a unique path
  *
  * Strategy:
@@ -31,21 +63,16 @@ export function resolvePathConflict(
   originalName: string,
   account: InstanceOfSchema<typeof Account>,
 ): { path: string; name: string } {
-  // Start with suffix (1) and increment until unique
-  let counter = 1;
-  let newName = `${originalName} (${counter})`;
-  let newPath = `${originalPath}-(${counter})`;
+  const newPath = resolveNameConflict(
+    originalPath,
+    (candidate) => !!findFolderByPath(candidate, account),
+    (base, counter) => `${base}-(${counter})`,
+  );
 
-  while (findFolderByPath(newPath, account)) {
-    counter++;
-    newName = `${originalName} (${counter})`;
-    newPath = `${originalPath}-(${counter})`;
-
-    // Safety limit
-    if (counter > 100) {
-      throw new Error('Unable to resolve path conflict after 100 attempts');
-    }
-  }
+  // Extract counter from resolved path
+  const match = newPath.match(/-\((\d+)\)$/);
+  const counter = match ? Number.parseInt(match[1], 10) : 1;
+  const newName = `${originalName} (${counter})`;
 
   return { path: newPath, name: newName };
 }
@@ -74,19 +101,10 @@ export function resolveItemNameConflict(itemName: string, existingNames: string[
     return itemName;
   }
 
-  // Try appending numbers
-  let counter = 2;
-  let newName = `${itemName} (${counter})`;
-
-  while (itemNameConflicts(newName, existingNames)) {
-    counter++;
-    newName = `${itemName} (${counter})`;
-
-    // Safety limit
-    if (counter > 100) {
-      throw new Error('Unable to resolve item name conflict after 100 attempts');
-    }
-  }
-
-  return newName;
+  return resolveNameConflict(
+    itemName,
+    (candidate) => itemNameConflicts(candidate, existingNames),
+    (base, counter) => `${base} (${counter})`,
+    2, // Start with (2) since (1) would be the original with implicit counter
+  );
 }
