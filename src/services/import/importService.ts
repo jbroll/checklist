@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import { isValidFileSize, isValidFileType, readFileAsText } from '../../utils/fileUpload';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { importJson } from './jsonImporter';
@@ -31,13 +31,13 @@ export class ImportService {
    * Import data from a file
    *
    * @param file - File object from input or drag-and-drop
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param fileType - Expected file type (optional, auto-detected from extension)
    * @returns Import result with success/failure info
    */
   static async importFromFile(
     file: File,
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     fileType?: ImportFileType,
   ): Promise<ImportResult> {
     // Validate file size
@@ -143,13 +143,13 @@ export class ImportService {
    *
    * @param file - TXT file with one item per line
    * @param folder - Folder to import items into
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @returns Import result with statistics
    */
   static async importItemsFromTxtFile(
     file: File,
     folder: InstanceOfSchema<typeof FolderNode>,
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
   ): Promise<TxtImportResult> {
     // Validate file
     if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
@@ -182,13 +182,13 @@ export class ImportService {
    *
    * @param file - CSV file with header row
    * @param folder - Folder to import items into
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @returns Import result with statistics
    */
   static async importItemsFromCsvFile(
     file: File,
     folder: InstanceOfSchema<typeof FolderNode>,
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
   ): Promise<CsvImportResult> {
     // Validate file
     if (!isValidFileSize(file, MAX_FILE_SIZE_MB)) {
@@ -221,14 +221,14 @@ export class ImportService {
    *
    * @param file - CSV file with session data
    * @param folder - Folder to import session into
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param options - Import options (session name, add missing items)
    * @returns Import result with statistics
    */
   static async importSessionFromCsvFile(
     file: File,
     folder: InstanceOfSchema<typeof FolderNode>,
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     options: SessionImportOptions = {},
   ): Promise<SessionImportResult> {
     // Validate file
@@ -265,14 +265,14 @@ export class ImportService {
    * Creates a new template folder with the given name and imports all items into it.
    *
    * @param file - TXT or CSV file with items
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param templateName - Name for the new template folder
    * @param fileType - File type ('txt' or 'csv')
    * @returns Import result with statistics
    */
   static async importAsNewTemplate(
     file: File,
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     templateName: string,
     fileType: 'txt' | 'csv',
   ): Promise<ImportResult> {

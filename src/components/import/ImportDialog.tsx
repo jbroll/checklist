@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import type { GroceriesAccount } from '@/schemas';
+import type { Account } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
 import type { ImportResult } from '@/services/import/types';
 import { isValidFileSize, isValidFileType } from '@/utils/fileUpload';
@@ -20,7 +20,7 @@ import { isValidFileSize, isValidFileType } from '@/utils/fileUpload';
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
   onImportComplete?: () => void;
 }
 

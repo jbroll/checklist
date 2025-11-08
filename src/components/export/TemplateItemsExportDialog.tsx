@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
 
@@ -19,7 +19,7 @@ interface TemplateItemsExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   folder: InstanceOfSchema<typeof FolderNode>;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
 }
 
 export function TemplateItemsExportDialog({

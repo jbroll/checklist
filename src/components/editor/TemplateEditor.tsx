@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
-import { ShoppingSessionView } from '@/components/session/ShoppingSessionView';
+import { ListSessionView } from '@/components/session/ListSessionView';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
-import type { GroceriesAccount } from '@/schemas';
+import type { Account } from '@/schemas';
 import * as FolderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
@@ -15,7 +15,7 @@ interface TemplateEditorProps {
 }
 
 export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
-  const { me } = useAccount<typeof GroceriesAccount>();
+  const { me } = useAccount<typeof Account>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -108,12 +108,12 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     }
   }
 
-  // If viewing a shopping session, show ShoppingSessionView
+  // If viewing a shopping session, show ListSessionView
   if (activeSessionFolderId && activeSessionId) {
     const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
     if (sessionFolder) {
       return (
-        <ShoppingSessionView
+        <ListSessionView
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           folder={sessionFolder}
           sessionId={activeSessionId}

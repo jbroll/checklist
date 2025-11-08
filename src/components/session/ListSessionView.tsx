@@ -22,19 +22,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAccount } from '@/lib/jazz';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import type { TemplateItem } from '@/schemas/tree';
 import * as SessionService from '@/services/sessionService';
 import { SessionZone } from './SessionZone';
 
-interface ShoppingSessionViewProps {
+interface ListSessionViewProps {
   folder: InstanceOfSchema<typeof FolderNode>;
   sessionId: string;
   onBack: () => void;
 }
 
-export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessionViewProps) {
-  const { me } = useAccount<typeof GroceriesAccount>();
+export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewProps) {
+  const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
     inventory: true,
     cart: true,
@@ -71,11 +71,11 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
 
     activeItems.forEach((item) => {
       const state = session.itemStates?.[item.$jazz.id];
-      if (!state || (!state.inCart && !state.purchased)) {
+      if (!state || (!state.selected && !state.checked)) {
         inventory.push(item);
-      } else if (state.purchased) {
+      } else if (state.checked) {
         completed.push(item);
-      } else if (state.inCart) {
+      } else if (state.selected) {
         cart.push(item);
       }
     });
@@ -126,7 +126,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
         : current === 'hierarchy-in-zones'
           ? 'zone-in-hierarchy'
           : 'flat';
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateViewMode(me, folder.$jazz.id, sessionId, next);
   };
 
@@ -145,21 +145,21 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
   };
 
   const handleToggleCart = (itemId: string) => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    SessionService.toggleItemInCart(me, folder.$jazz.id, sessionId, itemId);
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.toggleItemSelected(me, folder.$jazz.id, sessionId, itemId);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateSessionCounts(me, folder.$jazz.id, sessionId);
   };
 
   const handleTogglePurchased = (itemId: string) => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    SessionService.toggleItemPurchased(me, folder.$jazz.id, sessionId, itemId);
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.toggleItemChecked(me, folder.$jazz.id, sessionId, itemId);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateSessionCounts(me, folder.$jazz.id, sessionId);
   };
 
   const handleFinishSession = () => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.completeSession(me, folder.$jazz.id, sessionId);
     onBack();
   };
@@ -224,8 +224,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             itemStates={session.itemStates || {}}
             expanded={zoneExpanded.cart}
             onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, cart: !prev.cart }))}
-            onToggleCart={handleToggleCart}
-            onTogglePurchased={handleTogglePurchased}
+            onToggleSelected={handleToggleCart}
+            onToggleChecked={handleTogglePurchased}
             count={cartItems.length}
             showHeading={showHeadings}
           />
@@ -239,8 +239,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             onToggleExpand={() =>
               setZoneExpanded((prev) => ({ ...prev, completed: !prev.completed }))
             }
-            onToggleCart={handleToggleCart}
-            onTogglePurchased={handleTogglePurchased}
+            onToggleSelected={handleToggleCart}
+            onToggleChecked={handleTogglePurchased}
             count={completedItems.length}
             showHeading={showHeadings}
           />
@@ -281,8 +281,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                     [zone.key]: !prev[zone.key],
                   }))
                 }
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
+                onToggleSelected={handleToggleCart}
+                onToggleChecked={handleTogglePurchased}
                 count={zone.items.length}
                 showHeading={showHeadings}
               >
@@ -297,8 +297,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                         itemStates={session.itemStates || {}}
                         expanded={true}
                         onToggleExpand={() => {}}
-                        onToggleCart={handleToggleCart}
-                        onTogglePurchased={handleTogglePurchased}
+                        onToggleSelected={handleToggleCart}
+                        onToggleChecked={handleTogglePurchased}
                         count={1}
                       />
                     ))}
@@ -324,8 +324,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                               });
                             }
                           }}
-                          onToggleCart={handleToggleCart}
-                          onTogglePurchased={handleTogglePurchased}
+                          onToggleSelected={handleToggleCart}
+                          onToggleChecked={handleTogglePurchased}
                           count={category.items.length}
                         />
                       );
@@ -351,11 +351,11 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             // Split category items by zone
             const catCart = category.items.filter((item) => {
               const state = session.itemStates?.[item.$jazz.id];
-              return state?.inCart && !state.purchased;
+              return state?.selected && !state.checked;
             });
             const catCompleted = category.items.filter((item) => {
               const state = session.itemStates?.[item.$jazz.id];
-              return state?.purchased;
+              return state?.checked;
             });
 
             // Skip if no items in cart or completed
@@ -381,8 +381,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                     });
                   }
                 }}
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
+                onToggleSelected={handleToggleCart}
+                onToggleChecked={handleTogglePurchased}
                 count={totalItems}
               >
                 <div className="flex flex-col gap-2">
@@ -404,8 +404,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                           });
                         }
                       }}
-                      onToggleCart={handleToggleCart}
-                      onTogglePurchased={handleTogglePurchased}
+                      onToggleSelected={handleToggleCart}
+                      onToggleChecked={handleTogglePurchased}
                       count={catCart.length}
                       showHeading={showHeadings}
                     />
@@ -428,8 +428,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                           });
                         }
                       }}
-                      onToggleCart={handleToggleCart}
-                      onTogglePurchased={handleTogglePurchased}
+                      onToggleSelected={handleToggleCart}
+                      onToggleChecked={handleTogglePurchased}
                       count={catCompleted.length}
                       showHeading={showHeadings}
                     />
@@ -460,8 +460,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
         itemStates={{}}
         expanded={zoneExpanded.inventory}
         onToggleExpand={() => setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))}
-        onToggleCart={handleToggleCart}
-        onTogglePurchased={handleTogglePurchased}
+        onToggleSelected={handleToggleCart}
+        onToggleChecked={handleTogglePurchased}
         count={inventoryItems.length}
         showHeading={showHeadings}
       >
@@ -476,8 +476,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                 itemStates={session.itemStates || {}}
                 expanded={true}
                 onToggleExpand={() => {}}
-                onToggleCart={handleToggleCart}
-                onTogglePurchased={handleTogglePurchased}
+                onToggleSelected={handleToggleCart}
+                onToggleChecked={handleTogglePurchased}
                 count={1}
               />
             ))}
@@ -503,8 +503,8 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
                       });
                     }
                   }}
-                  onToggleCart={handleToggleCart}
-                  onTogglePurchased={handleTogglePurchased}
+                  onToggleSelected={handleToggleCart}
+                  onToggleChecked={handleTogglePurchased}
                   count={category.items.length}
                 />
               );
@@ -594,7 +594,7 @@ export function ShoppingSessionView({ folder, sessionId, onBack }: ShoppingSessi
             folder={folder}
             sessionId={sessionId}
             sessionName={session.name}
-            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with account types
+            // @ts-expect-error Jazz TypeScript inference issue with Account root type
             account={me}
           />
         )}

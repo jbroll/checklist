@@ -1,14 +1,14 @@
 import { co, z } from 'jazz-tools';
 
-// Forward reference to GroceriesAccount (defined in index.ts)
+// Forward reference to Account (defined in index.ts)
 // Use getter pattern for forward references
 // biome-ignore lint/suspicious/noExplicitAny: Forward reference pattern requires any
-let GroceriesAccount: any;
+let Account: any;
 
 // Helper to set the account reference (called from index.ts)
 // biome-ignore lint/suspicious/noExplicitAny: This accepts any account schema type
-export function setGroceriesAccountReference(account: any) {
-  GroceriesAccount = account;
+export function setAccountReference(account: any) {
+  Account = account;
 }
 
 /**
@@ -16,7 +16,7 @@ export function setGroceriesAccountReference(account: any) {
  *
  * Templates now support hierarchical organization using path-based structure.
  * Categories are just TemplateItems with type='category'.
- * Shopping state is tracked separately in ShoppingSession.
+ * Item state is tracked separately in ListSession.
  *
  * Examples:
  * - { type: 'category', path: 'produce', name: 'Produce' }
@@ -39,7 +39,7 @@ export const TemplateItem = co.map({
 
   // References
   get addedBy() {
-    return GroceriesAccount;
+    return Account;
   },
 
   // Timestamps
@@ -48,66 +48,125 @@ export const TemplateItem = co.map({
 });
 
 /**
- * ItemState - Shopping session state for a template item
- * Tracks the shopping state (in cart, purchased) for a specific item in a session.
+ * ItemState - List session state for a template item
+ * Tracks the item state (selected, checked) for a specific item in a session.
  * References the template item by ID.
  */
 export const ItemState = co.map({
   itemId: z.string(), // Reference to TemplateItem.$jazz.id
 
-  // Shopping state - dual checkbox system
-  inCart: z.boolean(), // Left checkbox - item added to cart
-  purchased: z.boolean(), // Right checkbox - item marked as purchased
+  // Item state - dual checkbox system
+  selected: z.boolean(), // Left checkbox - item selected
+  checked: z.boolean(), // Right checkbox - item marked as checked
 
   // Timestamps for state changes
-  addedToCartAt: z.optional(z.date()),
-  purchasedAt: z.optional(z.date()),
+  selectedAt: z.optional(z.date()),
+  checkedAt: z.optional(z.date()),
 
   // Track who checked the item
   get checkedBy() {
-    return co.optional(GroceriesAccount);
+    return co.optional(Account);
   },
 });
 
 /**
- * ShoppingSession - Tracks state for a shopping trip
+ * ListSession - Tracks state for a list session
  * Sessions reference template items and track their state.
  * Name format: "[2025-01-15]" or "[2025-01-15 14:30]" if multiple sessions per day.
  */
-export const ShoppingSession = co.map({
-  name: z.string(), // Date-prefixed: "[2025-01-15]" or "[2025-01-15 14:30]"
-  templateFolderId: z.string(), // Reference to parent TemplateFolderNode.$jazz.id
+export const ListSession = co
+  .map({
+    name: z.string(), // Date-prefixed: "[2025-01-15]" or "[2025-01-15 14:30]"
+    templateFolderId: z.string(), // Reference to parent TemplateFolderNode.$jazz.id
 
-  // State tracking by item ID
-  // Maps itemId → ItemState
-  itemStates: co.record(z.string(), ItemState),
+    // State tracking by item ID
+    // Maps itemId → ItemState
+    itemStates: co.record(z.string(), ItemState),
 
-  // Session status
-  status: z.enum(['active', 'completed', 'abandoned']),
-  archived: z.boolean(), // Soft delete flag - never hard delete sessions
+    // Session status
+    status: z.enum(['active', 'completed', 'abandoned']),
+    archived: z.boolean(), // Soft delete flag - never hard delete sessions
 
-  // UI state - which categories are expanded (by path or ID)
-  categoryExpanded: co.record(z.string(), z.boolean()),
+    // UI state - which categories are expanded (by path or ID)
+    categoryExpanded: co.record(z.string(), z.boolean()),
 
-  // UI state - view mode preference
-  // - 'zone-in-hierarchy': Shows category hierarchy with zones nested inside
-  // - 'hierarchy-in-zones': Shows zones with category hierarchy inside each zone
-  // - 'flat': Simple list grouped by zone only
-  viewMode: z.enum(['zone-in-hierarchy', 'hierarchy-in-zones', 'flat']),
+    // UI state - view mode preference
+    // - 'zone-in-hierarchy': Shows category hierarchy with zones nested inside
+    // - 'hierarchy-in-zones': Shows zones with category hierarchy inside each zone
+    // - 'flat': Simple list grouped by zone only
+    viewMode: z.enum(['zone-in-hierarchy', 'hierarchy-in-zones', 'flat']),
 
-  // Cached counts for UI performance
-  inCartCount: z.number(),
-  completedCount: z.number(),
-  remainingCount: z.number(),
+    // Cached counts for UI performance
+    selectedCount: z.number(),
+    checkedCount: z.number(),
+    remainingCount: z.number(),
 
-  // Ownership and timestamps
-  get owner() {
-    return GroceriesAccount;
-  },
-  startedAt: z.date(),
-  lastActivityAt: z.date(),
-  completedAt: z.optional(z.date()),
-});
+    // Ownership and timestamps
+    get owner() {
+      return Account;
+    },
+    startedAt: z.date(),
+    lastActivityAt: z.date(),
+    completedAt: z.optional(z.date()),
+  })
+  .withMigration((session) => {
+    // Migrate old shopping terminology to generic list terminology
+
+    // Migrate item states
+    if (session.$jazz.has('itemStates')) {
+      const itemStates = session.itemStates;
+      if (itemStates) {
+        Object.entries(itemStates).forEach(([, state]) => {
+          if (!state) return;
+
+          // Migrate inCart → selected
+          // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+          if ((state.$jazz as any).has('inCart') && !state.$jazz.has('selected')) {
+            // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+            const inCart = (state as any).inCart;
+            state.$jazz.set('selected', inCart);
+          }
+
+          // Migrate purchased → checked
+          // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+          if ((state.$jazz as any).has('purchased') && !state.$jazz.has('checked')) {
+            // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+            const purchased = (state as any).purchased;
+            state.$jazz.set('checked', purchased);
+          }
+
+          // Migrate addedToCartAt → selectedAt
+          // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+          if ((state.$jazz as any).has('addedToCartAt') && !state.$jazz.has('selectedAt')) {
+            // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+            const addedToCartAt = (state as any).addedToCartAt;
+            state.$jazz.set('selectedAt', addedToCartAt);
+          }
+
+          // Migrate purchasedAt → checkedAt
+          // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+          if ((state.$jazz as any).has('purchasedAt') && !state.$jazz.has('checkedAt')) {
+            // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+            const purchasedAt = (state as any).purchasedAt;
+            state.$jazz.set('checkedAt', purchasedAt);
+          }
+        });
+      }
+    }
+
+    // Migrate count fields
+    // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+    if ((session.$jazz as any).has('inCartCount') && !session.$jazz.has('selectedCount')) {
+      // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+      session.$jazz.set('selectedCount', (session as any).inCartCount);
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+    if ((session.$jazz as any).has('completedCount') && !session.$jazz.has('checkedCount')) {
+      // biome-ignore lint/suspicious/noExplicitAny: Migration code accessing old field names
+      session.$jazz.set('checkedCount', (session as any).completedCount);
+    }
+  });
 
 /**
  * TemplateFolderNode - Leaf node containing template items and sessions
@@ -123,8 +182,8 @@ export const TemplateFolderNode = co.map({
   // Template items (master list)
   items: co.list(TemplateItem),
 
-  // Shopping sessions
-  sessions: co.list(ShoppingSession),
+  // List sessions
+  sessions: co.list(ListSession),
   currentSessionId: z.optional(z.string()), // Active session ID if any
 
   // Sharing (to be implemented in Phase 6)
@@ -133,7 +192,7 @@ export const TemplateFolderNode = co.map({
 
   // Ownership and timestamps
   get owner() {
-    return GroceriesAccount;
+    return Account;
   },
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -164,7 +223,7 @@ export const FolderNode = co.map({
   // For template-folders only (these will be empty arrays for type="folder")
   // Note: Using non-optional CoLists with empty arrays avoids TypeScript inference issues
   items: co.list(TemplateItem),
-  sessions: co.list(ShoppingSession),
+  sessions: co.list(ListSession),
   currentSessionId: z.string(), // Empty string if no current session
 
   // Sharing (to be implemented in Phase 6)
@@ -173,7 +232,7 @@ export const FolderNode = co.map({
 
   // Ownership and timestamps
   get owner() {
-    return GroceriesAccount;
+    return Account;
   },
   createdAt: z.date(),
   updatedAt: z.date(),

@@ -6,15 +6,15 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { GroceriesAccount } from '../schemas';
-import { ItemState, ShoppingSession } from '../schemas/tree';
+import type { Account } from '../schemas';
+import { ItemState, ListSession } from '../schemas/tree';
 import { getFolder } from './folderService';
 
 /**
- * Create a new shopping session for a template folder
+ * Create a new list session for a template folder
  */
 export function createSession(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionName?: string,
 ): string {
@@ -41,8 +41,8 @@ export function createSession(
   const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
   const remainingCount = activeItems.length;
 
-  // Create new shopping session
-  const newSession = ShoppingSession.create(
+  // Create new list session
+  const newSession = ListSession.create(
     {
       name,
       templateFolderId: folderId,
@@ -51,8 +51,8 @@ export function createSession(
       archived: false,
       categoryExpanded: {},
       viewMode: 'zone-in-hierarchy', // Default view mode
-      inCartCount: 0,
-      completedCount: 0,
+      selectedCount: 0,
+      checkedCount: 0,
       remainingCount,
       owner: account,
       startedAt: now,
@@ -72,10 +72,10 @@ export function createSession(
  * Get session by ID from a folder
  */
 export function getSession(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
-): InstanceOfSchema<typeof ShoppingSession> | null {
+): InstanceOfSchema<typeof ListSession> | null {
   const folder = getFolder(account, folderId);
   if (!folder?.sessions) return null;
 
@@ -86,22 +86,20 @@ export function getSession(
  * Get all sessions from a folder
  */
 export function getSessions(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
-): Array<InstanceOfSchema<typeof ShoppingSession>> {
+): Array<InstanceOfSchema<typeof ListSession>> {
   const folder = getFolder(account, folderId);
   if (!folder?.sessions) return [];
 
-  return folder.sessions.filter((s) => s != null) as Array<
-    InstanceOfSchema<typeof ShoppingSession>
-  >;
+  return folder.sessions.filter((s) => s != null) as Array<InstanceOfSchema<typeof ListSession>>;
 }
 
 /**
- * Toggle item's "in cart" state
+ * Toggle item's "selected" state
  */
-export function toggleItemInCart(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+export function toggleItemSelected(
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
   itemId: string,
@@ -124,9 +122,9 @@ export function toggleItemInCart(
     const newState = ItemState.create(
       {
         itemId,
-        inCart: true,
-        purchased: false,
-        addedToCartAt: new Date(),
+        selected: true,
+        checked: false,
+        selectedAt: new Date(),
         checkedBy: account,
       },
       { owner: account },
@@ -137,15 +135,15 @@ export function toggleItemInCart(
       [itemId]: newState,
     });
   } else {
-    // Toggle inCart
-    const newInCart = !currentState.inCart;
-    currentState.$jazz.set('inCart', newInCart);
-    if (newInCart) {
-      currentState.$jazz.set('addedToCartAt', new Date());
+    // Toggle selected
+    const newSelected = !currentState.selected;
+    currentState.$jazz.set('selected', newSelected);
+    if (newSelected) {
+      currentState.$jazz.set('selectedAt', new Date());
     } else {
-      // If removing from cart, also clear purchased state
-      currentState.$jazz.set('purchased', false);
-      currentState.$jazz.set('purchasedAt', undefined);
+      // If deselecting, also clear checked state
+      currentState.$jazz.set('checked', false);
+      currentState.$jazz.set('checkedAt', undefined);
     }
   }
 
@@ -154,10 +152,10 @@ export function toggleItemInCart(
 }
 
 /**
- * Toggle item's "purchased" state
+ * Toggle item's "checked" state
  */
-export function toggleItemPurchased(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+export function toggleItemChecked(
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
   itemId: string,
@@ -168,23 +166,23 @@ export function toggleItemPurchased(
   const currentState = session.itemStates?.[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
-  const newPurchasedState = !currentState.purchased;
-  currentState.$jazz.set('purchased', newPurchasedState);
-  if (newPurchasedState) {
-    currentState.$jazz.set('purchasedAt', new Date());
+  const newCheckedState = !currentState.checked;
+  currentState.$jazz.set('checked', newCheckedState);
+  if (newCheckedState) {
+    currentState.$jazz.set('checkedAt', new Date());
     currentState.$jazz.set('checkedBy', account);
   } else {
-    currentState.$jazz.set('purchasedAt', undefined);
+    currentState.$jazz.set('checkedAt', undefined);
   }
 
   session.$jazz.set('lastActivityAt', new Date());
 }
 
 /**
- * Update session counts (in cart, completed, remaining)
+ * Update session counts (selected, checked, remaining)
  */
 export function updateSessionCounts(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
 ): void {
@@ -197,31 +195,31 @@ export function updateSessionCounts(
   // Only count leaf items, not categories
   const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
 
-  let inCartCount = 0;
-  let completedCount = 0;
+  let selectedCount = 0;
+  let checkedCount = 0;
   let remainingCount = 0;
 
   activeItems.forEach((item) => {
     const state = session.itemStates?.[item.$jazz.id];
-    if (!state || (!state.inCart && !state.purchased)) {
+    if (!state || (!state.selected && !state.checked)) {
       remainingCount++;
-    } else if (state.purchased) {
-      completedCount++;
-    } else if (state.inCart) {
-      inCartCount++;
+    } else if (state.checked) {
+      checkedCount++;
+    } else if (state.selected) {
+      selectedCount++;
     }
   });
 
-  session.$jazz.set('inCartCount', inCartCount);
-  session.$jazz.set('completedCount', completedCount);
+  session.$jazz.set('selectedCount', selectedCount);
+  session.$jazz.set('checkedCount', checkedCount);
   session.$jazz.set('remainingCount', remainingCount);
 }
 
 /**
- * Complete a shopping session
+ * Complete a list session
  */
 export function completeSession(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
 ): void {
@@ -233,10 +231,10 @@ export function completeSession(
 }
 
 /**
- * Abandon a shopping session
+ * Abandon a list session
  */
 export function abandonSession(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
 ): void {
@@ -251,7 +249,7 @@ export function abandonSession(
  * Update session view mode
  */
 export function updateViewMode(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   sessionId: string,
   viewMode: 'flat' | 'hierarchy-in-zones' | 'zone-in-hierarchy',

@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo, useState } from 'react';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import { moveFolder } from '@/services/folderService';
 import { getParentPath } from '@/utils/pathUtils';
 import { buildTreeStructure, type TreeNode } from '@/utils/treeHelpers';
@@ -21,7 +21,7 @@ import { TreeViewHeader } from './TreeViewHeader';
 
 interface TreeViewProps {
   nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string) => void;
   onAddItem?: (parentNodeId: string) => void;

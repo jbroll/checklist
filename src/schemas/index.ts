@@ -2,8 +2,8 @@ import { co } from 'jazz-tools';
 import {
   FolderNode,
   ItemState,
-  ShoppingSession,
-  setGroceriesAccountReference,
+  ListSession,
+  setAccountReference,
   TemplateFolderNode,
   TemplateItem,
 } from './tree';
@@ -16,7 +16,7 @@ export const ListsRoot = co.map({
 });
 
 // Account Schema (must be defined after ListsRoot)
-export const GroceriesAccount = co
+export const Account = co
   .account({
     root: ListsRoot,
     profile: co.profile(),
@@ -37,12 +37,12 @@ export const GroceriesAccount = co
     }
   });
 
-// Wire up the forward reference from tree.ts to GroceriesAccount
-setGroceriesAccountReference(GroceriesAccount);
+// Wire up the forward reference from tree.ts to Account
+setAccountReference(Account);
 
 // NOTE: CATEGORIES constant and autoCategorize() function have been removed.
 // Templates now use hierarchical TemplateItems with custom categories per template.
 // Each template can define its own category structure with custom icons and colors.
 
 // Re-export tree schemas for easy importing
-export { FolderNode, TemplateFolderNode, TemplateItem, ShoppingSession, ItemState };
+export { FolderNode, TemplateFolderNode, TemplateItem, ListSession, ItemState };

@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { GroceriesAccount } from '@/schemas';
+import type { Account } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import type { ExportScope } from '@/services/export/types';
 import { downloadJson } from '@/utils/fileDownload';
@@ -19,7 +19,7 @@ import { downloadJson } from '@/utils/fileDownload';
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
   /** Optional pre-selected folder ID for single-folder export */
   selectedFolderId?: string;
 }

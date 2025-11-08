@@ -5,13 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import {
-  FolderNode,
-  type GroceriesAccount,
-  ItemState,
-  ShoppingSession,
-  TemplateItem,
-} from '../../schemas';
+import { type Account, FolderNode, ItemState, ListSession, TemplateItem } from '../../schemas';
 import type { ExportedData, ExportedFolder, ExportedSession } from '../export/types';
 import { resolvePathConflict } from './conflictResolver';
 import type { ImportResult } from './types';
@@ -21,12 +15,12 @@ import { findFolderByPath, validateJsonData } from './validators';
  * Import JSON data into user's account
  *
  * @param jsonString - JSON string to import
- * @param account - User's GroceriesAccount
+ * @param account - User's Account
  * @returns Import result with success/failure info
  */
 export async function importJson(
   jsonString: string,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): Promise<ImportResult> {
   // Parse JSON
   let data: unknown;
@@ -66,12 +60,12 @@ export async function importJson(
  * Import folders from validated export data
  *
  * @param data - Validated export data
- * @param account - User's GroceriesAccount
+ * @param account - User's Account
  * @returns Import result
  */
 async function importFolders(
   data: ExportedData,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): Promise<ImportResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -144,7 +138,7 @@ async function importFolders(
  */
 async function importFolder(
   exportedFolder: ExportedFolder,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): Promise<{
   folder: InstanceOfSchema<typeof FolderNode>;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
@@ -206,7 +200,7 @@ async function importTemplateFolder(
   exportedFolder: ExportedFolder,
   path: string,
   name: string,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   pathConflict: boolean,
 ): Promise<{
   folder: InstanceOfSchema<typeof FolderNode>;
@@ -258,7 +252,7 @@ async function importTemplateFolder(
   );
 
   // Import sessions
-  const sessions: InstanceOfSchema<typeof ShoppingSession>[] = [];
+  const sessions: InstanceOfSchema<typeof ListSession>[] = [];
 
   if (exportedFolder.sessions && folder.$jazz?.id) {
     for (const exportedSession of exportedFolder.sessions) {
@@ -306,8 +300,8 @@ function importSession(
   exportedSession: ExportedSession,
   templateFolderId: string,
   items: InstanceOfSchema<typeof TemplateItem>[],
-  account: InstanceOfSchema<typeof GroceriesAccount>,
-): InstanceOfSchema<typeof ShoppingSession> {
+  account: InstanceOfSchema<typeof Account>,
+): InstanceOfSchema<typeof ListSession> {
   // Reconstruct item states with new item IDs
   const itemStates: Record<string, InstanceOfSchema<typeof ItemState>> = {};
 
@@ -331,10 +325,10 @@ function importSession(
       const itemState = ItemState.create(
         {
           itemId,
-          inCart: foundState.inCart,
-          purchased: foundState.purchased,
-          addedToCartAt: foundState.addedToCartAt ? new Date(foundState.addedToCartAt) : undefined,
-          purchasedAt: foundState.purchasedAt ? new Date(foundState.purchasedAt) : undefined,
+          selected: foundState.inCart,
+          checked: foundState.purchased,
+          selectedAt: foundState.addedToCartAt ? new Date(foundState.addedToCartAt) : undefined,
+          checkedAt: foundState.purchasedAt ? new Date(foundState.purchasedAt) : undefined,
           checkedBy: undefined,
         },
         { owner: account },
@@ -345,12 +339,12 @@ function importSession(
   }
 
   // Calculate counts
-  const inCartCount = Object.values(itemStates).filter((s) => s.inCart).length;
-  const completedCount = Object.values(itemStates).filter((s) => s.purchased).length;
-  const remainingCount = items.length - completedCount;
+  const selectedCount = Object.values(itemStates).filter((s) => s.selected).length;
+  const checkedCount = Object.values(itemStates).filter((s) => s.checked).length;
+  const remainingCount = items.length - checkedCount;
 
   // Create session
-  const session = ShoppingSession.create(
+  const session = ListSession.create(
     {
       name: exportedSession.name,
       templateFolderId,
@@ -359,8 +353,8 @@ function importSession(
       archived: exportedSession.archived ?? false, // Use exported value or default to false
       viewMode: exportedSession.viewMode || 'hierarchy-in-zones', // Default if not present
       categoryExpanded: {}, // Reset UI state - empty record
-      inCartCount,
-      completedCount,
+      selectedCount,
+      checkedCount,
       remainingCount,
       owner: account,
       startedAt: new Date(exportedSession.startedAt),

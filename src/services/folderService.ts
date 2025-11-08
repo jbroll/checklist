@@ -6,7 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { FolderNode, type GroceriesAccount } from '../schemas';
+import { type Account, FolderNode } from '../schemas';
 import { calculateDescendantPaths, calculateNewPath } from '../utils/pathManipulation';
 
 /**
@@ -17,7 +17,7 @@ import { calculateDescendantPaths, calculateNewPath } from '../utils/pathManipul
  * @param parentPath - Optional parent folder path (e.g., "stores" or "stores/wegmans")
  */
 export function createFolder(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   name: string,
   isTemplate = false,
   parentPath?: string | null,
@@ -62,7 +62,7 @@ export function createFolder(
  * Get folder by ID
  */
 export function getFolder(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
 ): InstanceOfSchema<typeof FolderNode> | null {
   if (!account.root?.nodes) return null;
@@ -73,7 +73,7 @@ export function getFolder(
  * Get all non-archived folders
  */
 export function getAllFolders(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): Array<InstanceOfSchema<typeof FolderNode>> {
   if (!account.root?.nodes) return [];
   return account.root.nodes.filter((n) => n && !n.archived) as Array<
@@ -85,7 +85,7 @@ export function getAllFolders(
  * Get all template folders (non-archived)
  */
 export function getTemplateFolders(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): Array<InstanceOfSchema<typeof FolderNode>> {
   return getAllFolders(account).filter((f) => f.type === 'template-folder');
 }
@@ -94,7 +94,7 @@ export function getTemplateFolders(
  * Rename a folder
  */
 export function renameFolder(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   newName: string,
 ): void {
@@ -109,10 +109,7 @@ export function renameFolder(
 /**
  * Archive (soft delete) a folder
  */
-export function archiveFolder(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
-  folderId: string,
-): void {
+export function archiveFolder(account: InstanceOfSchema<typeof Account>, folderId: string): void {
   const folder = getFolder(account, folderId);
   if (!folder) throw new Error(`Folder ${folderId} not found`);
 
@@ -123,10 +120,7 @@ export function archiveFolder(
 /**
  * Check if folder exists (and is not archived)
  */
-export function folderExists(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
-  folderId: string,
-): boolean {
+export function folderExists(account: InstanceOfSchema<typeof Account>, folderId: string): boolean {
   const folder = getFolder(account, folderId);
   return folder != null && !folder.archived;
 }
@@ -138,7 +132,7 @@ export function folderExists(
  * @param newParentPath - New parent path (undefined for root level)
  */
 export function moveFolder(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   nodeToMove: InstanceOfSchema<typeof FolderNode>,
   newParentPath: string | undefined,
 ): void {

@@ -76,7 +76,7 @@ export function exportSessionToText(
       const itemState = session.itemStates?.[itemId];
 
       // Check if item was purchased
-      const isPurchased = itemState?.purchased || false;
+      const isPurchased = itemState?.checked || false;
       const checkmark = isPurchased ? '✓' : ' ';
 
       lines.push(`${checkmark} ${item.name}`);

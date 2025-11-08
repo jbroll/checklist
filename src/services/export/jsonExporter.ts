@@ -5,7 +5,7 @@
  */
 
 import type { CoList, InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount, ShoppingSession, TemplateItem } from '../../schemas';
+import type { Account, FolderNode, ListSession, TemplateItem } from '../../schemas';
 import type {
   ExportedData,
   ExportedFolder,
@@ -17,10 +17,10 @@ import type {
 /**
  * Export all folders from a user's account
  *
- * @param account - The user's GroceriesAccount
+ * @param account - The user's Account
  * @returns Complete export data structure
  */
-export function exportAllFolders(account: InstanceOfSchema<typeof GroceriesAccount>): ExportedData {
+export function exportAllFolders(account: InstanceOfSchema<typeof Account>): ExportedData {
   const folders: ExportedFolder[] = [];
 
   // Export all nodes from the root
@@ -120,12 +120,10 @@ function exportTemplateItems(
 /**
  * Export shopping sessions from a CoList
  *
- * @param sessions - CoList of ShoppingSessions
+ * @param sessions - CoList of ListSessions
  * @returns Array of exported sessions
  */
-function exportSessions(
-  sessions: CoList<InstanceOfSchema<typeof ShoppingSession>>,
-): ExportedSession[] {
+function exportSessions(sessions: CoList<InstanceOfSchema<typeof ListSession>>): ExportedSession[] {
   const exportedSessions: ExportedSession[] = [];
 
   for (const session of sessions) {
@@ -134,15 +132,15 @@ function exportSessions(
     // Export item states
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
-        inCart: state.inCart,
-        purchased: state.purchased,
+        inCart: state.selected,
+        purchased: state.checked,
       };
 
-      if (state.addedToCartAt !== undefined) {
-        exportedState.addedToCartAt = state.addedToCartAt.toISOString();
+      if (state.selectedAt !== undefined) {
+        exportedState.addedToCartAt = state.selectedAt.toISOString();
       }
-      if (state.purchasedAt !== undefined) {
-        exportedState.purchasedAt = state.purchasedAt.toISOString();
+      if (state.checkedAt !== undefined) {
+        exportedState.purchasedAt = state.checkedAt.toISOString();
       }
 
       itemStates[itemId] = exportedState;
