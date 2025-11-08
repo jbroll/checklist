@@ -2,18 +2,28 @@
  * TXT Exporter
  *
  * Exports template items and sessions to plain text format.
+ * Supports two formats:
+ * 1. Flat format: One item per line (when no categories exist)
+ * 2. Indented format: Hierarchical structure with 2-space indentation
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
+import type { FolderNode, TemplateItem } from '../../schemas';
+
+interface TreeNode {
+  item: InstanceOfSchema<typeof TemplateItem>;
+  children: TreeNode[];
+}
 
 /**
  * Export template items to plain text format
  *
- * Format: One item per line, sorted by sortOrder
+ * Auto-detects format:
+ * - If categories exist: exports hierarchical indented format
+ * - If no categories: exports flat format (one item per line)
  *
  * @param folder - Folder to export items from
- * @returns Plain text string with one item per line
+ * @returns Plain text string
  */
 export function exportTemplateItemsToText(folder: InstanceOfSchema<typeof FolderNode>): string {
   if (!folder.items || folder.items.length === 0) {
@@ -28,8 +38,108 @@ export function exportTemplateItemsToText(folder: InstanceOfSchema<typeof Folder
       return a.sortOrder - b.sortOrder;
     });
 
-  // Create one line per item
+  // Check if any categories exist
+  const hasCategories = items.some((item) => item?.type === 'category');
+
+  if (hasCategories) {
+    // Export hierarchical format
+    return exportHierarchical(items);
+  }
+
+  // Export flat format (original behavior)
   const lines = items.map((item) => item?.name || '').filter((name) => name.length > 0);
+  return lines.join('\n');
+}
+
+/**
+ * Export items in hierarchical indented format
+ *
+ * @param items - Sorted items to export
+ * @returns Indented text string
+ */
+function exportHierarchical(
+  items: (InstanceOfSchema<typeof TemplateItem> | null | undefined)[],
+): string {
+  // Build tree structure from flat items
+  const tree = buildTreeFromPaths(items);
+
+  // Generate indented text
+  return treeToIndentedText(tree);
+}
+
+/**
+ * Build tree structure from flat items using paths
+ *
+ * @param items - Flat array of items with paths
+ * @returns Tree nodes
+ */
+function buildTreeFromPaths(
+  items: (InstanceOfSchema<typeof TemplateItem> | null | undefined)[],
+): TreeNode[] {
+  const root: TreeNode[] = [];
+  const nodeMap = new Map<string, TreeNode>();
+
+  // Create nodes for all items
+  for (const item of items) {
+    if (!item) continue;
+
+    const node: TreeNode = {
+      item,
+      children: [],
+    };
+
+    nodeMap.set(item.path, node);
+  }
+
+  // Build parent-child relationships
+  for (const item of items) {
+    if (!item) continue;
+
+    const node = nodeMap.get(item.path);
+    if (!node) continue;
+
+    // Find parent by checking if path is a child of another path
+    const pathParts = item.path.split('/');
+    if (pathParts.length === 1) {
+      // Root level item
+      root.push(node);
+    } else {
+      // Find parent
+      const parentPath = pathParts.slice(0, -1).join('/');
+      const parent = nodeMap.get(parentPath);
+
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        // Parent not found, add to root
+        root.push(node);
+      }
+    }
+  }
+
+  return root;
+}
+
+/**
+ * Convert tree to indented text
+ *
+ * @param nodes - Tree nodes
+ * @param indent - Current indentation level
+ * @returns Indented text string
+ */
+function treeToIndentedText(nodes: TreeNode[], indent = 0): string {
+  const lines: string[] = [];
+  const indentStr = '  '.repeat(indent); // 2 spaces per level
+
+  for (const node of nodes) {
+    // Add current item
+    lines.push(`${indentStr}${node.item.name}`);
+
+    // Add children recursively
+    if (node.children.length > 0) {
+      lines.push(treeToIndentedText(node.children, indent + 1));
+    }
+  }
 
   return lines.join('\n');
 }
