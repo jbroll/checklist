@@ -33,6 +33,18 @@ export const ListSessionItemRow = memo(function ListSessionItemRow({
   const leftCheckboxControlsPurchased = zone === 'cart' || zone === 'completed';
   const leftCheckboxChecked = leftCheckboxControlsPurchased ? purchased : inCart;
 
+  // Compute checkbox styles based on state
+  const getCheckboxClassName = () => {
+    if (leftCheckboxChecked) {
+      return leftCheckboxControlsPurchased
+        ? 'border-green-500 bg-green-500 text-white'
+        : 'border-blue-500 bg-blue-500 text-white';
+    }
+    return leftCheckboxControlsPurchased
+      ? 'border-neutral-300 hover:border-green-400'
+      : 'border-neutral-300 hover:border-blue-400';
+  };
+
   return (
     <div className="flex items-center gap-3 rounded px-2 py-1 hover:bg-neutral-100">
       {/* Left checkbox - Controls inCart (inventory) or purchased (cart/completed) */}
@@ -46,15 +58,7 @@ export const ListSessionItemRow = memo(function ListSessionItemRow({
             onToggleSelected(item.$jazz.id);
           }
         }}
-        className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
-          leftCheckboxChecked
-            ? leftCheckboxControlsPurchased
-              ? 'border-green-500 bg-green-500 text-white'
-              : 'border-blue-500 bg-blue-500 text-white'
-            : leftCheckboxControlsPurchased
-              ? 'border-neutral-300 hover:border-green-400'
-              : 'border-neutral-300 hover:border-blue-400'
-        }`}
+        className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${getCheckboxClassName()}`}
       >
         {leftCheckboxChecked && (
           <svg
