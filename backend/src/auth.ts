@@ -45,9 +45,7 @@ export const auth = betterAuth({
 
   // Jazz plugin to store Jazz account keys with users
   plugins: [
-    jazzPlugin({
-      peer: process.env.JAZZ_PEER || 'wss://cloud.jazz.tools',
-    })
+    jazzPlugin()
   ],
 
   // OAuth providers

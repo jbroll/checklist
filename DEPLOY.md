@@ -30,57 +30,41 @@ The app is deployed in two parts:
 2. **Backend**: Express/BetterAuth API service (systemd service on port 3001)
 3. **Apache**: Proxies `/api/*` requests to backend
 
-## Initial Deployment (First Time)
+## Quick Deployment (Recommended)
 
-### Step 1: Update Configuration
+Use `deploy-full.sh` to deploy both frontend and backend in one command:
 
-Edit the deploy config files with your actual server details:
-
-```bash
-# Update frontend deploy.conf
-vi deploy.conf
-# Set REMOTE_HOST, REMOTE_USER, LETSENCRYPT_EMAIL
-
-# Update backend deploy.conf
-vi backend/deploy.conf
-# Set REMOTE_HOST, REMOTE_USER
-```
-
-### Step 2: Deploy Frontend
+### Initial Deployment (First Time)
 
 ```bash
 # From project root
-../deploy.sh/deploy.sh init
+./deploy-full.sh init
 
 # This will:
-# - Build the React app (npm run build → dist/)
-# - Set up SSL certificates (Let's Encrypt)
-# - Configure Apache in hybrid mode (static + proxy)
-# - Deploy to /var/www/bubblelist
+# 1. Build and deploy frontend (React app → Apache)
+#    - Set up SSL certificates (Let's Encrypt)
+#    - Configure Apache in hybrid mode (static + proxy)
+#    - Deploy to /var/www/bubblelist
+# 2. Build and deploy backend (Express API → systemd service)
+#    - Create bubblelist system user
+#    - Deploy to /var/www/bubblelist-api
+#    - Create systemd service on port 3001
 ```
 
-### Step 3: Deploy Backend
+### Subsequent Updates
 
 ```bash
-# From backend directory
-cd backend
-../../deploy.sh/deploy.sh init
-
-# This will:
-# - Build the backend (tsc → dist/)
-# - Create bubblelist system user
-# - Deploy to /var/www/bubblelist-api
-# - Create systemd service
-# - Start the service on port 3001
+# Update both frontend and backend
+./deploy-full.sh update
 ```
 
-### Step 4: Create Backend Secrets File
+### Post-Deployment: Create Backend Secrets File
 
 The backend needs production secrets that aren't in the repo:
 
 ```bash
 # SSH to server and create secrets file
-ssh deploy@bubblelist.rkroll.com
+ssh john@bubblelist.rkroll.com
 
 # Create production secrets
 sudo nano /etc/bubblelist-api/.env
@@ -90,18 +74,23 @@ sudo nano /etc/bubblelist-api/.env
 sudo systemctl restart bubblelist-api
 ```
 
-## Subsequent Updates
+## Advanced: Deploy Frontend or Backend Separately
 
-After initial deployment, use `update` mode which skips infrastructure setup:
+If you need to deploy only one component, use the individual deploy configs:
 
+**Frontend only:**
 ```bash
-# Update frontend
 ../deploy.sh/deploy.sh update
+```
 
-# Update backend
+**Backend only:**
+```bash
 cd backend
 ../../deploy.sh/deploy.sh update
+cd ..
 ```
+
+Note: Each component has its own `deploy.conf` file with module-specific configuration.
 
 ## Verification
 
@@ -109,10 +98,10 @@ After deployment, verify everything is working:
 
 ```bash
 # Check Apache is running
-ssh deploy@bubblelist.rkroll.com "sudo systemctl status apache2"
+ssh john@bubblelist.rkroll.com "sudo systemctl status apache2"
 
 # Check backend service
-ssh deploy@bubblelist.rkroll.com "sudo systemctl status bubblelist-api"
+ssh john@bubblelist.rkroll.com "sudo systemctl status bubblelist-api"
 
 # Check SSL certificate
 curl -I https://bubblelist.rkroll.com
@@ -121,7 +110,7 @@ curl -I https://bubblelist.rkroll.com
 curl https://bubblelist.rkroll.com/api/auth/get-session
 
 # Check logs
-ssh deploy@bubblelist.rkroll.com "sudo journalctl -u bubblelist-api -f"
+ssh john@bubblelist.rkroll.com "sudo journalctl -u bubblelist-api -f"
 ```
 
 ## Troubleshooting
@@ -130,42 +119,43 @@ ssh deploy@bubblelist.rkroll.com "sudo journalctl -u bubblelist-api -f"
 
 ```bash
 # Check service logs
-ssh deploy@bubblelist.rkroll.com "sudo journalctl -u bubblelist-api -n 50"
+ssh john@bubblelist.rkroll.com "sudo journalctl -u bubblelist-api -n 50"
 
 # Check environment file
-ssh deploy@bubblelist.rkroll.com "sudo cat /etc/bubblelist-api/.env"
+ssh john@bubblelist.rkroll.com "sudo cat /etc/bubblelist-api/.env"
 
 # Restart service
-ssh deploy@bubblelist.rkroll.com "sudo systemctl restart bubblelist-api"
+ssh john@bubblelist.rkroll.com "sudo systemctl restart bubblelist-api"
 ```
 
 ### Frontend not loading
 
 ```bash
 # Check Apache logs
-ssh deploy@bubblelist.rkroll.com "sudo tail -f /var/log/apache2/bubblelist_error.log"
+ssh john@bubblelist.rkroll.com "sudo tail -f /var/log/apache2/bubblelist_error.log"
 
 # Check Apache config
-ssh deploy@bubblelist.rkroll.com "sudo apache2ctl configtest"
+ssh john@bubblelist.rkroll.com "sudo apache2ctl configtest"
 
 # Reload Apache
-ssh deploy@bubblelist.rkroll.com "sudo systemctl reload apache2"
+ssh john@bubblelist.rkroll.com "sudo systemctl reload apache2"
 ```
 
 ### SSL issues
 
 ```bash
 # Check certificate
-ssh deploy@bubblelist.rkroll.com "sudo certbot certificates"
+ssh john@bubblelist.rkroll.com "sudo certbot certificates"
 
 # Renew certificate
-ssh deploy@bubblelist.rkroll.com "sudo certbot renew"
+ssh john@bubblelist.rkroll.com "sudo certbot renew"
 ```
 
 ## Configuration Files
 
-- `deploy.conf` - Frontend deployment configuration
-- `backend/deploy.conf` - Backend deployment configuration
+- `deploy-full.sh` - **Main deployment script** (orchestrates both frontend and backend)
+- `deploy.conf` - Frontend deployment configuration (Apache + static files)
+- `backend/deploy.conf` - Backend deployment configuration (Express systemd service)
 - `.env.production` - Frontend environment variables (built into JS)
 - `backend/.env.production` - Backend environment template (not deployed directly)
 
