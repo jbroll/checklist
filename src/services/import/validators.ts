@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
@@ -21,7 +21,7 @@ const SUPPORTED_VERSIONS = ['1.0'];
  */
 export function validateJsonData(
   data: unknown,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -279,7 +279,7 @@ function isValidISODate(dateString: string): boolean {
  * @param account - User's account
  * @returns true if path exists
  */
-function pathExists(path: string, account: InstanceOfSchema<typeof GroceriesAccount>): boolean {
+function pathExists(path: string, account: InstanceOfSchema<typeof Account>): boolean {
   if (!account.root?.nodes) {
     return false;
   }
@@ -302,7 +302,7 @@ function pathExists(path: string, account: InstanceOfSchema<typeof GroceriesAcco
  */
 export function findFolderByPath(
   path: string,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): InstanceOfSchema<typeof FolderNode> | null {
   if (!account.root?.nodes) {
     return null;

@@ -5,8 +5,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { GroceriesAccount } from '../../schemas';
-// GroceriesAccount type imported via InstanceOfSchema from '../../schemas';
+import type { Account } from '../../schemas';
+// Account type imported via InstanceOfSchema from '../../schemas';
 import { findFolderByPath } from './validators';
 
 /**
@@ -29,7 +29,7 @@ import { findFolderByPath } from './validators';
 export function resolvePathConflict(
   originalPath: string,
   originalName: string,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): { path: string; name: string } {
   // Start with suffix (1) and increment until unique
   let counter = 1;

@@ -3,7 +3,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
 import { TreeNode } from '@/components/tree/TreeNode';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
-import { ShoppingSessionItemRow } from './ShoppingSessionItemRow';
+import { ListSessionItemRow } from './ListSessionItemRow';
 
 interface SessionZoneProps {
   title: string;
@@ -13,8 +13,8 @@ interface SessionZoneProps {
   itemStates: Record<string, InstanceOfSchema<typeof ItemState>>;
   expanded: boolean;
   onToggleExpand: () => void;
-  onToggleCart: (itemId: string) => void;
-  onTogglePurchased: (itemId: string) => void;
+  onToggleSelected: (itemId: string) => void;
+  onToggleChecked: (itemId: string) => void;
   count?: number;
   children?: React.ReactNode;
   showHeading?: boolean; // Controls whether to show the zone heading
@@ -28,8 +28,8 @@ export function SessionZone({
   itemStates,
   expanded,
   onToggleExpand,
-  onToggleCart,
-  onTogglePurchased,
+  onToggleSelected,
+  onToggleChecked,
   count,
   children,
   showHeading = true,
@@ -61,12 +61,12 @@ export function SessionZone({
                   x: { duration: 0.8, ease: 'easeInOut' },
                 }}
               >
-                <ShoppingSessionItemRow
+                <ListSessionItemRow
                   item={item}
                   state={itemStates[item.$jazz.id] || null}
                   zone={zone}
-                  onToggleCart={onToggleCart}
-                  onTogglePurchased={onTogglePurchased}
+                  onToggleSelected={onToggleSelected}
+                  onToggleChecked={onToggleChecked}
                 />
               </motion.div>
             ))}

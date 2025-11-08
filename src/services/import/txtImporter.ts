@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import { TemplateItem } from '../../schemas';
 import { parseTextList } from '../../utils/csvParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
@@ -27,13 +27,13 @@ export interface TxtImportResult {
  *
  * @param textContent - Plain text content
  * @param folder - Folder to import items into
- * @param account - User's GroceriesAccount (for ownership)
+ * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
 export function importItemsFromText(
   textContent: string,
   folder: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
 ): TxtImportResult {
   const result: TxtImportResult = {
     imported: 0,

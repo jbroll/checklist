@@ -5,8 +5,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount } from '../../schemas';
-import { ItemState, ShoppingSession } from '../../schemas/tree';
+import type { Account, FolderNode } from '../../schemas';
+import { ItemState, ListSession } from '../../schemas/tree';
 import { parseCsv } from '../../utils/csvParser';
 
 export interface SessionImportResult {
@@ -34,14 +34,14 @@ export interface SessionImportOptions {
  *
  * @param csvContent - CSV content string
  * @param folder - Folder to import session into
- * @param account - User's GroceriesAccount (for ownership)
+ * @param account - User's Account (for ownership)
  * @param options - Import options (session name, add missing items)
  * @returns Import result with statistics
  */
 export function importSessionFromCsv(
   csvContent: string,
   folder: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   options: SessionImportOptions = {},
 ): SessionImportResult {
   const result: SessionImportResult = {
@@ -144,10 +144,10 @@ export function importSessionFromCsv(
       const itemState = ItemState.create(
         {
           itemId: templateItem.$jazz.id,
-          inCart,
-          purchased,
-          addedToCartAt,
-          purchasedAt,
+          selected: inCart,
+          checked: purchased,
+          selectedAt: addedToCartAt,
+          checkedAt: purchasedAt,
         },
         { owner: account },
       );
@@ -180,7 +180,7 @@ export function importSessionFromCsv(
 
   // Create shopping session
   try {
-    const session = ShoppingSession.create(
+    const session = ListSession.create(
       {
         name: sessionName,
         templateFolderId: folder.$jazz?.id || '',
@@ -189,8 +189,8 @@ export function importSessionFromCsv(
         archived: false,
         viewMode: 'hierarchy-in-zones', // Default view mode
         categoryExpanded: {},
-        inCartCount: totalInCart,
-        completedCount: totalPurchased,
+        selectedCount: totalInCart,
+        checkedCount: totalPurchased,
         remainingCount,
         owner: account,
         startedAt: new Date(),

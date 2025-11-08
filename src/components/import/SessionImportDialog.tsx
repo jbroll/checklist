@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
 import type { SessionImportResult } from '@/services/import/sessionImporter';
 import { isValidFileSize, isValidFileType } from '@/utils/fileUpload';
@@ -21,7 +21,7 @@ interface SessionImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   folder: InstanceOfSchema<typeof FolderNode>;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
   onImportComplete?: () => void;
 }
 

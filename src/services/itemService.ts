@@ -7,7 +7,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { GroceriesAccount, TemplateItem } from '../schemas';
+import type { Account, TemplateItem } from '../schemas';
 import { TemplateItem as TemplateItemSchema } from '../schemas';
 import { createChildPath, getParentPath, normalizePathSegment } from '../utils/pathUtils';
 import { getFolder } from './folderService';
@@ -16,7 +16,7 @@ import { getFolder } from './folderService';
  * Create a new category in a template folder
  */
 export function createCategory(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   name: string,
   parentPath?: string,
@@ -63,7 +63,7 @@ export function createCategory(
  * Create a new item in a template folder
  */
 export function createItem(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   name: string,
   parentPath?: string,
@@ -111,7 +111,7 @@ export function createItem(
  * Get item by ID from a folder
  */
 export function getItem(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   itemId: string,
 ): InstanceOfSchema<typeof TemplateItem> | null {
@@ -125,7 +125,7 @@ export function getItem(
  * Get all non-archived items from a folder (both categories and leaf items)
  */
 export function getItems(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
 ): Array<InstanceOfSchema<typeof TemplateItem>> {
   const folder = getFolder(account, folderId);
@@ -140,7 +140,7 @@ export function getItems(
  * Get only leaf items (not categories) from a folder
  */
 export function getLeafItems(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
 ): Array<InstanceOfSchema<typeof TemplateItem>> {
   const folder = getFolder(account, folderId);
@@ -156,7 +156,7 @@ export function getLeafItems(
  * Updates the path and all descendant paths if it's a category
  */
 export function renameItem(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   itemId: string,
   newName: string,
@@ -205,7 +205,7 @@ export function renameItem(
  * If it's a category, also archives all descendants
  */
 export function archiveItem(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   itemId: string,
 ): void {
@@ -236,7 +236,7 @@ export function archiveItem(
  * Updates the path and all descendant paths if it's a category
  */
 export function moveItem(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   itemId: string,
   newParentPath: string | undefined,
@@ -283,7 +283,7 @@ export function moveItem(
  * Update item color
  */
 export function updateItemColor(
-  account: InstanceOfSchema<typeof GroceriesAccount>,
+  account: InstanceOfSchema<typeof Account>,
   folderId: string,
   itemId: string,
   color: string,

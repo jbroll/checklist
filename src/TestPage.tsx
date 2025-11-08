@@ -10,17 +10,17 @@
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAccount } from '@/lib/jazz';
-import { GroceriesAccount } from '@/schemas';
+import { Account } from '@/schemas';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { TemplateEditor } from './components/editor/TemplateEditor';
 
 export function TestPage() {
-  const { me, logOut } = useAccount(GroceriesAccount);
+  const { me, logOut } = useAccount(Account);
 
   // Expose services to window for E2E tests
   useEffect(() => {
     if (me) {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
       exposeServicesToWindow(() => me);
       console.log('[TestPage] Services exposed for testing');
 

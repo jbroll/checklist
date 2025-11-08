@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
 
@@ -21,7 +21,7 @@ interface SessionExportDialogProps {
   folder: InstanceOfSchema<typeof FolderNode>;
   sessionId: string;
   sessionName: string;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
 }
 
 export function SessionExportDialog({

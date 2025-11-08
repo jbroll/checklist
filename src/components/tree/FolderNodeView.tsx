@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { FolderNode as FolderNodeType, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode as FolderNodeType } from '@/schemas';
 import { TreeNode } from './TreeNode';
 
 interface FolderNodeViewProps {
@@ -29,7 +29,7 @@ interface FolderNodeViewProps {
   onUseTemplate?: (nodeId: string) => void;
   onEditTemplate?: (nodeId: string) => void;
   children?: React.ReactNode;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({

@@ -8,16 +8,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { ShoppingSession } from '@/schemas/tree';
+import type { ListSession } from '@/schemas/tree';
 import { TreeNode } from './TreeNode';
 
 interface SessionRowViewProps {
-  session: InstanceOfSchema<typeof ShoppingSession>;
+  session: InstanceOfSchema<typeof ListSession>;
   templateName: string;
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
-  allSessions: readonly (InstanceOfSchema<typeof ShoppingSession> | null)[];
+  allSessions: readonly (InstanceOfSchema<typeof ListSession> | null)[];
 }
 
 export const SessionRowView = memo(function SessionRowView({
@@ -64,11 +64,11 @@ export const SessionRowView = memo(function SessionRowView({
 
           {/* Session stats */}
           <div className="flex items-center gap-1 text-sm">
-            <span className="text-green-600">{session.completedCount || 0}</span>
+            <span className="text-green-600">{session.checkedCount || 0}</span>
             <span className="text-neutral-900">/</span>
             <span className="text-neutral-900">
-              {(session.completedCount || 0) +
-                (session.inCartCount || 0) +
+              {(session.checkedCount || 0) +
+                (session.selectedCount || 0) +
                 (session.remainingCount || 0)}
             </span>
           </div>

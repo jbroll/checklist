@@ -2,14 +2,14 @@ import { ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
-import { GroceriesAccount } from '@/schemas';
+import { Account } from '@/schemas';
 import { TemplateEditor } from './editor/TemplateEditor';
 import { Button } from './ui/button';
 import { LoadingScreen } from './ui/loading';
 
 export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
-  const { me, logOut } = useAccount(GroceriesAccount);
+  const { me, logOut } = useAccount(Account);
 
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';

@@ -1,7 +1,7 @@
 import { AuthProvider } from 'jazz-tools/better-auth/auth/react';
 import { JazzReactProvider } from 'jazz-tools/react';
 import type { ReactNode } from 'react';
-import { GroceriesAccount } from '../schemas';
+import { Account } from '../schemas';
 import { betterAuthClient } from './auth-client';
 
 const apiKey = import.meta.env.VITE_JAZZ_API_KEY;
@@ -12,7 +12,7 @@ export function JazzProvider({ children }: { children: ReactNode }) {
       sync={{
         peer: import.meta.env.VITE_JAZZ_PEER || `wss://cloud.jazz.tools/?key=${apiKey}`,
       }}
-      AccountSchema={GroceriesAccount}
+      AccountSchema={Account}
     >
       <AuthProvider betterAuthClient={betterAuthClient}>{children}</AuthProvider>
     </JazzReactProvider>

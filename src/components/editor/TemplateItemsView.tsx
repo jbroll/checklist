@@ -14,7 +14,7 @@ import { Folder } from 'lucide-react';
 import { useState } from 'react';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
-import type { FolderNode, GroceriesAccount, TemplateItem } from '@/schemas';
+import type { Account, FolderNode, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/itemService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -27,7 +27,7 @@ interface TemplateItemsViewProps {
 }
 
 export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
-  const { me } = useAccount<typeof GroceriesAccount>();
+  const { me } = useAccount<typeof Account>();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<InstanceOfSchema<typeof TemplateItem> | null>(null);
 

@@ -6,7 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount, ShoppingSession, TemplateItem } from '../schemas';
+import type { Account, FolderNode, ListSession, TemplateItem } from '../schemas';
 import * as ExportService from './export/exportService';
 import * as FolderService from './folderService';
 import { importJson } from './import/jsonImporter';
@@ -20,13 +20,13 @@ import * as SessionService from './sessionService';
  * Expose all services to window for E2E tests
  */
 export function exposeServicesToWindow(
-  getAccount: () => InstanceOfSchema<typeof GroceriesAccount> | null,
+  getAccount: () => InstanceOfSchema<typeof Account> | null,
 ): void {
   // Only expose in development/test
   if (import.meta.env.PROD) return;
 
   // Helper to get account with error handling
-  const withAccount = <T>(fn: (account: InstanceOfSchema<typeof GroceriesAccount>) => T): T => {
+  const withAccount = <T>(fn: (account: InstanceOfSchema<typeof Account>) => T): T => {
     const account = getAccount();
     if (!account) throw new Error('Account not initialized');
     return fn(account);
@@ -93,10 +93,10 @@ export function exposeServicesToWindow(
       get: (folderId: string, sessionId: string) =>
         withAccount((acc) => SessionService.getSession(acc, folderId, sessionId)),
       getAll: (folderId: string) => withAccount((acc) => SessionService.getSessions(acc, folderId)),
-      toggleItemInCart: (folderId: string, sessionId: string, itemId: string) =>
-        withAccount((acc) => SessionService.toggleItemInCart(acc, folderId, sessionId, itemId)),
-      toggleItemPurchased: (folderId: string, sessionId: string, itemId: string) =>
-        withAccount((acc) => SessionService.toggleItemPurchased(acc, folderId, sessionId, itemId)),
+      toggleItemSelected: (folderId: string, sessionId: string, itemId: string) =>
+        withAccount((acc) => SessionService.toggleItemSelected(acc, folderId, sessionId, itemId)),
+      toggleItemChecked: (folderId: string, sessionId: string, itemId: string) =>
+        withAccount((acc) => SessionService.toggleItemChecked(acc, folderId, sessionId, itemId)),
       updateCounts: (folderId: string, sessionId: string) =>
         withAccount((acc) => SessionService.updateSessionCounts(acc, folderId, sessionId)),
       complete: (folderId: string, sessionId: string) =>
@@ -158,13 +158,10 @@ declare global {
       };
       session: {
         create: (folderId: string, sessionName?: string) => string;
-        get: (
-          folderId: string,
-          sessionId: string,
-        ) => InstanceOfSchema<typeof ShoppingSession> | null;
-        getAll: (folderId: string) => Array<InstanceOfSchema<typeof ShoppingSession>>;
-        toggleItemInCart: (folderId: string, sessionId: string, itemId: string) => void;
-        toggleItemPurchased: (folderId: string, sessionId: string, itemId: string) => void;
+        get: (folderId: string, sessionId: string) => InstanceOfSchema<typeof ListSession> | null;
+        getAll: (folderId: string) => Array<InstanceOfSchema<typeof ListSession>>;
+        toggleItemSelected: (folderId: string, sessionId: string, itemId: string) => void;
+        toggleItemChecked: (folderId: string, sessionId: string, itemId: string) => void;
         updateCounts: (folderId: string, sessionId: string) => void;
         complete: (folderId: string, sessionId: string) => void;
         abandon: (folderId: string, sessionId: string) => void;

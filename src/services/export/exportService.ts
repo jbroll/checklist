@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, GroceriesAccount } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import { exportSessionToCsv, exportTemplateItemsToCsv } from './csvExporter';
 import { exportAllFolders, exportFolder, toJsonString } from './jsonExporter';
 import { exportSessionToText, exportTemplateItemsToText } from './txtExporter';
@@ -21,14 +21,11 @@ export class ExportService {
   /**
    * Export folders to JSON based on scope
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param scope - What to export (all folders or single folder)
    * @returns Export data structure
    */
-  static exportToJson(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
-    scope: ExportScope,
-  ): ExportedData {
+  static exportToJson(account: InstanceOfSchema<typeof Account>, scope: ExportScope): ExportedData {
     if (scope.type === 'all-folders') {
       return exportAllFolders(account);
     }
@@ -49,13 +46,13 @@ export class ExportService {
   /**
    * Export to JSON string
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param scope - What to export
    * @param pretty - Whether to pretty-print (default: true)
    * @returns JSON string
    */
   static exportToJsonString(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     scope: ExportScope,
     pretty = true,
   ): string {
@@ -90,12 +87,12 @@ export class ExportService {
   /**
    * Export template items to TXT format
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param folderId - ID of the folder to export
    * @returns Plain text string with one item per line
    */
   static exportTemplateItemsToText(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     folderId: string,
   ): string {
     const folder = ExportService.findFolderById(account, folderId);
@@ -109,12 +106,12 @@ export class ExportService {
   /**
    * Export template items to CSV format
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param folderId - ID of the folder to export
    * @returns CSV string with header row
    */
   static exportTemplateItemsToCsv(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     folderId: string,
   ): string {
     const folder = ExportService.findFolderById(account, folderId);
@@ -128,13 +125,13 @@ export class ExportService {
   /**
    * Export session to TXT format
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param folderId - ID of the folder containing the session
    * @param sessionId - ID of the session to export
    * @returns Plain text string with checkmarks
    */
   static exportSessionToText(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     folderId: string,
     sessionId: string,
   ): string {
@@ -154,13 +151,13 @@ export class ExportService {
   /**
    * Export session to CSV format
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param folderId - ID of the folder containing the session
    * @param sessionId - ID of the session to export
    * @returns CSV string with header row
    */
   static exportSessionToCsv(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     folderId: string,
     sessionId: string,
   ): string {
@@ -180,12 +177,12 @@ export class ExportService {
   /**
    * Find a folder by its Jazz ID
    *
-   * @param account - User's GroceriesAccount
+   * @param account - User's Account
    * @param folderId - Jazz ID of the folder
    * @returns FolderNode or null if not found
    */
   private static findFolderById(
-    account: InstanceOfSchema<typeof GroceriesAccount>,
+    account: InstanceOfSchema<typeof Account>,
     folderId: string,
   ): InstanceOfSchema<typeof FolderNode> | null {
     if (!account.root?.nodes) {

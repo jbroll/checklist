@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { FolderNode, GroceriesAccount } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import { ImportService } from '@/services/import/importService';
 import type { TxtImportResult } from '@/services/import/txtImporter';
@@ -20,7 +20,7 @@ interface TemplateItemsImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   folder: InstanceOfSchema<typeof FolderNode>;
-  account: InstanceOfSchema<typeof GroceriesAccount>;
+  account: InstanceOfSchema<typeof Account>;
   onImportComplete?: () => void;
 }
 

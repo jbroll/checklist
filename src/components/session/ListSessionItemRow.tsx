@@ -1,33 +1,33 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { memo } from 'react';
 import { useAccount } from '@/lib/jazz';
-import type { GroceriesAccount } from '@/schemas';
+import type { Account } from '@/schemas';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 
-interface ShoppingSessionItemRowProps {
+interface ListSessionItemRowProps {
   item: InstanceOfSchema<typeof TemplateItem>;
   state: InstanceOfSchema<typeof ItemState> | null;
   zone: 'inventory' | 'cart' | 'completed';
-  onToggleCart: (itemId: string) => void;
-  onTogglePurchased: (itemId: string) => void;
+  onToggleSelected: (itemId: string) => void;
+  onToggleChecked: (itemId: string) => void;
 }
 
-export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
+export const ListSessionItemRow = memo(function ListSessionItemRow({
   item,
   state,
   zone,
-  onToggleCart,
-  onTogglePurchased,
-}: ShoppingSessionItemRowProps) {
-  const { me } = useAccount<typeof GroceriesAccount>();
+  onToggleSelected,
+  onToggleChecked,
+}: ListSessionItemRowProps) {
+  const { me } = useAccount<typeof Account>();
 
   if (!me) return null;
 
   // Only leaf items should be shown in shopping sessions
   if (item.type === 'category') return null;
 
-  const inCart = state?.inCart || false;
-  const purchased = state?.purchased || false;
+  const inCart = state?.selected || false;
+  const purchased = state?.checked || false;
 
   // Determine which state the left checkbox controls based on zone
   const leftCheckboxControlsPurchased = zone === 'cart' || zone === 'completed';
@@ -41,9 +41,9 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
         onClick={(e) => {
           e.stopPropagation();
           if (leftCheckboxControlsPurchased) {
-            onTogglePurchased(item.$jazz.id);
+            onToggleChecked(item.$jazz.id);
           } else {
-            onToggleCart(item.$jazz.id);
+            onToggleSelected(item.$jazz.id);
           }
         }}
         className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
@@ -89,7 +89,7 @@ export const ShoppingSessionItemRow = memo(function ShoppingSessionItemRow({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleCart(item.$jazz.id);
+            onToggleSelected(item.$jazz.id);
           }}
           className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
           aria-label="Remove from cart"

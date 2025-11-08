@@ -106,10 +106,10 @@ export function exportSessionToCsv(
 
     const name = escapeCsvField(item.name);
     const path = escapeCsvField(item.path);
-    const inCart = itemState?.inCart ? 'true' : 'false';
-    const purchased = itemState?.purchased ? 'true' : 'false';
-    const addedToCartAt = itemState?.addedToCartAt?.toISOString() || '';
-    const purchasedAt = itemState?.purchasedAt?.toISOString() || '';
+    const inCart = itemState?.selected ? 'true' : 'false';
+    const purchased = itemState?.checked ? 'true' : 'false';
+    const addedToCartAt = itemState?.selectedAt?.toISOString() || '';
+    const purchasedAt = itemState?.checkedAt?.toISOString() || '';
 
     lines.push(`${name},${path},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
   }
