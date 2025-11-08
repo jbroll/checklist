@@ -98,9 +98,17 @@ See `ARCHITECTURE.md` for system overview and code locations.
 
 ## Deployment
 
-**Frontend**: Deploy `dist/` folder to Vercel, Netlify, or static hosting.
+See `DEPLOY.md` for detailed deployment instructions.
 
-**Backend**: BetterAuth server needs separate deployment (serverless functions or Node.js app).
+**Quick start:**
+```bash
+./deploy-full.sh init    # Initial deployment (frontend + backend)
+./deploy-full.sh update  # Subsequent updates
+```
+
+The app deploys in two parts:
+- **Frontend**: React SPA served by Apache (static files + SSL)
+- **Backend**: Express/BetterAuth API service (systemd service on port 3001)
 
 ## Tech Stack
 
