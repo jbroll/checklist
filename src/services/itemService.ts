@@ -7,10 +7,33 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, TemplateItem } from '../schemas';
+import type { Account, FolderNode, TemplateItem } from '../schemas';
 import { TemplateItem as TemplateItemSchema } from '../schemas';
 import { createChildPath, getParentPath, normalizePathSegment } from '../utils/pathUtils';
+import { findEntityById } from './entityFinder';
+import { updateEntity } from './entityUpdater';
 import { getFolder } from './folderService';
+
+/**
+ * Updates all descendant paths when a category's path changes
+ *
+ * @param folder - Folder containing the items
+ * @param oldParentPath - Old path of the category
+ * @param newParentPath - New path of the category
+ */
+function updateDescendantPaths(
+  folder: InstanceOfSchema<typeof FolderNode>,
+  oldParentPath: string,
+  newParentPath: string,
+): void {
+  for (const descendant of folder.items) {
+    if (descendant?.path.startsWith(`${oldParentPath}/`)) {
+      const relativePath = descendant.path.substring(oldParentPath.length + 1);
+      const newDescendantPath = `${newParentPath}/${relativePath}`;
+      updateEntity(descendant, { path: newDescendantPath });
+    }
+  }
+}
 
 /**
  * Create a new category in a template folder
@@ -116,9 +139,7 @@ export function getItem(
   itemId: string,
 ): InstanceOfSchema<typeof TemplateItem> | null {
   const folder = getFolder(account, folderId);
-  if (!folder?.items) return null;
-
-  return folder.items.find((i) => i?.$jazz.id === itemId) || null;
+  return findEntityById(folder?.items, itemId);
 }
 
 /**
@@ -181,20 +202,14 @@ export function renameItem(
   }
 
   // Update item name and path
-  item.$jazz.set('name', newName);
-  item.$jazz.set('path', newPath);
-  item.$jazz.set('updatedAt', new Date());
+  updateEntity(item, {
+    name: newName,
+    path: newPath,
+  });
 
   // If this is a category, update all descendant paths
   if (item.type === 'category') {
-    for (const descendant of folder.items) {
-      if (descendant?.path.startsWith(`${oldPath}/`)) {
-        const relativePath = descendant.path.substring(oldPath.length + 1);
-        const newDescendantPath = `${newPath}/${relativePath}`;
-        descendant.$jazz.set('path', newDescendantPath);
-        descendant.$jazz.set('updatedAt', new Date());
-      }
-    }
+    updateDescendantPaths(folder, oldPath, newPath);
   }
 
   folder.$jazz.set('updatedAt', new Date());
@@ -215,8 +230,7 @@ export function archiveItem(
   const item = folder.items.find((i) => i?.$jazz.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in folder ${folderId}`);
 
-  item.$jazz.set('archived', true);
-  item.$jazz.set('updatedAt', new Date());
+  updateEntity(item, { archived: true });
 
   // If this is a category, archive all descendants
   if (item.type === 'category') {
@@ -266,14 +280,7 @@ export function moveItem(
 
   // If this is a category, update all descendant paths
   if (item.type === 'category') {
-    for (const descendant of folder.items) {
-      if (descendant?.path.startsWith(`${oldPath}/`)) {
-        const relativePath = descendant.path.substring(oldPath.length + 1);
-        const newDescendantPath = `${newPath}/${relativePath}`;
-        descendant.$jazz.set('path', newDescendantPath);
-        descendant.$jazz.set('updatedAt', new Date());
-      }
-    }
+    updateDescendantPaths(folder, oldPath, newPath);
   }
 
   folder.$jazz.set('updatedAt', new Date());

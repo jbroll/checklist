@@ -8,6 +8,8 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
 import { calculateDescendantPaths, calculateNewPath } from '../utils/pathUtils';
+import { findEntityById } from './entityFinder';
+import { updateEntity } from './entityUpdater';
 
 /**
  * Create a new folder
@@ -65,8 +67,7 @@ export function getFolder(
   account: InstanceOfSchema<typeof Account>,
   folderId: string,
 ): InstanceOfSchema<typeof FolderNode> | null {
-  if (!account.root?.nodes) return null;
-  return account.root.nodes.find((n) => n?.$jazz.id === folderId) || null;
+  return findEntityById(account.root?.nodes, folderId);
 }
 
 /**
@@ -101,9 +102,10 @@ export function renameFolder(
   const folder = getFolder(account, folderId);
   if (!folder) throw new Error(`Folder ${folderId} not found`);
 
-  folder.$jazz.set('name', newName);
-  folder.$jazz.set('path', `/${newName}`);
-  folder.$jazz.set('updatedAt', new Date());
+  updateEntity(folder, {
+    name: newName,
+    path: `/${newName}`,
+  });
 }
 
 /**

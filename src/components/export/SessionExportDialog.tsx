@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import type { Account, FolderNode } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
+import { buildExportFilename } from '@/utils/fileUtils';
 
 interface SessionExportDialogProps {
   open: boolean;
@@ -45,9 +46,7 @@ export function SessionExportDialog({
       }
 
       // Generate filename
-      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const safeSessionName = sessionName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-      const filename = `session-${safeSessionName}-${timestamp}.${format}`;
+      const filename = buildExportFilename(sessionName, format, true, 'session');
 
       if (format === 'txt') {
         const content = ExportService.exportSessionToText(account, folderId, sessionId);
