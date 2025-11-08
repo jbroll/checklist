@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import type { Account, FolderNode } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
+import { buildExportFilename } from '@/utils/fileUtils';
 
 interface TemplateItemsExportDialogProps {
   open: boolean;
@@ -41,9 +42,7 @@ export function TemplateItemsExportDialog({
       }
 
       // Generate filename
-      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const safeName = folder.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const filename = `${safeName}-items-${timestamp}.${format}`;
+      const filename = buildExportFilename(folder.name, format, true, undefined);
 
       if (format === 'txt') {
         const content = ExportService.exportTemplateItemsToText(account, folderId);

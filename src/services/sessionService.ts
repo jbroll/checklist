@@ -8,6 +8,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account } from '../schemas';
 import { ItemState, ListSession } from '../schemas/tree';
+import { findEntityById } from './entityFinder';
 import { getFolder } from './folderService';
 
 /**
@@ -77,9 +78,7 @@ export function getSession(
   sessionId: string,
 ): InstanceOfSchema<typeof ListSession> | null {
   const folder = getFolder(account, folderId);
-  if (!folder?.sessions) return null;
-
-  return folder.sessions.find((s) => s?.$jazz.id === sessionId) || null;
+  return findEntityById(folder?.sessions, sessionId);
 }
 
 /**
