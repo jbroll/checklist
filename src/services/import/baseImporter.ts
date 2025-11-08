@@ -18,6 +18,7 @@ export interface BaseImportResult {
 export interface ItemToImport {
   name: string;
   path: string;
+  type?: 'category' | 'item'; // Optional: defaults to 'item' for backward compatibility
   defaultQuantity?: string;
   /** Optional context for error messages (e.g., "Row 5") */
   context?: string;
@@ -96,7 +97,7 @@ export function importItems(
 
   // Import each item
   for (const item of items) {
-    const { name, path, defaultQuantity = '', context } = item;
+    const { name, path, type = 'item', defaultQuantity = '', context } = item;
 
     // Skip if already exists at this path
     if (existingPaths.has(path.toLowerCase())) {
@@ -110,7 +111,7 @@ export function importItems(
       const newItem = TemplateItem.create(
         {
           name,
-          type: 'item',
+          type, // Use provided type or default to 'item'
           path,
           expanded: false,
           sortOrder: nextSortOrder++,
