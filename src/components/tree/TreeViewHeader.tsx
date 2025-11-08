@@ -166,13 +166,13 @@ export function TreeViewHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onExport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onImport}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
@@ -180,7 +180,7 @@ export function TreeViewHeader({
                   onCheckedChange={onToggleShowArchived}
                 >
                   <Archive className="mr-2 h-4 w-4" />
-                  Show Archived Sessions
+                  Archived
                 </DropdownMenuCheckboxItem>
                 {onSignOut && (
                   <>
