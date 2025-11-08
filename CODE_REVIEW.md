@@ -12,13 +12,13 @@ The bubblelist codebase is well-structured with clear separation of concerns, bu
 
 1. **Code Duplication:** ~620 lines of repeated code (~8-10% of service/utility code)
 2. **Complexity Issues:** 7 areas with overly verbose or convoluted logic
-3. **Naming Migration:** 90+ code occurrences + 25+ UI strings need renaming from shopping → generic list terminology
+3. ~~**Naming Migration:** 90+ code occurrences + 25+ UI strings need renaming from shopping → generic list terminology~~ ✅ **COMPLETED (2025-11-08)**
 
 **Estimated Effort:**
 - Refactoring duplication: 8-12 hours
 - Simplifying complex logic: 4-6 hours
-- Naming migration: 12-16 hours
-- **Total:** 24-34 hours
+- ~~Naming migration: 12-16 hours~~ ✅ **COMPLETED**
+- **Remaining:** 12-18 hours
 
 ---
 
@@ -412,26 +412,45 @@ function resolveNameConflict(
 
 ---
 
-## Part 3: Shopping → Generic List Migration
+## Part 3: Shopping → Generic List Migration ✅ COMPLETED
 
-### Terminology Mapping
+**Status:** ✅ Completed on 2025-11-08
+**Commit:** `6f2a666` - "refactor: migrate shopping terminology to generic list"
 
-| Current (Shopping) | Proposed (Generic) | Occurrences |
-|-------------------|-------------------|-------------|
-| `GroceriesAccount` | `Account` | 50+ |
-| `ShoppingSession` | `ListSession` | 40+ |
-| `inCart` | `selected` | 30+ |
-| `purchased` | `checked` | 30+ |
-| `addedToCartAt` | `selectedAt` | 10+ |
-| `purchasedAt` | `checkedAt` | 10+ |
-| `inCartCount` | `selectedCount` | 8 |
-| `completedCount` | `checkedCount` | 8 |
-| `toggleItemInCart()` | `toggleItemSelected()` | 6 |
-| `toggleItemPurchased()` | `toggleItemChecked()` | 6 |
+### Terminology Mapping (COMPLETED)
+
+| Old (Shopping) | New (Generic) | Status |
+|----------------|---------------|--------|
+| `GroceriesAccount` | `Account` | ✅ Migrated |
+| `ShoppingSession` | `ListSession` | ✅ Migrated |
+| `inCart` | `selected` | ✅ Migrated |
+| `purchased` | `checked` | ✅ Migrated |
+| `addedToCartAt` | `selectedAt` | ✅ Migrated |
+| `purchasedAt` | `checkedAt` | ✅ Migrated |
+| `inCartCount` | `selectedCount` | ✅ Migrated |
+| `completedCount` | `checkedCount` | ✅ Migrated |
+| `toggleItemInCart()` | `toggleItemSelected()` | ✅ Migrated |
+| `toggleItemPurchased()` | `toggleItemChecked()` | ✅ Migrated |
 
 ---
 
-### Migration Plan: 5 Phases
+### Migration Execution Summary
+
+**Files Changed:** 36 files
+**Lines Modified:** 389 insertions, 352 deletions
+**Components Renamed:** 2 (ShoppingSessionView, ShoppingSessionItemRow)
+
+**Quality Gates (All Passed):**
+- ✅ TypeScript type checking (0 errors)
+- ✅ Biome linting (0 issues)
+- ✅ Unit tests (81 tests passing)
+- ✅ E2E tests (30 tests passing)
+
+**Data Migration:** Implemented automatic migration for existing data with old field names
+
+---
+
+### ~~Migration Plan: 5 Phases~~ (COMPLETED)
 
 #### Phase 1: Schema Changes (BREAKING)
 
@@ -890,21 +909,26 @@ npm run check             # All checks
 
 ## Conclusion
 
-This code review identified **~620 lines of duplicate code** (8-10% reduction opportunity), **7 areas of overly complex logic**, and **90+ naming changes** needed for the shopping → generic list migration.
+This code review identified **~620 lines of duplicate code** (8-10% reduction opportunity), **7 areas of overly complex logic**, and ~~**90+ naming changes** needed for the shopping → generic list migration~~ ✅ **COMPLETED**.
 
-**Recommended Next Steps:**
+**Remaining Work:**
 
-1. **Week 1:** Quick wins refactoring (extract utilities, remove duplication)
-2. **Week 2:** Component refactoring (extract reusable components)
-3. **Week 3:** Generic list migration (schemas → services → components)
-4. **Week 4:** Documentation, testing, verification
+1. **Quick wins refactoring** (extract utilities, remove duplication) - 8-12 hours
+2. **Component refactoring** (extract reusable components) - 2-3 hours
+3. **Service improvements** (reduce duplication, simplify logic) - 2-3 hours
 
-**Total Estimated Effort:** 24-34 hours (3-4 weeks part-time)
+**Total Remaining Effort:** 12-18 hours (2-3 weeks part-time)
 
-**Expected Benefits:**
+**Benefits Achieved from Migration:**
+- ✅ More intuitive, generic terminology for users
+- ✅ Better separation of concerns (session state vs. template state)
+- ✅ Backward compatibility via automatic data migration
+- ✅ All tests passing (81 unit + 30 E2E)
+- ✅ Zero TypeScript errors, zero lint issues
+
+**Expected Benefits from Remaining Work:**
 - 8-10% code reduction
 - 15-20% complexity reduction
 - Improved maintainability
-- More intuitive terminology for users
 - Better test coverage
 - Easier onboarding for new developers
