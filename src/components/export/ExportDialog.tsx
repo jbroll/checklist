@@ -11,20 +11,30 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { Account } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import type { ExportScope } from '@/services/export/types';
-import { downloadJson } from '@/utils/fileDownload';
+import { downloadCsv, downloadJson, downloadText } from '@/utils/fileDownload';
+import { buildExportFilename } from '@/utils/fileUtils';
 
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account: InstanceOfSchema<typeof Account>;
-  /** Optional pre-selected folder ID for single-folder export */
+  /** Optional folder for folder-level export */
+  folder?: InstanceOfSchema<typeof FolderNode>;
+  /** Optional pre-selected folder ID for single-folder export (legacy, use folder instead) */
   selectedFolderId?: string;
 }
 
-export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, account, folder, selectedFolderId }: ExportDialogProps) {
+  const isTemplate = folder?.type === 'template-folder';
+  const isFolderLevel = !!folder;
+
+  // For folder-level template export, allow format selection
+  const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
+
+  // For top-level export, allow scope selection (legacy behavior)
   const [exportType, setExportType] = useState<'all-folders' | 'single-folder'>(
     selectedFolderId ? 'single-folder' : 'all-folders',
   );
@@ -38,23 +48,54 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
     setIsExporting(true);
 
     try {
-      const scope: ExportScope =
-        exportType === 'all-folders'
-          ? { type: 'all-folders' }
-          : { type: 'single-folder', folderId };
+      if (folder && isTemplate) {
+        // Template folder: Export items with format selection
+        const fId = folder.$jazz?.id;
+        if (!fId) {
+          throw new Error('Folder ID not found');
+        }
 
-      // Export to JSON
-      const data = ExportService.exportToJson(account, scope);
+        const filename = buildExportFilename(folder.name, format, true, undefined);
 
-      // Generate filename
-      const folderName =
-        exportType === 'single-folder'
-          ? folders.find((f) => f?.$jazz?.id === folderId)?.name
-          : undefined;
-      const filename = ExportService.generateFilename(scope, 'json', folderName);
+        if (format === 'json') {
+          const scope: ExportScope = { type: 'single-folder', folderId: fId };
+          const data = ExportService.exportToJson(account, scope);
+          downloadJson(data, filename);
+        } else if (format === 'txt') {
+          const content = ExportService.exportTemplateItemsToText(account, fId);
+          downloadText(content, filename);
+        } else {
+          const content = ExportService.exportTemplateItemsToCsv(account, fId);
+          downloadCsv(content, filename);
+        }
+      } else if (folder) {
+        // Organizational folder: JSON only
+        const fId = folder.$jazz?.id;
+        if (!fId) {
+          throw new Error('Folder ID not found');
+        }
 
-      // Download file
-      downloadJson(data, filename);
+        const scope: ExportScope = { type: 'single-folder', folderId: fId };
+        const data = ExportService.exportToJson(account, scope);
+        const filename = ExportService.generateFilename(scope, 'json', folder.name);
+        downloadJson(data, filename);
+      } else {
+        // Top-level: JSON only with scope selection
+        const scope: ExportScope =
+          exportType === 'all-folders'
+            ? { type: 'all-folders' }
+            : { type: 'single-folder', folderId };
+
+        const data = ExportService.exportToJson(account, scope);
+
+        const folderName =
+          exportType === 'single-folder'
+            ? folders.find((f) => f?.$jazz?.id === folderId)?.name
+            : undefined;
+        const filename = ExportService.generateFilename(scope, 'json', folderName);
+
+        downloadJson(data, filename);
+      }
 
       // Close dialog
       onOpenChange(false);
@@ -69,22 +110,116 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
   const handleCancel = () => {
     setExportType(selectedFolderId ? 'single-folder' : 'all-folders');
     setFolderId(selectedFolderId || '');
+    setFormat('json');
     onOpenChange(false);
   };
 
-  const canExport = exportType === 'all-folders' || (exportType === 'single-folder' && folderId);
+  const canExport = isFolderLevel || exportType === 'all-folders' || (exportType === 'single-folder' && folderId);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Export Grocery Data</DialogTitle>
-          <DialogDescription>
-            Export your grocery lists to a JSON file for backup or transfer.
-          </DialogDescription>
-        </DialogHeader>
+  // Get dynamic configuration based on context
+  const getConfig = () => {
+    if (folder && isTemplate) {
+      const itemCount = folder.items?.filter((item) => item && !item.archived).length || 0;
+      return {
+        title: `Export: ${folder.name}`,
+        description: 'Choose format for export.',
+        content: (
+          <>
+            {/* Format selection for templates */}
+            <div className="grid gap-3">
+              <Label>Export format</Label>
 
-        <div className="grid gap-4 py-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="export-json"
+                  checked={format === 'json'}
+                  onChange={() => setFormat('json')}
+                  className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
+                />
+                <Label htmlFor="export-json" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">JSON (.json)</div>
+                    <div className="text-xs text-neutral-600">Full backup with items and sessions</div>
+                  </div>
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="export-txt"
+                  checked={format === 'txt'}
+                  onChange={() => setFormat('txt')}
+                  className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
+                />
+                <Label htmlFor="export-txt" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">Plain Text (.txt)</div>
+                    <div className="text-xs text-neutral-600">Tab-indented hierarchy</div>
+                  </div>
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="export-csv"
+                  checked={format === 'csv'}
+                  onChange={() => setFormat('csv')}
+                  className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
+                />
+                <Label htmlFor="export-csv" className="cursor-pointer font-normal">
+                  <div>
+                    <div className="font-medium">CSV (.csv)</div>
+                    <div className="text-xs text-neutral-600">Includes name, category, sort order, quantity</div>
+                  </div>
+                </Label>
+              </div>
+            </div>
+
+            {/* Export details */}
+            <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
+              <div className="font-medium">What will be exported:</div>
+              <ul className="ml-4 mt-2 list-disc space-y-1">
+                <li>
+                  {itemCount} list item{itemCount !== 1 ? 's' : ''}
+                </li>
+                <li>Active items only (archived items excluded)</li>
+                {format === 'json' && <li>All sessions (active and completed)</li>}
+                {format === 'csv' && <li>Category and sort order information</li>}
+              </ul>
+            </div>
+          </>
+        ),
+      };
+    }
+
+    if (folder) {
+      return {
+        title: `Export: ${folder.name}`,
+        description: 'Export folder structure to JSON.',
+        content: (
+          <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
+            <div className="font-medium">What will be exported:</div>
+            <ul className="ml-4 mt-2 list-disc space-y-1">
+              <li>Folder structure and sub-folders</li>
+              <li>All list items</li>
+              <li>All sessions (active and completed)</li>
+            </ul>
+            <div className="mt-2 text-xs text-neutral-600">
+              Note: Sharing information will not be exported
+            </div>
+          </div>
+        ),
+      };
+    }
+
+    return {
+      title: 'Export',
+      description: 'Export to JSON for backup or transfer.',
+      content: (
+        <>
           {/* Export scope selection */}
           <div className="grid gap-3">
             <Label>Export scope</Label>
@@ -124,9 +259,9 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
                   className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 >
                   <option value="">Select a folder...</option>
-                  {folders.map((folder) => (
-                    <option key={folder.$jazz.id} value={folder.$jazz.id}>
-                      {folder.name}
+                  {folders.map((f) => (
+                    <option key={f.$jazz.id} value={f.$jazz.id}>
+                      {f.name}
                     </option>
                   ))}
                 </select>
@@ -146,7 +281,22 @@ export function ExportDialog({ open, onOpenChange, account, selectedFolderId }: 
               Note: Sharing information will not be exported
             </div>
           </div>
-        </div>
+        </>
+      ),
+    };
+  };
+
+  const config = getConfig();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{config.title}</DialogTitle>
+          <DialogDescription>{config.description}</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">{config.content}</div>
 
         <DialogFooter>
           <Button type="button" onClick={handleCancel} disabled={isExporting} variant="secondary">
