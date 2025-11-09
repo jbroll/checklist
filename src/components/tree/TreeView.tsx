@@ -28,6 +28,7 @@ interface TreeViewProps {
   onUseTemplate?: (nodeId: string) => void;
   onEditTemplate?: (nodeId: string) => void;
   onOpenSession?: (folderId: string, sessionId: string) => void;
+  onExportSession?: (folderId: string, sessionId: string) => void;
   // Header action handlers
   onHeaderClick?: () => void;
   onAddFolder?: () => void;
@@ -46,6 +47,7 @@ export function TreeView({
   onUseTemplate,
   onEditTemplate,
   onOpenSession,
+  onExportSession,
   onHeaderClick,
   onAddFolder,
   onAddTemplate,
@@ -270,6 +272,7 @@ export function TreeView({
                 level={level + 1}
                 onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
+                onExport={(sessionId) => onExportSession?.(node.$jazz.id, sessionId)}
                 allSessions={activeSessions}
               />
             ))}
