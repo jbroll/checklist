@@ -6,10 +6,7 @@ interface ImportFormFieldsProps {
   onTemplateNameChange: (name: string) => void;
 }
 
-export function ImportFormFields({
-  templateName,
-  onTemplateNameChange,
-}: ImportFormFieldsProps) {
+export function ImportFormFields({ templateName, onTemplateNameChange }: ImportFormFieldsProps) {
   return (
     <FormField label="List name" htmlFor="template-name" required>
       <Input
