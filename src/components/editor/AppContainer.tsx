@@ -122,19 +122,6 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   // If viewing a shopping session, show SessionView
   if (activeSessionFolderId && activeSessionId) {
     const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
-    console.log('📱 TEMPLATE EDITOR - Looking for session folder', {
-      activeSessionFolderId,
-      activeSessionId,
-      foundFolder: sessionFolder
-        ? {
-            id: sessionFolder.$jazz.id,
-            name: sessionFolder.name,
-            type: sessionFolder.type,
-            itemCount: sessionFolder.items?.length || 0,
-          }
-        : null,
-      allNodeIds: nodes.map((n) => ({ id: n?.$jazz.id, name: n?.name })),
-    });
     if (sessionFolder) {
       return (
         <SessionView
