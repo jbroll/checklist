@@ -5,7 +5,8 @@
  */
 
 import type { CoList, InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode, ListSession, TemplateItem } from '../../schemas';
+import type { Account, Template, Session } from '../../schemas';
+import type { TemplateItem } from '../../schemas/tree';
 import type {
   ExportedData,
   ExportedFolder,
@@ -23,10 +24,10 @@ import type {
 export function exportAllFolders(account: InstanceOfSchema<typeof Account>): ExportedData {
   const folders: ExportedFolder[] = [];
 
-  // Export all nodes from the root
-  if (account.root?.nodes) {
-    for (const node of account.root.nodes) {
-      const exportedFolder = exportFolderNode(node);
+  // Export all templates from the root
+  if (account.root?.templates) {
+    for (const template of account.root.templates) {
+      const exportedFolder = exportTemplateNode(template);
       folders.push(exportedFolder);
     }
   }
@@ -40,42 +41,42 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
 }
 
 /**
- * Export a single folder
+ * Export a single template
  *
- * @param folder - The FolderNode to export
- * @returns Export data containing single folder
+ * @param template - The Template to export
+ * @returns Export data containing single template
  */
-export function exportFolder(folder: InstanceOfSchema<typeof FolderNode>): ExportedData {
+export function exportTemplate(template: InstanceOfSchema<typeof Template>): ExportedData {
   return {
     version: '1.0',
     exportDate: new Date().toISOString(),
     appVersion: '1.0.0', // TODO: Get from package.json
-    folders: [exportFolderNode(folder)],
+    folders: [exportTemplateNode(template)],
   };
 }
 
 /**
- * Convert a FolderNode to exported format
+ * Convert a Template to exported format
  *
- * @param node - The FolderNode to convert
+ * @param template - The Template to convert
  * @returns Exported folder structure
  */
-function exportFolderNode(node: InstanceOfSchema<typeof FolderNode>): ExportedFolder {
+function exportTemplateNode(template: InstanceOfSchema<typeof Template>): ExportedFolder {
   const baseFolder: ExportedFolder = {
-    name: node.name,
-    path: node.path,
-    type: node.type,
-    createdAt: node.createdAt.toISOString(), // FolderNode still uses Date objects
-    updatedAt: node.updatedAt.toISOString(),
+    name: template.name,
+    path: template.path,
+    type: 'template-folder', // All templates are template-folders in the export format
+    createdAt: template.createdAt.toISOString(),
+    updatedAt: template.updatedAt.toISOString(),
   };
 
-  // Add template-folder specific data
-  if (node.type === 'template-folder' && node.items && node.sessions) {
-    baseFolder.items = exportTemplateItems(node.items);
-    baseFolder.sessions = exportSessions(node.sessions);
+  // Add template data
+  if (template.items && template.sessions) {
+    baseFolder.items = exportTemplateItems(template.items);
+    baseFolder.sessions = exportSessions(template.sessions);
     // Only include currentSessionId if it's not empty
-    if (node.currentSessionId && node.currentSessionId !== '') {
-      baseFolder.currentSessionId = node.currentSessionId;
+    if (template.currentSessionId && template.currentSessionId !== '') {
+      baseFolder.currentSessionId = template.currentSessionId;
     }
   }
 
@@ -83,14 +84,12 @@ function exportFolderNode(node: InstanceOfSchema<typeof FolderNode>): ExportedFo
 }
 
 /**
- * Export template items from a CoList
+ * Export template items from an array
  *
- * @param items - CoList of TemplateItems
+ * @param items - Array of TemplateItems
  * @returns Array of exported template items
  */
-function exportTemplateItems(
-  items: CoList<InstanceOfSchema<typeof TemplateItem>>,
-): ExportedTemplateItem[] {
+function exportTemplateItems(items: TemplateItem[]): ExportedTemplateItem[] {
   const exportedItems: ExportedTemplateItem[] = [];
 
   for (const item of items) {
@@ -108,7 +107,7 @@ function exportTemplateItems(
       defaultQuantity: item.defaultQuantity,
       color: item.color,
       createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
+      updatedAt: item.createdAt.toISOString(), // Use createdAt for both since plain items don't have updatedAt
     };
 
     exportedItems.push(exportedItem);
@@ -120,16 +119,16 @@ function exportTemplateItems(
 /**
  * Export shopping sessions from a CoList
  *
- * @param sessions - CoList of ListSessions
+ * @param sessions - CoList of Sessions
  * @returns Array of exported sessions
  */
-function exportSessions(sessions: CoList<InstanceOfSchema<typeof ListSession>>): ExportedSession[] {
+function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): ExportedSession[] {
   const exportedSessions: ExportedSession[] = [];
 
   for (const session of sessions) {
     const itemStates: Record<string, ExportedItemState> = {};
 
-    // Export item states
+    // Export item states (now plain objects)
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
         inCart: state.selected,

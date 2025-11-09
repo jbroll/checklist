@@ -11,24 +11,21 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo, useState } from 'react';
-import type { Account, FolderNode } from '@/schemas';
-import { moveFolder } from '@/services/folderService';
-import { getParentPath } from '@/utils/pathUtils';
-import { buildTreeStructure, type TreeNode } from '@/utils/treeHelpers';
+import type { Account, Template } from '@/schemas';
+import { buildFolderTree, moveTemplate, toggleFolderExpanded, type DerivedFolder } from '@/services/templateService';
 import { FolderNodeView } from './FolderNodeView';
 import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
 
 interface TreeViewProps {
-  nodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[];
   account: InstanceOfSchema<typeof Account>;
-  selectedNodeId?: string | null;
-  onNodeSelect?: (nodeId: string) => void;
-  onAddItem?: (parentNodeId: string) => void;
-  onUseTemplate?: (nodeId: string) => void;
-  onEditTemplate?: (nodeId: string) => void;
-  onOpenSession?: (folderId: string, sessionId: string) => void;
-  onExportSession?: (folderId: string, sessionId: string) => void;
+  selectedTemplateId?: string | null;
+  onTemplateSelect?: (templateId: string) => void;
+  onAddItem?: (parentTemplateId: string) => void;
+  onUseTemplate?: (templateId: string) => void;
+  onEditTemplate?: (templateId: string) => void;
+  onOpenSession?: (templateId: string, sessionId: string) => void;
+  onExportSession?: (templateId: string, sessionId: string) => void;
   // Header action handlers
   onHeaderClick?: () => void;
   onAddFolder?: () => void;
@@ -39,10 +36,9 @@ interface TreeViewProps {
 }
 
 export function TreeView({
-  nodes,
   account,
-  selectedNodeId,
-  onNodeSelect,
+  selectedTemplateId,
+  onTemplateSelect,
   onAddItem: _onAddItem,
   onUseTemplate,
   onEditTemplate,
@@ -55,7 +51,7 @@ export function TreeView({
   onImport,
   onSignOut,
 }: TreeViewProps) {
-  const [activeNode, setActiveNode] = useState<InstanceOfSchema<typeof FolderNode> | null>(null);
+  const [activeTemplate, setActiveTemplate] = useState<InstanceOfSchema<typeof Template> | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
   // Configure sensors for drag detection
@@ -67,31 +63,30 @@ export function TreeView({
     }),
   );
 
-  const handleToggleExpand = (node: InstanceOfSchema<typeof FolderNode>) => {
-    node.$jazz.set('expanded', !node.expanded);
-    node.$jazz.set('updatedAt', new Date());
+  const handleToggleFolderExpand = (folderPath: string) => {
+    toggleFolderExpanded(account, folderPath);
   };
 
-  const handleRenameNode = (nodeId: string, newName: string) => {
-    const node = nodes.find((n) => n?.$jazz.id === nodeId);
-    if (node) {
-      node.$jazz.set('name', newName);
-      node.$jazz.set('updatedAt', new Date());
+  const handleRenameTemplate = (templateId: string, newName: string) => {
+    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
+    if (template) {
+      template.$jazz.set('name', newName);
+      template.$jazz.set('updatedAt', new Date());
     }
   };
 
-  const handleDeleteNode = (nodeId: string) => {
-    const node = nodes.find((n) => n?.$jazz.id === nodeId);
-    if (node) {
-      node.$jazz.set('archived', true);
-      node.$jazz.set('updatedAt', new Date());
+  const handleDeleteTemplate = (templateId: string) => {
+    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
+    if (template) {
+      template.$jazz.set('archived', true);
+      template.$jazz.set('updatedAt', new Date());
     }
   };
 
-  const handleDeleteSession = (nodeId: string, sessionId: string) => {
-    const node = nodes.find((n) => n?.$jazz.id === nodeId);
-    if (node?.sessions) {
-      const session = node.sessions.find((s) => s?.$jazz.id === sessionId);
+  const handleDeleteSession = (templateId: string, sessionId: string) => {
+    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
+    if (template?.sessions) {
+      const session = template.sessions.find((s) => s?.$jazz.id === sessionId);
       if (session) {
         // Soft delete by setting status to abandoned
         session.$jazz.set('status', 'abandoned');
@@ -102,8 +97,8 @@ export function TreeView({
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
-    const draggedNode = event.active.data.current?.node as InstanceOfSchema<typeof FolderNode>;
-    setActiveNode(draggedNode);
+    const draggedTemplate = event.active.data.current?.template as InstanceOfSchema<typeof Template>;
+    setActiveTemplate(draggedTemplate);
   };
 
   const handleDragOver = (_event: DragOverEvent) => {
@@ -113,27 +108,14 @@ export function TreeView({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    setActiveNode(null);
+    setActiveTemplate(null);
 
     if (!over || !active.data.current) {
       return;
     }
 
-    const draggedNode = active.data.current.node as InstanceOfSchema<typeof FolderNode>;
+    const draggedTemplate = active.data.current.template as InstanceOfSchema<typeof Template>;
     const overData = over.data.current;
-
-    // CRITICAL: Check if we're dropping on a template node - reject immediately
-    // Templates are leaf nodes and cannot accept drops or affect positioning
-    const overNode = overData?.node as InstanceOfSchema<typeof FolderNode> | undefined;
-    if (overNode?.type === 'template-folder') {
-      // Ignore all drops on template nodes - they are leaf nodes
-      return;
-    }
-
-    // CRITICAL: Check if we're dropping a folder onto itself - reject immediately
-    if (overNode && draggedNode.$jazz.id === overNode.$jazz.id) {
-      return;
-    }
 
     // Determine the new parent path
     let newParentPath: string | undefined;
@@ -142,97 +124,110 @@ export function TreeView({
     if (overData?.path === '__ROOT_DROP_ZONE__') {
       newParentPath = undefined; // Move to root level
     } else if (overData?.isFolder) {
-      // Dropped on an organizational folder - move inside it
+      // Dropped on a folder - move inside it
       newParentPath = overData.path as string;
-    } else if (overData?.node) {
-      // Dropped on another node - move to same parent
-      const targetNodePath = (overData.node as InstanceOfSchema<typeof FolderNode>).path;
-      newParentPath = getParentPath(targetNodePath);
+    } else if (overData?.template) {
+      // Dropped on another template - move to same parent
+      const targetTemplate = overData.template as InstanceOfSchema<typeof Template>;
+      const pathParts = targetTemplate.path.split('/');
+      newParentPath = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : undefined;
     } else {
       // No valid drop target
       return;
     }
 
     // Don't move if dropped on same location
-    const currentParentPath = getParentPath(draggedNode.path);
+    const pathParts = draggedTemplate.path.split('/');
+    const currentParentPath = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : undefined;
 
     if (newParentPath === currentParentPath) {
       return;
     }
 
     try {
-      moveFolder(account, draggedNode, newParentPath);
+      moveTemplate(account, draggedTemplate, newParentPath);
     } catch {
       // Silently ignore expected validation errors (moving into self, naming conflicts)
     }
   };
 
   const handleDragCancel = () => {
-    setActiveNode(null);
+    setActiveTemplate(null);
   };
 
-  // Build hierarchical tree structure from flat node list
-  const treeStructure = useMemo(() => buildTreeStructure(nodes), [nodes]);
+  // Build hierarchical folder tree structure from template paths
+  const folderTree = useMemo(() => buildFolderTree(account), [account.root?.templates, account.root?.folderExpanded]);
 
-  const renderTreeNode = (treeNode: TreeNode, level = 0): React.ReactNode => {
-    const { node, children } = treeNode;
-
-    // Show sessions under template folders
-    const sessions = node.sessions || [];
-    const activeSessions = sessions
-      .filter((s) => {
-        if (!s || s.status === 'abandoned') return false;
-        if (!showArchived && s.archived) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        // Sort in reverse chronological order (newest first)
-        const dateA = a?.startedAt?.getTime() || 0;
-        const dateB = b?.startedAt?.getTime() || 0;
-        return dateB - dateA;
-      });
-
-    // A node has children if it has child folders/templates OR sessions (but NOT template items)
-    const hasChildren = children.length > 0 || activeSessions.length > 0;
+  const renderFolder = (folder: DerivedFolder, level = 0): React.ReactNode => {
+    const hasChildren = folder.children.length > 0 || folder.templates.length > 0;
 
     return (
       <FolderNodeView
-        key={node.$jazz.id}
-        node={node}
+        key={folder.path}
+        folder={folder}
         level={level}
         hasChildren={hasChildren}
-        isSelected={selectedNodeId === node.$jazz.id}
-        onSelect={onNodeSelect}
-        onToggleExpand={() => handleToggleExpand(node)}
-        onRename={handleRenameNode}
-        onDelete={handleDeleteNode}
-        onUseTemplate={onUseTemplate}
-        onEditTemplate={onEditTemplate}
+        isSelected={false}
+        onToggleExpand={() => handleToggleFolderExpand(folder.path)}
         account={account}
       >
         {/* Render children only when expanded */}
-        {node.expanded && (
+        {folder.expanded && (
           <>
-            {/* Render sessions for template folders */}
-            {activeSessions.map((session) => (
-              <SessionRowView
-                key={session.$jazz.id}
-                session={session}
-                templateName={node.name}
-                level={level + 1}
-                onOpen={(sessionId) => {
-                  // Use the session's templateFolderId, not the current node's ID
-                  // Sessions store which template they belong to via templateFolderId
-                  const folderId = session.templateFolderId || node.$jazz.id;
-                  onOpenSession?.(folderId, sessionId);
-                }}
-                onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
-                onExport={(sessionId) => onExportSession?.(node.$jazz.id, sessionId)}
-                allSessions={activeSessions}
-              />
-            ))}
-            {/* Render child folders/templates recursively */}
-            {children.map((childNode) => renderTreeNode(childNode, level + 1))}
+            {/* Render templates in this folder */}
+            {folder.templates.map((template) => {
+              const sessions = template.sessions || [];
+              const activeSessions = sessions
+                .filter((s) => {
+                  if (!s || s.status === 'abandoned') return false;
+                  if (!showArchived && s.archived) return false;
+                  return true;
+                })
+                .sort((a, b) => {
+                  const dateA = a?.startedAt?.getTime() || 0;
+                  const dateB = b?.startedAt?.getTime() || 0;
+                  return dateB - dateA;
+                });
+
+              const hasTemplateChildren = activeSessions.length > 0;
+
+              return (
+                <FolderNodeView
+                  key={template.$jazz.id}
+                  template={template}
+                  level={level + 1}
+                  hasChildren={hasTemplateChildren}
+                  isSelected={selectedTemplateId === template.$jazz.id}
+                  onSelect={onTemplateSelect}
+                  onToggleExpand={() => {
+                    template.$jazz.set('archived', !template.archived);
+                    template.$jazz.set('updatedAt', new Date());
+                  }}
+                  onRename={handleRenameTemplate}
+                  onDelete={handleDeleteTemplate}
+                  onUseTemplate={onUseTemplate}
+                  onEditTemplate={onEditTemplate}
+                  account={account}
+                >
+                  {activeSessions.map((session) => (
+                    <SessionRowView
+                      key={session.$jazz.id}
+                      session={session}
+                      templateName={template.name}
+                      level={level + 2}
+                      onOpen={(sessionId) => {
+                        onOpenSession?.(template.$jazz.id, sessionId);
+                      }}
+                      onDelete={(sessionId) => handleDeleteSession(template.$jazz.id, sessionId)}
+                      onExport={(sessionId) => onExportSession?.(template.$jazz.id, sessionId)}
+                      allSessions={activeSessions}
+                    />
+                  ))}
+                </FolderNodeView>
+              );
+            })}
+            {/* Render child folders recursively */}
+            {folder.children.map((childFolder) => renderFolder(childFolder, level + 1))}
           </>
         )}
       </FolderNodeView>
@@ -240,11 +235,10 @@ export function TreeView({
   };
 
   // Determine button states
-  const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
-  const isTemplate = selectedNode?.type === 'template-folder';
-  const isFolder = selectedNode?.type === 'folder';
-  const canCreateFolderOrList = !selectedNodeId || isFolder;
-  const canEditOrUse = !!(selectedNodeId && isTemplate);
+  const selectedTemplate = selectedTemplateId
+    ? account.root?.templates?.find((t) => t?.$jazz.id === selectedTemplateId)
+    : null;
+  const canEditOrUse = !!selectedTemplate;
 
   return (
     <DndContext
@@ -258,19 +252,19 @@ export function TreeView({
       <div className="rounded-lg border border-neutral-200 bg-white">
         {/* Root-level drop zone with header */}
         <TreeViewHeader
-          isDragging={!!activeNode}
-          canCreateFolderOrList={canCreateFolderOrList}
+          isDragging={!!activeTemplate}
+          canCreateFolderOrList={true}
           canEditOrUse={canEditOrUse}
           showArchived={showArchived}
           onHeaderClick={onHeaderClick || (() => {})}
           onEditTemplate={() => {
-            if (selectedNodeId && onEditTemplate) {
-              onEditTemplate(selectedNodeId);
+            if (selectedTemplateId && onEditTemplate) {
+              onEditTemplate(selectedTemplateId);
             }
           }}
           onUseTemplate={() => {
-            if (selectedNodeId && onUseTemplate) {
-              onUseTemplate(selectedNodeId);
+            if (selectedTemplateId && onUseTemplate) {
+              onUseTemplate(selectedTemplateId);
             }
           }}
           onAddFolder={onAddFolder || (() => {})}
@@ -281,23 +275,23 @@ export function TreeView({
           onSignOut={onSignOut}
         />
 
-        {treeStructure.length === 0 ? (
+        {folderTree.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">
             <p>No lists yet.</p>
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
           </div>
         ) : (
           <div className="divide-y divide-neutral-100 p-2">
-            {treeStructure.map((treeNode) => renderTreeNode(treeNode))}
+            {folderTree.map((folder) => renderFolder(folder))}
           </div>
         )}
       </div>
 
       {/* Drag Overlay */}
       <DragOverlay>
-        {activeNode ? (
+        {activeTemplate ? (
           <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
-            <span className="font-medium">{activeNode.name}</span>
+            <span className="font-medium">{activeTemplate.name}</span>
           </div>
         ) : null}
       </DragOverlay>

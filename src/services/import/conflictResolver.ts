@@ -7,7 +7,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account } from '../../schemas';
 // Account type imported via InstanceOfSchema from '../../schemas';
-import { findFolderByPath } from './validators';
+import { findTemplateByPath } from './validators';
 
 /**
  * Generic helper to resolve naming conflicts by appending numbered suffixes
@@ -65,7 +65,7 @@ export function resolvePathConflict(
 ): { path: string; name: string } {
   const newPath = resolveNameConflict(
     originalPath,
-    (candidate) => !!findFolderByPath(candidate, account),
+    (candidate) => !!findTemplateByPath(candidate, account),
     (base, counter) => `${base}-(${counter})`,
   );
 

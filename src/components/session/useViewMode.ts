@@ -1,16 +1,16 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { FolderTree, Layers, List } from 'lucide-react';
-import type { Account, FolderNode, ListSession } from '@/schemas';
+import type { Account, Session, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 
 interface UseViewModeParams {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession> | null;
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session> | null;
   sessionId: string;
   me: InstanceOfSchema<typeof Account> | null;
 }
 
-export function useViewMode({ folder, session, sessionId, me }: UseViewModeParams) {
+export function useViewMode({ template, session, sessionId, me }: UseViewModeParams) {
   const currentViewMode = session?.viewMode || 'zone-in-hierarchy';
 
   const cycleViewMode = () => {
@@ -22,7 +22,7 @@ export function useViewMode({ folder, session, sessionId, me }: UseViewModeParam
         : current === 'hierarchy-in-zones'
           ? 'zone-in-hierarchy'
           : 'flat';
-    SessionService.updateViewMode(me, folder.$jazz.id, sessionId, next);
+    SessionService.updateViewMode(me, template.$jazz.id, sessionId, next);
   };
 
   const getViewModeLabel = () => {

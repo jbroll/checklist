@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, Template } from '../../schemas';
 import { parseCsv } from '../../utils/csvParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
 import { type BaseImportResult, importItems } from './baseImporter';
@@ -22,13 +22,13 @@ export type CsvImportResult = BaseImportResult;
  * If path is not provided, items are created at top level.
  *
  * @param csvContent - CSV content string
- * @param folder - Folder to import items into
+ * @param template - Template to import items into
  * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
 export function importItemsFromCsv(
   csvContent: string,
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   account: InstanceOfSchema<typeof Account>,
 ): CsvImportResult {
   // Parse CSV
@@ -69,5 +69,5 @@ export function importItemsFromCsv(
   }
 
   // Use base importer to handle the actual import
-  return importItems(itemsToImport, folder, account);
+  return importItems(itemsToImport, template, account);
 }

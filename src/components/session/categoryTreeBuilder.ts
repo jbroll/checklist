@@ -1,10 +1,9 @@
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { TemplateItem } from '@/schemas/tree';
+import type { TemplateItem } from '@/schemas';
 
 export interface CategoryNode {
   name: string;
   path: string;
-  items: InstanceOfSchema<typeof TemplateItem>[];
+  items: TemplateItem[];
   children: CategoryNode[];
   depth: number;
 }
@@ -12,7 +11,7 @@ export interface CategoryNode {
 /**
  * Builds a multi-level category tree structure from a flat list of items
  */
-export function buildCategoryTree(items: InstanceOfSchema<typeof TemplateItem>[]): CategoryNode[] {
+export function buildCategoryTree(items: TemplateItem[]): CategoryNode[] {
   const categoryMap = new Map<string, CategoryNode>();
   const rootCategories: CategoryNode[] = [];
 

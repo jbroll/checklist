@@ -1,16 +1,15 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
 import { IndentedRow } from '@/components/tree/IndentedRow';
-import type { ItemState, TemplateItem } from '@/schemas/tree';
+import type { ItemState, TemplateItem } from '@/schemas';
 import { SessionItemRow } from './SessionItemRow';
 
 interface SessionZoneProps {
   title: string;
   icon?: LucideIcon;
   zone: 'inventory' | 'cart' | 'completed';
-  items: InstanceOfSchema<typeof TemplateItem>[];
-  itemStates: Record<string, InstanceOfSchema<typeof ItemState>>;
+  items: TemplateItem[];
+  itemStates: Record<string, ItemState>;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleSelected: (itemId: string) => void;
@@ -44,7 +43,7 @@ export function SessionZone({
           <AnimatePresence mode="popLayout">
             {items.map((item) => (
               <motion.div
-                key={item.$jazz.id}
+                key={item.id}
                 layout
                 initial={{ opacity: 0, scale: 0.9, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -63,7 +62,7 @@ export function SessionZone({
               >
                 <SessionItemRow
                   item={item}
-                  state={itemStates[item.$jazz.id] || null}
+                  state={itemStates[item.id] || null}
                   zone={zone}
                   onToggleSelected={onToggleSelected}
                   onToggleChecked={onToggleChecked}
