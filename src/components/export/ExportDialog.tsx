@@ -98,7 +98,6 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
   // Get dynamic configuration based on context
   const getConfig = () => {
     if (folder && isTemplate) {
-      const itemCount = folder.items?.filter((item) => item && !item.archived).length || 0;
       return {
         title: `Export: ${folder.name}`,
         description: 'Choose format for export.',
@@ -155,19 +154,6 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
                   </div>
                 </Label>
               </div>
-            </div>
-
-            {/* Export details */}
-            <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">What will be exported:</div>
-              <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>
-                  {itemCount} list item{itemCount !== 1 ? 's' : ''}
-                </li>
-                <li>Active items only (archived items excluded)</li>
-                {format === 'json' && <li>All sessions (active and completed)</li>}
-                {format === 'csv' && <li>Category and sort order information</li>}
-              </ul>
             </div>
           </>
         ),
