@@ -40,7 +40,16 @@ export class ExportService {
       throw new Error(`Template not found: ${scope.folderId}`);
     }
 
-    return exportTemplate(template);
+    // Find the directory entry for this template to get its path
+    const dirEntry = account.root?.directory?.find(
+      (entry) => entry.type === 'template-ref' && entry.templateId === scope.folderId
+    );
+
+    if (!dirEntry) {
+      throw new Error(`Directory entry not found for template: ${scope.folderId}`);
+    }
+
+    return exportTemplate(template, dirEntry.path);
   }
 
   /**

@@ -6,7 +6,7 @@ import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
-import * as TemplateService from '@/services/templateService';
+import * as directoryService from '@/services/directoryService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
@@ -56,25 +56,29 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
     // Determine parent path based on selected template
     let parentPath: string | undefined;
     if (selectedTemplateId) {
-      const selectedTemplate = templates.find((t) => t?.$jazz.id === selectedTemplateId);
-      if (selectedTemplate) {
-        // Use the directory path of the selected template
-        const pathParts = selectedTemplate.path.split('/');
+      // Find the directory entry for the selected template
+      // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+      const entries = directoryService.getAllDirectoryEntries(me);
+      const selectedEntry = entries.find((e) =>
+        e.type === 'template-ref' && e.templateId === selectedTemplateId
+      );
+      if (selectedEntry) {
+        // Use the parent path of the selected entry
+        const pathParts = selectedEntry.path.split('/');
         parentPath = pathParts.slice(0, -1).join('/') || undefined;
       }
     }
 
-    // Create template (all items are now templates, folders are derived)
-    if (isTemplate) {
-      TemplateService.createTemplate(me, name, parentPath);
-    }
-    // For non-template "folders", we don't create anything - folders are virtual
+    // Create directory entry (folder or template-ref)
+    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+    directoryService.createDirectoryEntry(me, name, isTemplate, parentPath);
   };
 
   const handleUseTemplate = () => {
     if (!selectedTemplateId) return;
 
     // Create session using service
+    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
     const sessionId = SessionService.createSession(me, selectedTemplateId);
 
     // Navigate to shopping session view
@@ -116,12 +120,8 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   if (activeEditTemplateId) {
     const editTemplate = templates.find((t) => t?.$jazz.id === activeEditTemplateId);
     if (editTemplate) {
-      return (
-        <TemplateItemEditor
-          template={editTemplate}
-          onBack={handleBackFromEdit}
-        />
-      );
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+      return <TemplateItemEditor template={editTemplate as any} onBack={handleBackFromEdit} />;
     }
   }
 
@@ -129,9 +129,10 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   if (activeSessionTemplateId && activeSessionId) {
     const sessionTemplate = templates.find((t) => t?.$jazz.id === activeSessionTemplateId);
     if (sessionTemplate) {
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
       return (
         <SessionView
-          template={sessionTemplate}
+          template={sessionTemplate as any}
           sessionId={activeSessionId}
           onBack={handleBackToTemplates}
         />
@@ -140,11 +141,13 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   }
 
   // Otherwise show Template Editor
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  const accountAsAny = me as any;
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <main id="main-content" className="mx-auto max-w-4xl">
         <TreeView
-          account={me}
+          account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
           onTemplateSelect={handleTemplateSelect}
           onUseTemplate={handleUseTemplate}
@@ -177,9 +180,17 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
           description="Create a new list folder for frequently purchased items."
         />
 
-        <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} account={me} />
+        <ExportDialog
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+          account={accountAsAny}
+        />
 
-        <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={me} />
+        <ImportDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          account={accountAsAny}
+        />
 
         {/* Session Export Dialog */}
         {sessionExportData &&
@@ -189,14 +200,15 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
               (s) => s?.$jazz.id === sessionExportData.sessionId,
             );
             if (template && session) {
+              // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
               return (
                 <SessionExportDialog
                   open={showSessionExportDialog}
                   onOpenChange={setShowSessionExportDialog}
-                  template={template}
+                  template={template as any}
                   sessionId={sessionExportData.sessionId}
                   sessionName={session.name}
-                  account={me}
+                  account={accountAsAny}
                 />
               );
             }

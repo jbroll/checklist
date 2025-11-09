@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template } from '../../schemas';
+import type { Account } from '../../schemas';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
@@ -94,8 +94,8 @@ export function validateJsonData(
           stats.totalSessions += folder.sessions.length;
         }
 
-        // Check for path conflicts
-        if (folder.path && pathExists(folder.path, account)) {
+        // Check for path conflicts in directory
+        if (folder.path && directoryPathExists(folder.path, account)) {
           stats.duplicateFolders++;
         }
       }
@@ -273,46 +273,34 @@ function isValidISODate(dateString: string): boolean {
 }
 
 /**
- * Check if a path already exists in the account
+ * Check if a path already exists in the directory
  *
  * @param path - Path to check
  * @param account - User's account
- * @returns true if path exists
+ * @returns true if path exists in directory
  */
-function pathExists(path: string, account: InstanceOfSchema<typeof Account>): boolean {
-  if (!account.root?.templates) {
+function directoryPathExists(path: string, account: InstanceOfSchema<typeof Account>): boolean {
+  if (!account.root?.directory) {
     return false;
   }
 
-  for (const template of account.root.templates) {
-    if (template && template.path === path) {
-      return true;
-    }
-  }
-
-  return false;
+  return account.root.directory.some((entry) => entry.path === path && !entry.archived);
 }
 
 /**
- * Find a template by path
+ * Find a directory entry by path
  *
  * @param path - Path to search for
  * @param account - User's account
- * @returns Template or null if not found
+ * @returns Directory entry or null if not found
  */
-export function findTemplateByPath(
+export function findDirectoryEntryByPath(
   path: string,
   account: InstanceOfSchema<typeof Account>,
-): InstanceOfSchema<typeof Template> | null {
-  if (!account.root?.templates) {
+): import('../../schemas').DirectoryEntry | null {
+  if (!account.root?.directory) {
     return null;
   }
 
-  for (const template of account.root.templates) {
-    if (template && template.path === path) {
-      return template;
-    }
-  }
-
-  return null;
+  return account.root.directory.find((entry) => entry.path === path && !entry.archived) || null;
 }

@@ -6,12 +6,12 @@
 
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { type Account, Template, Session } from '../../schemas';
+import { type Account, type DirectoryEntry, Template, Session } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
 import type { ExportedData, ExportedFolder, ExportedSession } from '../export/types';
 import { resolvePathConflict } from './conflictResolver';
 import type { ImportResult } from './types';
-import { findTemplateByPath, validateJsonData } from './validators';
+import { findDirectoryEntryByPath, validateJsonData } from './validators';
 
 /**
  * Import JSON data into user's account
@@ -90,10 +90,14 @@ async function importFolders(
   // Import each folder
   for (const exportedFolder of data.folders) {
     try {
-      const { template, stats } = await importFolder(exportedFolder, account);
+      const { template, directoryEntry, stats } = await importFolder(exportedFolder, account);
 
-      // Add to root
+      // Add template to root
       account.root.templates.$jazz.push(template);
+
+      // Add directory entry to root
+      const updatedDirectory = [...account.root.directory, directoryEntry];
+      account.root.$jazz.set('directory', updatedDirectory);
 
       // Track stats
       foldersCreated++;
@@ -136,22 +140,23 @@ async function importFolders(
  *
  * @param exportedFolder - Exported folder data
  * @param account - User's account
- * @returns Created template and stats
+ * @returns Created template, directory entry, and stats
  */
 async function importFolder(
   exportedFolder: ExportedFolder,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<{
   template: InstanceOfSchema<typeof Template>;
+  directoryEntry: DirectoryEntry;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
 }> {
-  // Check for path conflict
-  const existingTemplate = findTemplateByPath(exportedFolder.path, account);
+  // Check for path conflict in directory
+  const existingEntry = findDirectoryEntryByPath(exportedFolder.path, account);
   let finalPath = exportedFolder.path;
   let finalName = exportedFolder.name;
   let pathConflict = false;
 
-  if (existingTemplate) {
+  if (existingEntry) {
     const resolved = resolvePathConflict(exportedFolder.path, exportedFolder.name, account);
     finalPath = resolved.path;
     finalName = resolved.name;
@@ -170,7 +175,7 @@ async function importFolder(
  * @param name - Final name (after conflict resolution)
  * @param account - User's account
  * @param pathConflict - Whether path was changed
- * @returns Created template and stats
+ * @returns Created template, directory entry, and stats
  */
 async function importTemplateFolder(
   exportedFolder: ExportedFolder,
@@ -180,6 +185,7 @@ async function importTemplateFolder(
   pathConflict: boolean,
 ): Promise<{
   template: InstanceOfSchema<typeof Template>;
+  directoryEntry: DirectoryEntry;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
 }> {
   // Import template items as plain objects
@@ -204,12 +210,10 @@ async function importTemplateFolder(
     }
   }
 
-  // Create template
+  // Create template (path and archived are now in DirectoryEntry, not Template)
   const template = Template.create(
     {
       name,
-      path,
-      archived: false,
       items,
       sessions: [],
       currentSessionId: undefined,
@@ -247,8 +251,23 @@ async function importTemplateFolder(
     }
   }
 
+  // Create directory entry for this template
+  const now = new Date();
+  const directoryEntry: DirectoryEntry = {
+    id: crypto.randomUUID(),
+    name,
+    type: 'template-ref',
+    path,
+    expanded: false,
+    archived: false,
+    templateId: template.$jazz?.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+
   return {
     template,
+    directoryEntry,
     stats: {
       itemsAdded: items.length,
       sessionsCreated: sessions.length,

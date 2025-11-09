@@ -12,6 +12,22 @@ export function setAccountReference(account: any) {
 }
 
 /**
+ * DirectoryEntry - Lightweight directory entry (like filesystem dentry)
+ * Points to either a folder or a template "inode"
+ */
+export type DirectoryEntry = {
+  id: string; // Unique entry ID
+  name: string;
+  type: 'folder' | 'template-ref';
+  path: string; // Hierarchical path
+  expanded: boolean;
+  archived: boolean;
+  templateId?: string; // For template-ref: ID of Template "inode"
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
  * TemplateItem - Plain JSON object (not a CoValue)
  * Represents a hierarchical category or item node within a template.
  */
@@ -80,14 +96,11 @@ export const Session = co.map({
 });
 
 /**
- * Template - Single CoValue containing items and sessions
- * Path defines position in folder hierarchy (e.g., "grocery-stores/wegmans/weekly")
- * Folders are inferred from template paths - no separate folder entities.
+ * Template - The actual template data (loaded on-demand like an inode)
+ * Directory entries point to these by ID
  */
 export const Template = co.map({
   name: z.string(),
-  path: z.string(), // Full path including template name: "grocery-stores/wegmans/weekly"
-  archived: z.boolean(), // Soft delete flag
 
   // Items as plain JSON array (not CoValues)
   items: z.array(z.object({

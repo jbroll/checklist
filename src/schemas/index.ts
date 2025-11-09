@@ -3,25 +3,39 @@ import {
   Session,
   Template,
   setAccountReference,
+  type DirectoryEntry,
   type ItemState,
   type TemplateItem,
 } from './tree';
 
 /**
- * ListsRoot - Root schema for user's templates
- * Flat list of templates with folder structure inferred from paths.
- * UI state for folder tree (which folders are expanded) stored here.
+ * ListsRoot - Root schema with directory + templates
+ *
+ * Like a filesystem:
+ * - directory: Lightweight entries (dentries) with folder structure and template IDs
+ * - templates: Template "inodes" loaded on-demand
  */
 export const ListsRoot = co.map({
-  templates: co.list(Template),
+  // Lightweight directory - fast loading tree structure
+  directory: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.enum(['folder', 'template-ref']),
+    path: z.string(),
+    expanded: z.boolean(),
+    archived: z.boolean(),
+    templateId: z.optional(z.string()),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  })),
 
-  // UI state for folder tree (path → expanded)
-  folderExpanded: co.record(z.string(), z.boolean()),
+  // Template "inodes" - loaded on-demand when editing/using
+  templates: co.list(Template),
 });
 
 /**
  * Account Schema
- * Each user has a root containing their templates and folder UI state.
+ * Each user has a root containing their directory and templates.
  */
 export const Account = co
   .account({
@@ -32,10 +46,10 @@ export const Account = co
     // Initialize root for new accounts
     if (!account.$jazz.has('root')) {
       const templates = co.list(Template).create([], { owner: account });
-      const folderExpanded = {};
+      const directory: DirectoryEntry[] = [];
       account.$jazz.set(
         'root',
-        ListsRoot.create({ templates, folderExpanded }, { owner: account })
+        ListsRoot.create({ directory, templates }, { owner: account })
       );
       return;
     }
@@ -46,8 +60,8 @@ export const Account = co
       const templates = co.list(Template).create([], { owner: account });
       root.$jazz.set('templates', templates);
     }
-    if (root && !root.$jazz.has('folderExpanded')) {
-      root.$jazz.set('folderExpanded', {});
+    if (root && !root.$jazz.has('directory')) {
+      root.$jazz.set('directory', []);
     }
   });
 
@@ -55,4 +69,4 @@ export const Account = co
 setAccountReference(Account);
 
 // Re-export tree schemas and types for easy importing
-export { Template, Session, type TemplateItem, type ItemState };
+export { Template, Session, type DirectoryEntry, type TemplateItem, type ItemState };

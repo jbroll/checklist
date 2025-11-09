@@ -6,7 +6,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Session, Template, TemplateItem } from '../schemas';
+import type { Account, DirectoryEntry, Session, Template, TemplateItem } from '../schemas';
+import * as DirectoryService from './directoryService';
 import * as ExportService from './export/exportService';
 import { importJson } from './import/jsonImporter';
 import type { TxtImportResult } from './import/txtImporter';
@@ -34,16 +35,23 @@ export function exposeServicesToWindow(
 
   // Expose services
   window.__testServices = {
-    // Template operations
+    // Directory operations (for creating/managing folders and template references)
+    directory: {
+      create: (name: string, isTemplate: boolean, parentPath?: string | null) =>
+        withAccount((acc) => DirectoryService.createDirectoryEntry(acc, name, isTemplate, parentPath)),
+      get: (entryId: string) => withAccount((acc) => DirectoryService.getDirectoryEntry(acc, entryId)),
+      getAll: () => withAccount((acc) => DirectoryService.getAllDirectoryEntries(acc)),
+      rename: (entryId: string, newName: string) =>
+        withAccount((acc) => DirectoryService.renameDirectoryEntry(acc, entryId, newName)),
+      archive: (entryId: string) =>
+        withAccount((acc) => DirectoryService.archiveDirectoryEntry(acc, entryId)),
+      exists: (entryId: string) => withAccount((acc) => DirectoryService.entryExists(acc, entryId)),
+    },
+
+    // Template operations (for accessing template data)
     template: {
-      create: (name: string, parentPath?: string) =>
-        withAccount((acc) => TemplateService.createTemplate(acc, name, parentPath)),
       get: (templateId: string) => withAccount((acc) => TemplateService.getTemplate(acc, templateId)),
       getAll: () => withAccount((acc) => TemplateService.getAllTemplates(acc)),
-      rename: (templateId: string, newName: string) =>
-        withAccount((acc) => TemplateService.renameTemplate(acc, templateId, newName)),
-      archive: (templateId: string) =>
-        withAccount((acc) => TemplateService.archiveTemplate(acc, templateId)),
       exists: (templateId: string) => withAccount((acc) => TemplateService.templateExists(acc, templateId)),
     },
 
@@ -120,12 +128,17 @@ export function exposeServicesToWindow(
 declare global {
   interface Window {
     __testServices?: {
+      directory: {
+        create: (name: string, isTemplate: boolean, parentPath?: string | null) => { entryId: string; templateId?: string };
+        get: (entryId: string) => DirectoryEntry | null;
+        getAll: () => DirectoryEntry[];
+        rename: (entryId: string, newName: string) => void;
+        archive: (entryId: string) => void;
+        exists: (entryId: string) => boolean;
+      };
       template: {
-        create: (name: string, parentPath?: string) => string;
         get: (templateId: string) => InstanceOfSchema<typeof Template> | null;
         getAll: () => Array<InstanceOfSchema<typeof Template>>;
-        rename: (templateId: string, newName: string) => void;
-        archive: (templateId: string) => void;
         exists: (templateId: string) => boolean;
       };
       item: {
