@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Help - BubbleList</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --bg-light: #f9fafb;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg-light);
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      color: var(--text);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-light);
+    }
+
+    ul {
+      margin: 0.5rem 0 1rem 1.5rem;
+      color: var(--text-light);
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    code {
+      background: var(--bg-light);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+      color: var(--primary);
+    }
+
+    .format-section {
+      background: var(--bg-light);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid var(--primary);
+    }
+
+    .example {
+      background: #f3f4f6;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.875rem;
+      overflow-x: auto;
+    }
+
+    .note {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Import Help</h1>
+    <p class="subtitle">Understanding BubbleList import formats and options</p>
+
+    <h2>Supported File Formats</h2>
+
+    <div class="format-section">
+      <h3>JSON Format</h3>
+      <p><strong>Use for:</strong> Full backups, folder structures, or complete template exports</p>
+      <ul>
+        <li>Preserves complete hierarchy including folders, items, and shopping sessions</li>
+        <li>Maintains all metadata (categories, sort order, quantities, etc.)</li>
+        <li>Can import entire folder structures or individual templates</li>
+        <li>Auto-renames duplicates to prevent conflicts</li>
+      </ul>
+      <div class="example">
+{
+  "name": "Grocery Store",
+  "type": "template-folder",
+  "items": [
+    {
+      "name": "Produce",
+      "type": "category",
+      "items": [
+        {
+          "name": "Apples",
+          "type": "item",
+          "defaultQuantity": "2 lbs"
+        }
+      ]
+    }
+  ]
+}
+      </div>
+    </div>
+
+    <div class="format-section">
+      <h3>TXT Format</h3>
+      <p><strong>Use for:</strong> Simple item lists, quick imports, or creating new shopping lists</p>
+      <ul>
+        <li>One item name per line</li>
+        <li>Items are automatically categorized</li>
+        <li>Duplicate items are skipped</li>
+        <li>Blank lines are ignored</li>
+      </ul>
+      <div class="example">
+Apples
+Bananas
+Milk
+Bread
+Eggs
+      </div>
+    </div>
+
+    <div class="format-section">
+      <h3>CSV Format</h3>
+      <p><strong>Use for:</strong> Structured imports with categories and quantities</p>
+      <ul>
+        <li>Columns: <code>name</code>, <code>category</code>, <code>sortOrder</code>, <code>defaultQuantity</code></li>
+        <li>Header row is optional (auto-detected)</li>
+        <li>Missing categories are auto-assigned</li>
+        <li>Duplicate items are skipped</li>
+      </ul>
+      <div class="example">
+name,category,sortOrder,defaultQuantity
+Apples,Produce,1,2 lbs
+Bananas,Produce,2,1 bunch
+Milk,Dairy,1,1 gallon
+      </div>
+    </div>
+
+    <h2>Import Contexts</h2>
+
+    <h3>Top-Level Import</h3>
+    <p>Import from the main dashboard (no folder selected):</p>
+    <ul>
+      <li><strong>JSON:</strong> Imports full backup with all folders and templates</li>
+      <li><strong>TXT/CSV:</strong> Creates a new shopping list at the root level</li>
+    </ul>
+
+    <h3>Folder Import</h3>
+    <p>Import into an organizational folder:</p>
+    <ul>
+      <li><strong>JSON only:</strong> Imports folder structure with sub-folders and templates</li>
+      <li>Existing items are preserved (never overwritten)</li>
+    </ul>
+
+    <h3>Template Import</h3>
+    <p>Import into a template folder (shopping list):</p>
+    <ul>
+      <li><strong>JSON:</strong> Imports template items with full metadata</li>
+      <li><strong>TXT/CSV:</strong> Appends items to the existing list</li>
+      <li>Duplicate items (by name) are automatically skipped</li>
+    </ul>
+
+    <h2>Common Questions</h2>
+
+    <h3>What happens to duplicate items?</h3>
+    <p>Items with identical names are skipped during import. You'll see a summary of skipped duplicates after import completes.</p>
+
+    <h3>What happens to duplicate folders?</h3>
+    <p>Folders with the same name are automatically renamed with a numbered suffix: <code>(1)</code>, <code>(2)</code>, <code>(3)</code>, etc.</p>
+
+    <h3>Can I undo an import?</h3>
+    <p>Imports cannot be undone automatically. However, since imports never overwrite existing data, your original items remain intact. You can manually delete imported items if needed.</p>
+
+    <h3>What's the maximum file size?</h3>
+    <p>Import files are limited to 10 MB. This is sufficient for thousands of items and hundreds of folders.</p>
+
+    <div class="note">
+      <strong>Note:</strong> This help page covers the basics. Specific format details and advanced features will be documented as the import system evolves.
+    </div>
+  </div>
+</body>
+</html>
