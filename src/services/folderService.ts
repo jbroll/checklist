@@ -140,27 +140,17 @@ export function moveFolder(
 ): void {
   const oldPath = nodeToMove.path;
 
-  console.log('📦 moveFolder called', {
-    nodeName: nodeToMove.name,
-    nodeType: nodeToMove.type,
-    oldPath,
-    newParentPath,
-  });
-
   // Use pure function to calculate new path and validate
   const pathResult = calculateNewPath(nodeToMove.name, oldPath, newParentPath);
 
   if (!pathResult.isValid) {
     if (pathResult.error === 'Already at this location') {
-      console.log('⏭️ Same location, skipping move');
       return;
     }
-    console.error('❌', pathResult.error);
     throw new Error(pathResult.error);
   }
 
   const newPath = pathResult.newPath;
-  console.log('✅ New path calculated:', newPath);
 
   // Update the moved node's path
   nodeToMove.$jazz.set('path', newPath);
@@ -179,13 +169,8 @@ export function moveFolder(
   for (const update of descendantUpdates) {
     const node = allNodes.find((n) => n.$jazz.id === update.id);
     if (node) {
-      console.log(
-        `🔄 Updating descendant "${node.name}": "${update.oldPath}" → "${update.newPath}"`,
-      );
       node.$jazz.set('path', update.newPath);
       node.$jazz.set('updatedAt', new Date());
     }
   }
-
-  console.log('✅ Move completed');
 }
