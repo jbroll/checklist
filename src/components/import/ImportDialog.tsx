@@ -1,21 +1,12 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FileUploadDialog } from '@/components/ui/file-upload-dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { Account } from '@/schemas';
 import { ImportService } from '@/services/import/importService';
 import type { ImportResult } from '@/services/import/types';
-import { isValidFileSize, isValidFileType } from '@/utils/fileUpload';
 
 interface ImportDialogProps {
   open: boolean;
@@ -25,322 +16,175 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ open, onOpenChange, account, onImportComplete }: ImportDialogProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      validateAndSetFile(file);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      validateAndSetFile(file);
-    }
-  };
-
-  const validateAndSetFile = (file: File) => {
-    // Validate file type - accept JSON, TXT, or CSV
-    if (!isValidFileType(file, ['json', 'txt', 'csv'])) {
-      alert('Please select a JSON, TXT, or CSV file');
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (!isValidFileSize(file, 10)) {
-      alert('File size exceeds 10MB limit');
-      return;
-    }
-
-    // Determine file type from extension
-    const fileName = file.name.toLowerCase();
-    let detectedType: 'json' | 'txt' | 'csv';
-    if (fileName.endsWith('.json')) {
-      detectedType = 'json';
-    } else if (fileName.endsWith('.csv')) {
-      detectedType = 'csv';
-    } else {
-      detectedType = 'txt';
-    }
-
+  const handleUpload = async (file: File, detectedType: 'json' | 'txt' | 'csv') => {
     setFileType(detectedType);
-    setSelectedFile(file);
-    setImportResult(null);
-
-    // Auto-generate template name from filename (for TXT/CSV)
-    if (detectedType !== 'json' && !templateName) {
-      const baseName = file.name.replace(/\.(txt|csv)$/i, '');
-      setTemplateName(baseName);
-    }
-  };
-
-  const handleImport = async () => {
-    if (!selectedFile || !fileType) return;
 
     // For TXT/CSV, require list name
-    if (fileType !== 'json' && !templateName.trim()) {
-      alert('Please enter a list name');
-      return;
+    if (detectedType !== 'json' && !templateName.trim()) {
+      throw new Error('Please enter a list name');
     }
 
-    setIsImporting(true);
-    setImportResult(null);
+    let result: ImportResult;
 
-    try {
-      let result: ImportResult;
-
-      if (fileType === 'json') {
-        // JSON import: Full folder structure
-        result = await ImportService.importFromFile(selectedFile, account, 'json');
-      } else {
-        // TXT/CSV import: Create new template at root
-        result = await ImportService.importAsNewTemplate(
-          selectedFile,
-          account,
-          templateName.trim(),
-          fileType,
-        );
-      }
-
-      setImportResult(result);
-
-      if (result.success) {
-        // Auto-close after successful import
-        setTimeout(() => {
-          onImportComplete?.();
-          onOpenChange(false);
-          handleReset();
-        }, 2000);
-      }
-    } catch (error) {
-      setImportResult({
-        success: false,
-        errors: [`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
-        warnings: [],
-        stats: {},
-      });
-    } finally {
-      setIsImporting(false);
+    if (detectedType === 'json') {
+      result = await ImportService.importFromFile(file, account, 'json');
+    } else {
+      result = await ImportService.importAsNewTemplate(
+        file,
+        account,
+        templateName.trim(),
+        detectedType,
+      );
     }
+
+    if (result.success) {
+      setTimeout(() => {
+        onImportComplete?.();
+        onOpenChange(false);
+        setFileType(null);
+        setTemplateName('');
+      }, 2000);
+    }
+
+    return result;
   };
 
-  const handleReset = () => {
-    setSelectedFile(null);
-    setFileType(null);
-    setTemplateName('');
-    setImportResult(null);
-    setIsDragging(false);
-  };
+  const renderResult = (result: ImportResult) => (
+    <output
+      aria-live="polite"
+      aria-atomic="true"
+      className={`rounded-lg border p-4 ${
+        result.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        {result.success ? (
+          <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
+        ) : (
+          <AlertCircle className="h-5 w-5 text-red-600" aria-hidden="true" />
+        )}
+        <div className="flex-1">
+          <div className={`font-medium ${result.success ? 'text-green-900' : 'text-red-900'}`}>
+            {result.success ? 'Import Successful!' : 'Import Failed'}
+          </div>
 
-  const handleCancel = () => {
-    handleReset();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle>Import Grocery Data</DialogTitle>
-          <DialogDescription>
-            Import full backup (JSON) or create new list from items list (TXT/CSV).
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          {/* Template name input for TXT/CSV */}
-          {selectedFile && fileType !== 'json' && !importResult && (
-            <FormField label="List name" htmlFor="template-name" required>
-              <Input
-                id="template-name"
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Enter list name..."
-              />
-            </FormField>
-          )}
-
-          {/* File upload area */}
-          {!selectedFile && (
-            // biome-ignore lint/a11y/useSemanticElements: Drag-drop zone, not a clickable button
-            <div
-              role="button"
-              tabIndex={0}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-                isDragging ? 'border-green-500 bg-green-50' : 'border-neutral-300 bg-neutral-50'
-              }`}
-            >
-              <Upload
-                className={`mb-3 h-12 w-12 ${isDragging ? 'text-green-600' : 'text-neutral-400'}`}
-              />
-              <p className="mb-2 text-sm font-medium text-neutral-700">
-                {isDragging ? 'Drop file here' : 'Drop JSON, TXT, or CSV file here or'}
-              </p>
-              <label
-                htmlFor="file-upload"
-                className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
-              >
-                Browse Files
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".json,.txt,.csv"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <p className="mt-2 text-xs text-neutral-500">JSON, TXT, or CSV files, up to 10MB</p>
+          {result.success && result.stats && (
+            <div className="mt-2 space-y-1 text-sm text-green-800">
+              {result.stats.foldersCreated !== undefined && (
+                <div>• {result.stats.foldersCreated} folder(s) imported</div>
+              )}
+              {result.stats.itemsAdded !== undefined && (
+                <div>• {result.stats.itemsAdded} item(s) added</div>
+              )}
+              {result.stats.sessionsCreated !== undefined && (
+                <div>• {result.stats.sessionsCreated} session(s) created</div>
+              )}
             </div>
           )}
 
-          {/* Selected file info */}
-          {selectedFile && !importResult && (
-            <div className="rounded-lg border border-neutral-200 bg-white p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-medium text-neutral-900">{selectedFile.name}</div>
-                  <div className="text-sm text-neutral-600">
-                    {(selectedFile.size / 1024).toFixed(1)} KB
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleReset}
-                  variant="link"
-                  className="text-neutral-500 hover:text-neutral-700"
-                >
-                  Change
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Import result */}
-          {importResult && (
-            <output
-              aria-live="polite"
-              aria-atomic="true"
-              className={`rounded-lg border p-4 ${
-                importResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {importResult.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600" aria-hidden="true" />
-                )}
-                <div className="flex-1">
-                  <div
-                    className={`font-medium ${importResult.success ? 'text-green-900' : 'text-red-900'}`}
-                  >
-                    {importResult.success ? 'Import Successful!' : 'Import Failed'}
-                  </div>
-
-                  {/* Success stats */}
-                  {importResult.success && importResult.stats && (
-                    <div className="mt-2 space-y-1 text-sm text-green-800">
-                      {importResult.stats.foldersCreated !== undefined && (
-                        <div>• {importResult.stats.foldersCreated} folder(s) imported</div>
-                      )}
-                      {importResult.stats.itemsAdded !== undefined && (
-                        <div>• {importResult.stats.itemsAdded} item(s) added</div>
-                      )}
-                      {importResult.stats.sessionsCreated !== undefined && (
-                        <div>• {importResult.stats.sessionsCreated} session(s) created</div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Warnings */}
-                  {importResult.warnings.length > 0 && (
-                    <div className="mt-3 text-sm">
-                      <div className="font-medium text-amber-900">Warnings:</div>
-                      <ul className="ml-4 mt-1 list-disc text-amber-800">
-                        {importResult.warnings.map((warning) => (
-                          <li key={warning}>{warning}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Errors */}
-                  {importResult.errors.length > 0 && (
-                    <div className="mt-2 text-sm">
-                      <ul className="ml-4 list-disc text-red-800">
-                        {importResult.errors.map((error) => (
-                          <li key={error}>{error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </output>
-          )}
-
-          {/* Info box */}
-          {!importResult && (
-            <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">File formats:</div>
-              <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>
-                  <strong>JSON:</strong> Full backup with folders, items, and sessions
-                </li>
-                <li>
-                  <strong>TXT/CSV:</strong> Creates new list at root with imported items
-                </li>
+          {result.warnings.length > 0 && (
+            <div className="mt-3 text-sm">
+              <div className="font-medium text-amber-900">Warnings:</div>
+              <ul className="ml-4 mt-1 list-disc text-amber-800">
+                {result.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
               </ul>
-              <div className="mt-3 font-medium">Import rules:</div>
-              <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>Duplicate folders renamed with numbered suffix (1), (2), (3)...</li>
-                <li>Items auto-categorized if category not provided</li>
-                <li>Existing data will never be overwritten</li>
+            </div>
+          )}
+
+          {result.errors.length > 0 && (
+            <div className="mt-2 text-sm">
+              <ul className="ml-4 list-disc text-red-800">
+                {result.errors.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
               </ul>
             </div>
           )}
         </div>
+      </div>
+    </output>
+  );
 
-        <DialogFooter>
-          <Button type="button" onClick={handleCancel} disabled={isImporting} variant="secondary">
-            {importResult?.success ? 'Close' : 'Cancel'}
-          </Button>
-          {!importResult && (
-            <Button
-              type="button"
-              onClick={handleImport}
-              disabled={!selectedFile || isImporting}
-              variant="primary"
-            >
-              <Upload className="h-4 w-4" />
-              {isImporting ? 'Importing...' : 'Import'}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+  return (
+    <FileUploadDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setFileType(null);
+          setTemplateName('');
+        }
+        onOpenChange(isOpen);
+      }}
+      title="Import Grocery Data"
+      description="Import full backup (JSON) or create new list from items list (TXT/CSV)."
+      acceptedFileTypes={['json', 'txt', 'csv']}
+      maxSizeMB={10}
+      onUpload={handleUpload}
+      renderResult={renderResult}
+      uploadButtonText="Import"
+      canUpload={(file) => {
+        if (!file) return false;
+        // For JSON, always allow. For TXT/CSV, require template name
+        return fileType === 'json' || templateName.trim().length > 0;
+      }}
+      formFields={(file, result) => {
+        // Auto-detect file type and generate template name
+        if (file && !fileType) {
+          const fileName = file.name.toLowerCase();
+          let detectedType: 'json' | 'txt' | 'csv';
+          if (fileName.endsWith('.json')) {
+            detectedType = 'json';
+          } else if (fileName.endsWith('.csv')) {
+            detectedType = 'csv';
+          } else {
+            detectedType = 'txt';
+          }
+          setFileType(detectedType);
+
+          // Auto-generate template name from filename (for TXT/CSV)
+          if (detectedType !== 'json' && !templateName) {
+            const baseName = file.name.replace(/\.(txt|csv)$/i, '');
+            setTemplateName(baseName);
+          }
+        }
+
+        // Show template name input only for TXT/CSV and when no result
+        return file && fileType !== 'json' && !result ? (
+          <FormField label="List name" htmlFor="template-name" required>
+            <Input
+              id="template-name"
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Enter list name..."
+            />
+          </FormField>
+        ) : null;
+      }}
+      infoContent={
+        <>
+          <div className="font-medium">File formats:</div>
+          <ul className="ml-4 mt-2 list-disc space-y-1">
+            <li>
+              <strong>JSON:</strong> Full backup with folders, items, and sessions
+            </li>
+            <li>
+              <strong>TXT/CSV:</strong> Creates new list at root with imported items
+            </li>
+          </ul>
+          <div className="mt-3 font-medium">Import rules:</div>
+          <ul className="ml-4 mt-2 list-disc space-y-1">
+            <li>Duplicate folders renamed with numbered suffix (1), (2), (3)...</li>
+            <li>Items auto-categorized if category not provided</li>
+            <li>Existing data will never be overwritten</li>
+          </ul>
+        </>
+      }
+    />
   );
 }
