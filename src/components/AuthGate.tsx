@@ -24,11 +24,10 @@ export function AuthGate() {
           const session = await betterAuthClient.getSession();
 
           if (session?.data?.user?.name) {
-            console.log('Syncing profile name from BetterAuth:', session.data.user.name);
             me.profile.$jazz.set('name', session.data.user.name);
           }
-        } catch (error) {
-          console.error('Error syncing profile name:', error);
+        } catch {
+          // Silently ignore profile sync errors
         }
       }
     };
@@ -47,9 +46,8 @@ export function AuthGate() {
         callbackURL: `${window.location.origin}/`,
       });
       // Note: Profile name will be synced via useEffect after redirect
-    } catch (error) {
-      console.error('Google sign-in error:', error);
-      alert('Google sign-in failed. Check the console for details.');
+    } catch {
+      alert('Google sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -68,16 +66,16 @@ export function AuthGate() {
     // Sign out from BetterAuth first (clear server session)
     try {
       await betterAuthClient.signOut();
-    } catch (error) {
-      console.log('BetterAuth signOut error:', error);
+    } catch {
+      // Silently ignore signOut errors
     }
 
     // Sign out from Jazz (this clears the local account and triggers state change)
     // The state change will automatically show the login screen, no reload needed
     try {
       await logOut();
-    } catch (error) {
-      console.log('Jazz logOut error:', error);
+    } catch {
+      // Silently ignore logOut errors
     }
   };
 

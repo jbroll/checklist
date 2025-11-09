@@ -103,12 +103,6 @@ export function TreeView({
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     const draggedNode = event.active.data.current?.node as InstanceOfSchema<typeof FolderNode>;
-    console.log('🎯 DRAG START:', {
-      name: draggedNode?.name,
-      type: draggedNode?.type,
-      path: draggedNode?.path,
-      id: draggedNode?.$jazz.id,
-    });
     setActiveNode(draggedNode);
   };
 
@@ -119,100 +113,56 @@ export function TreeView({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    console.log('\n🏁 DRAG END:', {
-      hasOver: !!over,
-      hasActiveData: !!active.data.current,
-      overId: over?.id,
-    });
-
     setActiveNode(null);
 
     if (!over || !active.data.current) {
-      console.log('❌ No valid drop target');
       return;
     }
 
     const draggedNode = active.data.current.node as InstanceOfSchema<typeof FolderNode>;
     const overData = over.data.current;
 
-    console.log('📦 Drop details:', {
-      draggedName: draggedNode?.name,
-      draggedPath: draggedNode?.path,
-      draggedType: draggedNode?.type,
-      overData: overData,
-    });
-
     // CRITICAL: Check if we're dropping on a template node - reject immediately
     // Templates are leaf nodes and cannot accept drops or affect positioning
     const overNode = overData?.node as InstanceOfSchema<typeof FolderNode> | undefined;
     if (overNode?.type === 'template-folder') {
       // Ignore all drops on template nodes - they are leaf nodes
-      console.log('🚫 Drop on template ignored - templates cannot contain children', {
-        draggedNode: draggedNode.name,
-        targetTemplate: overNode.name,
-      });
       return;
     }
 
     // CRITICAL: Check if we're dropping a folder onto itself - reject immediately
     if (overNode && draggedNode.$jazz.id === overNode.$jazz.id) {
-      console.log('🚫 Cannot drop a folder onto itself', {
-        folderName: draggedNode.name,
-      });
       return;
     }
-
-    console.log('✅ Validations passed, determining new parent path...');
 
     // Determine the new parent path
     let newParentPath: string | undefined;
 
-    console.log('🔍 Determining target location:', {
-      isFolder: overData?.isFolder,
-      hasNode: !!overData?.node,
-      overPath: overData?.path,
-    });
-
     // IMPORTANT: Check virtual root zone FIRST
     if (overData?.path === '__ROOT_DROP_ZONE__') {
       newParentPath = undefined; // Move to root level
-      console.log('📍 Dropping into ROOT zone');
     } else if (overData?.isFolder) {
       // Dropped on an organizational folder - move inside it
       newParentPath = overData.path as string;
-      console.log(`📂 Dropping INTO folder: "${newParentPath}"`);
     } else if (overData?.node) {
       // Dropped on another node - move to same parent
       const targetNodePath = (overData.node as InstanceOfSchema<typeof FolderNode>).path;
       newParentPath = getParentPath(targetNodePath);
-      console.log(
-        `📍 Dropping NEXT TO node at path "${targetNodePath}" → parent: "${newParentPath || '<ROOT>'}"`,
-      );
     } else {
       // No valid drop target
-      console.log('❌ No valid drop target data');
       return;
     }
 
     // Don't move if dropped on same location
     const currentParentPath = getParentPath(draggedNode.path);
-    console.log('📍 Location check:', {
-      currentParent: currentParentPath || '<ROOT>',
-      newParent: newParentPath || '<ROOT>',
-      isSameLocation: newParentPath === currentParentPath,
-    });
 
     if (newParentPath === currentParentPath) {
-      console.log('⏭️  Already in this location, skipping');
       return;
     }
 
-    console.log('🚀 Calling moveFolder...\n');
     try {
       moveFolder(account, draggedNode, newParentPath);
-      console.log('✅ Move completed successfully\n');
-    } catch (error) {
-      console.error('❌ Move failed:', error);
+    } catch {
       // Silently ignore expected validation errors (moving into self, naming conflicts)
     }
   };
@@ -274,13 +224,6 @@ export function TreeView({
                   // Use the session's templateFolderId, not the current node's ID
                   // Sessions store which template they belong to via templateFolderId
                   const folderId = session.templateFolderId || node.$jazz.id;
-                  console.log('🎯 SESSION OPEN - Using templateFolderId', {
-                    sessionId,
-                    templateFolderId: session.templateFolderId,
-                    currentNodeId: node.$jazz.id,
-                    currentNodeName: node.name,
-                    usingFolderId: folderId,
-                  });
                   onOpenSession?.(folderId, sessionId);
                 }}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
