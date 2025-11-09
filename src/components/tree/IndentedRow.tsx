@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-interface TreeNodeProps {
+interface IndentedRowProps {
   level: number;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -10,14 +10,14 @@ interface TreeNodeProps {
   className?: string;
 }
 
-export function TreeNode({
+export function IndentedRow({
   level,
   expanded,
   onToggleExpand,
   hasChildren,
   children,
   className = '',
-}: TreeNodeProps) {
+}: IndentedRowProps) {
   const indent = level * 20; // 20px per level
 
   return (

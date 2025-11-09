@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { TreeNode } from './TreeNode';
+import { IndentedRow } from './IndentedRow';
 
-describe('TreeNode', () => {
+describe('IndentedRow', () => {
   it('should render children content', () => {
     render(
-      <TreeNode level={0} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
+      <IndentedRow level={0} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
         <span>Test Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     expect(screen.getByText('Test Content')).toBeInTheDocument();
@@ -16,9 +16,9 @@ describe('TreeNode', () => {
 
   it('should apply correct indentation based on level', () => {
     const { container } = render(
-      <TreeNode level={2} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
+      <IndentedRow level={2} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     const nodeDiv = container.querySelector('div');
@@ -27,9 +27,9 @@ describe('TreeNode', () => {
 
   it('should show expand button when hasChildren is true', () => {
     render(
-      <TreeNode level={0} expanded={false} onToggleExpand={() => {}} hasChildren={true}>
+      <IndentedRow level={0} expanded={false} onToggleExpand={() => {}} hasChildren={true}>
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     const expandButton = screen.getByLabelText('Expand');
@@ -38,9 +38,9 @@ describe('TreeNode', () => {
 
   it('should show collapse button when expanded', () => {
     render(
-      <TreeNode level={0} expanded={true} onToggleExpand={() => {}} hasChildren={true}>
+      <IndentedRow level={0} expanded={true} onToggleExpand={() => {}} hasChildren={true}>
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     const collapseButton = screen.getByLabelText('Collapse');
@@ -49,9 +49,9 @@ describe('TreeNode', () => {
 
   it('should not show expand/collapse button when hasChildren is false', () => {
     render(
-      <TreeNode level={0} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
+      <IndentedRow level={0} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument();
@@ -63,9 +63,9 @@ describe('TreeNode', () => {
     const onToggleExpand = vi.fn();
 
     render(
-      <TreeNode level={0} expanded={false} onToggleExpand={onToggleExpand} hasChildren={true}>
+      <IndentedRow level={0} expanded={false} onToggleExpand={onToggleExpand} hasChildren={true}>
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     const expandButton = screen.getByLabelText('Expand');
@@ -76,7 +76,7 @@ describe('TreeNode', () => {
 
   it('should apply custom className', () => {
     const { container } = render(
-      <TreeNode
+      <IndentedRow
         level={0}
         expanded={false}
         onToggleExpand={() => {}}
@@ -84,7 +84,7 @@ describe('TreeNode', () => {
         className="custom-class"
       >
         <span>Content</span>
-      </TreeNode>,
+      </IndentedRow>,
     );
 
     const nodeDiv = container.querySelector('.custom-class');

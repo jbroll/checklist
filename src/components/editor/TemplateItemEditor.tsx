@@ -21,12 +21,12 @@ import { getParentPath } from '@/utils/pathUtils';
 import { AddItemDialog } from './AddItemDialog';
 import { RootDropZone } from './RootDropZone';
 
-interface TemplateItemsViewProps {
+interface TemplateItemEditorProps {
   folder: InstanceOfSchema<typeof FolderNode>;
   onBack: () => void;
 }
 
-export function TemplateItemsView({ folder, onBack }: TemplateItemsViewProps) {
+export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) {
   const { me } = useAccount<typeof Account>();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<InstanceOfSchema<typeof TemplateItem> | null>(null);

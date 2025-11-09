@@ -12,7 +12,7 @@ import { useEffect } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
 import { exposeServicesToWindow } from '@/services/testHelpers';
-import { TemplateEditor } from './components/editor/TemplateEditor';
+import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
   const { me, logOut } = useAccount(Account);
@@ -68,7 +68,7 @@ export function TestPage() {
 
       {/* Main app with offset for banner */}
       <div className="pt-10">
-        <TemplateEditor onSignOut={handleSignOut} />
+        <AppContainer onSignOut={handleSignOut} />
       </div>
     </div>
   );

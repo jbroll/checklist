@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Account, FolderNode as FolderNodeType } from '@/schemas';
-import { TreeNode } from './TreeNode';
+import { IndentedRow } from './IndentedRow';
 
 interface FolderNodeViewProps {
   node: InstanceOfSchema<typeof FolderNodeType>;
@@ -118,7 +118,7 @@ export const FolderNodeView = memo(function FolderNodeView({
             : ''
         }`}
       >
-        <TreeNode
+        <IndentedRow
           level={level}
           expanded={node.expanded}
           onToggleExpand={onToggleExpand}
@@ -203,7 +203,7 @@ export const FolderNodeView = memo(function FolderNodeView({
               </DropdownMenu>
             )}
           </div>
-        </TreeNode>
+        </IndentedRow>
       </div>
 
       {/* Child Nodes - rendered by parent TreeView */}

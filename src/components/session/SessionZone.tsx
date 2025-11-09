@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
-import { TreeNode } from '@/components/tree/TreeNode';
+import { IndentedRow } from '@/components/tree/IndentedRow';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
-import { ListSessionItemRow } from './ListSessionItemRow';
+import { SessionItemRow } from './SessionItemRow';
 
 interface SessionZoneProps {
   title: string;
@@ -61,7 +61,7 @@ export function SessionZone({
                   x: { duration: 0.8, ease: 'easeInOut' },
                 }}
               >
-                <ListSessionItemRow
+                <SessionItemRow
                   item={item}
                   state={itemStates[item.$jazz.id] || null}
                   zone={zone}
@@ -90,7 +90,7 @@ export function SessionZone({
   return (
     <div>
       {/* Zone header */}
-      <TreeNode
+      <IndentedRow
         level={0}
         expanded={expanded}
         onToggleExpand={onToggleExpand}
@@ -110,7 +110,7 @@ export function SessionZone({
             </motion.span>
           )}
         </div>
-      </TreeNode>
+      </IndentedRow>
 
       {/* Zone items with expand/collapse animation */}
       <AnimatePresence initial={false}>
