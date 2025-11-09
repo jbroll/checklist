@@ -78,7 +78,6 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
       // Close dialog
       onOpenChange(false);
     } catch (error) {
-      console.error('Export failed:', error);
       alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);

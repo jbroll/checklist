@@ -143,8 +143,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
     try {
       // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
       ItemService.moveItem(me, folder.$jazz.id, draggedItem.$jazz.id, newParentPath);
-    } catch (error) {
-      console.error('Failed to move item:', error);
+    } catch {
       // Silently ignore expected validation errors
     }
   };
