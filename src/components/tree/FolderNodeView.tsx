@@ -12,28 +12,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Account, Template } from '@/schemas';
-import type { DerivedFolder } from '@/services/templateService';
+import type { Account, DirectoryEntry, Template } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
 interface FolderNodeViewProps {
-  folder?: DerivedFolder;
+  entry: DirectoryEntry;
   template?: InstanceOfSchema<typeof Template>;
   level: number;
   hasChildren?: boolean;
   isSelected?: boolean;
-  onSelect?: (templateId: string) => void;
+  onSelect?: () => void;
   onToggleExpand: () => void;
-  onRename?: (templateId: string, newName: string) => void;
-  onDelete?: (templateId: string) => void;
-  onUseTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
+  onRename?: (entryId: string, newName: string) => void;
+  onDelete?: (entryId: string) => void;
+  onUseTemplate?: () => void;
+  onEditTemplate?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({
-  folder,
+  entry,
   template,
   level,
   hasChildren = false,
@@ -47,36 +46,36 @@ export const FolderNodeView = memo(function FolderNodeView({
   children,
   account,
 }: FolderNodeViewProps) {
-  const isTemplate = !!template;
-  const isFolderNode = !!folder;
+  const isTemplateRef = entry.type === 'template-ref';
+  const isFolder = entry.type === 'folder';
 
-  const name = template?.name || folder?.name || '';
-  const path = template?.path || folder?.path || '';
-  const expanded = template ? true : folder?.expanded ?? true; // Templates don't have expanded state
-  const id = template?.$jazz.id || folder?.path || '';
+  const name = entry.name;
+  const path = entry.path;
+  const expanded = entry.expanded;
+  const entryId = entry.id;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(name);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  // Draggable setup - only templates are draggable
+  // Draggable setup - all entries are draggable
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
     setNodeRef: setDragRef,
     isDragging,
   } = useDraggable({
-    id: id,
-    data: { template },
-    disabled: !isTemplate, // Only templates can be dragged
+    id: entryId,
+    data: { entryId, entry },
+    disabled: false,
   });
 
   // Droppable setup - ONLY folders can accept drops
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop-${id}`,
-    data: { isFolder: isFolderNode, path, folder },
-    disabled: isTemplate, // Templates cannot accept drops
+    id: `drop-${entryId}`,
+    data: { isFolder, path, entryId },
+    disabled: !isFolder, // Only folders can accept drops
   });
 
   const handleStartEdit = () => {
@@ -85,8 +84,8 @@ export const FolderNodeView = memo(function FolderNodeView({
   };
 
   const handleSaveEdit = () => {
-    if (editedName.trim() && editedName !== name && onRename && template) {
-      onRename(template.$jazz.id, editedName.trim());
+    if (editedName.trim() && editedName !== name && onRename) {
+      onRename(entryId, editedName.trim());
     }
     setIsEditing(false);
   };
@@ -106,14 +105,14 @@ export const FolderNodeView = memo(function FolderNodeView({
   };
 
   const handleDelete = () => {
-    if (onDelete && template && confirm(`Delete "${name}"?`)) {
-      onDelete(template.$jazz.id);
+    if (onDelete && confirm(`Delete "${name}"?`)) {
+      onDelete(entryId);
     }
   };
 
   const handleClick = () => {
-    if (!isEditing && onSelect && template) {
-      onSelect(template.$jazz.id);
+    if (!isEditing && onSelect) {
+      onSelect();
     }
   };
 
@@ -122,7 +121,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       <div
         ref={setDropRef}
         className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
-          isOver && !isTemplate
+          isOver && isFolder
             ? 'bg-green-100 border-2 border-green-500 border-dashed rounded'
             : ''
         }`}
@@ -139,7 +138,7 @@ export const FolderNodeView = memo(function FolderNodeView({
               ref={setDragRef}
               {...dragAttributes}
               {...dragListeners}
-              className={isTemplate ? "cursor-grab active:cursor-grabbing flex-1 min-w-0" : "flex-1 min-w-0"}
+              className="cursor-grab active:cursor-grabbing flex-1 min-w-0"
             >
               <button
                 type="button"
@@ -148,8 +147,8 @@ export const FolderNodeView = memo(function FolderNodeView({
                   isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
                 }`}
               >
-                {/* Folder Icon */}
-                {isTemplate ? (
+                {/* Icon */}
+                {isTemplateRef ? (
                   <BubbleListIcon className="h-4 w-4 shrink-0" size={16} />
                 ) : (
                   <Folder className="h-4 w-4 shrink-0 text-yellow-600" />
@@ -168,7 +167,7 @@ export const FolderNodeView = memo(function FolderNodeView({
                   />
                 ) : (
                   <span
-                    className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+                    className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplateRef ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
                   >
                     {name}
                   </span>
@@ -176,8 +175,8 @@ export const FolderNodeView = memo(function FolderNodeView({
               </button>
             </div>
 
-            {/* Actions Menu - only for templates */}
-            {!isEditing && isTemplate && (
+            {/* Actions Menu - only for template-refs */}
+            {!isEditing && isTemplateRef && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -218,8 +217,8 @@ export const FolderNodeView = memo(function FolderNodeView({
       {/* Child Nodes - rendered by parent TreeView */}
       {children}
 
-      {/* Unified Export Dialog - only for templates */}
-      {isTemplate && template && (
+      {/* Unified Export Dialog - only for template-refs */}
+      {isTemplateRef && template && (
         <ExportDialog
           open={showExportDialog}
           onOpenChange={setShowExportDialog}
@@ -228,8 +227,8 @@ export const FolderNodeView = memo(function FolderNodeView({
         />
       )}
 
-      {/* Unified Import Dialog - only for templates */}
-      {isTemplate && template && (
+      {/* Unified Import Dialog - only for template-refs */}
+      {isTemplateRef && template && (
         <ImportDialog
           open={showImportDialog}
           onOpenChange={setShowImportDialog}

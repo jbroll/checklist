@@ -234,8 +234,6 @@ export class ImportService {
     const newTemplate = Template.create(
       {
         name: templateName,
-        path: templateName,
-        archived: false,
         items: [],
         sessions: [],
         currentSessionId: undefined,

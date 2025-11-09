@@ -24,11 +24,20 @@ import type {
 export function exportAllFolders(account: InstanceOfSchema<typeof Account>): ExportedData {
   const folders: ExportedFolder[] = [];
 
-  // Export all templates from the root
-  if (account.root?.templates) {
+  // Export all templates from the root, looking up paths from directory
+  if (account.root?.templates && account.root?.directory) {
     for (const template of account.root.templates) {
-      const exportedFolder = exportTemplateNode(template);
-      folders.push(exportedFolder);
+      if (!template) continue;
+
+      // Find the directory entry for this template to get its path
+      const dirEntry = account.root.directory.find(
+        (entry) => entry.type === 'template-ref' && entry.templateId === template.$jazz?.id
+      );
+
+      if (dirEntry) {
+        const exportedFolder = exportTemplateNode(template, dirEntry.path);
+        folders.push(exportedFolder);
+      }
     }
   }
 
@@ -44,14 +53,15 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
  * Export a single template
  *
  * @param template - The Template to export
+ * @param path - The directory path for this template
  * @returns Export data containing single template
  */
-export function exportTemplate(template: InstanceOfSchema<typeof Template>): ExportedData {
+export function exportTemplate(template: InstanceOfSchema<typeof Template>, path: string): ExportedData {
   return {
     version: '1.0',
     exportDate: new Date().toISOString(),
     appVersion: '1.0.0', // TODO: Get from package.json
-    folders: [exportTemplateNode(template)],
+    folders: [exportTemplateNode(template, path)],
   };
 }
 
@@ -59,12 +69,13 @@ export function exportTemplate(template: InstanceOfSchema<typeof Template>): Exp
  * Convert a Template to exported format
  *
  * @param template - The Template to convert
+ * @param path - The directory path for this template (from directory entry)
  * @returns Exported folder structure
  */
-function exportTemplateNode(template: InstanceOfSchema<typeof Template>): ExportedFolder {
+function exportTemplateNode(template: InstanceOfSchema<typeof Template>, path: string): ExportedFolder {
   const baseFolder: ExportedFolder = {
     name: template.name,
-    path: template.path,
+    path,
     type: 'template-folder', // All templates are template-folders in the export format
     createdAt: template.createdAt.toISOString(),
     updatedAt: template.updatedAt.toISOString(),
