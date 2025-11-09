@@ -270,7 +270,19 @@ export function TreeView({
                 session={session}
                 templateName={node.name}
                 level={level + 1}
-                onOpen={(sessionId) => onOpenSession?.(node.$jazz.id, sessionId)}
+                onOpen={(sessionId) => {
+                  // Use the session's templateFolderId, not the current node's ID
+                  // Sessions store which template they belong to via templateFolderId
+                  const folderId = session.templateFolderId || node.$jazz.id;
+                  console.log('🎯 SESSION OPEN - Using templateFolderId', {
+                    sessionId,
+                    templateFolderId: session.templateFolderId,
+                    currentNodeId: node.$jazz.id,
+                    currentNodeName: node.name,
+                    usingFolderId: folderId,
+                  });
+                  onOpenSession?.(folderId, sessionId);
+                }}
                 onDelete={(sessionId) => handleDeleteSession(node.$jazz.id, sessionId)}
                 onExport={(sessionId) => onExportSession?.(node.$jazz.id, sessionId)}
                 allSessions={activeSessions}

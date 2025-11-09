@@ -67,9 +67,9 @@ test.describe('Application Smoke Tests', () => {
     // Click Export menu item
     await page.getByRole('menuitem', { name: /export/i }).click();
 
-    // Should show export dialog
+    // Should show export dialog with new title
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByText(/export grocery data/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^export$/i })).toBeVisible();
   });
 
   test('should not crash when clicking Import button', async ({ page }) => {
@@ -86,9 +86,9 @@ test.describe('Application Smoke Tests', () => {
     // Click Import menu item
     await page.getByRole('menuitem', { name: /import/i }).click();
 
-    // Should show import dialog
+    // Should show import dialog with new title
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByText(/import grocery data/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^import$/i })).toBeVisible();
   });
 
   test('should close Export dialog when clicking Cancel', async ({ page }) => {
