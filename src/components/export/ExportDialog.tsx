@@ -23,13 +23,10 @@ interface ExportDialogProps {
   account: InstanceOfSchema<typeof Account>;
   /** Optional folder for folder-level export */
   folder?: InstanceOfSchema<typeof FolderNode>;
-  /** Optional pre-selected folder ID for single-folder export (legacy, use folder instead) */
-  selectedFolderId?: string;
 }
 
-export function ExportDialog({ open, onOpenChange, account, folder, selectedFolderId }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, account, folder }: ExportDialogProps) {
   const isTemplate = folder?.type === 'template-folder';
-  const isFolderLevel = !!folder;
 
   // For folder-level template export, allow format selection
   const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
@@ -118,7 +115,9 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
                 <Label htmlFor="export-json" className="cursor-pointer font-normal">
                   <div>
                     <div className="font-medium">JSON (.json)</div>
-                    <div className="text-xs text-neutral-600">Full backup with items and sessions</div>
+                    <div className="text-xs text-neutral-600">
+                      Full backup with items and sessions
+                    </div>
                   </div>
                 </Label>
               </div>
@@ -150,7 +149,9 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
                 <Label htmlFor="export-csv" className="cursor-pointer font-normal">
                   <div>
                     <div className="font-medium">CSV (.csv)</div>
-                    <div className="text-xs text-neutral-600">Includes name, category, sort order, quantity</div>
+                    <div className="text-xs text-neutral-600">
+                      Includes name, category, sort order, quantity
+                    </div>
                   </div>
                 </Label>
               </div>

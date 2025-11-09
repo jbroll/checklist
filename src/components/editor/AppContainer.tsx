@@ -122,6 +122,19 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   // If viewing a shopping session, show SessionView
   if (activeSessionFolderId && activeSessionId) {
     const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
+    console.log('📱 TEMPLATE EDITOR - Looking for session folder', {
+      activeSessionFolderId,
+      activeSessionId,
+      foundFolder: sessionFolder
+        ? {
+            id: sessionFolder.$jazz.id,
+            name: sessionFolder.name,
+            type: sessionFolder.type,
+            itemCount: sessionFolder.items?.length || 0,
+          }
+        : null,
+      allNodeIds: nodes.map((n) => ({ id: n?.$jazz.id, name: n?.name })),
+    });
     if (sessionFolder) {
       return (
         <SessionView
@@ -182,25 +195,28 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
         <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={me} />
 
         {/* Session Export Dialog */}
-        {sessionExportData && (() => {
-          const folder = nodes.find((n) => n?.$jazz.id === sessionExportData.folderId);
-          const session = folder?.sessions?.find((s) => s?.$jazz.id === sessionExportData.sessionId);
-          if (folder && session) {
-            return (
-              <SessionExportDialog
-                open={showSessionExportDialog}
-                onOpenChange={setShowSessionExportDialog}
-                // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-                folder={folder}
-                sessionId={sessionExportData.sessionId}
-                sessionName={session.name}
-                // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-                account={me}
-              />
+        {sessionExportData &&
+          (() => {
+            const folder = nodes.find((n) => n?.$jazz.id === sessionExportData.folderId);
+            const session = folder?.sessions?.find(
+              (s) => s?.$jazz.id === sessionExportData.sessionId,
             );
-          }
-          return null;
-        })()}
+            if (folder && session) {
+              return (
+                <SessionExportDialog
+                  open={showSessionExportDialog}
+                  onOpenChange={setShowSessionExportDialog}
+                  // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+                  folder={folder}
+                  sessionId={sessionExportData.sessionId}
+                  sessionName={session.name}
+                  // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+                  account={me}
+                />
+              );
+            }
+            return null;
+          })()}
       </main>
     </div>
   );

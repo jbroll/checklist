@@ -17,55 +17,11 @@ test.describe('Export Functionality', () => {
     await page.getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
 
-    // Check dialog is visible
+    // Check dialog is visible with new title and description
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(/export grocery data/i)).toBeVisible();
-
-    // Check export scope options
-    await expect(dialog.getByText(/all folders/i)).toBeVisible();
-    await expect(dialog.getByText(/selected folder/i)).toBeVisible();
-
-    // Check description text
-    await expect(dialog.getByText(/all list items/i)).toBeVisible();
-    await expect(dialog.getByText(/all sessions/i)).toBeVisible();
-  });
-
-  test('should have "All folders" selected by default', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
-      timeout: 10000,
-    });
-
-    await page.getByLabel('More options').click();
-    await page.getByRole('menuitem', { name: /export/i }).click();
-
-    // All folders radio should be checked
-    const allFoldersRadio = page.getByRole('radio', { name: /all folders/i });
-    await expect(allFoldersRadio).toBeChecked();
-
-    // Single folder radio should not be checked
-    const singleFolderRadio = page.getByRole('radio', { name: /selected folder/i });
-    await expect(singleFolderRadio).not.toBeChecked();
-  });
-
-  test('should switch to selected folder mode', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
-      timeout: 10000,
-    });
-
-    await page.getByLabel('More options').click();
-    await page.getByRole('menuitem', { name: /export/i }).click();
-
-    // Click "Selected folder" radio
-    await page.getByRole('radio', { name: /selected folder/i }).click();
-
-    // Should show dropdown
-    await expect(page.locator('select')).toBeVisible();
-
-    // Single folder radio should now be checked
-    await expect(page.getByRole('radio', { name: /selected folder/i })).toBeChecked();
+    await expect(dialog.getByRole('heading', { name: /^export$/i })).toBeVisible();
+    await expect(dialog.getByText(/export to json for backup or transfer/i)).toBeVisible();
   });
 
   test('should close export dialog on cancel', async ({ page }) => {
@@ -85,7 +41,7 @@ test.describe('Export Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test('should have export button enabled when all folders is selected', async ({ page }) => {
+  test('should have export button enabled', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
@@ -94,7 +50,7 @@ test.describe('Export Functionality', () => {
     await page.getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
 
-    // Export & Download button should be enabled
+    // Export & Download button should be enabled for top-level export
     const exportButton = page.getByRole('button', { name: /export & download/i });
     await expect(exportButton).toBeEnabled();
   });
@@ -111,17 +67,15 @@ test.describe('Import Functionality', () => {
     await page.getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
 
-    // Check dialog is visible
+    // Check dialog is visible with new title and description
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(/import grocery data/i)).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: /^import$/i })).toBeVisible();
+    await expect(dialog.getByText(/auto-detects json.*or txt\/csv/i)).toBeVisible();
 
     // Check for upload elements
-    await expect(dialog.getByText(/drop json, txt, or csv file here/i)).toBeVisible();
+    await expect(dialog.getByText(/drop json, txt, csv file here or/i)).toBeVisible();
     await expect(dialog.getByText(/browse files/i)).toBeVisible();
-
-    // Check info about file formats
-    await expect(dialog.getByText(/file formats:/i)).toBeVisible();
   });
 
   test('should show file size and type restrictions', async ({ page }) => {
@@ -134,8 +88,7 @@ test.describe('Import Functionality', () => {
     await page.getByRole('menuitem', { name: /import/i }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/json, txt, or csv files/i)).toBeVisible();
-    await expect(dialog.getByText(/up to 10mb/i)).toBeVisible();
+    await expect(dialog.getByText(/json, txt, csv files, up to 10mb/i)).toBeVisible();
   });
 
   test('should close import dialog on cancel', async ({ page }) => {
@@ -214,7 +167,7 @@ test.describe('Export/Import Dialog Interactions', () => {
     // Open Export dialog
     await page.getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
-    await expect(page.getByText(/export grocery data/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^export$/i })).toBeVisible();
 
     // Close it
     await page.keyboard.press('Escape');
@@ -223,9 +176,9 @@ test.describe('Export/Import Dialog Interactions', () => {
     // Open Import dialog
     await page.getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
-    await expect(page.getByText(/import grocery data/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^import$/i })).toBeVisible();
 
     // Should only see import dialog, not export
-    await expect(page.getByText(/export grocery data/i)).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: /^export$/i })).not.toBeVisible();
   });
 });

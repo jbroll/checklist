@@ -5,8 +5,8 @@ import { FileUploadDialog } from '@/components/ui/file-upload-dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { Account, FolderNode } from '@/schemas';
-import { ImportService } from '@/services/import/importService';
 import type { CsvImportResult } from '@/services/import/csvImporter';
+import { ImportService } from '@/services/import/importService';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
 
@@ -21,7 +21,13 @@ interface ImportDialogProps {
 
 type UnifiedImportResult = ImportResult | TxtImportResult | CsvImportResult;
 
-export function ImportDialog({ open, onOpenChange, account, folder, onImportComplete }: ImportDialogProps) {
+export function ImportDialog({
+  open,
+  onOpenChange,
+  account,
+  folder,
+  onImportComplete,
+}: ImportDialogProps) {
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
 
@@ -122,7 +128,10 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
             {hasSuccess && !hasErrors ? (
               <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
             ) : (
-              <AlertCircle className={`h-5 w-5 ${hasErrors ? 'text-red-600' : 'text-amber-600'}`} aria-hidden="true" />
+              <AlertCircle
+                className={`h-5 w-5 ${hasErrors ? 'text-red-600' : 'text-amber-600'}`}
+                aria-hidden="true"
+              />
             )}
             <div className="flex-1">
               <div
@@ -146,7 +155,9 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
                   <div className="text-green-800">• {result.imported} item(s) imported</div>
                 )}
                 {result.skipped > 0 && (
-                  <div className="text-amber-800">• {result.skipped} item(s) skipped (duplicates)</div>
+                  <div className="text-amber-800">
+                    • {result.skipped} item(s) skipped (duplicates)
+                  </div>
                 )}
               </div>
 

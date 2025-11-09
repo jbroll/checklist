@@ -1,5 +1,5 @@
 export { FolderNodeView } from './FolderNodeView';
+export { IndentedRow } from './IndentedRow';
 export { SessionRowView } from './SessionRowView';
 export { TemplateItemView } from './TemplateItemView';
-export { IndentedRow } from './IndentedRow';
 export { TreeView } from './TreeView';
