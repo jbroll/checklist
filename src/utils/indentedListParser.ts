@@ -144,7 +144,9 @@ function detectIndentation(lines: string[]): IndentConfig {
 function getIndentLevel(line: string, config: IndentConfig): number {
   if (config.type === 'tabs') {
     // Count leading tabs (convert spaces to tabs for mixed indent)
-    const normalized = line.replace(/^( {2,4})/g, (match) => '\t'.repeat(Math.floor(match.length / 4)));
+    const normalized = line.replace(/^( {2,4})/g, (match) =>
+      '\t'.repeat(Math.floor(match.length / 4)),
+    );
     const match = normalized.match(/^(\t*)/);
     return match ? match[1].length : 0;
   }
@@ -169,7 +171,7 @@ function buildTree(
   const root: TreeNode[] = [];
   const stack: TreeNode[] = [];
 
-  for (const { text, lineNumber } of lines) {
+  for (const { text } of lines) {
     const level = getIndentLevel(text, config);
     const name = text.trim();
 
