@@ -33,16 +33,7 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
 
   // For folder-level template export, allow format selection
   const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
-
-  // For top-level export, allow scope selection (legacy behavior)
-  const [exportType, setExportType] = useState<'all-folders' | 'single-folder'>(
-    selectedFolderId ? 'single-folder' : 'all-folders',
-  );
-  const [folderId, setFolderId] = useState(selectedFolderId || '');
   const [isExporting, setIsExporting] = useState(false);
-
-  // Get list of folders for dropdown - filter out null values
-  const folders = (account.root?.nodes || []).filter((f) => f != null);
 
   const handleExport = () => {
     setIsExporting(true);
@@ -80,20 +71,10 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
         const filename = ExportService.generateFilename(scope, 'json', folder.name);
         downloadJson(data, filename);
       } else {
-        // Top-level: JSON only with scope selection
-        const scope: ExportScope =
-          exportType === 'all-folders'
-            ? { type: 'all-folders' }
-            : { type: 'single-folder', folderId };
-
+        // Top-level: JSON only, export all folders
+        const scope: ExportScope = { type: 'all-folders' };
         const data = ExportService.exportToJson(account, scope);
-
-        const folderName =
-          exportType === 'single-folder'
-            ? folders.find((f) => f?.$jazz?.id === folderId)?.name
-            : undefined;
-        const filename = ExportService.generateFilename(scope, 'json', folderName);
-
+        const filename = ExportService.generateFilename(scope, 'json', undefined);
         downloadJson(data, filename);
       }
 
@@ -108,18 +89,15 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
   };
 
   const handleCancel = () => {
-    setExportType(selectedFolderId ? 'single-folder' : 'all-folders');
-    setFolderId(selectedFolderId || '');
     setFormat('json');
     onOpenChange(false);
   };
 
-  const canExport = isFolderLevel || exportType === 'all-folders' || (exportType === 'single-folder' && folderId);
+  const canExport = true;
 
   // Get dynamic configuration based on context
   const getConfig = () => {
     if (folder && isTemplate) {
-      const itemCount = folder.items?.filter((item) => item && !item.archived).length || 0;
       return {
         title: `Export: ${folder.name}`,
         description: 'Choose format for export.',
@@ -177,19 +155,6 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
                 </Label>
               </div>
             </div>
-
-            {/* Export details */}
-            <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-              <div className="font-medium">What will be exported:</div>
-              <ul className="ml-4 mt-2 list-disc space-y-1">
-                <li>
-                  {itemCount} list item{itemCount !== 1 ? 's' : ''}
-                </li>
-                <li>Active items only (archived items excluded)</li>
-                {format === 'json' && <li>All sessions (active and completed)</li>}
-                {format === 'csv' && <li>Category and sort order information</li>}
-              </ul>
-            </div>
           </>
         ),
       };
@@ -198,91 +163,15 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
     if (folder) {
       return {
         title: `Export: ${folder.name}`,
-        description: 'Export folder structure to JSON.',
-        content: (
-          <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-            <div className="font-medium">What will be exported:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>Folder structure and sub-folders</li>
-              <li>All list items</li>
-              <li>All sessions (active and completed)</li>
-            </ul>
-            <div className="mt-2 text-xs text-neutral-600">
-              Note: Sharing information will not be exported
-            </div>
-          </div>
-        ),
+        description: 'Export to JSON for backup or transfer.',
+        content: null,
       };
     }
 
     return {
       title: 'Export',
       description: 'Export to JSON for backup or transfer.',
-      content: (
-        <>
-          {/* Export scope selection */}
-          <div className="grid gap-3">
-            <Label>Export scope</Label>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="radio"
-                id="export-all"
-                checked={exportType === 'all-folders'}
-                onChange={() => setExportType('all-folders')}
-                className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
-              />
-              <Label htmlFor="export-all" className="cursor-pointer font-normal">
-                All folders
-              </Label>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="radio"
-                id="export-single"
-                checked={exportType === 'single-folder'}
-                onChange={() => setExportType('single-folder')}
-                className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500/20"
-              />
-              <Label htmlFor="export-single" className="cursor-pointer font-normal">
-                Selected folder
-              </Label>
-            </div>
-
-            {/* Folder selection dropdown */}
-            {exportType === 'single-folder' && (
-              <div className="ml-7 mt-2">
-                <select
-                  value={folderId}
-                  onChange={(e) => setFolderId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                >
-                  <option value="">Select a folder...</option>
-                  {folders.map((f) => (
-                    <option key={f.$jazz.id} value={f.$jazz.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Export details */}
-          <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-            <div className="font-medium">What will be exported:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>All list items</li>
-              <li>All sessions (active and completed)</li>
-              <li>Session history and states</li>
-            </ul>
-            <div className="mt-2 text-xs text-neutral-600">
-              Note: Sharing information will not be exported
-            </div>
-          </div>
-        </>
-      ),
+      content: null,
     };
   };
 
