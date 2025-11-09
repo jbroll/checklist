@@ -3,16 +3,26 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DirectoryEntry } from '../../schemas';
 import { resolvePathConflict } from './conflictResolver';
 
-// Mock GroceriesAccount type for testing
+// Mock Account with directory structure for testing
 const createMockAccount = (existingPaths: string[]) => {
+  const directory: DirectoryEntry[] = existingPaths.map((path) => ({
+    id: `mock-${path}`,
+    name: path.replace('/', ''),
+    type: 'template-ref' as const,
+    path,
+    expanded: false,
+    archived: false,
+    templateId: `template-${path}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+
   return {
     root: {
-      nodes: existingPaths.map((path) => ({
-        path,
-        name: path.replace('/', ''),
-      })),
+      directory,
     },
   } as any;
 };
@@ -79,16 +89,16 @@ describe('conflictResolver', () => {
       expect(result.name).toBe('List #1 (1)');
     });
 
-    it('should handle empty nodes array', () => {
-      const account = { root: { nodes: [] } } as any;
+    it('should handle empty directory array', () => {
+      const account = { root: { directory: [] } } as any;
       const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
 
       expect(result.path).toBe('/grocery-list-(1)');
       expect(result.name).toBe('Grocery List (1)');
     });
 
-    it('should handle null/undefined nodes gracefully', () => {
-      const account = { root: { nodes: null } } as any;
+    it('should handle null/undefined directory gracefully', () => {
+      const account = { root: { directory: null } } as any;
       const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
 
       expect(result.path).toBe('/grocery-list-(1)');
@@ -102,7 +112,17 @@ describe('conflictResolver', () => {
       expect(result1.path).toBe('/list-1-(1)');
 
       // Simulate adding the resolved path
-      account.root.nodes.push({ path: result1.path, name: result1.name });
+      account.root.directory.push({
+        id: 'new-entry',
+        name: result1.name,
+        type: 'template-ref',
+        path: result1.path,
+        expanded: false,
+        archived: false,
+        templateId: 'template-new',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const result2 = resolvePathConflict('/list-2', 'List 2', account);
       expect(result2.path).toBe('/list-2-(1)');
