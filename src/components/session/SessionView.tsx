@@ -2,7 +2,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { HierarchyInZonesRenderer } from './HierarchyInZonesRenderer';
@@ -13,12 +13,12 @@ import { useViewMode } from './useViewMode';
 import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
 
 interface SessionViewProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
+  template: InstanceOfSchema<typeof Template>;
   sessionId: string;
   onBack: () => void;
 }
 
-export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
+export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
     inventory: true,
@@ -27,21 +27,21 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
   });
 
   // Find session first (before any early returns)
-  const session = folder.sessions?.find((s) => s?.$jazz.id === sessionId);
+  const session = template.sessions?.find((s) => s?.$jazz.id === sessionId);
 
   // Check if there are multiple sessions on the same day
-  const showTime = hasMultipleSessionsOnSameDay(session || null, folder.sessions || []);
+  const showTime = hasMultipleSessionsOnSameDay(session || null, template.sessions || []);
 
   // Initialize category expanded state from session data
   const categoryExpanded: Record<string, boolean> = session?.categoryExpanded || {};
 
   // Use hooks for partitioning items
   // @ts-expect-error Jazz TypeScript inference issue with Account root type
-  const { inventoryItems, cartItems, completedItems } = useSessionItems({ folder, session });
+  const { inventoryItems, cartItems, completedItems } = useSessionItems({ template, session });
 
   // Use hook for view mode management
   const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
-    folder,
+    template,
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     session,
     sessionId,
@@ -50,7 +50,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
   });
 
   // Now handle early returns after hooks
-  if (!me || !folder.sessions) {
+  if (!me || !template.sessions) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -80,21 +80,21 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
 
   const handleToggleCart = (itemId: string) => {
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.toggleItemSelected(me, folder.$jazz.id, sessionId, itemId);
+    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, folder.$jazz.id, sessionId);
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
   };
 
   const handleTogglePurchased = (itemId: string) => {
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.toggleItemChecked(me, folder.$jazz.id, sessionId, itemId);
+    SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, folder.$jazz.id, sessionId);
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
   };
 
   const handleFinishSession = () => {
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.completeSession(me, folder.$jazz.id, sessionId);
+    SessionService.completeSession(me, template.$jazz.id, sessionId);
     onBack();
   };
 
@@ -120,7 +120,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
     if (currentViewMode === 'flat') {
       return (
         <FlatViewRenderer
-          folder={folder}
+          template={template}
           session={session}
           cartItems={cartItems}
           completedItems={completedItems}
@@ -137,7 +137,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
     if (currentViewMode === 'hierarchy-in-zones') {
       return (
         <HierarchyInZonesRenderer
-          folder={folder}
+          template={template}
           session={session}
           cartItems={cartItems}
           completedItems={completedItems}
@@ -156,7 +156,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
     if (currentViewMode === 'zone-in-hierarchy') {
       return (
         <ZoneInHierarchyRenderer
-          folder={folder}
+          template={template}
           session={session}
           cartItems={cartItems}
           completedItems={completedItems}
@@ -176,7 +176,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
       <div className="mx-auto max-w-4xl">
         <div className="rounded-lg border border-neutral-200 bg-white">
           <SessionHeader
-            folder={folder}
+            template={template}
             session={session}
             sessionId={sessionId}
             // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -196,7 +196,7 @@ export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
               <div className="my-2 border-t-2 border-neutral-200" />
             )}
             <InventoryZoneRenderer
-              folder={folder}
+              template={template}
               session={session}
               inventoryItems={inventoryItems}
               categoryExpanded={categoryExpanded}

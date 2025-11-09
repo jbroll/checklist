@@ -4,9 +4,10 @@
  * Shared logic for CSV and TXT importers to reduce duplication.
  */
 
+
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
-import { TemplateItem } from '../../schemas';
+import type { Account, Template } from '../../schemas';
+import type { TemplateItem } from '../../schemas/tree';
 
 export interface BaseImportResult {
   imported: number;
@@ -25,16 +26,16 @@ export interface ItemToImport {
 }
 
 /**
- * Get existing item paths from folder (case-insensitive)
+ * Get existing item paths from template (case-insensitive)
  *
- * @param folder - Folder to check
+ * @param template - Template to check
  * @returns Set of existing paths (lowercase)
  */
-export function getExistingPaths(folder: InstanceOfSchema<typeof FolderNode>): Set<string> {
+export function getExistingPaths(template: InstanceOfSchema<typeof Template>): Set<string> {
   const existingPaths = new Set<string>();
 
-  if (folder.items) {
-    for (const item of folder.items) {
+  if (template.items) {
+    for (const item of template.items) {
       if (item && !item.archived) {
         existingPaths.add(item.path.toLowerCase());
       }
@@ -45,16 +46,16 @@ export function getExistingPaths(folder: InstanceOfSchema<typeof FolderNode>): S
 }
 
 /**
- * Calculate next available sort order for items in folder
+ * Calculate next available sort order for items in template
  *
- * @param folder - Folder to check
+ * @param template - Template to check
  * @returns Next available sort order
  */
-export function calculateNextSortOrder(folder: InstanceOfSchema<typeof FolderNode>): number {
+export function calculateNextSortOrder(template: InstanceOfSchema<typeof Template>): number {
   let nextSortOrder = 0;
 
-  if (folder.items) {
-    for (const item of folder.items) {
+  if (template.items) {
+    for (const item of template.items) {
       if (item && item.sortOrder >= nextSortOrder) {
         nextSortOrder = item.sortOrder + 1;
       }
@@ -65,18 +66,18 @@ export function calculateNextSortOrder(folder: InstanceOfSchema<typeof FolderNod
 }
 
 /**
- * Import multiple items into a folder
+ * Import multiple items into a template
  *
  * Handles duplicate detection, item creation, and error tracking.
  *
  * @param items - Items to import
- * @param folder - Folder to import into
+ * @param template - Template to import into
  * @param account - User account (for ownership)
  * @returns Import result with statistics
  */
 export function importItems(
   items: ItemToImport[],
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   account: InstanceOfSchema<typeof Account>,
 ): BaseImportResult {
   const result: BaseImportResult = {
@@ -92,8 +93,8 @@ export function importItems(
   }
 
   // Get existing paths and next sort order
-  const existingPaths = getExistingPaths(folder);
-  let nextSortOrder = calculateNextSortOrder(folder);
+  const existingPaths = getExistingPaths(template);
+  let nextSortOrder = calculateNextSortOrder(template);
 
   // Import each item
   for (const item of items) {
@@ -107,26 +108,22 @@ export function importItems(
     }
 
     try {
-      // Create new template item
-      const newItem = TemplateItem.create(
-        {
-          name,
-          type, // Use provided type or default to 'item'
-          path,
-          expanded: false,
-          sortOrder: nextSortOrder++,
-          archived: false,
-          defaultQuantity,
-          color: '#6b7280',
-          addedBy: account,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        { owner: account },
-      );
+      // Create new template item as plain object
+      const newItem: TemplateItem = {
+        id: crypto.randomUUID(),
+        name,
+        type, // Use provided type or default to 'item'
+        path,
+        expanded: false,
+        sortOrder: nextSortOrder++,
+        archived: false,
+        defaultQuantity,
+        color: '#6b7280',
+        createdAt: new Date(),
+      };
 
-      // Add to folder
-      folder.items?.$jazz.push(newItem);
+      // Add to template
+      template.items.push(newItem);
       result.imported++;
 
       // Add to existing paths to prevent duplicates within import
@@ -137,8 +134,8 @@ export function importItems(
     }
   }
 
-  // Update folder timestamp
-  folder.$jazz.set('updatedAt', new Date());
+  // Update template timestamp
+  template.$jazz.set('updatedAt', new Date());
 
   return result;
 }

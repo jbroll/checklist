@@ -1,46 +1,87 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '@/schemas';
-import { getParentPath } from './pathUtils';
+import type { Template } from '@/schemas';
+import type { DerivedFolder } from '@/services/templateService';
 
 export interface TreeNode {
-  node: InstanceOfSchema<typeof FolderNode>;
+  folder: DerivedFolder;
   children: TreeNode[];
 }
 
 /**
- * Build hierarchical tree structure from flat path-based list of nodes
- * Simple: group by parent path and build recursively
+ * Build hierarchical tree structure from derived folders
+ * Converts DerivedFolder[] to TreeNode[] for compatibility
  */
 export function buildTreeStructure(
-  allNodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[],
+  derivedFolders: DerivedFolder[],
 ): TreeNode[] {
-  // Filter out null/undefined and archived nodes
-  const validNodes = allNodes.filter(
-    (node): node is InstanceOfSchema<typeof FolderNode> =>
-      node != null && !!node.name && !!node.path && !node.archived,
+  return derivedFolders.map((folder) => ({
+    folder,
+    children: buildTreeStructure(folder.children),
+  }));
+}
+
+/**
+ * Build tree structure from flat template list (legacy support)
+ * For new code, use templateService.buildFolderTree() instead
+ */
+export function buildTreeFromTemplates(
+  templates: readonly (InstanceOfSchema<typeof Template> | null)[],
+  folderExpanded: Record<string, boolean> = {},
+): TreeNode[] {
+  const validTemplates = templates.filter(
+    (t): t is InstanceOfSchema<typeof Template> =>
+      t != null && !!t.name && !!t.path && !t.archived,
   );
 
-  // Group by parent path to create hierarchy
-  const nodesByParent = new Map<string | undefined, InstanceOfSchema<typeof FolderNode>[]>();
-
-  for (const node of validNodes) {
-    const parentKey = getParentPath(node.path);
-
-    if (!nodesByParent.has(parentKey)) {
-      nodesByParent.set(parentKey, []);
+  // Extract all unique folder paths
+  const folderPaths = new Set<string>();
+  for (const template of validTemplates) {
+    const parts = template.path.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      folderPaths.add(parts.slice(0, i).join('/'));
     }
-    nodesByParent.get(parentKey)?.push(node);
   }
 
-  // Build recursive structure
-  const buildChildren = (parentPath: string | undefined): TreeNode[] => {
-    const children = nodesByParent.get(parentPath) || [];
-    return children.map((node) => ({
-      node,
-      // Only folders can have children, templates are leaf nodes
-      children: node.type === 'folder' ? buildChildren(node.path) : [],
-    }));
-  };
+  // Build folder map
+  const folderMap = new Map<string, DerivedFolder>();
+  for (const path of folderPaths) {
+    const parts = path.split('/');
+    const name = parts[parts.length - 1];
+    folderMap.set(path, {
+      path,
+      name,
+      expanded: folderExpanded[path] ?? true,
+      children: [],
+      templates: [],
+    });
+  }
 
-  return buildChildren(undefined); // Start with root nodes (no parent path)
+  // Build hierarchy
+  const rootFolders: DerivedFolder[] = [];
+  for (const [path, folder] of folderMap) {
+    const parts = path.split('/');
+    if (parts.length === 1) {
+      rootFolders.push(folder);
+    } else {
+      const parentPath = parts.slice(0, -1).join('/');
+      const parent = folderMap.get(parentPath);
+      if (parent) {
+        parent.children.push(folder);
+      }
+    }
+  }
+
+  // Add templates to folders
+  for (const template of validTemplates) {
+    const parts = template.path.split('/');
+    if (parts.length > 1) {
+      const folderPath = parts.slice(0, -1).join('/');
+      const folder = folderMap.get(folderPath);
+      if (folder) {
+        folder.templates.push(template);
+      }
+    }
+  }
+
+  return buildTreeStructure(rootFolders);
 }

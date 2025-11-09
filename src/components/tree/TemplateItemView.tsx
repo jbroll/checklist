@@ -1,5 +1,4 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import type { InstanceOfSchema } from 'jazz-tools';
 import { Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -8,11 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { TemplateItem as TemplateItemType } from '@/schemas';
+import type { TemplateItem } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
 interface TemplateItemViewProps {
-  item: InstanceOfSchema<typeof TemplateItemType>;
+  item: TemplateItem;
   level: number;
   hasChildren?: boolean;
   onRename?: (itemId: string, newName: string) => void;
@@ -40,13 +39,13 @@ export function TemplateItemView({
     setNodeRef: setDragRef,
     isDragging,
   } = useDraggable({
-    id: item.$jazz.id,
+    id: item.id,
     data: { item },
   });
 
   // Droppable setup - only categories can accept drops
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop-${item.$jazz.id}`,
+    id: `drop-${item.id}`,
     data: { isCategory, path: item.path, item },
     disabled: !isCategory, // Only categories can accept drops
   });
@@ -58,7 +57,7 @@ export function TemplateItemView({
 
   const handleSaveEdit = () => {
     if (editedName.trim() && editedName !== item.name && onRename) {
-      onRename(item.$jazz.id, editedName.trim());
+      onRename(item.id, editedName.trim());
     }
     setIsEditing(false);
   };
@@ -79,13 +78,13 @@ export function TemplateItemView({
 
   const handleDelete = () => {
     if (onDelete && confirm(`Delete "${item.name}"?`)) {
-      onDelete(item.$jazz.id);
+      onDelete(item.id);
     }
   };
 
   const handleToggle = () => {
     if (isCategory && onToggleExpand) {
-      onToggleExpand(item.$jazz.id);
+      onToggleExpand(item.id);
     }
   };
 

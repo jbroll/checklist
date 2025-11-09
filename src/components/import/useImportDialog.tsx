@@ -1,7 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, Template } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import { ImportService } from '@/services/import/importService';
 import type { TxtImportResult } from '@/services/import/txtImporter';
@@ -18,22 +18,21 @@ interface DialogConfig {
 
 interface UseImportDialogProps {
   account: InstanceOfSchema<typeof Account>;
-  folder?: InstanceOfSchema<typeof FolderNode>;
+  folder?: InstanceOfSchema<typeof Template>;
   onImportComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }
 
 export function useImportDialog({
   account,
-  folder,
+  folder: template,
   onImportComplete,
   onOpenChange,
 }: UseImportDialogProps) {
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
 
-  const isTemplate = folder?.type === 'template-folder';
-  const isFolderLevel = !!folder;
+  const isFolderLevel = !!template;
 
   const resetState = () => {
     setFileType(null);
@@ -53,30 +52,20 @@ export function useImportDialog({
 
     let result: UnifiedImportResult;
 
-    // Folder-level import
-    if (folder && isTemplate) {
-      // Template folder: JSON (items) or TXT/CSV (append items)
+    // Template-level import
+    if (template) {
+      // Template import: JSON (items) or TXT/CSV (append items)
       if (detectedType === 'json') {
         // TODO: Import JSON items list - for now use TXT/CSV logic
-        result = await ImportService.importItemsFromCsvFile(file, folder, account);
+        result = await ImportService.importItemsFromCsvFile(file, template, account);
       } else if (detectedType === 'txt') {
-        result = await ImportService.importItemsFromTxtFile(file, folder, account);
+        result = await ImportService.importItemsFromTxtFile(file, template, account);
       } else {
-        result = await ImportService.importItemsFromCsvFile(file, folder, account);
+        result = await ImportService.importItemsFromCsvFile(file, template, account);
       }
 
       // Auto-close after successful import
       if ('imported' in result && result.imported > 0) {
-        handleSuccessfulImport();
-      }
-    } else if (folder) {
-      // Organizational folder: JSON only
-      if (detectedType !== 'json') {
-        throw new Error('Only JSON files are supported for folder import');
-      }
-      result = await ImportService.importFromFile(file, account, 'json');
-
-      if ('success' in result && result.success) {
         handleSuccessfulImport();
       }
     } else {
@@ -117,20 +106,11 @@ export function useImportDialog({
       </a>
     );
 
-    if (folder && isTemplate) {
+    if (template) {
       return {
-        title: `Import Items: ${folder.name}`,
+        title: `Import Items: ${template.name}`,
         description: 'Auto-detects JSON (items list) or TXT/CSV (append items).',
         acceptedFileTypes: ['json', 'txt', 'csv'],
-        infoContent: learnMoreLink,
-      };
-    }
-
-    if (folder) {
-      return {
-        title: `Import Folder: ${folder.name}`,
-        description: 'Import folder structure from JSON backup.',
-        acceptedFileTypes: ['json'],
         infoContent: learnMoreLink,
       };
     }

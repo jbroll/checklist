@@ -7,30 +7,20 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account } from '../schemas';
-import { ItemState, ListSession } from '../schemas/tree';
+import { Session } from '../schemas/tree';
 import { findEntityById } from './entityFinder';
-import { getFolder } from './folderService';
+import { getTemplate } from './templateService';
 
 /**
- * Create a new list session for a template folder
+ * Create a new list session for a template
  */
 export function createSession(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionName?: string,
 ): string {
-  const folder = getFolder(account, folderId);
-  if (!folder) throw new Error(`Folder ${folderId} not found`);
-
-  // Initialize sessions list if it's null (Jazz CoList might not be initialized yet)
-  if (!folder.sessions) {
-    folder.$jazz.set('sessions', []);
-  }
-
-  // Initialize items list if it's null
-  if (!folder.items) {
-    folder.$jazz.set('items', []);
-  }
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
 
   // Generate auto-generated session name with timestamp if not provided
   const now = new Date();
@@ -39,14 +29,13 @@ export function createSession(
   const name = sessionName || `${dateStr} ${timeStr}`;
 
   // Count non-archived leaf items only (exclude categories)
-  const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
+  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
   const remainingCount = activeItems.length;
 
   // Create new list session
-  const newSession = ListSession.create(
+  const newSession = Session.create(
     {
       name,
-      templateFolderId: folderId,
       itemStates: {},
       status: 'active',
       archived: false,
@@ -62,36 +51,36 @@ export function createSession(
     { owner: account },
   );
 
-  // Add session to folder
-  folder.sessions.$jazz.push(newSession);
-  folder.$jazz.set('updatedAt', new Date());
+  // Add session to template
+  template.sessions.$jazz.push(newSession);
+  template.$jazz.set('updatedAt', new Date());
 
   return newSession.$jazz.id;
 }
 
 /**
- * Get session by ID from a folder
+ * Get session by ID from a template
  */
 export function getSession(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
-): InstanceOfSchema<typeof ListSession> | null {
-  const folder = getFolder(account, folderId);
-  return findEntityById(folder?.sessions, sessionId);
+): InstanceOfSchema<typeof Session> | null {
+  const template = getTemplate(account, templateId);
+  return findEntityById(template?.sessions, sessionId);
 }
 
 /**
- * Get all sessions from a folder
+ * Get all sessions from a template
  */
 export function getSessions(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
-): Array<InstanceOfSchema<typeof ListSession>> {
-  const folder = getFolder(account, folderId);
-  if (!folder?.sessions) return [];
+  templateId: string,
+): Array<InstanceOfSchema<typeof Session>> {
+  const template = getTemplate(account, templateId);
+  if (!template?.sessions) return [];
 
-  return folder.sessions.filter((s) => s != null) as Array<InstanceOfSchema<typeof ListSession>>;
+  return template.sessions.filter((s) => s != null) as Array<InstanceOfSchema<typeof Session>>;
 }
 
 /**
@@ -99,51 +88,41 @@ export function getSessions(
  */
 export function toggleItemSelected(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
   itemId: string,
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
   // Initialize itemStates if not present
-  if (!session.itemStates) {
-    session.$jazz.set('itemStates', {});
-  }
-
-  const itemStates = session.itemStates;
-  if (!itemStates) return;
+  const itemStates = session.itemStates || {};
 
   const currentState = itemStates[itemId];
 
   if (!currentState) {
-    // Create new ItemState
-    const newState = ItemState.create(
-      {
-        itemId,
+    // Create new plain object state
+    session.$jazz.set('itemStates', {
+      ...itemStates,
+      [itemId]: {
         selected: true,
         checked: false,
         selectedAt: new Date(),
-        checkedBy: account,
       },
-      { owner: account },
-    );
-    // Use $jazz.set on the record to add the new state
-    session.$jazz.set('itemStates', {
-      ...itemStates,
-      [itemId]: newState,
     });
   } else {
     // Toggle selected
     const newSelected = !currentState.selected;
-    currentState.$jazz.set('selected', newSelected);
-    if (newSelected) {
-      currentState.$jazz.set('selectedAt', new Date());
-    } else {
-      // If deselecting, also clear checked state
-      currentState.$jazz.set('checked', false);
-      currentState.$jazz.set('checkedAt', undefined);
-    }
+    session.$jazz.set('itemStates', {
+      ...itemStates,
+      [itemId]: {
+        ...currentState,
+        selected: newSelected,
+        selectedAt: newSelected ? new Date() : currentState.selectedAt,
+        checked: newSelected ? currentState.checked : false,
+        checkedAt: newSelected ? currentState.checkedAt : undefined,
+      },
+    });
   }
 
   // Update session activity
@@ -155,24 +134,26 @@ export function toggleItemSelected(
  */
 export function toggleItemChecked(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
   itemId: string,
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
-  const currentState = session.itemStates?.[itemId];
+  const itemStates = session.itemStates || {};
+  const currentState = itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
   const newCheckedState = !currentState.checked;
-  currentState.$jazz.set('checked', newCheckedState);
-  if (newCheckedState) {
-    currentState.$jazz.set('checkedAt', new Date());
-    currentState.$jazz.set('checkedBy', account);
-  } else {
-    currentState.$jazz.set('checkedAt', undefined);
-  }
+  session.$jazz.set('itemStates', {
+    ...itemStates,
+    [itemId]: {
+      ...currentState,
+      checked: newCheckedState,
+      checkedAt: newCheckedState ? new Date() : undefined,
+    },
+  });
 
   session.$jazz.set('lastActivityAt', new Date());
 }
@@ -182,24 +163,24 @@ export function toggleItemChecked(
  */
 export function updateSessionCounts(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
-  const folder = getFolder(account, folderId);
-  if (!folder?.items) return;
+  const template = getTemplate(account, templateId);
+  if (!template?.items) return;
 
   // Only count leaf items, not categories
-  const activeItems = folder.items.filter((item) => item && !item.archived && item.type === 'item');
+  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
 
   let selectedCount = 0;
   let checkedCount = 0;
   let remainingCount = 0;
 
   activeItems.forEach((item) => {
-    const state = session.itemStates?.[item.$jazz.id];
+    const state = session.itemStates?.[item.id];
     if (!state || (!state.selected && !state.checked)) {
       remainingCount++;
     } else if (state.checked) {
@@ -219,11 +200,11 @@ export function updateSessionCounts(
  */
 export function completeSession(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
   session.$jazz.set('status', 'completed');
   session.$jazz.set('completedAt', new Date());
@@ -234,11 +215,11 @@ export function completeSession(
  */
 export function abandonSession(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
   session.$jazz.set('status', 'abandoned');
   session.$jazz.set('lastActivityAt', new Date());
@@ -249,12 +230,12 @@ export function abandonSession(
  */
 export function updateViewMode(
   account: InstanceOfSchema<typeof Account>,
-  folderId: string,
+  templateId: string,
   sessionId: string,
   viewMode: 'flat' | 'hierarchy-in-zones' | 'zone-in-hierarchy',
 ): void {
-  const session = getSession(account, folderId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in folder ${folderId}`);
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
   session.$jazz.set('viewMode', viewMode);
   session.$jazz.set('lastActivityAt', new Date());

@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, Template } from '../../schemas';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
@@ -280,12 +280,12 @@ function isValidISODate(dateString: string): boolean {
  * @returns true if path exists
  */
 function pathExists(path: string, account: InstanceOfSchema<typeof Account>): boolean {
-  if (!account.root?.nodes) {
+  if (!account.root?.templates) {
     return false;
   }
 
-  for (const node of account.root.nodes) {
-    if (node && node.path === path) {
+  for (const template of account.root.templates) {
+    if (template && template.path === path) {
       return true;
     }
   }
@@ -294,23 +294,23 @@ function pathExists(path: string, account: InstanceOfSchema<typeof Account>): bo
 }
 
 /**
- * Find a folder by path
+ * Find a template by path
  *
  * @param path - Path to search for
  * @param account - User's account
- * @returns FolderNode or null if not found
+ * @returns Template or null if not found
  */
-export function findFolderByPath(
+export function findTemplateByPath(
   path: string,
   account: InstanceOfSchema<typeof Account>,
-): InstanceOfSchema<typeof FolderNode> | null {
-  if (!account.root?.nodes) {
+): InstanceOfSchema<typeof Template> | null {
+  if (!account.root?.templates) {
     return null;
   }
 
-  for (const node of account.root.nodes) {
-    if (node && node.path === path) {
-      return node;
+  for (const template of account.root.templates) {
+    if (template && template.path === path) {
+      return template;
     }
   }
 

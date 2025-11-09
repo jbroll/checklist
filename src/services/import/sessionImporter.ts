@@ -5,8 +5,9 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
-import { ItemState, ListSession } from '../../schemas/tree';
+import type { Account, Template } from '../../schemas';
+import { Session } from '../../schemas/tree';
+import type { ItemState } from '../../schemas/tree';
 import { parseCsv } from '../../utils/csvParser';
 
 export interface SessionImportResult {
@@ -33,14 +34,14 @@ export interface SessionImportOptions {
  * Creates a new session with the imported state.
  *
  * @param csvContent - CSV content string
- * @param folder - Folder to import session into
+ * @param template - Template to import session into
  * @param account - User's Account (for ownership)
  * @param options - Import options (session name, add missing items)
  * @returns Import result with statistics
  */
 export function importSessionFromCsv(
   csvContent: string,
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   account: InstanceOfSchema<typeof Account>,
   options: SessionImportOptions = {},
 ): SessionImportResult {
@@ -52,9 +53,9 @@ export function importSessionFromCsv(
     unmatchedItems: [],
   };
 
-  // Validate folder type
-  if (folder.type !== 'template-folder' || !folder.items || !folder.sessions) {
-    result.errors.push('Can only import sessions into template folders');
+  // Validate template has items and sessions
+  if (!template.items || !template.sessions) {
+    result.errors.push('Can only import sessions into templates with items');
     return result;
   }
 
@@ -73,18 +74,15 @@ export function importSessionFromCsv(
   }
 
   // Create lookup map for template items (by lowercase name)
-  const templateItemsByName = new Map<
-    string,
-    InstanceOfSchema<typeof import('../../schemas/tree').TemplateItem>
-  >();
-  for (const item of folder.items) {
+  const templateItemsByName = new Map<string, { id: string; name: string }>();
+  for (const item of template.items) {
     if (item && !item.archived) {
       templateItemsByName.set(item.name.toLowerCase(), item);
     }
   }
 
   // Process CSV rows and create item states
-  const itemStatesRecord: Record<string, InstanceOfSchema<typeof ItemState>> = {};
+  const itemStatesRecord: Record<string, ItemState> = {};
   let totalInCart = 0;
   let totalPurchased = 0;
 
@@ -140,19 +138,15 @@ export function importSessionFromCsv(
     }
 
     try {
-      // Create ItemState
-      const itemState = ItemState.create(
-        {
-          itemId: templateItem.$jazz.id,
-          selected: inCart,
-          checked: purchased,
-          selectedAt: addedToCartAt,
-          checkedAt: purchasedAt,
-        },
-        { owner: account },
-      );
+      // Create ItemState as plain object
+      const itemState: ItemState = {
+        selected: inCart,
+        checked: purchased,
+        selectedAt: addedToCartAt,
+        checkedAt: purchasedAt,
+      };
 
-      itemStatesRecord[templateItem.$jazz.id] = itemState;
+      itemStatesRecord[templateItem.id] = itemState;
       result.matched++;
 
       // Update counts
@@ -180,10 +174,9 @@ export function importSessionFromCsv(
 
   // Create shopping session
   try {
-    const session = ListSession.create(
+    const session = Session.create(
       {
         name: sessionName,
-        templateFolderId: folder.$jazz?.id || '',
         itemStates: itemStatesRecord,
         status,
         archived: false,
@@ -200,11 +193,11 @@ export function importSessionFromCsv(
       { owner: account },
     );
 
-    // Add session to folder
-    folder.sessions?.$jazz.push(session);
+    // Add session to template
+    template.sessions.$jazz.push(session);
 
-    // Update folder timestamp
-    folder.$jazz.set('updatedAt', new Date());
+    // Update template timestamp
+    template.$jazz.set('updatedAt', new Date());
 
     result.imported = true;
     result.sessionId = session.$jazz.id;

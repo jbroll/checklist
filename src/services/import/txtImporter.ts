@@ -8,7 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, Template } from '../../schemas';
 import { parseTextList } from '../../utils/csvParser';
 import { isIndentedFormat, parseIndentedList } from '../../utils/indentedListParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
@@ -33,13 +33,13 @@ export type TxtImportResult = BaseImportResult;
  * - Paths are generated from hierarchy
  *
  * @param textContent - Plain text content
- * @param folder - Folder to import items into
+ * @param template - Template to import items into
  * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
 export function importItemsFromText(
   textContent: string,
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   account: InstanceOfSchema<typeof Account>,
 ): TxtImportResult {
   // Detect format
@@ -55,7 +55,7 @@ export function importItemsFromText(
     }));
 
     // Use base importer to handle the actual import
-    return importItems(itemsToImport, folder, account);
+    return importItems(itemsToImport, template, account);
   }
 
   // Parse flat format (original behavior)
@@ -68,5 +68,5 @@ export function importItemsFromText(
   }));
 
   // Use base importer to handle the actual import
-  return importItems(itemsToImport, folder, account);
+  return importItems(itemsToImport, template, account);
 }
