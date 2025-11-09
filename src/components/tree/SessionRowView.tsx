@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
+import { CheckCircle2, Download, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ interface SessionRowViewProps {
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
+  onExport?: (sessionId: string) => void;
   allSessions: readonly (InstanceOfSchema<typeof ListSession> | null)[];
 }
 
@@ -26,6 +27,7 @@ export const SessionRowView = memo(function SessionRowView({
   level,
   onOpen,
   onDelete,
+  onExport,
   allSessions,
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
@@ -86,6 +88,12 @@ export const SessionRowView = memo(function SessionRowView({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            {onExport && (
+              <DropdownMenuItem onClick={() => onExport(session.$jazz.id)}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Session

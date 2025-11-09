@@ -120,16 +120,6 @@ export function SessionExportDialog({
               </Label>
             </div>
           </div>
-
-          {/* Export details */}
-          <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-            <div className="font-medium">What will be exported:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>All items from template</li>
-              <li>Shopping state (in cart, purchased)</li>
-              {format === 'csv' && <li>Timestamps and category information</li>}
-            </ul>
-          </div>
         </div>
 
         <DialogFooter>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
+import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { ListSessionView } from '@/components/session/ListSessionView';
 import { TreeView } from '@/components/tree';
@@ -20,6 +21,11 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
+  const [sessionExportData, setSessionExportData] = useState<{
+    folderId: string;
+    sessionId: string;
+  } | null>(null);
 
   // Selection state - tracks currently selected folder/template
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -94,6 +100,11 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     setSelectedNodeId(null);
   };
 
+  const handleExportSession = (folderId: string, sessionId: string) => {
+    setSessionExportData({ folderId, sessionId });
+    setShowSessionExportDialog(true);
+  };
+
   // If editing a template, show TemplateItemsView
   if (activeEditFolderId) {
     const editFolder = nodes.find((n) => n?.$jazz.id === activeEditFolderId);
@@ -140,6 +151,7 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
             setActiveSessionFolderId(folderId);
             setActiveSessionId(sessionId);
           }}
+          onExportSession={handleExportSession}
           onHeaderClick={handleHeaderClick}
           onAddFolder={() => setShowAddFolder(true)}
           onAddTemplate={() => setShowAddTemplate(true)}
@@ -168,6 +180,27 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
 
         {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
         <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={me} />
+
+        {/* Session Export Dialog */}
+        {sessionExportData && (() => {
+          const folder = nodes.find((n) => n?.$jazz.id === sessionExportData.folderId);
+          const session = folder?.sessions?.find((s) => s?.$jazz.id === sessionExportData.sessionId);
+          if (folder && session) {
+            return (
+              <SessionExportDialog
+                open={showSessionExportDialog}
+                onOpenChange={setShowSessionExportDialog}
+                // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+                folder={folder}
+                sessionId={sessionExportData.sessionId}
+                sessionName={session.name}
+                // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+                account={me}
+              />
+            );
+          }
+          return null;
+        })()}
       </main>
     </div>
   );
