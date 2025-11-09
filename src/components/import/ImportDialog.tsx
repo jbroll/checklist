@@ -249,24 +249,22 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
         acceptedFileTypes: ['json', 'txt', 'csv'] as ('json' | 'txt' | 'csv')[],
         infoContent: (
           <>
-            <div className="font-medium">File formats:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>
-                <strong>JSON:</strong> List of template items
-              </li>
-              <li>
-                <strong>TXT:</strong> One item name per line
-              </li>
-              <li>
-                <strong>CSV:</strong> Columns: name, category, sortOrder, defaultQuantity
-              </li>
-            </ul>
-            <div className="mt-3 font-medium">Import rules:</div>
+            <div className="font-medium">Import rules:</div>
             <ul className="ml-4 mt-2 list-disc space-y-1">
               <li>Items will be appended to existing list</li>
               <li>Duplicate items (by name) will be skipped</li>
               <li>Auto-categorized if category not provided</li>
             </ul>
+            <div className="mt-3">
+              <a
+                href="/help/imports.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 underline text-sm"
+              >
+                Learn more about import formats
+              </a>
+            </div>
           </>
         ),
       };
@@ -279,17 +277,21 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
         acceptedFileTypes: ['json'] as ('json' | 'txt' | 'csv')[],
         infoContent: (
           <>
-            <div className="font-medium">File format:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>
-                <strong>JSON:</strong> Folder structure with items and sessions
-              </li>
-            </ul>
-            <div className="mt-3 font-medium">Import rules:</div>
+            <div className="font-medium">Import rules:</div>
             <ul className="ml-4 mt-2 list-disc space-y-1">
               <li>Duplicate folders renamed with numbered suffix</li>
               <li>Existing data will never be overwritten</li>
             </ul>
+            <div className="mt-3">
+              <a
+                href="/help/imports.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 underline text-sm"
+              >
+                Learn more about import formats
+              </a>
+            </div>
           </>
         ),
       };
@@ -301,21 +303,22 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
       acceptedFileTypes: ['json', 'txt', 'csv'] as ('json' | 'txt' | 'csv')[],
       infoContent: (
         <>
-          <div className="font-medium">File formats:</div>
-          <ul className="ml-4 mt-2 list-disc space-y-1">
-            <li>
-              <strong>JSON:</strong> Full backup with folders, items, and sessions
-            </li>
-            <li>
-              <strong>TXT/CSV:</strong> Creates new list at root with imported items
-            </li>
-          </ul>
-          <div className="mt-3 font-medium">Import rules:</div>
+          <div className="font-medium">Import rules:</div>
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li>Duplicate folders renamed with numbered suffix (1), (2), (3)...</li>
             <li>Items auto-categorized if category not provided</li>
             <li>Existing data will never be overwritten</li>
           </ul>
+          <div className="mt-3">
+            <a
+              href="/help/imports.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-700 underline text-sm"
+            >
+              Learn more about import formats
+            </a>
+          </div>
         </>
       ),
     };
