@@ -248,24 +248,14 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
         description: 'Auto-detects JSON (items list) or TXT/CSV (append items).',
         acceptedFileTypes: ['json', 'txt', 'csv'] as ('json' | 'txt' | 'csv')[],
         infoContent: (
-          <>
-            <div className="font-medium">Import rules:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>Items will be appended to existing list</li>
-              <li>Duplicate items (by name) will be skipped</li>
-              <li>Auto-categorized if category not provided</li>
-            </ul>
-            <div className="mt-3">
-              <a
-                href="/help/imports.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 underline text-sm"
-              >
-                Learn more about import formats
-              </a>
-            </div>
-          </>
+          <a
+            href="/help/imports.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 underline text-sm"
+          >
+            Learn more about import formats
+          </a>
         ),
       };
     }
@@ -276,23 +266,14 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
         description: 'Import folder structure from JSON backup.',
         acceptedFileTypes: ['json'] as ('json' | 'txt' | 'csv')[],
         infoContent: (
-          <>
-            <div className="font-medium">Import rules:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>Duplicate folders renamed with numbered suffix</li>
-              <li>Existing data will never be overwritten</li>
-            </ul>
-            <div className="mt-3">
-              <a
-                href="/help/imports.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 underline text-sm"
-              >
-                Learn more about import formats
-              </a>
-            </div>
-          </>
+          <a
+            href="/help/imports.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 underline text-sm"
+          >
+            Learn more about import formats
+          </a>
         ),
       };
     }
@@ -302,24 +283,14 @@ export function ImportDialog({ open, onOpenChange, account, folder, onImportComp
       description: 'Auto-detects JSON (full backup) or TXT/CSV (create new list).',
       acceptedFileTypes: ['json', 'txt', 'csv'] as ('json' | 'txt' | 'csv')[],
       infoContent: (
-        <>
-          <div className="font-medium">Import rules:</div>
-          <ul className="ml-4 mt-2 list-disc space-y-1">
-            <li>Duplicate folders renamed with numbered suffix (1), (2), (3)...</li>
-            <li>Items auto-categorized if category not provided</li>
-            <li>Existing data will never be overwritten</li>
-          </ul>
-          <div className="mt-3">
-            <a
-              href="/help/imports.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-700 underline text-sm"
-            >
-              Learn more about import formats
-            </a>
-          </div>
-        </>
+        <a
+          href="/help/imports.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-700 underline text-sm"
+        >
+          Learn more about import formats
+        </a>
       ),
     };
   };
