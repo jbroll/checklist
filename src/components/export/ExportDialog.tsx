@@ -164,38 +164,14 @@ export function ExportDialog({ open, onOpenChange, account, folder, selectedFold
       return {
         title: `Export: ${folder.name}`,
         description: 'Export to JSON for backup or transfer.',
-        content: (
-          <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-            <div className="font-medium">What will be exported:</div>
-            <ul className="ml-4 mt-2 list-disc space-y-1">
-              <li>Folder structure and sub-folders</li>
-              <li>All list items</li>
-              <li>All sessions (active and completed)</li>
-            </ul>
-            <div className="mt-2 text-xs text-neutral-600">
-              Note: Sharing information will not be exported
-            </div>
-          </div>
-        ),
+        content: null,
       };
     }
 
     return {
       title: 'Export',
       description: 'Export to JSON for backup or transfer.',
-      content: (
-        <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
-          <div className="font-medium">What will be exported:</div>
-          <ul className="ml-4 mt-2 list-disc space-y-1">
-            <li>All folders and sub-folders</li>
-            <li>All list items</li>
-            <li>All sessions (active and completed)</li>
-          </ul>
-          <div className="mt-2 text-xs text-neutral-600">
-            Note: Sharing information will not be exported
-          </div>
-        </div>
-      ),
+      content: null,
     };
   };
 
