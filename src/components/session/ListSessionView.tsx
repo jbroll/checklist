@@ -170,39 +170,117 @@ export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewPr
     session.$jazz.set('lastActivityAt', new Date());
   };
 
-  // Helper to build category tree structure
+  // Helper to build multi-level category tree structure
   const buildCategoryTree = (items: InstanceOfSchema<typeof TemplateItem>[]) => {
-    const categoryNodes = new Map<
-      string,
-      { name: string; path: string; items: InstanceOfSchema<typeof TemplateItem>[] }
-    >();
+    interface CategoryNode {
+      name: string;
+      path: string;
+      items: InstanceOfSchema<typeof TemplateItem>[];
+      children: CategoryNode[];
+      depth: number;
+    }
 
+    const categoryMap = new Map<string, CategoryNode>();
+    const rootCategories: CategoryNode[] = [];
+
+    // First pass: Create all category nodes
     items.forEach((item) => {
       const pathParts = item.path.split('/');
-      const parentPath = pathParts.slice(0, -1).join('/');
 
-      if (parentPath && !categoryNodes.has(parentPath)) {
-        // Create category node from path
-        const categoryName = pathParts[pathParts.length - 2] || 'Uncategorized';
-        categoryNodes.set(parentPath, {
-          name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
-          path: parentPath,
-          items: [],
-        });
+      // Create category nodes for all levels (excluding the item itself)
+      for (let i = 1; i < pathParts.length; i++) {
+        const categoryPath = pathParts.slice(0, i).join('/');
+
+        if (!categoryMap.has(categoryPath)) {
+          const categoryName = pathParts[i - 1];
+          categoryMap.set(categoryPath, {
+            name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
+            path: categoryPath,
+            items: [],
+            children: [],
+            depth: i - 1,
+          });
+        }
       }
 
+      // Add item to its immediate parent category
+      const parentPath = pathParts.slice(0, -1).join('/');
       if (parentPath) {
-        categoryNodes.get(parentPath)?.items.push(item);
+        categoryMap.get(parentPath)?.items.push(item);
       }
     });
 
-    // Sort categories alphabetically by name, and items within each category
-    return Array.from(categoryNodes.values())
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((category) => ({
-        ...category,
-        items: category.items.sort((a, b) => a.name.localeCompare(b.name)),
-      }));
+    // Second pass: Build hierarchy by connecting parents and children
+    categoryMap.forEach((category, path) => {
+      const pathParts = path.split('/');
+
+      if (pathParts.length === 1) {
+        // Top-level category
+        rootCategories.push(category);
+      } else {
+        // Nested category - find parent and add as child
+        const parentPath = pathParts.slice(0, -1).join('/');
+        const parent = categoryMap.get(parentPath);
+        if (parent) {
+          parent.children.push(category);
+        }
+      }
+    });
+
+    // Sort categories and items alphabetically
+    const sortCategoryTree = (categories: CategoryNode[]): CategoryNode[] => {
+      return categories
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((category) => ({
+          ...category,
+          items: category.items.sort((a, b) => a.name.localeCompare(b.name)),
+          children: sortCategoryTree(category.children),
+        }));
+    };
+
+    return sortCategoryTree(rootCategories);
+  };
+
+  // Helper to recursively render category tree
+  const renderCategoryTree = (
+    categories: ReturnType<typeof buildCategoryTree>,
+    zone: 'inventory' | 'cart' | 'completed',
+    keyPrefix: string,
+  ): React.ReactNode => {
+    return categories.map((category) => {
+      const catKey = `${keyPrefix}-${category.path}`;
+      const hasChildren = category.children.length > 0;
+
+      return (
+        <div key={category.path} className="flex flex-col gap-2">
+          <SessionZone
+            title={category.name}
+            zone={zone}
+            items={category.items}
+            itemStates={session?.itemStates || {}}
+            expanded={categoryExpanded[catKey] ?? true}
+            onToggleExpand={() => {
+              if (session?.categoryExpanded) {
+                const currentValue = categoryExpanded[catKey] ?? true;
+                session.$jazz.set('categoryExpanded', {
+                  ...categoryExpanded,
+                  [catKey]: !currentValue,
+                });
+              }
+            }}
+            onToggleSelected={handleToggleCart}
+            onToggleChecked={handleTogglePurchased}
+            count={category.items.length}
+          >
+            {hasChildren && (
+              <div className="flex flex-col gap-2 pl-4">
+                {renderCategoryTree(category.children, zone, keyPrefix)}
+              </div>
+            )}
+          </SessionZone>
+        </div>
+      );
+    });
   };
 
   // Render In Cart and Completed zones based on view mode
@@ -305,31 +383,7 @@ export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewPr
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {categories.map((category) => {
-                      const catKey = `${zone.key}-${category.path}`;
-                      return (
-                        <SessionZone
-                          key={category.path}
-                          title={category.name}
-                          zone={zone.key}
-                          items={category.items}
-                          itemStates={session.itemStates || {}}
-                          expanded={categoryExpanded[catKey] ?? true}
-                          onToggleExpand={() => {
-                            if (session?.categoryExpanded) {
-                              const currentValue = categoryExpanded[catKey] ?? true;
-                              session.$jazz.set('categoryExpanded', {
-                                ...categoryExpanded,
-                                [catKey]: !currentValue,
-                              });
-                            }
-                          }}
-                          onToggleSelected={handleToggleCart}
-                          onToggleChecked={handleTogglePurchased}
-                          count={category.items.length}
-                        />
-                      );
-                    })}
+                    {renderCategoryTree(categories, zone.key, zone.key)}
                   </div>
                 )}
               </SessionZone>
@@ -345,101 +399,145 @@ export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewPr
       const cartAndCompletedItems = [...cartItems, ...completedItems];
       const categoriesWithItems = buildCategoryTree(cartAndCompletedItems);
 
-      return (
-        <>
-          {categoriesWithItems.map((category) => {
-            // Split category items by zone
-            const catCart = category.items.filter((item) => {
-              const state = session.itemStates?.[item.$jazz.id];
-              return state?.selected && !state.checked;
-            });
-            const catCompleted = category.items.filter((item) => {
-              const state = session.itemStates?.[item.$jazz.id];
-              return state?.checked;
-            });
+      // Recursive function to count all items in a category tree (including children)
+      const countAllItems = (
+        category: ReturnType<typeof buildCategoryTree>[0],
+      ): { cart: number; completed: number } => {
+        let cartCount = 0;
+        let completedCount = 0;
 
-            // Skip if no items in cart or completed
-            if (catCart.length === 0 && catCompleted.length === 0) return null;
+        // Count items at this level
+        category.items.forEach((item) => {
+          const state = session.itemStates?.[item.$jazz.id];
+          if (state?.selected && !state.checked) cartCount++;
+          if (state?.checked) completedCount++;
+        });
 
-            const totalItems = catCart.length + catCompleted.length;
+        // Count items in children
+        category.children.forEach((child) => {
+          const childCounts = countAllItems(child);
+          cartCount += childCounts.cart;
+          completedCount += childCounts.completed;
+        });
 
-            return (
-              <SessionZone
-                key={category.path}
-                title={category.name}
-                zone="inventory"
-                items={[]}
-                itemStates={{}}
-                expanded={categoryExpanded[`category-${category.path}`] ?? true}
-                onToggleExpand={() => {
-                  if (session?.categoryExpanded) {
-                    const catKey = `category-${category.path}`;
-                    const currentValue = categoryExpanded[catKey] ?? true;
-                    session.$jazz.set('categoryExpanded', {
-                      ...categoryExpanded,
-                      [catKey]: !currentValue,
-                    });
-                  }
-                }}
-                onToggleSelected={handleToggleCart}
-                onToggleChecked={handleTogglePurchased}
-                count={totalItems}
-              >
-                <div className="flex flex-col gap-2">
-                  {catCart.length > 0 && (
-                    <SessionZone
-                      title="In Cart"
-                      icon={ShoppingCart}
-                      zone="cart"
-                      items={catCart}
-                      itemStates={session.itemStates || {}}
-                      expanded={categoryExpanded[`${category.path}-cart`] ?? true}
-                      onToggleExpand={() => {
-                        if (session?.categoryExpanded) {
-                          const catKey = `${category.path}-cart`;
-                          const currentValue = categoryExpanded[catKey] ?? true;
-                          session.$jazz.set('categoryExpanded', {
-                            ...categoryExpanded,
-                            [catKey]: !currentValue,
-                          });
-                        }
-                      }}
-                      onToggleSelected={handleToggleCart}
-                      onToggleChecked={handleTogglePurchased}
-                      count={catCart.length}
-                      showHeading={showHeadings}
-                    />
-                  )}
-                  {catCompleted.length > 0 && (
-                    <SessionZone
-                      title="Completed"
-                      icon={CheckCircle2}
-                      zone="completed"
-                      items={catCompleted}
-                      itemStates={session.itemStates || {}}
-                      expanded={categoryExpanded[`${category.path}-completed`] ?? true}
-                      onToggleExpand={() => {
-                        if (session?.categoryExpanded) {
-                          const catKey = `${category.path}-completed`;
-                          const currentValue = categoryExpanded[catKey] ?? true;
-                          session.$jazz.set('categoryExpanded', {
-                            ...categoryExpanded,
-                            [catKey]: !currentValue,
-                          });
-                        }
-                      }}
-                      onToggleSelected={handleToggleCart}
-                      onToggleChecked={handleTogglePurchased}
-                      count={catCompleted.length}
-                      showHeading={showHeadings}
-                    />
-                  )}
-                </div>
-              </SessionZone>
-            );
-          })}
-        </>
-      );
+        return { cart: cartCount, completed: completedCount };
+      };
+
+      // Recursive renderer for zone-in-hierarchy mode
+      const renderZoneInHierarchy = (
+        categories: ReturnType<typeof buildCategoryTree>,
+      ): React.ReactNode => {
+        return categories.map((category) => {
+          // Count all items in this category and its children
+          const counts = countAllItems(category);
+          const totalItems = counts.cart + counts.completed;
+
+          // Skip if no items in cart or completed
+          if (totalItems === 0) return null;
+
+          // Split category items by zone (just at this level, not children)
+          const catCart = category.items.filter((item) => {
+            const state = session.itemStates?.[item.$jazz.id];
+            return state?.selected && !state.checked;
+          });
+          const catCompleted = category.items.filter((item) => {
+            const state = session.itemStates?.[item.$jazz.id];
+            return state?.checked;
+          });
+
+          const hasDirectItems = catCart.length > 0 || catCompleted.length > 0;
+          const hasChildren = category.children.length > 0;
+
+          return (
+            <SessionZone
+              key={category.path}
+              title={category.name}
+              zone="inventory"
+              items={[]}
+              itemStates={{}}
+              expanded={categoryExpanded[`category-${category.path}`] ?? true}
+              onToggleExpand={() => {
+                if (session?.categoryExpanded) {
+                  const catKey = `category-${category.path}`;
+                  const currentValue = categoryExpanded[catKey] ?? true;
+                  session.$jazz.set('categoryExpanded', {
+                    ...categoryExpanded,
+                    [catKey]: !currentValue,
+                  });
+                }
+              }}
+              onToggleSelected={handleToggleCart}
+              onToggleChecked={handleTogglePurchased}
+              count={totalItems}
+            >
+              <div className="flex flex-col gap-2">
+                {/* Show zones for items at this level */}
+                {hasDirectItems && (
+                  <>
+                    {catCart.length > 0 && (
+                      <SessionZone
+                        title="In Cart"
+                        icon={ShoppingCart}
+                        zone="cart"
+                        items={catCart}
+                        itemStates={session.itemStates || {}}
+                        expanded={categoryExpanded[`${category.path}-cart`] ?? true}
+                        onToggleExpand={() => {
+                          if (session?.categoryExpanded) {
+                            const catKey = `${category.path}-cart`;
+                            const currentValue = categoryExpanded[catKey] ?? true;
+                            session.$jazz.set('categoryExpanded', {
+                              ...categoryExpanded,
+                              [catKey]: !currentValue,
+                            });
+                          }
+                        }}
+                        onToggleSelected={handleToggleCart}
+                        onToggleChecked={handleTogglePurchased}
+                        count={catCart.length}
+                        showHeading={showHeadings}
+                      />
+                    )}
+                    {catCompleted.length > 0 && (
+                      <SessionZone
+                        title="Completed"
+                        icon={CheckCircle2}
+                        zone="completed"
+                        items={catCompleted}
+                        itemStates={session.itemStates || {}}
+                        expanded={categoryExpanded[`${category.path}-completed`] ?? true}
+                        onToggleExpand={() => {
+                          if (session?.categoryExpanded) {
+                            const catKey = `${category.path}-completed`;
+                            const currentValue = categoryExpanded[catKey] ?? true;
+                            session.$jazz.set('categoryExpanded', {
+                              ...categoryExpanded,
+                              [catKey]: !currentValue,
+                            });
+                          }
+                        }}
+                        onToggleSelected={handleToggleCart}
+                        onToggleChecked={handleTogglePurchased}
+                        count={catCompleted.length}
+                        showHeading={showHeadings}
+                      />
+                    )}
+                  </>
+                )}
+
+                {/* Recursively render child categories */}
+                {hasChildren && (
+                  <div className="flex flex-col gap-2 pl-4">
+                    {renderZoneInHierarchy(category.children)}
+                  </div>
+                )}
+              </div>
+            </SessionZone>
+          );
+        });
+      };
+
+      return <>{renderZoneInHierarchy(categoriesWithItems)}</>;
     }
 
     return null;
@@ -484,31 +582,7 @@ export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewPr
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {inventoryCategories.map((category) => {
-              const catKey = `inventory-${category.path}`;
-              return (
-                <SessionZone
-                  key={category.path}
-                  title={category.name}
-                  zone="inventory"
-                  items={category.items}
-                  itemStates={session.itemStates || {}}
-                  expanded={categoryExpanded[catKey] ?? true}
-                  onToggleExpand={() => {
-                    if (session?.categoryExpanded) {
-                      const currentValue = categoryExpanded[catKey] ?? true;
-                      session.$jazz.set('categoryExpanded', {
-                        ...categoryExpanded,
-                        [catKey]: !currentValue,
-                      });
-                    }
-                  }}
-                  onToggleSelected={handleToggleCart}
-                  onToggleChecked={handleTogglePurchased}
-                  count={category.items.length}
-                />
-              );
-            })}
+            {renderCategoryTree(inventoryCategories, 'inventory', 'inventory')}
           </div>
         )}
       </SessionZone>
