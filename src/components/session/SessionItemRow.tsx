@@ -4,7 +4,7 @@ import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
 import type { ItemState, TemplateItem } from '@/schemas/tree';
 
-interface ListSessionItemRowProps {
+interface SessionItemRowProps {
   item: InstanceOfSchema<typeof TemplateItem>;
   state: InstanceOfSchema<typeof ItemState> | null;
   zone: 'inventory' | 'cart' | 'completed';
@@ -12,13 +12,13 @@ interface ListSessionItemRowProps {
   onToggleChecked: (itemId: string) => void;
 }
 
-export const ListSessionItemRow = memo(function ListSessionItemRow({
+export const SessionItemRow = memo(function SessionItemRow({
   item,
   state,
   zone,
   onToggleSelected,
   onToggleChecked,
-}: ListSessionItemRowProps) {
+}: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
 
   if (!me) return null;

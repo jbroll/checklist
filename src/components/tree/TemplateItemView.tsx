@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { TemplateItem as TemplateItemType } from '@/schemas';
-import { TreeNode } from './TreeNode';
+import { IndentedRow } from './IndentedRow';
 
 interface TemplateItemViewProps {
   item: InstanceOfSchema<typeof TemplateItemType>;
@@ -96,7 +96,7 @@ export function TemplateItemView({
         isOver && isCategory ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
       }`}
     >
-      <TreeNode
+      <IndentedRow
         level={level}
         expanded={isCategory ? item.expanded : false}
         onToggleExpand={isCategory && hasChildren ? handleToggle : () => {}}
@@ -165,7 +165,7 @@ export function TemplateItemView({
             </DropdownMenu>
           )}
         </div>
-      </TreeNode>
+      </IndentedRow>
     </div>
   );
 }

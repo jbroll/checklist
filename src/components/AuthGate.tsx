@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
-import { TemplateEditor } from './editor/TemplateEditor';
+import { AppContainer } from './editor/AppContainer';
 import { Button } from './ui/button';
 import { LoadingScreen } from './ui/loading';
 
-export function Dashboard() {
+export function AuthGate() {
   const [isLoading, setIsLoading] = useState(false);
   const { me, logOut } = useAccount(Account);
 
@@ -90,7 +90,7 @@ export function Dashboard() {
     // Otherwise show sign-in screen (will be shown below)
   } else if (me) {
     // User is authenticated and hasn't signed out, show the app
-    return <TemplateEditor onSignOut={handleSignOut} />;
+    return <AppContainer onSignOut={handleSignOut} />;
   }
 
   return (

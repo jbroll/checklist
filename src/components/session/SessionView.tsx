@@ -27,13 +27,13 @@ import type { TemplateItem } from '@/schemas/tree';
 import * as SessionService from '@/services/sessionService';
 import { SessionZone } from './SessionZone';
 
-interface ListSessionViewProps {
+interface SessionViewProps {
   folder: InstanceOfSchema<typeof FolderNode>;
   sessionId: string;
   onBack: () => void;
 }
 
-export function ListSessionView({ folder, sessionId, onBack }: ListSessionViewProps) {
+export function SessionView({ folder, sessionId, onBack }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
     inventory: true,

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { ListSession } from '@/schemas/tree';
-import { TreeNode } from './TreeNode';
+import { IndentedRow } from './IndentedRow';
 
 interface SessionRowViewProps {
   session: InstanceOfSchema<typeof ListSession>;
@@ -49,7 +49,7 @@ export const SessionRowView = memo(function SessionRowView({
         : Pause;
 
   return (
-    <TreeNode level={level} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
+    <IndentedRow level={level} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
       <div className="group flex flex-1 items-center gap-2 rounded hover:bg-neutral-50">
         <button
           type="button"
@@ -101,6 +101,6 @@ export const SessionRowView = memo(function SessionRowView({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </TreeNode>
+    </IndentedRow>
   );
 });

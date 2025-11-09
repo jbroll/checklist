@@ -1,6 +1,6 @@
 import { XCircle } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import { Dashboard } from './components/Dashboard';
+import { AuthGate } from './components/AuthGate';
 import { LoadingScreen } from './components/ui/loading';
 import { JazzProvider } from './lib/jazz';
 
@@ -46,7 +46,7 @@ function App() {
             <TestPage />
           </Suspense>
         ) : (
-          <Dashboard />
+          <AuthGate />
         )}
       </div>
     </JazzProvider>

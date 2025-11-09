@@ -2,20 +2,20 @@ import { useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
-import { ListSessionView } from '@/components/session/ListSessionView';
+import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
 import * as FolderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
-import { TemplateItemsView } from './TemplateItemsView';
+import { TemplateItemEditor } from './TemplateItemEditor';
 
-interface TemplateEditorProps {
+interface AppContainerProps {
   onSignOut?: () => void;
 }
 
-export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
+export function AppContainer({ onSignOut }: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
@@ -105,12 +105,12 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     setShowSessionExportDialog(true);
   };
 
-  // If editing a template, show TemplateItemsView
+  // If editing a template, show TemplateItemEditor
   if (activeEditFolderId) {
     const editFolder = nodes.find((n) => n?.$jazz.id === activeEditFolderId);
     if (editFolder) {
       return (
-        <TemplateItemsView
+        <TemplateItemEditor
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           folder={editFolder}
           onBack={handleBackFromEdit}
@@ -119,12 +119,12 @@ export function TemplateEditor({ onSignOut }: TemplateEditorProps) {
     }
   }
 
-  // If viewing a shopping session, show ListSessionView
+  // If viewing a shopping session, show SessionView
   if (activeSessionFolderId && activeSessionId) {
     const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
     if (sessionFolder) {
       return (
-        <ListSessionView
+        <SessionView
           // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           folder={sessionFolder}
           sessionId={activeSessionId}
