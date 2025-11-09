@@ -53,9 +53,7 @@ export function ItemImportResult({ result }: ItemImportResultProps) {
               <div className="text-green-800">• {result.imported} item(s) imported</div>
             )}
             {result.skipped > 0 && (
-              <div className="text-amber-800">
-                • {result.skipped} item(s) skipped (duplicates)
-              </div>
+              <div className="text-amber-800">• {result.skipped} item(s) skipped (duplicates)</div>
             )}
           </div>
 
