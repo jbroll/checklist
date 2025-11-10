@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,18 +11,13 @@ import {
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { TemplateItem } from '@/schemas';
 
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddItem: (name: string, parentPath?: string, defaultQuantity?: string) => void;
-  onAddCategory: (name: string, parentPath?: string, color?: string) => void;
+  onAddItem: (name: string, defaultQuantity?: string) => void;
+  onAddCategory: (name: string, color?: string) => void;
   folderName?: string;
-  // Available categories to select as parent
-  categories?: readonly TemplateItem[];
-  // Default parent path (e.g., from selected category)
-  defaultParentPath?: string;
 }
 
 export function AddItemDialog({
@@ -31,34 +26,19 @@ export function AddItemDialog({
   onAddItem,
   onAddCategory,
   folderName,
-  categories = [],
-  defaultParentPath,
 }: AddItemDialogProps) {
   const [itemType, setItemType] = useState<'item' | 'category'>('item');
   const [name, setName] = useState('');
-  const [parentPath, setParentPath] = useState<string>('');
   const [defaultQuantity, setDefaultQuantity] = useState('');
   const [color, setColor] = useState('#6b7280');
-
-  // Update parentPath when dialog opens with a default parent path
-  useEffect(() => {
-    if (open && defaultParentPath) {
-      setParentPath(defaultParentPath);
-    }
-  }, [open, defaultParentPath]);
-
-  // Filter valid categories
-  const validCategories = categories.filter((cat): cat is TemplateItem => {
-    return cat !== null && !cat.archived && cat.type === 'category';
-  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
       if (itemType === 'item') {
-        onAddItem(name.trim(), parentPath || undefined, defaultQuantity.trim() || undefined);
+        onAddItem(name.trim(), defaultQuantity.trim() || undefined);
       } else {
-        onAddCategory(name.trim(), parentPath || undefined, color || undefined);
+        onAddCategory(name.trim(), color || undefined);
       }
       handleReset();
       onOpenChange(false);
@@ -67,7 +47,6 @@ export function AddItemDialog({
 
   const handleReset = () => {
     setName('');
-    setParentPath('');
     setDefaultQuantity('');
     setColor('#6b7280');
     setItemType('item');
@@ -133,26 +112,6 @@ export function AddItemDialog({
                 autoFocus
               />
             </FormField>
-
-            {/* Parent Category */}
-            {validCategories.length > 0 && (
-              <div className="grid gap-2">
-                <Label htmlFor="parent">Parent Category (Optional)</Label>
-                <select
-                  id="parent"
-                  value={parentPath}
-                  onChange={(e) => setParentPath(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                >
-                  <option value="">-- None (Top Level) --</option>
-                  {validCategories.map((cat) => (
-                    <option key={cat.id} value={cat.path}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* Item-specific: Default Quantity */}
             {itemType === 'item' && (

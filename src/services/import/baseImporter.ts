@@ -95,6 +95,9 @@ export function importItems(
   const existingPaths = getExistingPaths(template);
   let nextSortOrder = calculateNextSortOrder(template);
 
+  // Collect new items to add
+  const newItems: TemplateItem[] = [];
+
   // Import each item
   for (const item of items) {
     const { name, path, type = 'item', defaultQuantity = '', context } = item;
@@ -121,8 +124,8 @@ export function importItems(
         createdAt: new Date(),
       };
 
-      // Add to template
-      template.items.push(newItem);
+      // Collect item for batch add
+      newItems.push(newItem);
       result.imported++;
 
       // Add to existing paths to prevent duplicates within import
@@ -131,6 +134,11 @@ export function importItems(
       const errorContext = context ? `${context} ` : '';
       result.errors.push(`${errorContext}Failed to import "${name}": ${String(error)}`);
     }
+  }
+
+  // Add all new items to template using Jazz API
+  if (newItems.length > 0) {
+    template.$jazz.set('items', [...template.items, ...newItems]);
   }
 
   // Update template timestamp
