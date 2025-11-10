@@ -173,8 +173,8 @@ export const FolderNodeView = memo(function FolderNodeView({
               </button>
             </div>
 
-            {/* Actions Menu - only for template-refs */}
-            {!isEditing && isTemplateRef && (
+            {/* Actions Menu - for both folders and template-refs */}
+            {!isEditing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -191,15 +191,19 @@ export const FolderNodeView = memo(function FolderNodeView({
                     <Pencil className="mr-2 h-4 w-4" />
                     Rename
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </DropdownMenuItem>
+                  {isTemplateRef && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Import
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDelete} className="text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" />
