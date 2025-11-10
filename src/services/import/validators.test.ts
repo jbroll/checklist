@@ -31,7 +31,7 @@ const createMockAccount = (existingPaths: string[] = []) => {
 describe('validators', () => {
   describe('validateJsonData', () => {
     const validData: ExportedData = {
-      version: '1.0',
+      version: '2.0',
       exportDate: '2024-11-01T00:00:00.000Z',
       appVersion: '1.0.0',
       folders: [],
@@ -71,7 +71,7 @@ describe('validators', () => {
     it('should reject data without exportDate field', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         appVersion: '1.0.0',
         folders: [],
       };
@@ -85,7 +85,7 @@ describe('validators', () => {
     it('should reject data without folders field', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
       };
@@ -99,7 +99,7 @@ describe('validators', () => {
     it('should reject data with folders not being an array', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: 'not-an-array',
@@ -114,7 +114,7 @@ describe('validators', () => {
     it('should validate data with valid folders', () => {
       const account = createMockAccount();
       const dataWithFolders: ExportedData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -139,7 +139,7 @@ describe('validators', () => {
     it('should reject folder without required name field', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -161,7 +161,7 @@ describe('validators', () => {
     it('should reject folder with invalid type', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -184,7 +184,7 @@ describe('validators', () => {
     it('should validate folder with valid items', () => {
       const account = createMockAccount();
       const dataWithItems: ExportedData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -196,9 +196,9 @@ describe('validators', () => {
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
               {
+                id: 'apple-id',
                 name: 'Apple',
                 type: 'item',
-                path: 'apple',
                 expanded: false,
                 sortOrder: 0,
                 icon: '🍎',
@@ -221,7 +221,7 @@ describe('validators', () => {
     it('should reject item with invalid type', () => {
       const account = createMockAccount();
       const invalidData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -233,9 +233,9 @@ describe('validators', () => {
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
               {
+                id: 'item-id',
                 name: 'Item',
                 type: 'invalid-type',
-                path: 'item',
                 sortOrder: 0,
                 color: '#000000',
                 createdAt: '2024-11-01T00:00:00.000Z',
@@ -256,7 +256,7 @@ describe('validators', () => {
     it('should accept optional defaultQuantity field', () => {
       const account = createMockAccount();
       const dataWithQuantity: ExportedData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
@@ -268,9 +268,9 @@ describe('validators', () => {
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
               {
+                id: 'item-id',
                 name: 'Item',
                 type: 'item',
-                path: 'item',
                 expanded: false,
                 sortOrder: 0,
                 defaultQuantity: '2 lbs',
@@ -292,7 +292,7 @@ describe('validators', () => {
     it('should warn about missing appVersion', () => {
       const account = createMockAccount();
       const dataWithoutAppVersion = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         folders: [],
       };
@@ -305,7 +305,7 @@ describe('validators', () => {
     it('should detect duplicate folders by path', () => {
       const account = createMockAccount(['/grocery-list']);
       const dataWithDuplicate: ExportedData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [

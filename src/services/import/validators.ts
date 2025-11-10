@@ -10,10 +10,10 @@ import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
 const CURRENT_VERSION = '2.0';
-const SUPPORTED_VERSIONS = ['1.0', '2.0'];
+const SUPPORTED_VERSIONS = ['2.0'];
 
 /**
- * Count items recursively (handles both flat v1.0 and hierarchical v2.0)
+ * Count items recursively
  *
  * @param items - Array of items to count
  * @returns Total count of all items and children
@@ -195,7 +195,7 @@ function validateFolder(folder: Partial<ExportedFolder>, index: number): string[
 }
 
 /**
- * Validate a template item (supports both v1.0 and v2.0 formats)
+ * Validate a template item
  *
  * @param item - Item to validate
  * @param index - Index in items array
@@ -213,11 +213,7 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
 
   const typedItem = item as Record<string, unknown>;
 
-  // Detect format: v2.0 has 'id' or 'children', v1.0 has 'path'
-  const isV2Format = 'id' in typedItem || 'children' in typedItem;
-  const isV1Format = 'path' in typedItem;
-
-  // Required fields (common to both versions)
+  // Required fields
   if (!typedItem.name || typeof typedItem.name !== 'string') {
     errors.push(`${itemPrefix}: Missing or invalid "name"`);
   }
@@ -227,35 +223,26 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
     errors.push(`${itemPrefix}: Invalid type "${typedItem.type}". Must be "category" or "item"`);
   }
 
-  // Version-specific validation
-  if (isV2Format) {
-    // V2.0: Requires 'id', optional 'children'
-    if (!typedItem.id || typeof typedItem.id !== 'string') {
-      errors.push(`${itemPrefix}: Missing or invalid "id" (v2.0 format)`);
-    }
-    // Validate children if present
-    if (typedItem.children) {
-      if (!Array.isArray(typedItem.children)) {
-        errors.push(`${itemPrefix}: Field "children" must be an array`);
-      } else {
-        // Recursively validate children
-        for (let i = 0; i < typedItem.children.length; i++) {
-          const childErrors = validateTemplateItem(
-            typedItem.children[i],
-            i,
-            `${itemPrefix}.children`,
-          );
-          errors.push(...childErrors);
-        }
+  // V2.0: Requires 'id', optional 'children'
+  if (!typedItem.id || typeof typedItem.id !== 'string') {
+    errors.push(`${itemPrefix}: Missing or invalid "id"`);
+  }
+
+  // Validate children if present
+  if (typedItem.children) {
+    if (!Array.isArray(typedItem.children)) {
+      errors.push(`${itemPrefix}: Field "children" must be an array`);
+    } else {
+      // Recursively validate children
+      for (let i = 0; i < typedItem.children.length; i++) {
+        const childErrors = validateTemplateItem(
+          typedItem.children[i],
+          i,
+          `${itemPrefix}.children`,
+        );
+        errors.push(...childErrors);
       }
     }
-  } else if (isV1Format) {
-    // V1.0: Requires 'path'
-    if (!typedItem.path || typeof typedItem.path !== 'string') {
-      errors.push(`${itemPrefix}: Missing or invalid "path" (v1.0 format)`);
-    }
-  } else {
-    errors.push(`${itemPrefix}: Unable to determine format version (missing both 'id' and 'path')`);
   }
 
   if (typeof typedItem.sortOrder !== 'number') {
