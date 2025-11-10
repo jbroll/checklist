@@ -14,6 +14,8 @@ interface TemplateItemViewProps {
   item: TemplateItem;
   level: number;
   hasChildren?: boolean;
+  isSelected?: boolean;
+  onSelect?: (itemId: string) => void;
   onRename?: (itemId: string, newName: string) => void;
   onDelete?: (itemId: string) => void;
   onToggleExpand?: (itemId: string) => void;
@@ -23,6 +25,8 @@ export function TemplateItemView({
   item,
   level,
   hasChildren = false,
+  isSelected = false,
+  onSelect,
   onRename,
   onDelete,
   onToggleExpand,
@@ -88,6 +92,12 @@ export function TemplateItemView({
     }
   };
 
+  const handleClick = () => {
+    if (onSelect && !isEditing) {
+      onSelect(item.id);
+    }
+  };
+
   return (
     <div
       ref={setDropRef}
@@ -102,41 +112,51 @@ export function TemplateItemView({
         hasChildren={isCategory && hasChildren}
         className="group"
       >
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <div
             ref={setDragRef}
             {...dragAttributes}
             {...dragListeners}
-            className="cursor-grab active:cursor-grabbing flex-1 flex items-center gap-2 min-w-0"
+            className="cursor-grab active:cursor-grabbing flex-1 min-w-0"
           >
-            {/* Icon */}
-            {isCategory && <Folder className="h-4 w-4 shrink-0" />}
+            <button
+              type="button"
+              onClick={handleClick}
+              className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
+                isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
+              }`}
+            >
+              {/* Icon */}
+              {isCategory && <Folder className="h-4 w-4 shrink-0" />}
 
-            {/* Name (Editable) */}
-            {isEditing ? (
-              <input
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onBlur={handleSaveEdit}
-                onClick={(e) => e.stopPropagation()}
-                className="flex-1 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
-              />
-            ) : (
-              <span
-                className={`flex-1 text-sm ${isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-700'}`}
-              >
-                {item.name}
-              </span>
-            )}
+              {/* Name (Editable) */}
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleSaveEdit}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                />
+              ) : (
+                <span
+                  className={`flex-1 min-w-0 truncate text-left text-sm ${
+                    isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-700'
+                  }`}
+                >
+                  {item.name}
+                </span>
+              )}
 
-            {/* Quantity Badge (items only) */}
-            {!isCategory && item.defaultQuantity && (
-              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 shrink-0">
-                {item.defaultQuantity}
-              </span>
-            )}
+              {/* Quantity Badge (items only) */}
+              {!isCategory && item.defaultQuantity && (
+                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 shrink-0">
+                  {item.defaultQuantity}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Actions Menu */}
@@ -145,7 +165,8 @@ export function TemplateItemView({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="invisible rounded p-1 hover:bg-neutral-200 group-hover:visible shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                  className="invisible shrink-0 rounded p-1 hover:bg-neutral-200 group-hover:visible"
                   aria-label="More options"
                 >
                   <MoreVertical className="h-4 w-4 text-neutral-600" />

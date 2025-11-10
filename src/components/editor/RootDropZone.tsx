@@ -6,6 +6,7 @@ interface RootDropZoneProps {
   folderName: string;
   onBack: () => void;
   onAddItem: () => void;
+  onHeaderClick?: () => void;
 }
 
 /**
@@ -14,7 +15,13 @@ interface RootDropZoneProps {
  * and also contains the list header with name and action buttons.
  * Styled to match the shopping session header.
  */
-export function RootDropZone({ isDragging, folderName, onBack, onAddItem }: RootDropZoneProps) {
+export function RootDropZone({
+  isDragging,
+  folderName,
+  onBack,
+  onAddItem,
+  onHeaderClick,
+}: RootDropZoneProps) {
   // Droppable setup for root-level drops
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: 'drop-__ROOT_DROP_ZONE__',
@@ -22,8 +29,18 @@ export function RootDropZone({ isDragging, folderName, onBack, onAddItem }: Root
   });
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: div must be droppable target
     <div
       ref={setDropRef}
+      onClick={onHeaderClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onHeaderClick?.();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       className={`px-4 py-4 border-b transition-all ${
         isDragging && isOver
           ? 'bg-green-50 border-green-500 border-2 border-dashed'
@@ -38,7 +55,10 @@ export function RootDropZone({ isDragging, folderName, onBack, onAddItem }: Root
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onAddItem}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddItem();
+            }}
             className="flex items-center gap-1 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
           >
             <Plus className="h-4 w-4" />
@@ -46,7 +66,10 @@ export function RootDropZone({ isDragging, folderName, onBack, onAddItem }: Root
           </button>
           <button
             type="button"
-            onClick={onBack}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBack();
+            }}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
             Done

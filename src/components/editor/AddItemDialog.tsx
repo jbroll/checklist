@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +21,8 @@ interface AddItemDialogProps {
   folderName?: string;
   // Available categories to select as parent
   categories?: readonly TemplateItem[];
+  // Default parent path (e.g., from selected category)
+  defaultParentPath?: string;
 }
 
 export function AddItemDialog({
@@ -30,12 +32,20 @@ export function AddItemDialog({
   onAddCategory,
   folderName,
   categories = [],
+  defaultParentPath,
 }: AddItemDialogProps) {
   const [itemType, setItemType] = useState<'item' | 'category'>('item');
   const [name, setName] = useState('');
   const [parentPath, setParentPath] = useState<string>('');
   const [defaultQuantity, setDefaultQuantity] = useState('');
   const [color, setColor] = useState('#6b7280');
+
+  // Update parentPath when dialog opens with a default parent path
+  useEffect(() => {
+    if (open && defaultParentPath) {
+      setParentPath(defaultParentPath);
+    }
+  }, [open, defaultParentPath]);
 
   // Filter valid categories
   const validCategories = categories.filter((cat): cat is TemplateItem => {

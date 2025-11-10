@@ -63,13 +63,17 @@ export function InventoryZoneRenderer({
     });
   };
 
+  // If there are no categories, render items directly in the zone
+  // Otherwise render the category tree
+  const hasCategories = inventoryCategories.length > 0;
+
   return (
     <SessionZone
       title="List"
       icon={Package}
       zone="inventory"
-      items={[]}
-      itemStates={{}}
+      items={hasCategories ? [] : inventoryItems}
+      itemStates={session.itemStates || {}}
       expanded={zoneExpanded}
       onToggleExpand={onToggleZoneExpanded}
       onToggleSelected={onToggleSelected}
@@ -77,24 +81,7 @@ export function InventoryZoneRenderer({
       count={inventoryItems.length}
       showHeading={showZoneHeadings}
     >
-      {inventoryCategories.length === 0 ? (
-        <div className="flex flex-col gap-2">
-          {inventoryItems.map((item) => (
-            <SessionZone
-              key={item.id}
-              title={item.name}
-              zone="inventory"
-              items={[item]}
-              itemStates={session.itemStates || {}}
-              expanded={true}
-              onToggleExpand={() => {}}
-              onToggleSelected={onToggleSelected}
-              onToggleChecked={onToggleChecked}
-              count={1}
-            />
-          ))}
-        </div>
-      ) : (
+      {hasCategories && (
         <div className="flex flex-col gap-2">
           {renderCategoryTree(inventoryCategories, 'inventory', 'inventory')}
         </div>
