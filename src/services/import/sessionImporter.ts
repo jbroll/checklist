@@ -6,8 +6,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, Template } from '../../schemas';
-import { Session } from '../../schemas/tree';
 import type { ItemState } from '../../schemas/tree';
+import { Session } from '../../schemas/tree';
 import { parseCsv } from '../../utils/csvParser';
 
 export interface SessionImportResult {

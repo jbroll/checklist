@@ -16,9 +16,7 @@ export interface ItemTreeNode {
  * @param items - Flat list of template items (both categories and leaf items)
  * @returns Array of root-level tree nodes
  */
-export function buildItemTree(
-  items: readonly (TemplateItem | null | undefined)[],
-): ItemTreeNode[] {
+export function buildItemTree(items: readonly (TemplateItem | null | undefined)[]): ItemTreeNode[] {
   // Helper to sort items by sortOrder and name
   const sortItems = (a: TemplateItem, b: TemplateItem) => {
     if (a.sortOrder !== b.sortOrder) {

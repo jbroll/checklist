@@ -23,13 +23,7 @@ vi.mock('../schemas', async () => {
 });
 
 // Mock crypto.randomUUID
-const mockUUIDs = [
-  'mock-uuid-1',
-  'mock-uuid-2',
-  'mock-uuid-3',
-  'mock-uuid-4',
-  'mock-uuid-5',
-];
+const mockUUIDs = ['mock-uuid-1', 'mock-uuid-2', 'mock-uuid-3', 'mock-uuid-4', 'mock-uuid-5'];
 let uuidIndex = 0;
 
 vi.stubGlobal('crypto', {
@@ -94,7 +88,7 @@ describe('directoryService', () => {
         account,
         'Subfolder',
         false,
-        'parent/path'
+        'parent/path',
       );
 
       expect(result.entryId).toBe('mock-uuid-1');

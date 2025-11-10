@@ -64,12 +64,15 @@ export const Session = co.map({
   name: z.string(), // Date-prefixed: "[2025-01-15]" or "[2025-01-15 14:30]"
 
   // Item states as plain JSON record (itemId → state)
-  itemStates: z.record(z.string(), z.object({
-    selected: z.boolean(),
-    checked: z.boolean(),
-    selectedAt: z.optional(z.date()),
-    checkedAt: z.optional(z.date()),
-  })),
+  itemStates: z.record(
+    z.string(),
+    z.object({
+      selected: z.boolean(),
+      checked: z.boolean(),
+      selectedAt: z.optional(z.date()),
+      checkedAt: z.optional(z.date()),
+    }),
+  ),
 
   // Session status
   status: z.enum(['active', 'completed', 'abandoned']),
@@ -103,18 +106,20 @@ export const Template = co.map({
   name: z.string(),
 
   // Items as plain JSON array (not CoValues)
-  items: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.enum(['category', 'item']),
-    path: z.string(),
-    expanded: z.boolean(),
-    sortOrder: z.number(),
-    archived: z.boolean(),
-    defaultQuantity: z.string(),
-    color: z.string(),
-    createdAt: z.date(),
-  })),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(['category', 'item']),
+      path: z.string(),
+      expanded: z.boolean(),
+      sortOrder: z.number(),
+      archived: z.boolean(),
+      defaultQuantity: z.string(),
+      color: z.string(),
+      createdAt: z.date(),
+    }),
+  ),
 
   // Sessions as CoList
   sessions: co.list(Session),

@@ -38,8 +38,11 @@ export function exposeServicesToWindow(
     // Directory operations (for creating/managing folders and template references)
     directory: {
       create: (name: string, isTemplate: boolean, parentPath?: string | null) =>
-        withAccount((acc) => DirectoryService.createDirectoryEntry(acc, name, isTemplate, parentPath)),
-      get: (entryId: string) => withAccount((acc) => DirectoryService.getDirectoryEntry(acc, entryId)),
+        withAccount((acc) =>
+          DirectoryService.createDirectoryEntry(acc, name, isTemplate, parentPath),
+        ),
+      get: (entryId: string) =>
+        withAccount((acc) => DirectoryService.getDirectoryEntry(acc, entryId)),
       getAll: () => withAccount((acc) => DirectoryService.getAllDirectoryEntries(acc)),
       rename: (entryId: string, newName: string) =>
         withAccount((acc) => DirectoryService.renameDirectoryEntry(acc, entryId, newName)),
@@ -50,14 +53,21 @@ export function exposeServicesToWindow(
 
     // Template operations (for accessing template data)
     template: {
-      get: (templateId: string) => withAccount((acc) => TemplateService.getTemplate(acc, templateId)),
+      get: (templateId: string) =>
+        withAccount((acc) => TemplateService.getTemplate(acc, templateId)),
       getAll: () => withAccount((acc) => TemplateService.getAllTemplates(acc)),
-      exists: (templateId: string) => withAccount((acc) => TemplateService.templateExists(acc, templateId)),
+      exists: (templateId: string) =>
+        withAccount((acc) => TemplateService.templateExists(acc, templateId)),
     },
 
     // Item operations
     item: {
-      createItem: (templateId: string, name: string, parentPath?: string, defaultQuantity?: string) =>
+      createItem: (
+        templateId: string,
+        name: string,
+        parentPath?: string,
+        defaultQuantity?: string,
+      ) =>
         withAccount((acc) =>
           ItemService.createItem(acc, templateId, name, parentPath, defaultQuantity),
         ),
@@ -99,7 +109,8 @@ export function exposeServicesToWindow(
         withAccount((acc) => SessionService.createSession(acc, templateId, sessionName)),
       get: (templateId: string, sessionId: string) =>
         withAccount((acc) => SessionService.getSession(acc, templateId, sessionId)),
-      getAll: (templateId: string) => withAccount((acc) => SessionService.getSessions(acc, templateId)),
+      getAll: (templateId: string) =>
+        withAccount((acc) => SessionService.getSessions(acc, templateId)),
       toggleItemSelected: (templateId: string, sessionId: string, itemId: string) =>
         withAccount((acc) => SessionService.toggleItemSelected(acc, templateId, sessionId, itemId)),
       toggleItemChecked: (templateId: string, sessionId: string, itemId: string) =>
@@ -129,7 +140,11 @@ declare global {
   interface Window {
     __testServices?: {
       directory: {
-        create: (name: string, isTemplate: boolean, parentPath?: string | null) => { entryId: string; templateId?: string };
+        create: (
+          name: string,
+          isTemplate: boolean,
+          parentPath?: string | null,
+        ) => { entryId: string; templateId?: string };
         get: (entryId: string) => DirectoryEntry | null;
         getAll: () => DirectoryEntry[];
         rename: (entryId: string, newName: string) => void;

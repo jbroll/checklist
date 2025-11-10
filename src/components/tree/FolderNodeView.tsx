@@ -121,9 +121,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       <div
         ref={setDropRef}
         className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
-          isOver && isFolder
-            ? 'bg-green-100 border-2 border-green-500 border-dashed rounded'
-            : ''
+          isOver && isFolder ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
         }`}
       >
         <IndentedRow

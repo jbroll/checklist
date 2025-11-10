@@ -4,9 +4,8 @@
  * Imports folder structures with all template items and session history from JSON format.
  */
 
-
 import type { InstanceOfSchema } from 'jazz-tools';
-import { type Account, type DirectoryEntry, Template, Session } from '../../schemas';
+import { type Account, type DirectoryEntry, Session, Template } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
 import type { ExportedData, ExportedFolder, ExportedSession } from '../export/types';
 import { resolvePathConflict } from './conflictResolver';
@@ -296,7 +295,7 @@ function importSession(
   const exportedItemsBySort = new Map<number, string>();
 
   // Try to map exported states to new item IDs by matching sortOrder
-  for (const [itemId, state] of Object.entries(exportedSession.itemStates)) {
+  for (const [itemId] of Object.entries(exportedSession.itemStates)) {
     exportedItemsBySort.set(itemId.length, itemId); // Basic heuristic
   }
 
@@ -314,8 +313,12 @@ function importSession(
       const itemState: ItemState = {
         selected: correspondingState.inCart,
         checked: correspondingState.purchased,
-        selectedAt: correspondingState.addedToCartAt ? new Date(correspondingState.addedToCartAt) : undefined,
-        checkedAt: correspondingState.purchasedAt ? new Date(correspondingState.purchasedAt) : undefined,
+        selectedAt: correspondingState.addedToCartAt
+          ? new Date(correspondingState.addedToCartAt)
+          : undefined,
+        checkedAt: correspondingState.purchasedAt
+          ? new Date(correspondingState.purchasedAt)
+          : undefined,
       };
 
       itemStates[item.id] = itemState;

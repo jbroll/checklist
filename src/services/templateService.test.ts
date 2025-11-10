@@ -18,11 +18,12 @@ const createMockTemplate = (id: string, name: string) => ({
 });
 
 // Mock Account with templates
-const createMockAccount = (templates: any[] = []) => ({
-  root: {
-    templates,
-  },
-} as any);
+const createMockAccount = (templates: any[] = []) =>
+  ({
+    root: {
+      templates,
+    },
+  }) as any;
 
 describe('templateService', () => {
   beforeEach(() => {

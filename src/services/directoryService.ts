@@ -42,7 +42,7 @@ export function createDirectoryEntry(
         createdAt: now,
         updatedAt: now,
       },
-      { owner: account }
+      { owner: account },
     );
 
     account.root.templates.$jazz.push(template);
@@ -106,9 +106,7 @@ export function getAllDirectoryEntries(
 /**
  * Get template-ref entries only
  */
-export function getTemplateRefEntries(
-  account: InstanceOfSchema<typeof Account>,
-): DirectoryEntry[] {
+export function getTemplateRefEntries(account: InstanceOfSchema<typeof Account>): DirectoryEntry[] {
   return getAllDirectoryEntries(account).filter((e) => e.type === 'template-ref');
 }
 
@@ -157,7 +155,7 @@ export function archiveDirectoryEntry(
   if (!account.root?.directory) throw new Error('Directory not initialized');
 
   const updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId ? { ...e, archived: true, updatedAt: new Date() } : e
+    e.id === entryId ? { ...e, archived: true, updatedAt: new Date() } : e,
   );
 
   account.root.$jazz.set('directory', updatedEntries);
@@ -175,9 +173,7 @@ export function toggleEntryExpanded(
   if (!account.root?.directory) return;
 
   const updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId
-      ? { ...e, expanded: !e.expanded, updatedAt: new Date() }
-      : e
+    e.id === entryId ? { ...e, expanded: !e.expanded, updatedAt: new Date() } : e,
   );
 
   account.root.$jazz.set('directory', updatedEntries);
@@ -212,7 +208,7 @@ export function moveDirectoryEntry(
 
   // Update the moved entry's path
   let updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId ? { ...e, path: newPath, updatedAt: new Date() } : e
+    e.id === entryId ? { ...e, path: newPath, updatedAt: new Date() } : e,
   );
 
   // Calculate and update descendant paths
@@ -221,7 +217,7 @@ export function moveDirectoryEntry(
 
   for (const update of descendantUpdates) {
     updatedEntries = updatedEntries.map((e) =>
-      e.id === update.id ? { ...e, path: update.newPath, updatedAt: new Date() } : e
+      e.id === update.id ? { ...e, path: update.newPath, updatedAt: new Date() } : e,
     );
   }
 
@@ -231,10 +227,7 @@ export function moveDirectoryEntry(
 /**
  * Check if directory entry exists (and is not archived)
  */
-export function entryExists(
-  account: InstanceOfSchema<typeof Account>,
-  entryId: string,
-): boolean {
+export function entryExists(account: InstanceOfSchema<typeof Account>, entryId: string): boolean {
   const entry = getDirectoryEntry(account, entryId);
   return entry != null && !entry.archived;
 }

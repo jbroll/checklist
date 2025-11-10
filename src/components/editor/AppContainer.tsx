@@ -59,8 +59,8 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
       // Find the directory entry for the selected template
       // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
       const entries = directoryService.getAllDirectoryEntries(me);
-      const selectedEntry = entries.find((e) =>
-        e.type === 'template-ref' && e.templateId === selectedTemplateId
+      const selectedEntry = entries.find(
+        (e) => e.type === 'template-ref' && e.templateId === selectedTemplateId,
       );
       if (selectedEntry) {
         // Use the parent path of the selected entry
@@ -120,7 +120,7 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   if (activeEditTemplateId) {
     const editTemplate = templates.find((t) => t?.$jazz.id === activeEditTemplateId);
     if (editTemplate) {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
       return <TemplateItemEditor template={editTemplate as any} onBack={handleBackFromEdit} />;
     }
   }
@@ -129,9 +129,9 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   if (activeSessionTemplateId && activeSessionId) {
     const sessionTemplate = templates.find((t) => t?.$jazz.id === activeSessionTemplateId);
     if (sessionTemplate) {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
       return (
         <SessionView
+          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
           template={sessionTemplate as any}
           sessionId={activeSessionId}
           onBack={handleBackToTemplates}
@@ -200,11 +200,11 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
               (s) => s?.$jazz.id === sessionExportData.sessionId,
             );
             if (template && session) {
-              // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
               return (
                 <SessionExportDialog
                   open={showSessionExportDialog}
                   onOpenChange={setShowSessionExportDialog}
+                  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
                   template={template as any}
                   sessionId={sessionExportData.sessionId}
                   sessionName={session.name}
