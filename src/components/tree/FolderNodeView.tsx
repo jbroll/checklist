@@ -7,6 +7,7 @@ import { ImportDialog } from '@/components/import/ImportDialog';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -25,10 +26,12 @@ interface FolderNodeViewProps {
   onToggleExpand: () => void;
   onRename?: (entryId: string, newName: string) => void;
   onDelete?: (entryId: string) => void;
+  onArchive?: (entryId: string) => void;
   onUseTemplate?: () => void;
   onEditTemplate?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
+  showArchived?: boolean;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({
@@ -41,10 +44,12 @@ export const FolderNodeView = memo(function FolderNodeView({
   onToggleExpand,
   onRename,
   onDelete,
+  onArchive,
   onUseTemplate: _onUseTemplate,
   onEditTemplate: _onEditTemplate,
   children,
   account,
+  showArchived = false,
 }: FolderNodeViewProps) {
   const isTemplateRef = entry.type === 'template-ref';
   const isFolder = entry.type === 'folder';
@@ -104,8 +109,28 @@ export const FolderNodeView = memo(function FolderNodeView({
     }
   };
 
+  const handleToggleArchived = () => {
+    if (entry.archived) {
+      // Unarchive
+      if (onArchive) {
+        onArchive(entryId);
+      }
+    } else {
+      // Archive
+      if (onArchive && confirm(`Archive "${name}"?`)) {
+        onArchive(entryId);
+      }
+    }
+  };
+
   const handleDelete = () => {
-    if (onDelete && confirm(`Delete "${name}"?`)) {
+    // Permanent deletion - show warning
+    const warningMessage =
+      entry.type === 'template-ref'
+        ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
+        : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
+
+    if (onDelete && confirm(warningMessage)) {
       onDelete(entryId);
     }
   };
@@ -205,10 +230,21 @@ export const FolderNodeView = memo(function FolderNodeView({
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
+                  <DropdownMenuCheckboxItem
+                    checked={entry.archived}
+                    onCheckedChange={handleToggleArchived}
+                  >
+                    Archived
+                  </DropdownMenuCheckboxItem>
+                  {showArchived && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

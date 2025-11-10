@@ -166,6 +166,71 @@ export function archiveDirectoryEntry(
 }
 
 /**
+ * Unarchive (restore) a directory entry
+ */
+export function unarchiveDirectoryEntry(
+  account: InstanceOfSchema<typeof Account>,
+  entryId: string,
+): void {
+  if (!account.root?.directory) throw new Error('Directory not initialized');
+
+  const updatedEntries = account.root.directory.map((e) =>
+    e.id === entryId ? { ...e, archived: false, updatedAt: new Date() } : e,
+  );
+
+  account.root.$jazz.set('directory', updatedEntries);
+}
+
+/**
+ * Permanently delete a directory entry and its associated template
+ *
+ * This function permanently removes:
+ * - The directory entry from the directory list
+ * - The template "inode" from the templates list (if template-ref)
+ * - All sessions within the template (cleaned up by Jazz when template is removed)
+ *
+ * Note: Jazz handles cascading cleanup of nested CoValues (sessions)
+ * when the parent CoValue (template) is removed from a CoList.
+ */
+export function deleteDirectoryEntry(
+  account: InstanceOfSchema<typeof Account>,
+  entryId: string,
+): void {
+  if (!account.root?.directory) throw new Error('Directory not initialized');
+
+  const entry = account.root.directory.find((e) => e.id === entryId);
+  if (!entry) throw new Error(`Entry ${entryId} not found`);
+
+  // Remove from directory
+  const updatedEntries = account.root.directory.filter((e) => e.id !== entryId);
+  account.root.$jazz.set('directory', updatedEntries);
+
+  // If it's a template-ref, remove the template "inode" from templates list
+  if (entry.type === 'template-ref' && entry.templateId && account.root.templates) {
+    const templateIndex = account.root.templates.findIndex((t) => t?.$jazz.id === entry.templateId);
+    if (templateIndex !== -1) {
+      const template = account.root.templates[templateIndex];
+
+      // Clear sessions list before removing template (explicit cleanup)
+      // This ensures all session CoValues are properly dereferenced
+      if (template?.sessions) {
+        // Remove all sessions from the list
+        while (template.sessions.length > 0) {
+          template.sessions.$jazz.splice(0, 1);
+        }
+      }
+
+      // Remove template from the list
+      // Jazz will handle cleanup of the template CoValue and any remaining nested data
+      account.root.templates.$jazz.splice(templateIndex, 1);
+    }
+  }
+
+  // Note: For folders, we only remove the directory entry.
+  // Any child entries should be handled by the caller (e.g., recursive deletion warning).
+}
+
+/**
  * Toggle expanded state of a directory entry
  */
 export function toggleEntryExpanded(
