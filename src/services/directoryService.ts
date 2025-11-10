@@ -215,6 +215,7 @@ export function unarchiveDirectoryEntry(
  * - The directory entry from the directory list
  * - The template "inode" from the templates list (if template-ref)
  * - All sessions within the template (cleaned up by Jazz when template is removed)
+ * - All child entries if deleting a folder (recursive)
  *
  * Note: Jazz handles cascading cleanup of nested CoValues (sessions)
  * when the parent CoValue (template) is removed from a CoList.
@@ -227,6 +228,15 @@ export function deleteDirectoryEntry(
 
   const entry = account.root.directory.find((e) => e.id === entryId);
   if (!entry) throw new Error(`Entry ${entryId} not found`);
+
+  // If it's a folder, recursively delete all children first
+  if (entry.type === 'folder') {
+    const childEntries = account.root.directory.filter((e) => e.path.startsWith(`${entry.path}/`));
+    for (const child of childEntries) {
+      // Recursively delete each child (which will handle their children too)
+      deleteDirectoryEntry(account, child.id);
+    }
+  }
 
   // Remove from directory
   const updatedEntries = account.root.directory.filter((e) => e.id !== entryId);
@@ -252,9 +262,6 @@ export function deleteDirectoryEntry(
       account.root.templates.$jazz.splice(templateIndex, 1);
     }
   }
-
-  // Note: For folders, we only remove the directory entry.
-  // Any child entries should be handled by the caller (e.g., recursive deletion warning).
 }
 
 /**
