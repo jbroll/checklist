@@ -525,6 +525,192 @@ describe('directoryService', () => {
         directoryService.archiveDirectoryEntry(account, 'any-id');
       }).toThrow('Directory not initialized');
     });
+
+    it('should cascade archive to child entries when archiving a folder', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: 'folder-1',
+          name: 'Parent Folder',
+          type: 'folder',
+          path: 'parent',
+          expanded: true,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'template-1',
+          name: 'Child Template',
+          type: 'template-ref',
+          path: 'parent/child',
+          templateId: 'template-id-1',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'folder-2',
+          name: 'Nested Folder',
+          type: 'folder',
+          path: 'parent/nested',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'template-2',
+          name: 'Deeply Nested Template',
+          type: 'template-ref',
+          path: 'parent/nested/deep',
+          templateId: 'template-id-2',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'other-1',
+          name: 'Unrelated',
+          type: 'folder',
+          path: 'other',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.archiveDirectoryEntry(account, 'folder-1');
+
+      const calls = account.root.$jazz.set.mock.calls[0];
+      const updatedDirectory = calls[1];
+
+      // Parent folder should be archived
+      expect(updatedDirectory[0].archived).toBe(true);
+      // Child template should be archived
+      expect(updatedDirectory[1].archived).toBe(true);
+      // Nested folder should be archived
+      expect(updatedDirectory[2].archived).toBe(true);
+      // Deeply nested template should be archived
+      expect(updatedDirectory[3].archived).toBe(true);
+      // Unrelated entry should NOT be archived
+      expect(updatedDirectory[4].archived).toBe(false);
+    });
+
+    it('should not cascade when archiving a template-ref', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: 'folder-1',
+          name: 'Parent Folder',
+          type: 'folder',
+          path: 'parent',
+          expanded: true,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'template-1',
+          name: 'Template',
+          type: 'template-ref',
+          path: 'parent/template',
+          templateId: 'template-id-1',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.archiveDirectoryEntry(account, 'template-1');
+
+      const calls = account.root.$jazz.set.mock.calls[0];
+      const updatedDirectory = calls[1];
+
+      // Parent folder should NOT be archived
+      expect(updatedDirectory[0].archived).toBe(false);
+      // Only the template should be archived
+      expect(updatedDirectory[1].archived).toBe(true);
+    });
+  });
+
+  describe('unarchiveDirectoryEntry', () => {
+    it('should set archived to false', () => {
+      const entry: DirectoryEntry = {
+        id: 'entry-1',
+        name: 'Test',
+        type: 'folder',
+        path: 'test',
+        expanded: false,
+        archived: true,
+        createdAt: new Date(),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const account = createMockAccount([entry]);
+      directoryService.unarchiveDirectoryEntry(account, 'entry-1');
+
+      expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
+        expect.objectContaining({
+          id: 'entry-1',
+          archived: false,
+          updatedAt: expect.any(Date),
+        }),
+      ]);
+    });
+
+    it('should cascade unarchive to child entries when unarchiving a folder', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: 'folder-1',
+          name: 'Parent Folder',
+          type: 'folder',
+          path: 'parent',
+          expanded: true,
+          archived: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'template-1',
+          name: 'Child Template',
+          type: 'template-ref',
+          path: 'parent/child',
+          templateId: 'template-id-1',
+          expanded: false,
+          archived: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'folder-2',
+          name: 'Nested Folder',
+          type: 'folder',
+          path: 'parent/nested',
+          expanded: false,
+          archived: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.unarchiveDirectoryEntry(account, 'folder-1');
+
+      const calls = account.root.$jazz.set.mock.calls[0];
+      const updatedDirectory = calls[1];
+
+      // Parent folder should be unarchived
+      expect(updatedDirectory[0].archived).toBe(false);
+      // Child template should be unarchived
+      expect(updatedDirectory[1].archived).toBe(false);
+      // Nested folder should be unarchived
+      expect(updatedDirectory[2].archived).toBe(false);
+    });
   });
 
   describe('toggleEntryExpanded', () => {

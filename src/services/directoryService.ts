@@ -150,6 +150,7 @@ export function renameDirectoryEntry(
 
 /**
  * Archive (soft delete) a directory entry
+ * If archiving a folder, also archives all child entries under that folder's path
  */
 export function archiveDirectoryEntry(
   account: InstanceOfSchema<typeof Account>,
@@ -157,9 +158,21 @@ export function archiveDirectoryEntry(
 ): void {
   if (!account.root?.directory) throw new Error('Directory not initialized');
 
-  const updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId ? { ...e, archived: true, updatedAt: new Date() } : e,
-  );
+  const now = new Date();
+  const entry = account.root.directory.find((e) => e.id === entryId);
+  if (!entry) throw new Error(`Entry ${entryId} not found`);
+
+  const updatedEntries = account.root.directory.map((e) => {
+    // Archive the entry itself
+    if (e.id === entryId) {
+      return { ...e, archived: true, updatedAt: now };
+    }
+    // Archive all entries whose paths start with this folder's path (if it's a folder)
+    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}/`)) {
+      return { ...e, archived: true, updatedAt: now };
+    }
+    return e;
+  });
 
   account.root.$jazz.set('directory', updatedEntries);
 
@@ -168,6 +181,7 @@ export function archiveDirectoryEntry(
 
 /**
  * Unarchive (restore) a directory entry
+ * If unarchiving a folder, also unarchives all child entries under that folder's path
  */
 export function unarchiveDirectoryEntry(
   account: InstanceOfSchema<typeof Account>,
@@ -175,9 +189,21 @@ export function unarchiveDirectoryEntry(
 ): void {
   if (!account.root?.directory) throw new Error('Directory not initialized');
 
-  const updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId ? { ...e, archived: false, updatedAt: new Date() } : e,
-  );
+  const now = new Date();
+  const entry = account.root.directory.find((e) => e.id === entryId);
+  if (!entry) throw new Error(`Entry ${entryId} not found`);
+
+  const updatedEntries = account.root.directory.map((e) => {
+    // Unarchive the entry itself
+    if (e.id === entryId) {
+      return { ...e, archived: false, updatedAt: now };
+    }
+    // Unarchive all entries whose paths start with this folder's path (if it's a folder)
+    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}/`)) {
+      return { ...e, archived: false, updatedAt: now };
+    }
+    return e;
+  });
 
   account.root.$jazz.set('directory', updatedEntries);
 }
