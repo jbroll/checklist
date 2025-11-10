@@ -20,7 +20,7 @@ export function createDirectoryEntry(
   name: string,
   isTemplate: boolean,
   parentPath?: string | null,
-): { entryId: string; templateId?: string } {
+): { entryId: string; templateId?: string; path: string } {
   if (!account.root) throw new Error('Account root not initialized');
 
   // Normalize name for path
@@ -63,7 +63,7 @@ export function createDirectoryEntry(
 
     account.root.$jazz.set('directory', [...account.root.directory, entry]);
 
-    return { entryId, templateId: template.$jazz.id };
+    return { entryId, templateId: template.$jazz.id, path };
   } else {
     // Create organizational folder entry
     const entry: DirectoryEntry = {
@@ -79,7 +79,7 @@ export function createDirectoryEntry(
 
     account.root.$jazz.set('directory', [...account.root.directory, entry]);
 
-    return { entryId };
+    return { entryId, path };
   }
 }
 

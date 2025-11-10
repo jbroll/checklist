@@ -48,6 +48,10 @@ export function exposeServicesToWindow(
         withAccount((acc) => DirectoryService.renameDirectoryEntry(acc, entryId, newName)),
       archive: (entryId: string) =>
         withAccount((acc) => DirectoryService.archiveDirectoryEntry(acc, entryId)),
+      unarchive: (entryId: string) =>
+        withAccount((acc) => DirectoryService.unarchiveDirectoryEntry(acc, entryId)),
+      delete: (entryId: string) =>
+        withAccount((acc) => DirectoryService.deleteDirectoryEntry(acc, entryId)),
       exists: (entryId: string) => withAccount((acc) => DirectoryService.entryExists(acc, entryId)),
     },
 
@@ -142,11 +146,13 @@ declare global {
           name: string,
           isTemplate: boolean,
           parentPath?: string | null,
-        ) => { entryId: string; templateId?: string };
+        ) => { entryId: string; templateId?: string; path: string };
         get: (entryId: string) => DirectoryEntry | null;
         getAll: () => DirectoryEntry[];
         rename: (entryId: string, newName: string) => void;
         archive: (entryId: string) => void;
+        unarchive: (entryId: string) => void;
+        delete: (entryId: string) => void;
         exists: (entryId: string) => boolean;
       };
       template: {
