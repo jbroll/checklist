@@ -1,20 +1,20 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo } from 'react';
-import type { FolderNode, ListSession } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 
 interface UseSessionItemsParams {
-  folder: InstanceOfSchema<typeof FolderNode> | null;
-  session: InstanceOfSchema<typeof ListSession> | null;
+  template: InstanceOfSchema<typeof Template> | null;
+  session: InstanceOfSchema<typeof Session> | null;
 }
 
-export function useSessionItems({ folder, session }: UseSessionItemsParams) {
-  const items = folder?.items || [];
+export function useSessionItems({ template, session }: UseSessionItemsParams) {
+  const items = template?.items || [];
   const activeItems = items.filter((item) => item && !item.archived && item.type === 'item');
 
   const { inventoryItems, cartItems, completedItems } = useMemo(() => {
-    const inventory: typeof activeItems = [];
-    const cart: typeof activeItems = [];
-    const completed: typeof activeItems = [];
+    const inventory: TemplateItem[] = [];
+    const cart: TemplateItem[] = [];
+    const completed: TemplateItem[] = [];
 
     if (!session) {
       return {
@@ -25,7 +25,7 @@ export function useSessionItems({ folder, session }: UseSessionItemsParams) {
     }
 
     activeItems.forEach((item) => {
-      const state = session.itemStates?.[item.$jazz.id];
+      const state = session.itemStates?.[item.id];
       if (!state || (!state.selected && !state.checked)) {
         inventory.push(item);
       } else if (state.checked) {

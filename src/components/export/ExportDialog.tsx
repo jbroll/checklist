@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, Template } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import type { ExportScope } from '@/services/export/types';
 import { downloadCsv, downloadJson, downloadText } from '@/utils/fileDownload';
@@ -22,13 +22,11 @@ interface ExportDialogProps {
   onOpenChange: (open: boolean) => void;
   account: InstanceOfSchema<typeof Account>;
   /** Optional folder for folder-level export */
-  folder?: InstanceOfSchema<typeof FolderNode>;
+  folder?: InstanceOfSchema<typeof Template>;
 }
 
 export function ExportDialog({ open, onOpenChange, account, folder }: ExportDialogProps) {
-  const isTemplate = folder?.type === 'template-folder';
-
-  // For folder-level template export, allow format selection
+  // For template-level export, allow format selection
   const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
   const [isExporting, setIsExporting] = useState(false);
 
@@ -36,11 +34,11 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
     setIsExporting(true);
 
     try {
-      if (folder && isTemplate) {
-        // Template folder: Export items with format selection
+      if (folder) {
+        // Template export: Export items with format selection
         const fId = folder.$jazz?.id;
         if (!fId) {
-          throw new Error('Folder ID not found');
+          throw new Error('Template ID not found');
         }
 
         const filename = buildExportFilename(folder.name, format, true, undefined);
@@ -56,19 +54,8 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
           const content = ExportService.exportTemplateItemsToCsv(account, fId);
           downloadCsv(content, filename);
         }
-      } else if (folder) {
-        // Organizational folder: JSON only
-        const fId = folder.$jazz?.id;
-        if (!fId) {
-          throw new Error('Folder ID not found');
-        }
-
-        const scope: ExportScope = { type: 'single-folder', folderId: fId };
-        const data = ExportService.exportToJson(account, scope);
-        const filename = ExportService.generateFilename(scope, 'json', folder.name);
-        downloadJson(data, filename);
       } else {
-        // Top-level: JSON only, export all folders
+        // Top-level: JSON only, export all templates
         const scope: ExportScope = { type: 'all-folders' };
         const data = ExportService.exportToJson(account, scope);
         const filename = ExportService.generateFilename(scope, 'json', undefined);
@@ -93,7 +80,7 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
 
   // Get dynamic configuration based on context
   const getConfig = () => {
-    if (folder && isTemplate) {
+    if (folder) {
       return {
         title: `Export: ${folder.name}`,
         description: 'Choose format for export.',
@@ -157,14 +144,6 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
             </div>
           </>
         ),
-      };
-    }
-
-    if (folder) {
-      return {
-        title: `Export: ${folder.name}`,
-        description: 'Export to JSON for backup or transfer.',
-        content: null,
       };
     }
 

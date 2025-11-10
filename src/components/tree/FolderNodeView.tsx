@@ -12,26 +12,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Account, FolderNode as FolderNodeType } from '@/schemas';
+import type { Account, DirectoryEntry, Template } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
 interface FolderNodeViewProps {
-  node: InstanceOfSchema<typeof FolderNodeType>;
+  entry: DirectoryEntry;
+  template?: InstanceOfSchema<typeof Template>;
   level: number;
   hasChildren?: boolean;
   isSelected?: boolean;
-  onSelect?: (nodeId: string) => void;
+  onSelect?: () => void;
   onToggleExpand: () => void;
-  onRename?: (nodeId: string, newName: string) => void;
-  onDelete?: (nodeId: string) => void;
-  onUseTemplate?: (nodeId: string) => void;
-  onEditTemplate?: (nodeId: string) => void;
+  onRename?: (entryId: string, newName: string) => void;
+  onDelete?: (entryId: string) => void;
+  onUseTemplate?: () => void;
+  onEditTemplate?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({
-  node,
+  entry,
+  template,
   level,
   hasChildren = false,
   isSelected = false,
@@ -44,46 +46,52 @@ export const FolderNodeView = memo(function FolderNodeView({
   children,
   account,
 }: FolderNodeViewProps) {
+  const isTemplateRef = entry.type === 'template-ref';
+  const isFolder = entry.type === 'folder';
+
+  const name = entry.name;
+  const path = entry.path;
+  const expanded = entry.expanded;
+  const entryId = entry.id;
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(node.name);
+  const [editedName, setEditedName] = useState(name);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  const isTemplate = node.type === 'template-folder';
-
-  // Draggable setup - both folders and templates are draggable
+  // Draggable setup - all entries are draggable
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
     setNodeRef: setDragRef,
     isDragging,
   } = useDraggable({
-    id: node.$jazz.id,
-    data: { node },
+    id: entryId,
+    data: { entryId, entry },
+    disabled: false,
   });
 
-  // Droppable setup - ONLY organizational folders can accept drops
-  // Templates are leaf nodes and cannot contain children
+  // Droppable setup - ONLY folders can accept drops
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop-${node.$jazz.id}`,
-    data: { isFolder: true, path: node.path, node },
-    disabled: isTemplate, // Disable drop zone for templates
+    id: `drop-${entryId}`,
+    data: { isFolder, path, entryId },
+    disabled: !isFolder, // Only folders can accept drops
   });
 
   const handleStartEdit = () => {
-    setEditedName(node.name);
+    setEditedName(name);
     setIsEditing(true);
   };
 
   const handleSaveEdit = () => {
-    if (editedName.trim() && editedName !== node.name && onRename) {
-      onRename(node.$jazz.id, editedName.trim());
+    if (editedName.trim() && editedName !== name && onRename) {
+      onRename(entryId, editedName.trim());
     }
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
-    setEditedName(node.name);
+    setEditedName(name);
     setIsEditing(false);
   };
 
@@ -97,14 +105,14 @@ export const FolderNodeView = memo(function FolderNodeView({
   };
 
   const handleDelete = () => {
-    if (onDelete && confirm(`Delete "${node.name}"?`)) {
-      onDelete(node.$jazz.id);
+    if (onDelete && confirm(`Delete "${name}"?`)) {
+      onDelete(entryId);
     }
   };
 
   const handleClick = () => {
     if (!isEditing && onSelect) {
-      onSelect(node.$jazz.id);
+      onSelect();
     }
   };
 
@@ -113,14 +121,14 @@ export const FolderNodeView = memo(function FolderNodeView({
       <div
         ref={setDropRef}
         className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
-          isOver && !isTemplate
+          isOver && isFolder
             ? 'bg-green-100 border-2 border-green-500 border-dashed rounded'
             : ''
         }`}
       >
         <IndentedRow
           level={level}
-          expanded={node.expanded}
+          expanded={expanded}
           onToggleExpand={onToggleExpand}
           hasChildren={hasChildren}
           className="group"
@@ -139,8 +147,8 @@ export const FolderNodeView = memo(function FolderNodeView({
                   isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
                 }`}
               >
-                {/* Folder Icon */}
-                {isTemplate ? (
+                {/* Icon */}
+                {isTemplateRef ? (
                   <BubbleListIcon className="h-4 w-4 shrink-0" size={16} />
                 ) : (
                   <Folder className="h-4 w-4 shrink-0 text-yellow-600" />
@@ -159,16 +167,16 @@ export const FolderNodeView = memo(function FolderNodeView({
                   />
                 ) : (
                   <span
-                    className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+                    className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplateRef ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
                   >
-                    {node.name}
+                    {name}
                   </span>
                 )}
               </button>
             </div>
 
-            {/* Actions Menu */}
-            {!isEditing && (
+            {/* Actions Menu - only for template-refs */}
+            {!isEditing && isTemplateRef && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -209,21 +217,25 @@ export const FolderNodeView = memo(function FolderNodeView({
       {/* Child Nodes - rendered by parent TreeView */}
       {children}
 
-      {/* Unified Export Dialog */}
-      <ExportDialog
-        open={showExportDialog}
-        onOpenChange={setShowExportDialog}
-        account={account}
-        folder={node}
-      />
+      {/* Unified Export Dialog - only for template-refs */}
+      {isTemplateRef && template && (
+        <ExportDialog
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+          account={account}
+          folder={template}
+        />
+      )}
 
-      {/* Unified Import Dialog */}
-      <ImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        account={account}
-        folder={node}
-      />
+      {/* Unified Import Dialog - only for template-refs */}
+      {isTemplateRef && template && (
+        <ImportDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          account={account}
+          folder={template}
+        />
+      )}
     </div>
   );
 });

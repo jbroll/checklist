@@ -1,4 +1,3 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +20,7 @@ interface AddItemDialogProps {
   onAddCategory: (name: string, parentPath?: string, color?: string) => void;
   folderName?: string;
   // Available categories to select as parent
-  categories?: readonly (InstanceOfSchema<typeof TemplateItem> | null)[];
+  categories?: readonly TemplateItem[];
 }
 
 export function AddItemDialog({
@@ -39,7 +38,7 @@ export function AddItemDialog({
   const [color, setColor] = useState('#6b7280');
 
   // Filter valid categories
-  const validCategories = categories.filter((cat): cat is InstanceOfSchema<typeof TemplateItem> => {
+  const validCategories = categories.filter((cat): cat is TemplateItem => {
     return cat !== null && !cat.archived && cat.type === 'category';
   });
 
@@ -137,7 +136,7 @@ export function AddItemDialog({
                 >
                   <option value="">-- None (Top Level) --</option>
                   {validCategories.map((cat) => (
-                    <option key={cat.$jazz.id} value={cat.path}>
+                    <option key={cat.id} value={cat.path}>
                       {cat.name}
                     </option>
                   ))}

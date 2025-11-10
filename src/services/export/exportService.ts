@@ -5,9 +5,9 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, Template } from '../../schemas';
 import { exportSessionToCsv, exportTemplateItemsToCsv } from './csvExporter';
-import { exportAllFolders, exportFolder, toJsonString } from './jsonExporter';
+import { exportAllFolders, exportTemplate, toJsonString } from './jsonExporter';
 import { exportSessionToText, exportTemplateItemsToText } from './txtExporter';
 import type { ExportedData, ExportScope } from './types';
 
@@ -22,7 +22,7 @@ export class ExportService {
    * Export folders to JSON based on scope
    *
    * @param account - User's Account
-   * @param scope - What to export (all folders or single folder)
+   * @param scope - What to export (all folders or single template)
    * @returns Export data structure
    */
   static exportToJson(account: InstanceOfSchema<typeof Account>, scope: ExportScope): ExportedData {
@@ -30,17 +30,26 @@ export class ExportService {
       return exportAllFolders(account);
     }
 
-    // Single folder export
+    // Single template export
     if (!scope.folderId) {
-      throw new Error('Folder ID required for single-folder export');
+      throw new Error('Template ID required for single-template export');
     }
 
-    const folder = ExportService.findFolderById(account, scope.folderId);
-    if (!folder) {
-      throw new Error(`Folder not found: ${scope.folderId}`);
+    const template = ExportService.findTemplateById(account, scope.folderId);
+    if (!template) {
+      throw new Error(`Template not found: ${scope.folderId}`);
     }
 
-    return exportFolder(folder);
+    // Find the directory entry for this template to get its path
+    const dirEntry = account.root?.directory?.find(
+      (entry) => entry.type === 'template-ref' && entry.templateId === scope.folderId
+    );
+
+    if (!dirEntry) {
+      throw new Error(`Directory entry not found for template: ${scope.folderId}`);
+    }
+
+    return exportTemplate(template, dirEntry.path);
   }
 
   /**
@@ -88,59 +97,59 @@ export class ExportService {
    * Export template items to TXT format
    *
    * @param account - User's Account
-   * @param folderId - ID of the folder to export
+   * @param templateId - ID of the template to export
    * @returns Plain text string with one item per line
    */
   static exportTemplateItemsToText(
     account: InstanceOfSchema<typeof Account>,
-    folderId: string,
+    templateId: string,
   ): string {
-    const folder = ExportService.findFolderById(account, folderId);
-    if (!folder) {
-      throw new Error(`Folder not found: ${folderId}`);
+    const template = ExportService.findTemplateById(account, templateId);
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
     }
 
-    return exportTemplateItemsToText(folder);
+    return exportTemplateItemsToText(template);
   }
 
   /**
    * Export template items to CSV format
    *
    * @param account - User's Account
-   * @param folderId - ID of the folder to export
+   * @param templateId - ID of the template to export
    * @returns CSV string with header row
    */
   static exportTemplateItemsToCsv(
     account: InstanceOfSchema<typeof Account>,
-    folderId: string,
+    templateId: string,
   ): string {
-    const folder = ExportService.findFolderById(account, folderId);
-    if (!folder) {
-      throw new Error(`Folder not found: ${folderId}`);
+    const template = ExportService.findTemplateById(account, templateId);
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
     }
 
-    return exportTemplateItemsToCsv(folder);
+    return exportTemplateItemsToCsv(template);
   }
 
   /**
    * Export session to TXT format
    *
    * @param account - User's Account
-   * @param folderId - ID of the folder containing the session
+   * @param templateId - ID of the template containing the session
    * @param sessionId - ID of the session to export
    * @returns Plain text string with checkmarks
    */
   static exportSessionToText(
     account: InstanceOfSchema<typeof Account>,
-    folderId: string,
+    templateId: string,
     sessionId: string,
   ): string {
-    const folder = ExportService.findFolderById(account, folderId);
-    if (!folder) {
-      throw new Error(`Folder not found: ${folderId}`);
+    const template = ExportService.findTemplateById(account, templateId);
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
     }
 
-    const result = exportSessionToText(folder, sessionId);
+    const result = exportSessionToText(template, sessionId);
     if (!result) {
       throw new Error(`Session not found: ${sessionId}`);
     }
@@ -152,21 +161,21 @@ export class ExportService {
    * Export session to CSV format
    *
    * @param account - User's Account
-   * @param folderId - ID of the folder containing the session
+   * @param templateId - ID of the template containing the session
    * @param sessionId - ID of the session to export
    * @returns CSV string with header row
    */
   static exportSessionToCsv(
     account: InstanceOfSchema<typeof Account>,
-    folderId: string,
+    templateId: string,
     sessionId: string,
   ): string {
-    const folder = ExportService.findFolderById(account, folderId);
-    if (!folder) {
-      throw new Error(`Folder not found: ${folderId}`);
+    const template = ExportService.findTemplateById(account, templateId);
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
     }
 
-    const result = exportSessionToCsv(folder, sessionId);
+    const result = exportSessionToCsv(template, sessionId);
     if (!result) {
       throw new Error(`Session not found: ${sessionId}`);
     }
@@ -175,23 +184,23 @@ export class ExportService {
   }
 
   /**
-   * Find a folder by its Jazz ID
+   * Find a template by its Jazz ID
    *
    * @param account - User's Account
-   * @param folderId - Jazz ID of the folder
-   * @returns FolderNode or null if not found
+   * @param templateId - Jazz ID of the template
+   * @returns Template or null if not found
    */
-  private static findFolderById(
+  private static findTemplateById(
     account: InstanceOfSchema<typeof Account>,
-    folderId: string,
-  ): InstanceOfSchema<typeof FolderNode> | null {
-    if (!account.root?.nodes) {
+    templateId: string,
+  ): InstanceOfSchema<typeof Template> | null {
+    if (!account.root?.templates) {
       return null;
     }
 
-    for (const node of account.root.nodes) {
-      if (node && node.$jazz?.id === folderId) {
-        return node;
+    for (const template of account.root.templates) {
+      if (template && template.$jazz?.id === templateId) {
+        return template;
       }
     }
 

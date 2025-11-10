@@ -3,17 +3,27 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { DirectoryEntry } from '../../schemas';
 import type { ExportedData } from '../export/types';
 import { validateJsonData } from './validators';
 
-// Mock GroceriesAccount for testing
+// Mock Account with directory structure for testing
 const createMockAccount = (existingPaths: string[] = []) => {
+  const directory: DirectoryEntry[] = existingPaths.map((path) => ({
+    id: `mock-${path}`,
+    name: path.replace('/', ''),
+    type: 'template-ref' as const,
+    path,
+    expanded: false,
+    archived: false,
+    templateId: `template-${path}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+
   return {
     root: {
-      nodes: existingPaths.map((path) => ({
-        path,
-        name: path.replace('/', ''),
-      })),
+      directory,
     },
   } as any;
 };

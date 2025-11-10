@@ -1,46 +1,97 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '@/schemas';
-import { getParentPath } from './pathUtils';
+import type { DirectoryEntry, Template } from '@/schemas';
 
+/**
+ * TreeNode representing a directory entry with its children
+ */
 export interface TreeNode {
-  node: InstanceOfSchema<typeof FolderNode>;
+  entry: DirectoryEntry;
+  template?: InstanceOfSchema<typeof Template>; // Only for template-ref entries
   children: TreeNode[];
 }
 
 /**
- * Build hierarchical tree structure from flat path-based list of nodes
- * Simple: group by parent path and build recursively
+ * Build hierarchical tree structure from directory entries
+ *
+ * @param directory - Flat array of directory entries
+ * @param templates - Array of templates (for looking up template data)
+ * @returns Hierarchical tree of TreeNodes
  */
-export function buildTreeStructure(
-  allNodes: readonly (InstanceOfSchema<typeof FolderNode> | null)[],
+export function buildTreeFromDirectory(
+  directory: DirectoryEntry[],
+  templates: readonly (InstanceOfSchema<typeof Template> | null)[],
 ): TreeNode[] {
-  // Filter out null/undefined and archived nodes
-  const validNodes = allNodes.filter(
-    (node): node is InstanceOfSchema<typeof FolderNode> =>
-      node != null && !!node.name && !!node.path && !node.archived,
-  );
+  // Filter out archived entries
+  const activeEntries = directory.filter((entry) => !entry.archived);
 
-  // Group by parent path to create hierarchy
-  const nodesByParent = new Map<string | undefined, InstanceOfSchema<typeof FolderNode>[]>();
-
-  for (const node of validNodes) {
-    const parentKey = getParentPath(node.path);
-
-    if (!nodesByParent.has(parentKey)) {
-      nodesByParent.set(parentKey, []);
-    }
-    nodesByParent.get(parentKey)?.push(node);
+  // Build a map of entries by path for quick lookup
+  const entryMap = new Map<string, DirectoryEntry>();
+  for (const entry of activeEntries) {
+    entryMap.set(entry.path, entry);
   }
 
-  // Build recursive structure
-  const buildChildren = (parentPath: string | undefined): TreeNode[] => {
-    const children = nodesByParent.get(parentPath) || [];
-    return children.map((node) => ({
-      node,
-      // Only folders can have children, templates are leaf nodes
-      children: node.type === 'folder' ? buildChildren(node.path) : [],
-    }));
-  };
+  // Build a map of templates by ID for quick lookup
+  const templateMap = new Map<string, InstanceOfSchema<typeof Template>>();
+  for (const template of templates) {
+    if (template?.$jazz?.id) {
+      templateMap.set(template.$jazz.id, template);
+    }
+  }
 
-  return buildChildren(undefined); // Start with root nodes (no parent path)
+  // Build tree structure
+  const rootNodes: TreeNode[] = [];
+  const nodeMap = new Map<string, TreeNode>();
+
+  // Create nodes for all entries
+  for (const entry of activeEntries) {
+    const node: TreeNode = {
+      entry,
+      template: entry.type === 'template-ref' && entry.templateId
+        ? templateMap.get(entry.templateId)
+        : undefined,
+      children: [],
+    };
+    nodeMap.set(entry.path, node);
+  }
+
+  // Build parent-child relationships
+  for (const entry of activeEntries) {
+    const node = nodeMap.get(entry.path);
+    if (!node) continue;
+
+    const parts = entry.path.split('/');
+    if (parts.length === 1) {
+      // Root level entry
+      rootNodes.push(node);
+    } else {
+      // Child entry - find parent
+      const parentPath = parts.slice(0, -1).join('/');
+      const parentNode = nodeMap.get(parentPath);
+      if (parentNode) {
+        parentNode.children.push(node);
+      } else {
+        // Parent doesn't exist - treat as root
+        rootNodes.push(node);
+      }
+    }
+  }
+
+  return rootNodes;
+}
+
+/**
+ * Legacy support: Build tree from templates (deprecated)
+ * This is kept for backward compatibility but should not be used in new code.
+ * Use buildTreeFromDirectory instead.
+ *
+ * @deprecated Use buildTreeFromDirectory with directory entries instead
+ */
+export function buildTreeFromTemplates(
+  templates: readonly (InstanceOfSchema<typeof Template> | null)[],
+  folderExpanded: Record<string, boolean> = {},
+): TreeNode[] {
+  // This function is deprecated and should not be used
+  // Return empty array as a placeholder
+  console.warn('buildTreeFromTemplates is deprecated. Use buildTreeFromDirectory instead.');
+  return [];
 }

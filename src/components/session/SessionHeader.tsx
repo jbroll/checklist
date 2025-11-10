@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate } from '@/lib/utils';
-import type { Account, FolderNode, ListSession } from '@/schemas';
+import type { Account, Session, Template } from '@/schemas';
 
 interface SessionHeaderProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession>;
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
   sessionId: string;
   me: InstanceOfSchema<typeof Account>;
   showTime: boolean;
@@ -27,7 +27,7 @@ interface SessionHeaderProps {
 }
 
 export function SessionHeader({
-  folder,
+  template,
   session,
   sessionId,
   me,
@@ -44,7 +44,7 @@ export function SessionHeader({
     <>
       <div className="flex flex-col gap-3 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
-          {folder.name}{' '}
+          {template.name}{' '}
           <span className="text-neutral-500">
             · {formatSessionDate(session.startedAt, showTime)}
           </span>
@@ -98,7 +98,7 @@ export function SessionHeader({
       <SessionExportDialog
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
-        folder={folder}
+        template={template}
         sessionId={sessionId}
         sessionName={session.name}
         account={me}

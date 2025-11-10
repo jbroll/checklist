@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, Template } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
 import { buildExportFilename } from '@/utils/fileUtils';
@@ -19,7 +19,7 @@ import { buildExportFilename } from '@/utils/fileUtils';
 interface SessionExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folder: InstanceOfSchema<typeof FolderNode>;
+  template: InstanceOfSchema<typeof Template>;
   sessionId: string;
   sessionName: string;
   account: InstanceOfSchema<typeof Account>;
@@ -28,7 +28,7 @@ interface SessionExportDialogProps {
 export function SessionExportDialog({
   open,
   onOpenChange,
-  folder,
+  template,
   sessionId,
   sessionName,
   account,
@@ -40,7 +40,7 @@ export function SessionExportDialog({
     setIsExporting(true);
 
     try {
-      const folderId = folder.$jazz?.id;
+      const folderId = template.$jazz?.id;
       if (!folderId) {
         throw new Error('Folder ID not found');
       }

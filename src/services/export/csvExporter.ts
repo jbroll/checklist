@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
+import type { Template } from '../../schemas';
 
 /**
  * Escape CSV field value
@@ -23,21 +23,21 @@ function escapeCsvField(value: string): string {
  *
  * Format: name,defaultQuantity,path
  *
- * @param folder - Folder to export items from
+ * @param template - Template to export items from
  * @returns CSV string with header row
  */
-export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderNode>): string {
+export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Template>): string {
   const lines: string[] = [];
 
   // Header row
   lines.push('name,defaultQuantity,path');
 
-  if (!folder.items || folder.items.length === 0) {
+  if (!template.items || template.items.length === 0) {
     return lines.join('\n');
   }
 
   // Get non-archived leaf items (not categories), sorted by sortOrder
-  const items = Array.from(folder.items)
+  const items = template.items
     .filter((item) => item && !item.archived && item.type === 'item')
     .sort((a, b) => {
       if (!a || !b) return 0;
@@ -63,19 +63,19 @@ export function exportTemplateItemsToCsv(folder: InstanceOfSchema<typeof FolderN
  *
  * Format: name,path,inCart,purchased,addedToCartAt,purchasedAt
  *
- * @param folder - Folder containing the session
+ * @param template - Template containing the session
  * @param sessionId - ID of the session to export
  * @returns CSV string with header row, or null if session not found
  */
 export function exportSessionToCsv(
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   sessionId: string,
 ): string | null {
-  if (!folder.sessions) {
+  if (!template.sessions) {
     return null;
   }
 
-  const session = Array.from(folder.sessions).find((s) => s?.$jazz.id === sessionId);
+  const session = Array.from(template.sessions).find((s) => s?.$jazz.id === sessionId);
   if (!session) {
     return null;
   }
@@ -85,12 +85,12 @@ export function exportSessionToCsv(
   // Header row
   lines.push('name,path,inCart,purchased,addedToCartAt,purchasedAt');
 
-  if (!folder.items) {
+  if (!template.items) {
     return lines.join('\n');
   }
 
   // Get all leaf items (not categories) from the template, sorted by sortOrder
-  const items = Array.from(folder.items)
+  const items = template.items
     .filter((item) => item && !item.archived && item.type === 'item')
     .sort((a, b) => {
       if (!a || !b) return 0;
@@ -101,7 +101,7 @@ export function exportSessionToCsv(
   for (const item of items) {
     if (!item) continue;
 
-    const itemId = item.$jazz.id;
+    const itemId = item.id;
     const itemState = session.itemStates?.[itemId];
 
     const name = escapeCsvField(item.name);

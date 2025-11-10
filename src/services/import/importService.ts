@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, Template } from '../../schemas';
 import { readFileAsText } from '../../utils/fileUpload';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
@@ -101,13 +101,13 @@ export class ImportService {
    * Import template items from TXT file
    *
    * @param file - TXT file with one item per line
-   * @param folder - Folder to import items into
+   * @param template - Template to import items into
    * @param account - User's Account
    * @returns Import result with statistics
    */
   static async importItemsFromTxtFile(
     file: File,
-    folder: InstanceOfSchema<typeof FolderNode>,
+    template: InstanceOfSchema<typeof Template>,
     account: InstanceOfSchema<typeof Account>,
   ): Promise<TxtImportResult> {
     // Validate file
@@ -126,20 +126,20 @@ export class ImportService {
     const content = await readFileAsText(file);
 
     // Import items
-    return importItemsFromText(content, folder, account);
+    return importItemsFromText(content, template, account);
   }
 
   /**
    * Import template items from CSV file
    *
    * @param file - CSV file with header row
-   * @param folder - Folder to import items into
+   * @param template - Template to import items into
    * @param account - User's Account
    * @returns Import result with statistics
    */
   static async importItemsFromCsvFile(
     file: File,
-    folder: InstanceOfSchema<typeof FolderNode>,
+    template: InstanceOfSchema<typeof Template>,
     account: InstanceOfSchema<typeof Account>,
   ): Promise<CsvImportResult> {
     // Validate file
@@ -158,21 +158,21 @@ export class ImportService {
     const content = await readFileAsText(file);
 
     // Import items
-    return importItemsFromCsv(content, folder, account);
+    return importItemsFromCsv(content, template, account);
   }
 
   /**
    * Import session from CSV file
    *
    * @param file - CSV file with session data
-   * @param folder - Folder to import session into
+   * @param template - Template to import session into
    * @param account - User's Account
    * @param options - Import options (session name, add missing items)
    * @returns Import result with statistics
    */
   static async importSessionFromCsvFile(
     file: File,
-    folder: InstanceOfSchema<typeof FolderNode>,
+    template: InstanceOfSchema<typeof Template>,
     account: InstanceOfSchema<typeof Account>,
     options: SessionImportOptions = {},
   ): Promise<SessionImportResult> {
@@ -193,13 +193,13 @@ export class ImportService {
     const content = await readFileAsText(file);
 
     // Import session
-    return importSessionFromCsv(content, folder, account, options);
+    return importSessionFromCsv(content, template, account, options);
   }
 
   /**
-   * Import TXT/CSV file as a new template folder at root
+   * Import TXT/CSV file as a new template at root
    *
-   * Creates a new template folder with the given name and imports all items into it.
+   * Creates a new template with the given name and imports all items into it.
    *
    * @param file - TXT or CSV file with items
    * @param account - User's Account
@@ -228,20 +228,16 @@ export class ImportService {
     // Read file content
     const content = await readFileAsText(file);
 
-    // Create new template folder at root
-    const { FolderNode } = await import('../../schemas/tree');
+    // Create new template at root
+    const { Template } = await import('../../schemas/tree');
 
-    const newFolder = FolderNode.create(
+    const newTemplate = Template.create(
       {
         name: templateName,
-        type: 'template-folder',
-        path: `/${templateName}`,
-        expanded: true,
-        archived: false,
-        showZoneHeadings: false, // Hide zone headings by default
         items: [],
         sessions: [],
-        currentSessionId: '',
+        currentSessionId: undefined,
+        showZoneHeadings: false, // Hide zone headings by default
         owner: account,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -249,12 +245,12 @@ export class ImportService {
       { owner: account },
     );
 
-    // Import items into the new folder
+    // Import items into the new template
     let importResult: TxtImportResult | CsvImportResult;
     if (fileType === 'txt') {
-      importResult = importItemsFromText(content, newFolder, account);
+      importResult = importItemsFromText(content, newTemplate, account);
     } else {
-      importResult = importItemsFromCsv(content, newFolder, account);
+      importResult = importItemsFromCsv(content, newTemplate, account);
     }
 
     // Check if import succeeded
@@ -262,12 +258,12 @@ export class ImportService {
       return createErrorResult(importResult.errors[0]);
     }
 
-    // Add folder to root
+    // Add template to root
     if (!account.root) {
       return createErrorResult('Account root not found');
     }
 
-    account.root.nodes.$jazz.push(newFolder);
+    account.root.templates.$jazz.push(newTemplate);
 
     return createSuccessResult(
       {

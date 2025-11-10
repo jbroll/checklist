@@ -4,12 +4,14 @@
  * Imports folder structures with all template items and session history from JSON format.
  */
 
+
 import type { InstanceOfSchema } from 'jazz-tools';
-import { type Account, FolderNode, ItemState, ListSession, TemplateItem } from '../../schemas';
+import { type Account, type DirectoryEntry, Template, Session } from '../../schemas';
+import type { ItemState, TemplateItem } from '../../schemas/tree';
 import type { ExportedData, ExportedFolder, ExportedSession } from '../export/types';
 import { resolvePathConflict } from './conflictResolver';
 import type { ImportResult } from './types';
-import { findFolderByPath, validateJsonData } from './validators';
+import { findDirectoryEntryByPath, validateJsonData } from './validators';
 
 /**
  * Import JSON data into user's account
@@ -88,28 +90,32 @@ async function importFolders(
   // Import each folder
   for (const exportedFolder of data.folders) {
     try {
-      const { folder, stats } = await importFolder(exportedFolder, account);
+      const { template, directoryEntry, stats } = await importFolder(exportedFolder, account);
 
-      // Add to root
-      account.root.nodes.$jazz.push(folder);
+      // Add template to root
+      account.root.templates.$jazz.push(template);
+
+      // Add directory entry to root
+      const updatedDirectory = [...account.root.directory, directoryEntry];
+      account.root.$jazz.set('directory', updatedDirectory);
 
       // Track stats
       foldersCreated++;
       itemsAdded += stats.itemsAdded;
       sessionsCreated += stats.sessionsCreated;
 
-      if (folder.$jazz?.id) {
-        folderIds.push(folder.$jazz.id);
+      if (template.$jazz?.id) {
+        folderIds.push(template.$jazz.id);
       }
 
       if (stats.pathConflict) {
         warnings.push(
-          `Folder "${exportedFolder.name}" imported as "${folder.name}" due to path conflict`,
+          `Template "${exportedFolder.name}" imported as "${template.name}" due to path conflict`,
         );
       }
     } catch (error) {
       errors.push(
-        `Failed to import folder "${exportedFolder.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to import template "${exportedFolder.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -134,56 +140,31 @@ async function importFolders(
  *
  * @param exportedFolder - Exported folder data
  * @param account - User's account
- * @returns Created folder and stats
+ * @returns Created template, directory entry, and stats
  */
 async function importFolder(
   exportedFolder: ExportedFolder,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<{
-  folder: InstanceOfSchema<typeof FolderNode>;
+  template: InstanceOfSchema<typeof Template>;
+  directoryEntry: DirectoryEntry;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
 }> {
-  // Check for path conflict
-  const existingFolder = findFolderByPath(exportedFolder.path, account);
+  // Check for path conflict in directory
+  const existingEntry = findDirectoryEntryByPath(exportedFolder.path, account);
   let finalPath = exportedFolder.path;
   let finalName = exportedFolder.name;
   let pathConflict = false;
 
-  if (existingFolder) {
+  if (existingEntry) {
     const resolved = resolvePathConflict(exportedFolder.path, exportedFolder.name, account);
     finalPath = resolved.path;
     finalName = resolved.name;
     pathConflict = true;
   }
 
-  // Create folder based on type
-  if (exportedFolder.type === 'template-folder') {
-    return importTemplateFolder(exportedFolder, finalPath, finalName, account, pathConflict);
-  }
-
-  // Regular folder (no items or sessions, but must initialize empty arrays)
-  const folder = FolderNode.create(
-    {
-      name: finalName,
-      type: 'folder',
-      path: finalPath,
-      expanded: false,
-      archived: false, // New folders start unarchived
-      showZoneHeadings: false, // Hide zone headings by default
-      items: [], // Always initialize even for regular folders
-      sessions: [], // Always initialize even for regular folders
-      currentSessionId: '', // Empty string for no session
-      owner: account,
-      createdAt: new Date(exportedFolder.createdAt),
-      updatedAt: new Date(exportedFolder.updatedAt),
-    },
-    { owner: account },
-  );
-
-  return {
-    folder,
-    stats: { itemsAdded: 0, sessionsCreated: 0, pathConflict },
-  };
+  // All templates support items and sessions
+  return importTemplateFolder(exportedFolder, finalPath, finalName, account, pathConflict);
 }
 
 /**
@@ -194,7 +175,7 @@ async function importFolder(
  * @param name - Final name (after conflict resolution)
  * @param account - User's account
  * @param pathConflict - Whether path was changed
- * @returns Created folder and stats
+ * @returns Created template, directory entry, and stats
  */
 async function importTemplateFolder(
   exportedFolder: ExportedFolder,
@@ -203,47 +184,40 @@ async function importTemplateFolder(
   account: InstanceOfSchema<typeof Account>,
   pathConflict: boolean,
 ): Promise<{
-  folder: InstanceOfSchema<typeof FolderNode>;
+  template: InstanceOfSchema<typeof Template>;
+  directoryEntry: DirectoryEntry;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
 }> {
-  // Import template items
-  const items: InstanceOfSchema<typeof TemplateItem>[] = [];
+  // Import template items as plain objects
+  const items: TemplateItem[] = [];
 
   if (exportedFolder.items) {
     for (const exportedItem of exportedFolder.items) {
-      const item = TemplateItem.create(
-        {
-          name: exportedItem.name,
-          type: exportedItem.type,
-          path: exportedItem.path,
-          expanded: exportedItem.expanded ?? false,
-          sortOrder: exportedItem.sortOrder,
-          archived: false,
-          defaultQuantity: exportedItem.defaultQuantity || '',
-          color: exportedItem.color || '#6b7280',
-          addedBy: account,
-          createdAt: new Date(exportedItem.createdAt),
-          updatedAt: new Date(exportedItem.updatedAt),
-        },
-        { owner: account },
-      );
+      const item: TemplateItem = {
+        id: crypto.randomUUID(),
+        name: exportedItem.name,
+        type: exportedItem.type,
+        path: exportedItem.path,
+        expanded: exportedItem.expanded ?? false,
+        sortOrder: exportedItem.sortOrder,
+        archived: false,
+        defaultQuantity: exportedItem.defaultQuantity || '',
+        color: exportedItem.color || '#6b7280',
+        createdAt: new Date(exportedItem.createdAt),
+      };
 
       items.push(item);
     }
   }
 
-  // Create folder first (needed for session.templateFolderId)
-  const folder = FolderNode.create(
+  // Create template (path and archived are now in DirectoryEntry, not Template)
+  const template = Template.create(
     {
       name,
-      type: 'template-folder',
-      path,
-      expanded: false,
-      archived: false, // New folders start unarchived
-      showZoneHeadings: false, // Hide zone headings by default
       items,
       sessions: [],
-      currentSessionId: '', // Empty string for no current session
+      currentSessionId: undefined,
+      showZoneHeadings: false, // Hide zone headings by default
       owner: account,
       createdAt: new Date(exportedFolder.createdAt),
       updatedAt: new Date(exportedFolder.updatedAt),
@@ -252,33 +226,48 @@ async function importTemplateFolder(
   );
 
   // Import sessions
-  const sessions: InstanceOfSchema<typeof ListSession>[] = [];
+  const sessions: InstanceOfSchema<typeof Session>[] = [];
 
-  if (exportedFolder.sessions && folder.$jazz?.id) {
+  if (exportedFolder.sessions) {
     for (const exportedSession of exportedFolder.sessions) {
-      const session = importSession(exportedSession, folder.$jazz.id, items, account);
+      const session = importSession(exportedSession, items, account);
       sessions.push(session);
     }
   }
 
-  // Add sessions to folder
-  if (folder.sessions) {
+  // Add sessions to template
+  if (template.sessions) {
     for (const session of sessions) {
-      folder.sessions.$jazz.push(session);
+      template.sessions.$jazz.push(session);
     }
   }
 
-  // Set current session if it was active (using type assertion to bypass readonly)
+  // Set current session if it was active
   if (exportedFolder.currentSessionId && sessions.length > 0) {
     // Find the session that was current (use first active session)
     const activeSession = sessions.find((s) => s.status === 'active');
     if (activeSession?.$jazz?.id) {
-      (folder as { currentSessionId?: string }).currentSessionId = activeSession.$jazz.id;
+      template.$jazz.set('currentSessionId', activeSession.$jazz.id);
     }
   }
 
+  // Create directory entry for this template
+  const now = new Date();
+  const directoryEntry: DirectoryEntry = {
+    id: crypto.randomUUID(),
+    name,
+    type: 'template-ref',
+    path,
+    expanded: false,
+    archived: false,
+    templateId: template.$jazz?.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+
   return {
-    folder,
+    template,
+    directoryEntry,
     stats: {
       itemsAdded: items.length,
       sessionsCreated: sessions.length,
@@ -291,50 +280,45 @@ async function importTemplateFolder(
  * Import a shopping session
  *
  * @param exportedSession - Exported session data
- * @param templateFolderId - ID of the parent template folder
  * @param items - Array of template items
  * @param account - User's account
  * @returns Created session
  */
 function importSession(
   exportedSession: ExportedSession,
-  templateFolderId: string,
-  items: InstanceOfSchema<typeof TemplateItem>[],
+  items: TemplateItem[],
   account: InstanceOfSchema<typeof Account>,
-): InstanceOfSchema<typeof ListSession> {
-  // Reconstruct item states with new item IDs
-  const itemStates: Record<string, InstanceOfSchema<typeof ItemState>> = {};
+): InstanceOfSchema<typeof Session> {
+  // Reconstruct item states with new item IDs as plain objects
+  const itemStates: Record<string, ItemState> = {};
 
-  // For each item in the template, create an ItemState if it was in the session
-  for (const item of items) {
-    if (!item.$jazz?.id) continue;
+  // Create a map of old exported items by sortOrder to match with new items
+  const exportedItemsBySort = new Map<number, string>();
 
-    const itemId = item.$jazz.id;
+  // Try to map exported states to new item IDs by matching sortOrder
+  for (const [itemId, state] of Object.entries(exportedSession.itemStates)) {
+    exportedItemsBySort.set(itemId.length, itemId); // Basic heuristic
+  }
 
-    // Find the original state (search by sortOrder match)
-    let foundState = null;
-    for (const [_originalItemId, state] of Object.entries(exportedSession.itemStates)) {
-      // Try to match by item name or sortOrder
-      // Since we don't have original IDs, we'll create states for all items
-      // and use the session's state data where available
-      foundState = state;
-      break; // Use first state for now - this is a limitation of the import
-    }
+  // For each item in the template, try to find matching state from export
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item?.id) continue;
 
-    if (foundState) {
-      const itemState = ItemState.create(
-        {
-          itemId,
-          selected: foundState.inCart,
-          checked: foundState.purchased,
-          selectedAt: foundState.addedToCartAt ? new Date(foundState.addedToCartAt) : undefined,
-          checkedAt: foundState.purchasedAt ? new Date(foundState.purchasedAt) : undefined,
-          checkedBy: undefined,
-        },
-        { owner: account },
-      );
+    // Try to find the corresponding exported state
+    // Match by index position (best we can do without original IDs)
+    const exportedStatesArray = Object.values(exportedSession.itemStates);
+    const correspondingState = exportedStatesArray[i];
 
-      itemStates[itemId] = itemState;
+    if (correspondingState) {
+      const itemState: ItemState = {
+        selected: correspondingState.inCart,
+        checked: correspondingState.purchased,
+        selectedAt: correspondingState.addedToCartAt ? new Date(correspondingState.addedToCartAt) : undefined,
+        checkedAt: correspondingState.purchasedAt ? new Date(correspondingState.purchasedAt) : undefined,
+      };
+
+      itemStates[item.id] = itemState;
     }
   }
 
@@ -344,15 +328,14 @@ function importSession(
   const remainingCount = items.length - checkedCount;
 
   // Create session
-  const session = ListSession.create(
+  const session = Session.create(
     {
       name: exportedSession.name,
-      templateFolderId,
-      itemStates, // Already a Record of ItemStates
+      itemStates,
       status: exportedSession.status,
-      archived: exportedSession.archived ?? false, // Use exported value or default to false
-      viewMode: exportedSession.viewMode || 'hierarchy-in-zones', // Default if not present
-      categoryExpanded: {}, // Reset UI state - empty record
+      archived: exportedSession.archived ?? false,
+      viewMode: exportedSession.viewMode || 'hierarchy-in-zones',
+      categoryExpanded: {},
       selectedCount,
       checkedCount,
       remainingCount,

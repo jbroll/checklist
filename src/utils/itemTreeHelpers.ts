@@ -1,4 +1,3 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import type { TemplateItem } from '@/schemas';
 import { getParentPath } from './pathUtils';
 
@@ -6,7 +5,7 @@ import { getParentPath } from './pathUtils';
  * Tree structure for template items (categories and items)
  */
 export interface ItemTreeNode {
-  item: InstanceOfSchema<typeof TemplateItem>;
+  item: TemplateItem;
   children: ItemTreeNode[];
 }
 
@@ -18,13 +17,10 @@ export interface ItemTreeNode {
  * @returns Array of root-level tree nodes
  */
 export function buildItemTree(
-  items: readonly (InstanceOfSchema<typeof TemplateItem> | null)[],
+  items: readonly (TemplateItem | null | undefined)[],
 ): ItemTreeNode[] {
   // Helper to sort items by sortOrder and name
-  const sortItems = (
-    a: InstanceOfSchema<typeof TemplateItem>,
-    b: InstanceOfSchema<typeof TemplateItem>,
-  ) => {
+  const sortItems = (a: TemplateItem, b: TemplateItem) => {
     if (a.sortOrder !== b.sortOrder) {
       return a.sortOrder - b.sortOrder;
     }
@@ -73,8 +69,8 @@ export function buildItemTree(
 /**
  * Flattens a tree back into a list, maintaining hierarchical order
  */
-export function flattenItemTree(nodes: ItemTreeNode[]): InstanceOfSchema<typeof TemplateItem>[] {
-  const result: InstanceOfSchema<typeof TemplateItem>[] = [];
+export function flattenItemTree(nodes: ItemTreeNode[]): TemplateItem[] {
+  const result: TemplateItem[] = [];
 
   function traverse(node: ItemTreeNode) {
     result.push(node.item);
@@ -94,10 +90,10 @@ export function flattenItemTree(nodes: ItemTreeNode[]): InstanceOfSchema<typeof 
  * Gets all descendant items (children, grandchildren, etc.) of a category
  */
 export function getDescendantItems(
-  items: readonly (InstanceOfSchema<typeof TemplateItem> | null)[],
+  items: readonly (TemplateItem | null | undefined)[],
   categoryPath: string,
-): InstanceOfSchema<typeof TemplateItem>[] {
-  return items.filter((item): item is InstanceOfSchema<typeof TemplateItem> => {
+): TemplateItem[] {
+  return items.filter((item): item is TemplateItem => {
     if (!item || item.archived) return false;
     return item.path.startsWith(`${categoryPath}/`);
   });
@@ -107,10 +103,10 @@ export function getDescendantItems(
  * Gets only the direct children of a category (not grandchildren)
  */
 export function getDirectChildren(
-  items: readonly (InstanceOfSchema<typeof TemplateItem> | null)[],
+  items: readonly (TemplateItem | null | undefined)[],
   categoryPath: string | undefined,
-): InstanceOfSchema<typeof TemplateItem>[] {
-  return items.filter((item): item is InstanceOfSchema<typeof TemplateItem> => {
+): TemplateItem[] {
+  return items.filter((item): item is TemplateItem => {
     if (!item || item.archived) return false;
     const itemParent = getParentPath(item.path);
     return itemParent === categoryPath;
