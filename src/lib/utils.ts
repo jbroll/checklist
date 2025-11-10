@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
 import type { Session } from '@/schemas';
 
@@ -147,4 +148,17 @@ export function hasMultipleSessionsOnSameDay(
   });
 
   return sessionsOnSameDay.length > 1;
+}
+
+/**
+ * Generate a short, unique ID for items and directory entries
+ * Uses nanoid with 10 characters for compact yet collision-resistant IDs
+ *
+ * Examples: "V1StGXR8_Z", "3q2W5e7R8t", "9YuHjI7kLp"
+ *
+ * Collision probability with 10 chars (~1% after 361 million IDs):
+ * Safe for collaborative editing where multiple users create items simultaneously
+ */
+export function generateId(): string {
+  return nanoid(10);
 }

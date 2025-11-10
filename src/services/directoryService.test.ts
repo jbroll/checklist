@@ -68,11 +68,13 @@ describe('directoryService', () => {
       const account = createMockAccount();
       const result = directoryService.createDirectoryEntry(account, 'My Folder', false);
 
-      expect(result.entryId).toBe('mock-uuid-1');
+      expect(result.entryId).toBeDefined();
+      expect(typeof result.entryId).toBe('string');
+      expect(result.entryId.length).toBeGreaterThan(0);
       expect(result.templateId).toBeUndefined();
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
-          id: 'mock-uuid-1',
+          id: result.entryId,
           name: 'My Folder',
           type: 'folder',
           path: 'My-Folder',
@@ -91,9 +93,12 @@ describe('directoryService', () => {
         'parent/path',
       );
 
-      expect(result.entryId).toBe('mock-uuid-1');
+      expect(result.entryId).toBeDefined();
+      expect(typeof result.entryId).toBe('string');
+      expect(result.entryId.length).toBeGreaterThan(0);
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
+          id: result.entryId,
           path: 'parent/path/Subfolder',
           name: 'Subfolder',
           type: 'folder',
@@ -105,7 +110,9 @@ describe('directoryService', () => {
       const account = createMockAccount();
       const result = directoryService.createDirectoryEntry(account, 'My List', true);
 
-      expect(result.entryId).toBe('mock-uuid-1');
+      expect(result.entryId).toBeDefined();
+      expect(typeof result.entryId).toBe('string');
+      expect(result.entryId.length).toBeGreaterThan(0);
       expect(result.templateId).toBeDefined();
 
       // Verify templates.push was called
@@ -114,7 +121,7 @@ describe('directoryService', () => {
       // Verify directory entry was created with correct structure
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
-          id: 'mock-uuid-1',
+          id: result.entryId,
           name: 'My List',
           type: 'template-ref',
           path: 'My-List',
