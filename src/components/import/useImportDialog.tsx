@@ -1,11 +1,17 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
 import type { Account, Template } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import { ImportService } from '@/services/import/importService';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
+
+// Track file identity for change detection
+function getFileId(file: File | null): string {
+  if (!file) return 'null';
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
 
 type UnifiedImportResult = ImportResult | TxtImportResult | CsvImportResult;
 
@@ -31,13 +37,43 @@ export function useImportDialog({
 }: UseImportDialogProps) {
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const lastFileIdRef = useRef<string>('null');
 
   const isFolderLevel = !!template;
 
   const resetState = () => {
     setFileType(null);
     setTemplateName('');
+    setSelectedFile(null);
+    lastFileIdRef.current = 'null';
   };
+
+  // Auto-detect file type and template name when file changes
+  useEffect(() => {
+    if (!selectedFile) {
+      setFileType(null);
+      return;
+    }
+
+    const fileName = selectedFile.name.toLowerCase();
+    let detectedType: 'json' | 'txt' | 'csv';
+    if (fileName.endsWith('.json')) {
+      detectedType = 'json';
+    } else if (fileName.endsWith('.csv')) {
+      detectedType = 'csv';
+    } else {
+      detectedType = 'txt';
+    }
+
+    setFileType(detectedType);
+
+    // Auto-generate template name from filename (for TXT/CSV at top level)
+    if (!isFolderLevel && detectedType !== 'json') {
+      const baseName = selectedFile.name.replace(/\.(txt|csv)$/i, '');
+      setTemplateName(baseName);
+    }
+  }, [selectedFile, isFolderLevel]);
 
   const handleSuccessfulImport = () => {
     setTimeout(() => {
@@ -123,31 +159,15 @@ export function useImportDialog({
     };
   };
 
-  const handleFileTypeDetection = (file: File) => {
-    if (file && !fileType) {
-      const fileName = file.name.toLowerCase();
-      let detectedType: 'json' | 'txt' | 'csv';
-      if (fileName.endsWith('.json')) {
-        detectedType = 'json';
-      } else if (fileName.endsWith('.csv')) {
-        detectedType = 'csv';
-      } else {
-        detectedType = 'txt';
-      }
-      setFileType(detectedType);
-
-      // Auto-generate template name from filename (for TXT/CSV at top level)
-      if (!isFolderLevel && detectedType !== 'json' && !templateName) {
-        const baseName = file.name.replace(/\.(txt|csv)$/i, '');
-        setTemplateName(baseName);
-      }
-    }
-  };
-
   const renderFormFields = (file: File | null, result: UnifiedImportResult | null) => {
-    // Auto-detect file type when file is selected
-    if (file) {
-      handleFileTypeDetection(file);
+    // Detect file changes and update state via effect
+    const currentFileId = getFileId(file);
+    if (currentFileId !== lastFileIdRef.current) {
+      lastFileIdRef.current = currentFileId;
+      // Schedule state update for after render
+      Promise.resolve().then(() => {
+        setSelectedFile(file);
+      });
     }
 
     // Show template name input only for top-level TXT/CSV and when no result
