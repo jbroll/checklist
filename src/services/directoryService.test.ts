@@ -230,6 +230,81 @@ describe('directoryService', () => {
       expect(result[0].id).toBe('1');
     });
 
+    it('should return all entries including archived when showArchived=true', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'Active',
+          type: 'folder',
+          path: 'active',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'Archived',
+          type: 'folder',
+          path: 'archived',
+          expanded: false,
+          archived: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'Another Active',
+          type: 'template-ref',
+          path: 'another-active',
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      const result = directoryService.getAllDirectoryEntries(account, true);
+
+      expect(result).toHaveLength(3);
+      expect(result.map((e) => e.id)).toContain('1');
+      expect(result.map((e) => e.id)).toContain('2');
+      expect(result.map((e) => e.id)).toContain('3');
+    });
+
+    it('should return only non-archived when showArchived=false (explicit)', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'Active',
+          type: 'folder',
+          path: 'active',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'Archived',
+          type: 'folder',
+          path: 'archived',
+          expanded: false,
+          archived: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      const result = directoryService.getAllDirectoryEntries(account, false);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('1');
+    });
+
     it('should return empty array if directory is null', () => {
       const account = { root: { directory: null } } as any;
       const result = directoryService.getAllDirectoryEntries(account);
