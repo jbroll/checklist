@@ -16,6 +16,19 @@ import type {
 } from './types';
 
 /**
+ * Safely convert a Date or date string to ISO string
+ * Handles both Date objects and ISO date strings from Jazz deserialization
+ *
+ * @param date - Date object or ISO date string
+ * @returns ISO date string
+ */
+function toISOString(date: Date | string | undefined): string | undefined {
+  if (!date) return undefined;
+  if (typeof date === 'string') return date;
+  return date.toISOString();
+}
+
+/**
  * Export all folders from a user's account
  *
  * @param account - The user's Account
@@ -83,8 +96,8 @@ function exportTemplateNode(
     name: template.name,
     path,
     type: 'template-folder', // All templates are template-folders in the export format
-    createdAt: template.createdAt.toISOString(),
-    updatedAt: template.updatedAt.toISOString(),
+    createdAt: toISOString(template.createdAt) || new Date().toISOString(),
+    updatedAt: toISOString(template.updatedAt) || new Date().toISOString(),
   };
 
   // Add template data
@@ -123,8 +136,8 @@ function exportTemplateItems(items: TemplateItem[]): ExportedTemplateItem[] {
       sortOrder: item.sortOrder,
       defaultQuantity: item.defaultQuantity,
       color: item.color,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.createdAt.toISOString(), // Use createdAt for both since plain items don't have updatedAt
+      createdAt: toISOString(item.createdAt) || new Date().toISOString(),
+      updatedAt: toISOString(item.createdAt) || new Date().toISOString(), // Use createdAt for both since plain items don't have updatedAt
     };
 
     exportedItems.push(exportedItem);
@@ -152,11 +165,13 @@ function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): Exp
         purchased: state.checked,
       };
 
-      if (state.selectedAt !== undefined) {
-        exportedState.addedToCartAt = state.selectedAt.toISOString();
+      const addedToCartAt = toISOString(state.selectedAt);
+      if (addedToCartAt) {
+        exportedState.addedToCartAt = addedToCartAt;
       }
-      if (state.checkedAt !== undefined) {
-        exportedState.purchasedAt = state.checkedAt.toISOString();
+      const purchasedAt = toISOString(state.checkedAt);
+      if (purchasedAt) {
+        exportedState.purchasedAt = purchasedAt;
       }
 
       itemStates[itemId] = exportedState;
@@ -168,12 +183,13 @@ function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): Exp
       archived: session.archived || false,
       viewMode: session.viewMode,
       itemStates,
-      startedAt: session.startedAt.toISOString(),
-      lastActivityAt: session.lastActivityAt.toISOString(),
+      startedAt: toISOString(session.startedAt) || new Date().toISOString(),
+      lastActivityAt: toISOString(session.lastActivityAt) || new Date().toISOString(),
     };
 
-    if (session.completedAt !== undefined) {
-      exportedSession.completedAt = session.completedAt.toISOString();
+    const completedAt = toISOString(session.completedAt);
+    if (completedAt) {
+      exportedSession.completedAt = completedAt;
     }
 
     exportedSessions.push(exportedSession);
