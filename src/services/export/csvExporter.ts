@@ -8,6 +8,19 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import type { Template } from '../../schemas';
 
 /**
+ * Safely convert a Date or date string to ISO string
+ * Handles both Date objects and ISO date strings from Jazz deserialization
+ *
+ * @param date - Date object or ISO date string
+ * @returns ISO date string
+ */
+function toISOString(date: Date | string | undefined): string {
+  if (!date) return '';
+  if (typeof date === 'string') return date;
+  return date.toISOString();
+}
+
+/**
  * Escape CSV field value
  * Wraps in quotes if contains comma, quote, or newline
  */
@@ -108,8 +121,8 @@ export function exportSessionToCsv(
     const path = escapeCsvField(item.path);
     const inCart = itemState?.selected ? 'true' : 'false';
     const purchased = itemState?.checked ? 'true' : 'false';
-    const addedToCartAt = itemState?.selectedAt?.toISOString() || '';
-    const purchasedAt = itemState?.checkedAt?.toISOString() || '';
+    const addedToCartAt = toISOString(itemState?.selectedAt);
+    const purchasedAt = toISOString(itemState?.checkedAt);
 
     lines.push(`${name},${path},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
   }

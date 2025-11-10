@@ -3,8 +3,83 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { toJsonString } from './jsonExporter';
+import { exportAllFolders, exportTemplate, toJsonString } from './jsonExporter';
 import type { ExportedData } from './types';
+
+// Mock Jazz data structures
+const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: boolean }) => {
+  const { withTemplates = true, datesAsStrings = false } = options;
+  const date = datesAsStrings ? '2024-11-01T00:00:00.000Z' : new Date('2024-11-01T00:00:00.000Z');
+
+  const mockTemplate = withTemplates
+    ? {
+        $jazz: { id: 'template-1' },
+        name: 'Test Template',
+        items: [
+          {
+            id: 'item-1',
+            name: 'Test Item',
+            type: 'item' as const,
+            path: 'test-item',
+            expanded: false,
+            sortOrder: 0,
+            archived: false,
+            defaultQuantity: '1',
+            color: '#000000',
+            createdAt: date,
+          },
+        ],
+        sessions: [
+          {
+            $jazz: { id: 'session-1' },
+            name: '[2024-11-01]',
+            status: 'active' as const,
+            archived: false,
+            viewMode: 'flat' as const,
+            itemStates: {
+              'item-1': {
+                selected: true,
+                checked: false,
+                selectedAt: date,
+              },
+            },
+            categoryExpanded: {},
+            selectedCount: 1,
+            checkedCount: 0,
+            remainingCount: 1,
+            startedAt: date,
+            lastActivityAt: date,
+          },
+        ],
+        currentSessionId: 'session-1',
+        showZoneHeadings: false,
+        createdAt: date,
+        updatedAt: date,
+      }
+    : null;
+
+  return {
+    root: {
+      templates: withTemplates && mockTemplate ? [mockTemplate] : [],
+      directory:
+        withTemplates && mockTemplate
+          ? [
+              {
+                id: 'dir-1',
+                name: 'Test Template',
+                type: 'template-ref' as const,
+                path: '/test-template',
+                expanded: false,
+                archived: false,
+                templateId: 'template-1',
+                createdAt: date,
+                updatedAt: date,
+              },
+            ]
+          : [],
+    },
+  };
+};
 
 describe('jsonExporter', () => {
   describe('toJsonString', () => {
@@ -123,6 +198,131 @@ describe('jsonExporter', () => {
       // Should not include undefined optional fields
       expect(JSON.parse(result)).toBeDefined();
       expect(result).toContain('"name":"Item"');
+    });
+  });
+
+  describe('exportAllFolders', () => {
+    it('should export all folders with Date objects', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+
+      const result = exportAllFolders(account as any);
+
+      expect(result.version).toBe('1.0');
+      expect(result.folders).toHaveLength(1);
+      expect(result.folders[0].name).toBe('Test Template');
+      expect(result.folders[0].path).toBe('/test-template');
+      expect(result.folders[0].items).toHaveLength(1);
+      expect(result.folders[0].sessions).toHaveLength(1);
+    });
+
+    it('should export all folders with date strings (Jazz deserialization)', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: true });
+
+      const result = exportAllFolders(account as any);
+
+      expect(result.version).toBe('1.0');
+      expect(result.folders).toHaveLength(1);
+      expect(result.folders[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].items?.[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].sessions?.[0].startedAt).toBe('2024-11-01T00:00:00.000Z');
+    });
+
+    it('should handle empty templates list', () => {
+      const account = createMockAccount({ withTemplates: false });
+
+      const result = exportAllFolders(account as any);
+
+      expect(result.version).toBe('1.0');
+      expect(result.folders).toHaveLength(0);
+    });
+
+    it('should skip archived items', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+      // Add archived item
+      account.root.templates[0].items.push({
+        id: 'item-2',
+        name: 'Archived Item',
+        type: 'item' as const,
+        path: 'archived-item',
+        expanded: false,
+        sortOrder: 1,
+        archived: true, // This should be skipped
+        defaultQuantity: '1',
+        color: '#000000',
+        createdAt: new Date('2024-11-01T00:00:00.000Z'),
+      });
+
+      const result = exportAllFolders(account as any);
+
+      expect(result.folders[0].items).toHaveLength(1);
+      expect(result.folders[0].items?.[0].name).toBe('Test Item');
+    });
+
+    it('should export session item states with dates', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+
+      const result = exportAllFolders(account as any);
+
+      const session = result.folders[0].sessions?.[0];
+      expect(session).toBeDefined();
+      expect(session?.itemStates['item-1']).toEqual({
+        inCart: true,
+        purchased: false,
+        addedToCartAt: '2024-11-01T00:00:00.000Z',
+      });
+    });
+  });
+
+  describe('exportTemplate', () => {
+    it('should export a single template with Date objects', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+      const template = account.root.templates[0];
+
+      const result = exportTemplate(template as any, '/test-template');
+
+      expect(result.version).toBe('1.0');
+      expect(result.folders).toHaveLength(1);
+      expect(result.folders[0].name).toBe('Test Template');
+      expect(result.folders[0].path).toBe('/test-template');
+    });
+
+    it('should export a single template with date strings', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: true });
+      const template = account.root.templates[0];
+
+      const result = exportTemplate(template as any, '/test-template');
+
+      expect(result.version).toBe('1.0');
+      expect(result.folders[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].updatedAt).toBe('2024-11-01T00:00:00.000Z');
+    });
+
+    it('should include currentSessionId if present', () => {
+      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+      const template = account.root.templates[0];
+
+      const result = exportTemplate(template as any, '/test-template');
+
+      expect(result.folders[0].currentSessionId).toBe('session-1');
+    });
+
+    it('should handle template without items or sessions', () => {
+      const template = {
+        $jazz: { id: 'template-2' },
+        name: 'Empty Template',
+        items: [],
+        sessions: [],
+        currentSessionId: '',
+        showZoneHeadings: false,
+        createdAt: new Date('2024-11-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-11-01T00:00:00.000Z'),
+      };
+
+      const result = exportTemplate(template as any, '/empty-template');
+
+      expect(result.folders[0].items).toEqual([]);
+      expect(result.folders[0].sessions).toEqual([]);
+      expect(result.folders[0].currentSessionId).toBeUndefined();
     });
   });
 });
