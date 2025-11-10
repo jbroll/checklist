@@ -6,6 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { generateId } from '../../lib/utils';
 import { type Account, type DirectoryEntry, Session, Template } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
 import { createChildPath } from '../../utils/pathUtils';
@@ -190,8 +191,8 @@ function flattenHierarchicalItems(
   let sortOrderCounter = 0;
 
   for (const exportedItem of exportedItems) {
-    // Generate new ID for this item
-    const newId = crypto.randomUUID();
+    // Generate new ID for this item (using nanoid for compact IDs)
+    const newId = generateId();
 
     // Track ID mapping for session states (if export has ID)
     if (exportedItem.id) {
@@ -304,7 +305,7 @@ async function importTemplateFolder(
   // Create directory entry for this template
   const now = new Date();
   const directoryEntry: DirectoryEntry = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name,
     type: 'template-ref',
     path,
