@@ -2,7 +2,7 @@
  * JSON import functionality
  *
  * Imports folder structures with all template items and session history from JSON format.
- * Supports both v1.0 (flat with paths) and v2.0 (hierarchical with IDs) formats.
+ * Supports v2.0 (hierarchical with IDs) format.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
@@ -174,7 +174,7 @@ async function importFolder(
 }
 
 /**
- * Flatten hierarchical items to path-based items (v2.0 → internal format)
+ * Flatten hierarchical items to path-based items
  *
  * @param exportedItems - Hierarchical exported items
  * @param parentPath - Parent path for context
@@ -255,35 +255,9 @@ async function importTemplateFolder(
   const idMap = new Map<string, string>(); // Maps old exported IDs to new IDs
 
   if (exportedFolder.items) {
-    // Check if this is v2.0 format (hierarchical with children) or v1.0 (flat with paths)
-    const isV2Format = exportedFolder.items.some((item) => 'children' in item || 'id' in item);
-
-    if (isV2Format) {
-      // V2.0: Hierarchical format - flatten it
-      const flattenedItems = flattenHierarchicalItems(exportedFolder.items, undefined, idMap);
-      items.push(...flattenedItems);
-    } else {
-      // V1.0: Already flat with paths
-      for (const exportedItem of exportedFolder.items) {
-        const newId = crypto.randomUUID();
-        // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility - path field doesn't exist in v2.0 types
-        const v1Item = exportedItem as any;
-        const item: TemplateItem = {
-          id: newId,
-          name: exportedItem.name,
-          type: exportedItem.type,
-          path: v1Item.path || exportedItem.name.toLowerCase(),
-          expanded: exportedItem.expanded ?? false,
-          sortOrder: exportedItem.sortOrder,
-          archived: false,
-          defaultQuantity: exportedItem.defaultQuantity || '',
-          color: exportedItem.color || '#6b7280',
-          createdAt: new Date(exportedItem.createdAt),
-        };
-
-        items.push(item);
-      }
-    }
+    // Flatten hierarchical format
+    const flattenedItems = flattenHierarchicalItems(exportedFolder.items, undefined, idMap);
+    items.push(...flattenedItems);
   }
 
   // Create template (path and archived are now in DirectoryEntry, not Template)
@@ -353,12 +327,12 @@ async function importTemplateFolder(
 }
 
 /**
- * Import a session (supports both v1.0 and v2.0 formats)
+ * Import a session
  *
  * @param exportedSession - Exported session data
  * @param items - Array of template items
  * @param account - User's account
- * @param idMap - Map of old exported IDs to new IDs (for v2.0)
+ * @param idMap - Map of old exported IDs to new IDs
  * @returns Created session
  */
 function importSession(
@@ -372,57 +346,18 @@ function importSession(
 
   // Map exported item states to new item IDs
   for (const [oldItemId, exportedState] of Object.entries(exportedSession.itemStates)) {
-    // V2.0: Use idMap to find the new ID
+    // Use idMap to find the new ID
     const newItemId = idMap.get(oldItemId);
 
     if (newItemId) {
-      // V2.0 format: Use neutral terminology (selected/checked)
-      const hasNewFormat = 'selected' in exportedState;
-
-      // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility - old field names
-      const v1State = exportedState as any;
-
       const itemState: ItemState = {
-        selected: hasNewFormat ? exportedState.selected : (v1State.inCart ?? false),
-        checked: hasNewFormat ? exportedState.checked : (v1State.purchased ?? false),
-        selectedAt: hasNewFormat
-          ? exportedState.selectedAt
-            ? new Date(exportedState.selectedAt)
-            : undefined
-          : v1State.addedToCartAt
-            ? new Date(v1State.addedToCartAt)
-            : undefined,
-        checkedAt: hasNewFormat
-          ? exportedState.checkedAt
-            ? new Date(exportedState.checkedAt)
-            : undefined
-          : v1State.purchasedAt
-            ? new Date(v1State.purchasedAt)
-            : undefined,
+        selected: exportedState.selected,
+        checked: exportedState.checked,
+        selectedAt: exportedState.selectedAt ? new Date(exportedState.selectedAt) : undefined,
+        checkedAt: exportedState.checkedAt ? new Date(exportedState.checkedAt) : undefined,
       };
 
       itemStates[newItemId] = itemState;
-    } else {
-      // V1.0 fallback: Try to match by index position (fragile but best we can do)
-      const exportedStatesArray = Object.values(exportedSession.itemStates);
-      const itemIndex = exportedStatesArray.indexOf(exportedState);
-
-      if (itemIndex >= 0 && itemIndex < items.length) {
-        const item = items[itemIndex];
-        if (item?.id) {
-          // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility fallback
-          const v1State = exportedState as any;
-
-          const itemState: ItemState = {
-            selected: v1State.inCart ?? false,
-            checked: v1State.purchased ?? false,
-            selectedAt: v1State.addedToCartAt ? new Date(v1State.addedToCartAt) : undefined,
-            checkedAt: v1State.purchasedAt ? new Date(v1State.purchasedAt) : undefined,
-          };
-
-          itemStates[item.id] = itemState;
-        }
-      }
     }
   }
 
