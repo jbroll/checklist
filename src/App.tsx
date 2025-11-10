@@ -1,3 +1,4 @@
+import { JazzInspector } from 'jazz-tools/inspector';
 import { XCircle } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { AuthGate } from './components/AuthGate';
@@ -6,6 +7,21 @@ import { JazzProvider } from './lib/jazz';
 
 // Lazy load TestPage only in development to avoid bundling it in production
 const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
+
+/**
+ * Conditional Jazz Inspector wrapper
+ * Only shows inspector in development mode (never in production)
+ */
+function ConditionalJazzInspector() {
+  const isDevelopment = import.meta.env.DEV;
+
+  // Only show inspector in development mode
+  if (!isDevelopment) {
+    return null;
+  }
+
+  return <JazzInspector />;
+}
 
 function App() {
   // Check if we're on the test page route
@@ -49,6 +65,7 @@ function App() {
           <AuthGate />
         )}
       </div>
+      <ConditionalJazzInspector />
     </JazzProvider>
   );
 }

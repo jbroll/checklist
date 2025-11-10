@@ -7,6 +7,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { generateId } from '../lib/utils';
 import type { Account, TemplateItem } from '../schemas';
 import { createChildPath, getParentPath, normalizePathSegment } from '../utils/pathUtils';
 import { getTemplate } from './templateService';
@@ -53,7 +54,7 @@ export function createCategory(
   }
 
   const newCategory: TemplateItem = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name,
     type: 'category',
     path,
@@ -96,7 +97,7 @@ export function createItem(
   }
 
   const newItem: TemplateItem = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name,
     type: 'item',
     path,

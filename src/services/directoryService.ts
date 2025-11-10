@@ -8,6 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { generateId } from '../lib/utils';
 import { type Account, type DirectoryEntry, Template } from '../schemas';
 import { calculateDescendantPaths, calculateNewPath } from '../utils/pathUtils';
 
@@ -27,7 +28,7 @@ export function createDirectoryEntry(
   const path = parentPath ? `${parentPath}/${normalizedName}` : normalizedName;
 
   const now = new Date();
-  const entryId = crypto.randomUUID();
+  const entryId = generateId();
 
   if (isTemplate) {
     // Create template "inode"
