@@ -12,8 +12,10 @@ interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account: InstanceOfSchema<typeof Account>;
-  /** Optional folder for folder-level import */
+  /** Optional folder for folder-level import (import items into existing template) */
   folder?: InstanceOfSchema<typeof Template>;
+  /** Optional parent path for creating new templates in a specific folder */
+  parentPath?: string;
   onImportComplete?: () => void;
 }
 
@@ -24,12 +26,14 @@ export function ImportDialog({
   onOpenChange,
   account,
   folder: template,
+  parentPath,
   onImportComplete,
 }: ImportDialogProps) {
   const { resetState, handleUpload, getDialogConfig, renderFormFields, canUpload } =
     useImportDialog({
       account,
       folder: template,
+      parentPath,
       onImportComplete,
       onOpenChange,
     });

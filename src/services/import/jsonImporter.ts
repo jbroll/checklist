@@ -25,11 +25,13 @@ import { findDirectoryEntryByPath, validateJsonData } from './validators';
  *
  * @param jsonString - JSON string to import
  * @param account - User's Account
+ * @param parentPath - Optional parent folder path (if not provided, imports to root)
  * @returns Import result with success/failure info
  */
 export async function importJson(
   jsonString: string,
   account: InstanceOfSchema<typeof Account>,
+  parentPath?: string,
 ): Promise<ImportResult> {
   // Parse JSON
   let data: unknown;
@@ -57,7 +59,7 @@ export async function importJson(
 
   // Import folders
   const exportData = data as ExportedData;
-  const result = await importFolders(exportData, account);
+  const result = await importFolders(exportData, account, parentPath);
 
   return {
     ...result,
@@ -70,11 +72,13 @@ export async function importJson(
  *
  * @param data - Validated export data
  * @param account - User's Account
+ * @param parentPath - Optional parent folder path
  * @returns Import result
  */
 async function importFolders(
   data: ExportedData,
   account: InstanceOfSchema<typeof Account>,
+  parentPath?: string,
 ): Promise<ImportResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -97,7 +101,11 @@ async function importFolders(
   // Import each folder
   for (const exportedFolder of data.folders) {
     try {
-      const { template, directoryEntry, stats } = await importFolder(exportedFolder, account);
+      const { template, directoryEntry, stats } = await importFolder(
+        exportedFolder,
+        account,
+        parentPath,
+      );
 
       // Add template to root
       account.root.templates.$jazz.push(template);
@@ -147,11 +155,13 @@ async function importFolders(
  *
  * @param exportedFolder - Exported folder data
  * @param account - User's account
+ * @param parentPath - Optional parent folder path
  * @returns Created template, directory entry, and stats
  */
 async function importFolder(
   exportedFolder: ExportedFolder,
   account: InstanceOfSchema<typeof Account>,
+  parentPath?: string,
 ): Promise<{
   template: InstanceOfSchema<typeof Template>;
   directoryEntry: DirectoryEntry;
@@ -159,7 +169,7 @@ async function importFolder(
 }> {
   // Generate path from name (normalize for path usage)
   const normalizedName = exportedFolder.name.trim().replace(/\s+/g, '-');
-  const generatedPath = normalizedName;
+  const generatedPath = parentPath ? createChildPath(parentPath, normalizedName) : normalizedName;
 
   // Check for path conflict in directory
   const existingEntry = findDirectoryEntryByPath(generatedPath, account);

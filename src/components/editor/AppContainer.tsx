@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
@@ -38,6 +38,22 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
 
   // Navigation state for template editing view
   const [activeEditTemplateId, setActiveEditTemplateId] = useState<string | null>(null);
+
+  // Compute parent path for import based on selected folder (must be before early return)
+  const importParentPath = useMemo(() => {
+    if (!me || !selectedEntryId) return undefined;
+
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+    const entries = directoryService.getAllDirectoryEntries(me as any);
+    const selectedEntry = entries.find((e) => e.id === selectedEntryId);
+
+    // Only use folder paths (not template-refs)
+    if (selectedEntry?.type === 'folder') {
+      return selectedEntry.path;
+    }
+
+    return undefined;
+  }, [selectedEntryId, me]);
 
   if (!me) {
     return (
@@ -202,6 +218,7 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
           open={showImportDialog}
           onOpenChange={setShowImportDialog}
           account={accountAsAny}
+          parentPath={importParentPath}
         />
 
         {/* Session Export Dialog */}

@@ -25,6 +25,7 @@ interface DialogConfig {
 interface UseImportDialogProps {
   account: InstanceOfSchema<typeof Account>;
   folder?: InstanceOfSchema<typeof Template>;
+  parentPath?: string;
   onImportComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }
@@ -32,6 +33,7 @@ interface UseImportDialogProps {
 export function useImportDialog({
   account,
   folder: template,
+  parentPath,
   onImportComplete,
   onOpenChange,
 }: UseImportDialogProps) {
@@ -107,8 +109,8 @@ export function useImportDialog({
     } else {
       // Top-level import
       if (detectedType === 'json') {
-        // Full account import
-        result = await ImportService.importFromFile(file, account, 'json');
+        // Full account import (with optional parent folder)
+        result = await ImportService.importFromFile(file, account, 'json', parentPath);
       } else {
         // Create new template at root
         if (!templateName.trim()) {
@@ -119,6 +121,7 @@ export function useImportDialog({
           account,
           templateName.trim(),
           detectedType,
+          parentPath,
         );
       }
 
