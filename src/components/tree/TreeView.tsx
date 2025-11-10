@@ -149,8 +149,19 @@ export function TreeView({
     directoryService.renameDirectoryEntry(account, entryId, newName);
   };
 
+  const handleToggleArchiveEntry = (entryId: string) => {
+    const entry = directoryService.getDirectoryEntry(account, entryId);
+    if (!entry) return;
+
+    if (entry.archived) {
+      directoryService.unarchiveDirectoryEntry(account, entryId);
+    } else {
+      directoryService.archiveDirectoryEntry(account, entryId);
+    }
+  };
+
   const handleDeleteEntry = (entryId: string) => {
-    directoryService.archiveDirectoryEntry(account, entryId);
+    directoryService.deleteDirectoryEntry(account, entryId);
   };
 
   const handleDeleteSession = (templateId: string, sessionId: string) => {
@@ -280,6 +291,7 @@ export function TreeView({
         }}
         onToggleExpand={() => handleToggleEntryExpand(entry.id)}
         onRename={handleRenameEntry}
+        onArchive={handleToggleArchiveEntry}
         onDelete={handleDeleteEntry}
         onUseTemplate={
           isTemplateRef && template ? () => onUseTemplate?.(template.$jazz.id) : undefined
@@ -288,6 +300,7 @@ export function TreeView({
           isTemplateRef && template ? () => onEditTemplate?.(template.$jazz.id) : undefined
         }
         account={account}
+        showArchived={showArchived}
       >
         {/* Render children only when expanded */}
         {entry.expanded && (
