@@ -157,14 +157,18 @@ async function importFolder(
   directoryEntry: DirectoryEntry;
   stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
 }> {
+  // Generate path from name (normalize for path usage)
+  const normalizedName = exportedFolder.name.trim().replace(/\s+/g, '-');
+  const generatedPath = normalizedName;
+
   // Check for path conflict in directory
-  const existingEntry = findDirectoryEntryByPath(exportedFolder.path, account);
-  let finalPath = exportedFolder.path;
+  const existingEntry = findDirectoryEntryByPath(generatedPath, account);
+  let finalPath = generatedPath;
   let finalName = exportedFolder.name;
   let pathConflict = false;
 
   if (existingEntry) {
-    const resolved = resolvePathConflict(exportedFolder.path, exportedFolder.name, account);
+    const resolved = resolvePathConflict(generatedPath, exportedFolder.name, account);
     finalPath = resolved.path;
     finalName = resolved.name;
     pathConflict = true;
@@ -295,8 +299,8 @@ async function importTemplateFolder(
 
   // Set current session if it was active
   if (exportedFolder.currentSessionId && sessions.length > 0) {
-    // Find the session that was current (use first active session)
-    const activeSession = sessions.find((s) => s.status === 'active');
+    // Use the first non-archived session
+    const activeSession = sessions.find((s) => !s.archived);
     if (activeSession?.$jazz?.id) {
       template.$jazz.set('currentSessionId', activeSession.$jazz.id);
     }
@@ -370,9 +374,7 @@ function importSession(
   // Create session
   const session = Session.create(
     {
-      name: exportedSession.name,
       itemStates,
-      status: exportedSession.status,
       archived: exportedSession.archived ?? false,
       viewMode: exportedSession.viewMode || 'hierarchy-in-zones',
       categoryExpanded: {},
@@ -380,9 +382,8 @@ function importSession(
       checkedCount,
       remainingCount,
       owner: account,
-      startedAt: new Date(exportedSession.startedAt),
+      createdAt: new Date(exportedSession.createdAt),
       lastActivityAt: new Date(exportedSession.lastActivityAt),
-      completedAt: exportedSession.completedAt ? new Date(exportedSession.completedAt) : undefined,
     },
     { owner: account },
   );

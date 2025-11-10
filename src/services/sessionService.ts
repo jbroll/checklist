@@ -17,16 +17,11 @@ import { getTemplate } from './templateService';
 export function createSession(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-  sessionName?: string,
 ): string {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  // Generate auto-generated session name with timestamp if not provided
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-  const timeStr = now.toTimeString().slice(0, 5); // HH:MM
-  const name = sessionName || `${dateStr} ${timeStr}`;
 
   // Count non-archived leaf items only (exclude categories)
   const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
@@ -35,9 +30,7 @@ export function createSession(
   // Create new list session
   const newSession = Session.create(
     {
-      name,
       itemStates: {},
-      status: 'active',
       archived: false,
       categoryExpanded: {},
       viewMode: 'zone-in-hierarchy', // Default view mode
@@ -45,7 +38,7 @@ export function createSession(
       checkedCount: 0,
       remainingCount,
       owner: account,
-      startedAt: now,
+      createdAt: now,
       lastActivityAt: now,
     },
     { owner: account },
@@ -193,36 +186,6 @@ export function updateSessionCounts(
   session.$jazz.set('selectedCount', selectedCount);
   session.$jazz.set('checkedCount', checkedCount);
   session.$jazz.set('remainingCount', remainingCount);
-}
-
-/**
- * Complete a list session
- */
-export function completeSession(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  sessionId: string,
-): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  session.$jazz.set('status', 'completed');
-  session.$jazz.set('completedAt', new Date());
-}
-
-/**
- * Abandon a list session
- */
-export function abandonSession(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  sessionId: string,
-): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  session.$jazz.set('status', 'abandoned');
-  session.$jazz.set('lastActivityAt', new Date());
 }
 
 /**

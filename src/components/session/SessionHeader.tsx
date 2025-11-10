@@ -40,13 +40,16 @@ export function SessionHeader({
 }: SessionHeaderProps) {
   const [showExportDialog, setShowExportDialog] = useState(false);
 
+  // Generate session name from createdAt
+  const sessionName = session.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+
   return (
     <>
       <div className="flex flex-col gap-3 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
           {template.name}{' '}
           <span className="text-neutral-500">
-            · {formatSessionDate(session.startedAt, showTime)}
+            · {formatSessionDate(session.createdAt, showTime)}
           </span>
         </h1>
         <div className="flex items-center gap-2">
@@ -100,7 +103,7 @@ export function SessionHeader({
         onOpenChange={setShowExportDialog}
         template={template}
         sessionId={sessionId}
-        sessionName={session.name}
+        sessionName={sessionName}
         account={me}
       />
     </>

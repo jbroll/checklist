@@ -60,7 +60,6 @@ const createMockTemplate = (options: { withCategories?: boolean } = {}) => {
       {
         $jazz: { id: 'session-1' },
         name: '[2024-11-01]',
-        status: 'active' as const,
         archived: false,
         viewMode: 'flat' as const,
         itemStates: {
@@ -77,7 +76,7 @@ const createMockTemplate = (options: { withCategories?: boolean } = {}) => {
         selectedCount: 2,
         checkedCount: 1,
         remainingCount: 1,
-        startedAt: date,
+        createdAt: date,
         lastActivityAt: date,
       },
     ],

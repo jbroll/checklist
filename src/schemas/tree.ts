@@ -58,11 +58,9 @@ export type ItemState = {
 /**
  * Session - Single CoValue tracking state for a shopping/list session
  * Sessions are owned by templates and have no back-reference.
- * Name format: "[2025-01-15]" or "[2025-01-15 14:30]" if multiple sessions per day.
+ * Display name is generated from createdAt timestamp.
  */
 export const Session = co.map({
-  name: z.string(), // Date-prefixed: "[2025-01-15]" or "[2025-01-15 14:30]"
-
   // Item states as plain JSON record (itemId → state)
   itemStates: z.record(
     z.string(),
@@ -74,8 +72,6 @@ export const Session = co.map({
     }),
   ),
 
-  // Session status
-  status: z.enum(['active', 'completed', 'abandoned']),
   archived: z.boolean(), // Soft delete flag
 
   // UI state - which categories are expanded (by path or ID)
@@ -93,9 +89,8 @@ export const Session = co.map({
   get owner() {
     return Account;
   },
-  startedAt: z.date(),
+  createdAt: z.date(),
   lastActivityAt: z.date(),
-  completedAt: z.optional(z.date()),
 });
 
 /**

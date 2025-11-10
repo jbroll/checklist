@@ -169,8 +169,8 @@ export function TreeView({
     if (template?.sessions) {
       const session = template.sessions.find((s) => s?.$jazz.id === sessionId);
       if (session) {
-        // Soft delete by setting status to abandoned
-        session.$jazz.set('status', 'abandoned');
+        // Soft delete by setting archived flag
+        session.$jazz.set('archived', true);
         session.$jazz.set('lastActivityAt', new Date());
       }
     }
@@ -246,13 +246,13 @@ export function TreeView({
       const sessions = template.sessions || [];
       const activeSessions = sessions
         .filter((s) => {
-          if (!s || s.status === 'abandoned') return false;
+          if (!s) return false;
           if (!showArchived && s.archived) return false;
           return true;
         })
         .sort((a, b) => {
-          const dateA = a?.startedAt?.getTime() || 0;
-          const dateB = b?.startedAt?.getTime() || 0;
+          const dateA = a?.createdAt?.getTime() || 0;
+          const dateB = b?.createdAt?.getTime() || 0;
           return dateB - dateA;
         });
 

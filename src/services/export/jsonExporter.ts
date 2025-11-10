@@ -6,6 +6,7 @@
  */
 
 import type { CoList, InstanceOfSchema } from 'jazz-tools';
+import { generateSessionName } from '../../lib/utils';
 import type { Account, Session, Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
@@ -87,16 +88,15 @@ export function exportTemplate(
  * Convert a Template to exported format
  *
  * @param template - The Template to convert
- * @param path - The directory path for this template (from directory entry)
+ * @param _path - The directory path for this template (not used in export)
  * @returns Exported folder structure
  */
 function exportTemplateNode(
   template: InstanceOfSchema<typeof Template>,
-  path: string,
+  _path: string,
 ): ExportedFolder {
   const baseFolder: ExportedFolder = {
     name: template.name,
-    path,
     type: 'template-folder', // All templates are template-folders in the export format
     createdAt: toISOString(template.createdAt) || new Date().toISOString(),
     updatedAt: toISOString(template.updatedAt) || new Date().toISOString(),
@@ -175,7 +175,10 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
 function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): ExportedSession[] {
   const exportedSessions: ExportedSession[] = [];
 
-  for (const session of sessions) {
+  // Convert to array for easier manipulation
+  const sessionArray = Array.from(sessions);
+
+  for (const session of sessionArray) {
     const itemStates: Record<string, ExportedItemState> = {};
 
     // Export item states with neutral terminology (v2.0)
@@ -197,20 +200,30 @@ function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): Exp
       itemStates[itemId] = exportedState;
     }
 
+    // Generate name from createdAt
+    // Convert string dates to Date objects at the export boundary
+    const createdAtRaw = session.createdAt;
+    if (!createdAtRaw) {
+      throw new Error('Session missing createdAt field');
+    }
+    const createdAt = typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : createdAtRaw;
+
+    // Convert all session dates to Date objects for the utility function
+    const sessionsWithDates = sessionArray.map((s) => ({
+      ...s,
+      createdAt: typeof s.createdAt === 'string' ? new Date(s.createdAt) : s.createdAt,
+    })) as unknown as readonly (InstanceOfSchema<typeof Session> | null)[];
+
+    const name = generateSessionName(createdAt, sessionsWithDates);
+
     const exportedSession: ExportedSession = {
-      name: session.name,
-      status: session.status,
+      name,
       archived: session.archived || false,
       viewMode: session.viewMode,
       itemStates,
-      startedAt: toISOString(session.startedAt) || new Date().toISOString(),
+      createdAt: toISOString(session.createdAt) || new Date().toISOString(),
       lastActivityAt: toISOString(session.lastActivityAt) || new Date().toISOString(),
     };
-
-    const completedAt = toISOString(session.completedAt);
-    if (completedAt) {
-      exportedSession.completedAt = completedAt;
-    }
 
     exportedSessions.push(exportedSession);
   }

@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, Download, MoreVertical, Pause, ShoppingCart, Trash2 } from 'lucide-react';
+import { Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
@@ -35,18 +35,11 @@ export const SessionRowView = memo(function SessionRowView({
   const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
 
   const handleDelete = () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.startedAt, showTime)}`;
+    const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
     if (onDelete && confirm(`Delete session "${displayName}"?`)) {
       onDelete(session.$jazz.id);
     }
   };
-
-  const StatusIcon =
-    session.status === 'completed'
-      ? CheckCircle2
-      : session.status === 'active'
-        ? ShoppingCart
-        : Pause;
 
   return (
     <IndentedRow level={level} expanded={false} onToggleExpand={() => {}} hasChildren={false}>
@@ -56,12 +49,12 @@ export const SessionRowView = memo(function SessionRowView({
           onClick={() => onOpen(session.$jazz.id)}
           className="flex flex-1 items-center gap-2"
         >
-          {/* Status icon */}
-          <StatusIcon className="h-4 w-4" />
+          {/* Session icon */}
+          <ShoppingCart className="h-4 w-4" />
 
           {/* Relative date */}
           <span className="flex-1 text-left text-sm text-neutral-500">
-            {formatSessionDate(session.startedAt, showTime)}
+            {formatSessionDate(session.createdAt, showTime)}
           </span>
 
           {/* Session stats */}

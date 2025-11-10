@@ -303,16 +303,15 @@ describe('validators', () => {
     });
 
     it('should detect duplicate folders by path', () => {
-      const account = createMockAccount(['/grocery-list']);
+      const account = createMockAccount(['Grocery-List']); // Path is normalized from name
       const dataWithDuplicate: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
           {
-            name: 'Grocery List',
+            name: 'Grocery List', // Will normalize to "Grocery-List"
             type: 'template-folder',
-            path: '/grocery-list',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [],
