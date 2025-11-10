@@ -82,6 +82,8 @@ export function exposeServicesToWindow(
         withAccount((acc) => ItemService.archiveItem(acc, templateId, itemId)),
       updateColor: (templateId: string, itemId: string, color: string) =>
         withAccount((acc) => ItemService.updateItemColor(acc, templateId, itemId, color)),
+      toggleCategoryExpanded: (templateId: string, itemId: string) =>
+        withAccount((acc) => ItemService.toggleCategoryExpanded(acc, templateId, itemId)),
     },
 
     // Export operations
@@ -174,6 +176,7 @@ declare global {
         rename: (templateId: string, itemId: string, newName: string) => void;
         archive: (templateId: string, itemId: string) => void;
         updateColor: (templateId: string, itemId: string, color: string) => void;
+        toggleCategoryExpanded: (templateId: string, itemId: string) => void;
       };
       export: {
         toJson: () => string;
