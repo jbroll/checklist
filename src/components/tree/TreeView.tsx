@@ -49,8 +49,11 @@ interface TreeViewProps {
 /**
  * Build hierarchical tree from flat directory entries
  */
-function buildDirectoryTree(account: InstanceOfSchema<typeof Account>): DirectoryNode[] {
-  const entries = directoryService.getAllDirectoryEntries(account);
+function buildDirectoryTree(
+  account: InstanceOfSchema<typeof Account>,
+  showArchived: boolean,
+): DirectoryNode[] {
+  const entries = directoryService.getAllDirectoryEntries(account, showArchived);
   const nodeMap = new Map<string, DirectoryNode>();
   const rootNodes: DirectoryNode[] = [];
 
@@ -217,7 +220,10 @@ export function TreeView({
   };
 
   // Build hierarchical tree structure from directory entries
-  const directoryTree = useMemo(() => buildDirectoryTree(account), [account]);
+  const directoryTree = useMemo(
+    () => buildDirectoryTree(account, showArchived),
+    [account, showArchived],
+  );
 
   const renderNode = (node: DirectoryNode): React.ReactNode => {
     const { entry, template, children } = node;
