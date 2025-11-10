@@ -10,7 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Account, DirectoryEntry, Template } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
 import * as templateService from '@/services/templateService';
@@ -131,6 +131,17 @@ export function TreeView({
 }: TreeViewProps) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  // Clear selection when selected entry becomes archived
+  useEffect(() => {
+    if (selectedEntryId) {
+      const entry = directoryService.getDirectoryEntry(account, selectedEntryId);
+      if (entry?.archived && !showArchived) {
+        // Entry was archived - clear the selection by triggering header click
+        onHeaderClick?.();
+      }
+    }
+  }, [selectedEntryId, account, showArchived, onHeaderClick]);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -319,11 +330,15 @@ export function TreeView({
     ? directoryService.getDirectoryEntry(account, selectedEntryId)
     : null;
 
-  // Show Edit/Use buttons only when a template is selected
-  const canEditOrUse = selectedEntry?.type === 'template-ref';
+  // Show Edit/Use buttons only when a non-archived template is selected
+  const canEditOrUse = selectedEntry?.type === 'template-ref' && !selectedEntry?.archived;
 
-  // Show New Folder/List buttons when nothing is selected OR a folder is selected
-  const canCreateFolderOrList = !selectedEntryId || selectedEntry?.type === 'folder';
+  // Show New Folder/List buttons when:
+  // - Not in archived view AND
+  // - (nothing is selected OR a non-archived folder is selected)
+  const canCreateFolderOrList =
+    !showArchived &&
+    (!selectedEntryId || (selectedEntry?.type === 'folder' && !selectedEntry?.archived));
 
   return (
     <DndContext
