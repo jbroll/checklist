@@ -5,6 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { generateId } from '../../lib/utils';
 import type { Account, Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 
@@ -110,9 +111,9 @@ export function importItems(
     }
 
     try {
-      // Create new template item as plain object
+      // Create new template item as plain object (using nanoid for compact IDs)
       const newItem: TemplateItem = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name,
         type, // Use provided type or default to 'item'
         path,
