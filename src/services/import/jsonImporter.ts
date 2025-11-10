@@ -214,10 +214,8 @@ function flattenHierarchicalItems(
     }
 
     // Reconstruct path from hierarchy
-    const itemPath = createChildPath(
-      parentPath,
-      exportedItem.name.toLowerCase().replace(/\s+/g, '-'),
-    );
+    // Keep spaces in category/item names for paths
+    const itemPath = createChildPath(parentPath, exportedItem.name.toLowerCase());
 
     const item: TemplateItem = {
       id: newId,
