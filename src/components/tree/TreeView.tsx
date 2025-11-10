@@ -296,11 +296,16 @@ export function TreeView({
     );
   };
 
-  // Determine button states
-  const selectedTemplate = selectedTemplateId
-    ? account.root?.templates?.find((t) => t?.$jazz.id === selectedTemplateId)
+  // Determine button states based on selection
+  const selectedEntry = selectedEntryId
+    ? directoryService.getDirectoryEntry(account, selectedEntryId)
     : null;
-  const canEditOrUse = !!selectedTemplate;
+
+  // Show Edit/Use buttons only when a template is selected
+  const canEditOrUse = selectedEntry?.type === 'template-ref';
+
+  // Show New Folder/List buttons when nothing is selected OR a folder is selected
+  const canCreateFolderOrList = !selectedEntryId || selectedEntry?.type === 'folder';
 
   return (
     <DndContext
@@ -315,7 +320,7 @@ export function TreeView({
         {/* Root-level drop zone with header */}
         <TreeViewHeader
           isDragging={!!activeEntryId}
-          canCreateFolderOrList={true}
+          canCreateFolderOrList={canCreateFolderOrList}
           canEditOrUse={canEditOrUse}
           showArchived={showArchived}
           onHeaderClick={onHeaderClick || (() => {})}
