@@ -2,12 +2,19 @@
  * JSON import functionality
  *
  * Imports folder structures with all template items and session history from JSON format.
+ * Supports both v1.0 (flat with paths) and v2.0 (hierarchical with IDs) formats.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { type Account, type DirectoryEntry, Session, Template } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
-import type { ExportedData, ExportedFolder, ExportedSession } from '../export/types';
+import { createChildPath } from '../../utils/pathUtils';
+import type {
+  ExportedData,
+  ExportedFolder,
+  ExportedSession,
+  ExportedTemplateItem,
+} from '../export/types';
 import { resolvePathConflict } from './conflictResolver';
 import type { ImportResult } from './types';
 import { findDirectoryEntryByPath, validateJsonData } from './validators';
@@ -167,6 +174,62 @@ async function importFolder(
 }
 
 /**
+ * Flatten hierarchical items to path-based items (v2.0 → internal format)
+ *
+ * @param exportedItems - Hierarchical exported items
+ * @param parentPath - Parent path for context
+ * @param idMap - Map to track old ID → new ID for session state mapping
+ * @returns Flattened array of TemplateItems with paths
+ */
+function flattenHierarchicalItems(
+  exportedItems: ExportedTemplateItem[],
+  parentPath: string | undefined,
+  idMap: Map<string, string>,
+): TemplateItem[] {
+  const items: TemplateItem[] = [];
+  let sortOrderCounter = 0;
+
+  for (const exportedItem of exportedItems) {
+    // Generate new ID for this item
+    const newId = crypto.randomUUID();
+
+    // Track ID mapping for session states (if export has ID)
+    if (exportedItem.id) {
+      idMap.set(exportedItem.id, newId);
+    }
+
+    // Reconstruct path from hierarchy
+    const itemPath = createChildPath(
+      parentPath,
+      exportedItem.name.toLowerCase().replace(/\s+/g, '-'),
+    );
+
+    const item: TemplateItem = {
+      id: newId,
+      name: exportedItem.name,
+      type: exportedItem.type,
+      path: itemPath,
+      expanded: exportedItem.expanded ?? false,
+      sortOrder: exportedItem.sortOrder ?? sortOrderCounter++,
+      archived: false,
+      defaultQuantity: exportedItem.defaultQuantity || '',
+      color: exportedItem.color || '#6b7280',
+      createdAt: new Date(exportedItem.createdAt),
+    };
+
+    items.push(item);
+
+    // Recursively flatten children
+    if (exportedItem.children && exportedItem.children.length > 0) {
+      const childItems = flattenHierarchicalItems(exportedItem.children, itemPath, idMap);
+      items.push(...childItems);
+    }
+  }
+
+  return items;
+}
+
+/**
  * Import a template folder with items and sessions
  *
  * @param exportedFolder - Exported template folder data
@@ -189,23 +252,37 @@ async function importTemplateFolder(
 }> {
   // Import template items as plain objects
   const items: TemplateItem[] = [];
+  const idMap = new Map<string, string>(); // Maps old exported IDs to new IDs
 
   if (exportedFolder.items) {
-    for (const exportedItem of exportedFolder.items) {
-      const item: TemplateItem = {
-        id: crypto.randomUUID(),
-        name: exportedItem.name,
-        type: exportedItem.type,
-        path: exportedItem.path,
-        expanded: exportedItem.expanded ?? false,
-        sortOrder: exportedItem.sortOrder,
-        archived: false,
-        defaultQuantity: exportedItem.defaultQuantity || '',
-        color: exportedItem.color || '#6b7280',
-        createdAt: new Date(exportedItem.createdAt),
-      };
+    // Check if this is v2.0 format (hierarchical with children) or v1.0 (flat with paths)
+    const isV2Format = exportedFolder.items.some((item) => 'children' in item || 'id' in item);
 
-      items.push(item);
+    if (isV2Format) {
+      // V2.0: Hierarchical format - flatten it
+      const flattenedItems = flattenHierarchicalItems(exportedFolder.items, undefined, idMap);
+      items.push(...flattenedItems);
+    } else {
+      // V1.0: Already flat with paths
+      for (const exportedItem of exportedFolder.items) {
+        const newId = crypto.randomUUID();
+        // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility - path field doesn't exist in v2.0 types
+        const v1Item = exportedItem as any;
+        const item: TemplateItem = {
+          id: newId,
+          name: exportedItem.name,
+          type: exportedItem.type,
+          path: v1Item.path || exportedItem.name.toLowerCase(),
+          expanded: exportedItem.expanded ?? false,
+          sortOrder: exportedItem.sortOrder,
+          archived: false,
+          defaultQuantity: exportedItem.defaultQuantity || '',
+          color: exportedItem.color || '#6b7280',
+          createdAt: new Date(exportedItem.createdAt),
+        };
+
+        items.push(item);
+      }
     }
   }
 
@@ -229,7 +306,7 @@ async function importTemplateFolder(
 
   if (exportedFolder.sessions) {
     for (const exportedSession of exportedFolder.sessions) {
-      const session = importSession(exportedSession, items, account);
+      const session = importSession(exportedSession, items, account, idMap);
       sessions.push(session);
     }
   }
@@ -276,52 +353,76 @@ async function importTemplateFolder(
 }
 
 /**
- * Import a shopping session
+ * Import a session (supports both v1.0 and v2.0 formats)
  *
  * @param exportedSession - Exported session data
  * @param items - Array of template items
  * @param account - User's account
+ * @param idMap - Map of old exported IDs to new IDs (for v2.0)
  * @returns Created session
  */
 function importSession(
   exportedSession: ExportedSession,
   items: TemplateItem[],
   account: InstanceOfSchema<typeof Account>,
+  idMap: Map<string, string>,
 ): InstanceOfSchema<typeof Session> {
   // Reconstruct item states with new item IDs as plain objects
   const itemStates: Record<string, ItemState> = {};
 
-  // Create a map of old exported items by sortOrder to match with new items
-  const exportedItemsBySort = new Map<number, string>();
+  // Map exported item states to new item IDs
+  for (const [oldItemId, exportedState] of Object.entries(exportedSession.itemStates)) {
+    // V2.0: Use idMap to find the new ID
+    const newItemId = idMap.get(oldItemId);
 
-  // Try to map exported states to new item IDs by matching sortOrder
-  for (const [itemId] of Object.entries(exportedSession.itemStates)) {
-    exportedItemsBySort.set(itemId.length, itemId); // Basic heuristic
-  }
+    if (newItemId) {
+      // V2.0 format: Use neutral terminology (selected/checked)
+      const hasNewFormat = 'selected' in exportedState;
 
-  // For each item in the template, try to find matching state from export
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (!item?.id) continue;
+      // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility - old field names
+      const v1State = exportedState as any;
 
-    // Try to find the corresponding exported state
-    // Match by index position (best we can do without original IDs)
-    const exportedStatesArray = Object.values(exportedSession.itemStates);
-    const correspondingState = exportedStatesArray[i];
-
-    if (correspondingState) {
       const itemState: ItemState = {
-        selected: correspondingState.inCart,
-        checked: correspondingState.purchased,
-        selectedAt: correspondingState.addedToCartAt
-          ? new Date(correspondingState.addedToCartAt)
-          : undefined,
-        checkedAt: correspondingState.purchasedAt
-          ? new Date(correspondingState.purchasedAt)
-          : undefined,
+        selected: hasNewFormat ? exportedState.selected : (v1State.inCart ?? false),
+        checked: hasNewFormat ? exportedState.checked : (v1State.purchased ?? false),
+        selectedAt: hasNewFormat
+          ? exportedState.selectedAt
+            ? new Date(exportedState.selectedAt)
+            : undefined
+          : v1State.addedToCartAt
+            ? new Date(v1State.addedToCartAt)
+            : undefined,
+        checkedAt: hasNewFormat
+          ? exportedState.checkedAt
+            ? new Date(exportedState.checkedAt)
+            : undefined
+          : v1State.purchasedAt
+            ? new Date(v1State.purchasedAt)
+            : undefined,
       };
 
-      itemStates[item.id] = itemState;
+      itemStates[newItemId] = itemState;
+    } else {
+      // V1.0 fallback: Try to match by index position (fragile but best we can do)
+      const exportedStatesArray = Object.values(exportedSession.itemStates);
+      const itemIndex = exportedStatesArray.indexOf(exportedState);
+
+      if (itemIndex >= 0 && itemIndex < items.length) {
+        const item = items[itemIndex];
+        if (item?.id) {
+          // biome-ignore lint/suspicious/noExplicitAny: V1.0 backward compatibility fallback
+          const v1State = exportedState as any;
+
+          const itemState: ItemState = {
+            selected: v1State.inCart ?? false,
+            checked: v1State.purchased ?? false,
+            selectedAt: v1State.addedToCartAt ? new Date(v1State.addedToCartAt) : undefined,
+            checkedAt: v1State.purchasedAt ? new Date(v1State.purchasedAt) : undefined,
+          };
+
+          itemStates[item.id] = itemState;
+        }
+      }
     }
   }
 

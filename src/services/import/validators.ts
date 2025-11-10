@@ -9,8 +9,26 @@ import type { Account } from '../../schemas';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 
-const CURRENT_VERSION = '1.0';
-const SUPPORTED_VERSIONS = ['1.0'];
+const CURRENT_VERSION = '2.0';
+const SUPPORTED_VERSIONS = ['1.0', '2.0'];
+
+/**
+ * Count items recursively (handles both flat v1.0 and hierarchical v2.0)
+ *
+ * @param items - Array of items to count
+ * @returns Total count of all items and children
+ */
+function countItemsRecursively(items: unknown[]): number {
+  let count = 0;
+  for (const item of items) {
+    count++; // Count this item
+    // If it has children, count them recursively
+    if (item && typeof item === 'object' && 'children' in item && Array.isArray(item.children)) {
+      count += countItemsRecursively(item.children);
+    }
+  }
+  return count;
+}
 
 /**
  * Validate JSON export data
@@ -88,7 +106,7 @@ export function validateJsonData(
 
         // Count items and sessions
         if (folder.items) {
-          stats.totalItems += folder.items.length;
+          stats.totalItems += countItemsRecursively(folder.items);
         }
         if (folder.sessions) {
           stats.totalSessions += folder.sessions.length;
@@ -177,7 +195,7 @@ function validateFolder(folder: Partial<ExportedFolder>, index: number): string[
 }
 
 /**
- * Validate a template item
+ * Validate a template item (supports both v1.0 and v2.0 formats)
  *
  * @param item - Item to validate
  * @param index - Index in items array
@@ -195,7 +213,11 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
 
   const typedItem = item as Record<string, unknown>;
 
-  // Required fields
+  // Detect format: v2.0 has 'id' or 'children', v1.0 has 'path'
+  const isV2Format = 'id' in typedItem || 'children' in typedItem;
+  const isV1Format = 'path' in typedItem;
+
+  // Required fields (common to both versions)
   if (!typedItem.name || typeof typedItem.name !== 'string') {
     errors.push(`${itemPrefix}: Missing or invalid "name"`);
   }
@@ -204,9 +226,38 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
   } else if (typedItem.type !== 'category' && typedItem.type !== 'item') {
     errors.push(`${itemPrefix}: Invalid type "${typedItem.type}". Must be "category" or "item"`);
   }
-  if (!typedItem.path || typeof typedItem.path !== 'string') {
-    errors.push(`${itemPrefix}: Missing or invalid "path"`);
+
+  // Version-specific validation
+  if (isV2Format) {
+    // V2.0: Requires 'id', optional 'children'
+    if (!typedItem.id || typeof typedItem.id !== 'string') {
+      errors.push(`${itemPrefix}: Missing or invalid "id" (v2.0 format)`);
+    }
+    // Validate children if present
+    if (typedItem.children) {
+      if (!Array.isArray(typedItem.children)) {
+        errors.push(`${itemPrefix}: Field "children" must be an array`);
+      } else {
+        // Recursively validate children
+        for (let i = 0; i < typedItem.children.length; i++) {
+          const childErrors = validateTemplateItem(
+            typedItem.children[i],
+            i,
+            `${itemPrefix}.children`,
+          );
+          errors.push(...childErrors);
+        }
+      }
+    }
+  } else if (isV1Format) {
+    // V1.0: Requires 'path'
+    if (!typedItem.path || typeof typedItem.path !== 'string') {
+      errors.push(`${itemPrefix}: Missing or invalid "path" (v1.0 format)`);
+    }
+  } else {
+    errors.push(`${itemPrefix}: Unable to determine format version (missing both 'id' and 'path')`);
   }
+
   if (typeof typedItem.sortOrder !== 'number') {
     errors.push(`${itemPrefix}: Missing or invalid "sortOrder"`);
   }
