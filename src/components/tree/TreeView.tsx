@@ -47,18 +47,17 @@ interface TreeViewProps {
 /**
  * Build hierarchical tree from flat directory entries
  */
-function buildDirectoryTree(
-  account: InstanceOfSchema<typeof Account>
-): DirectoryNode[] {
+function buildDirectoryTree(account: InstanceOfSchema<typeof Account>): DirectoryNode[] {
   const entries = directoryService.getAllDirectoryEntries(account);
   const nodeMap = new Map<string, DirectoryNode>();
   const rootNodes: DirectoryNode[] = [];
 
   // Create nodes for all entries
   for (const entry of entries) {
-    const template = entry.type === 'template-ref' && entry.templateId
-      ? templateService.getTemplate(account, entry.templateId)
-      : undefined;
+    const template =
+      entry.type === 'template-ref' && entry.templateId
+        ? templateService.getTemplate(account, entry.templateId)
+        : undefined;
 
     const node: DirectoryNode = {
       entry,
@@ -78,7 +77,7 @@ function buildDirectoryTree(
     } else {
       // Find parent by path
       const parentPath = pathParts.slice(0, -1).join('/');
-      const parentEntry = entries.find(e => e.path === parentPath);
+      const parentEntry = entries.find((e) => e.path === parentPath);
       if (parentEntry) {
         const parentNode = nodeMap.get(parentEntry.id);
         if (parentNode) {
@@ -214,7 +213,7 @@ export function TreeView({
   };
 
   // Build hierarchical tree structure from directory entries
-  const directoryTree = useMemo(() => buildDirectoryTree(account), [account.root?.directory, account.root?.templates]);
+  const directoryTree = useMemo(() => buildDirectoryTree(account), [account]);
 
   const renderNode = (node: DirectoryNode): React.ReactNode => {
     const { entry, template, children } = node;
@@ -262,12 +261,18 @@ export function TreeView({
         level={node.level}
         hasChildren={hasChildren}
         isSelected={isTemplateRef && selectedTemplateId === template?.$jazz.id}
-        onSelect={isTemplateRef && template ? () => onTemplateSelect?.(template.$jazz.id) : undefined}
+        onSelect={
+          isTemplateRef && template ? () => onTemplateSelect?.(template.$jazz.id) : undefined
+        }
         onToggleExpand={() => handleToggleEntryExpand(entry.id)}
         onRename={handleRenameEntry}
         onDelete={handleDeleteEntry}
-        onUseTemplate={isTemplateRef && template ? () => onUseTemplate?.(template.$jazz.id) : undefined}
-        onEditTemplate={isTemplateRef && template ? () => onEditTemplate?.(template.$jazz.id) : undefined}
+        onUseTemplate={
+          isTemplateRef && template ? () => onUseTemplate?.(template.$jazz.id) : undefined
+        }
+        onEditTemplate={
+          isTemplateRef && template ? () => onEditTemplate?.(template.$jazz.id) : undefined
+        }
         account={account}
       >
         {/* Render children only when expanded */}

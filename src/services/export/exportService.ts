@@ -42,7 +42,7 @@ export class ExportService {
 
     // Find the directory entry for this template to get its path
     const dirEntry = account.root?.directory?.find(
-      (entry) => entry.type === 'template-ref' && entry.templateId === scope.folderId
+      (entry) => entry.type === 'template-ref' && entry.templateId === scope.folderId,
     );
 
     if (!dirEntry) {

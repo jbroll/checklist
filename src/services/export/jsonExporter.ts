@@ -5,7 +5,7 @@
  */
 
 import type { CoList, InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template, Session } from '../../schemas';
+import type { Account, Session, Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import type {
   ExportedData,
@@ -31,7 +31,7 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
 
       // Find the directory entry for this template to get its path
       const dirEntry = account.root.directory.find(
-        (entry) => entry.type === 'template-ref' && entry.templateId === template.$jazz?.id
+        (entry) => entry.type === 'template-ref' && entry.templateId === template.$jazz?.id,
       );
 
       if (dirEntry) {
@@ -56,7 +56,10 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
  * @param path - The directory path for this template
  * @returns Export data containing single template
  */
-export function exportTemplate(template: InstanceOfSchema<typeof Template>, path: string): ExportedData {
+export function exportTemplate(
+  template: InstanceOfSchema<typeof Template>,
+  path: string,
+): ExportedData {
   return {
     version: '1.0',
     exportDate: new Date().toISOString(),
@@ -72,7 +75,10 @@ export function exportTemplate(template: InstanceOfSchema<typeof Template>, path
  * @param path - The directory path for this template (from directory entry)
  * @returns Exported folder structure
  */
-function exportTemplateNode(template: InstanceOfSchema<typeof Template>, path: string): ExportedFolder {
+function exportTemplateNode(
+  template: InstanceOfSchema<typeof Template>,
+  path: string,
+): ExportedFolder {
   const baseFolder: ExportedFolder = {
     name: template.name,
     path,

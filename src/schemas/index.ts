@@ -1,10 +1,10 @@
 import { co, z } from 'jazz-tools';
 import {
-  Session,
-  Template,
-  setAccountReference,
   type DirectoryEntry,
   type ItemState,
+  Session,
+  setAccountReference,
+  Template,
   type TemplateItem,
 } from './tree';
 
@@ -17,17 +17,19 @@ import {
  */
 export const ListsRoot = co.map({
   // Lightweight directory - fast loading tree structure
-  directory: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.enum(['folder', 'template-ref']),
-    path: z.string(),
-    expanded: z.boolean(),
-    archived: z.boolean(),
-    templateId: z.optional(z.string()),
-    createdAt: z.date(),
-    updatedAt: z.date(),
-  })),
+  directory: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(['folder', 'template-ref']),
+      path: z.string(),
+      expanded: z.boolean(),
+      archived: z.boolean(),
+      templateId: z.optional(z.string()),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    }),
+  ),
 
   // Template "inodes" - loaded on-demand when editing/using
   templates: co.list(Template),
@@ -47,10 +49,7 @@ export const Account = co
     if (!account.$jazz.has('root')) {
       const templates = co.list(Template).create([], { owner: account });
       const directory: DirectoryEntry[] = [];
-      account.$jazz.set(
-        'root',
-        ListsRoot.create({ directory, templates }, { owner: account })
-      );
+      account.$jazz.set('root', ListsRoot.create({ directory, templates }, { owner: account }));
       return;
     }
 

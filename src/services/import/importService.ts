@@ -228,22 +228,19 @@ export class ImportService {
     // Read file content
     const content = await readFileAsText(file);
 
-    // Create new template at root
-    const { Template } = await import('../../schemas/tree');
+    // Create new template at root using directoryService
+    const { createDirectoryEntry } = await import('../directoryService');
+    const { templateId } = createDirectoryEntry(account, templateName, true);
 
-    const newTemplate = Template.create(
-      {
-        name: templateName,
-        items: [],
-        sessions: [],
-        currentSessionId: undefined,
-        showZoneHeadings: false, // Hide zone headings by default
-        owner: account,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      { owner: account },
-    );
+    if (!templateId) {
+      return createErrorResult('Failed to create template');
+    }
+
+    // Get the created template
+    const newTemplate = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
+    if (!newTemplate) {
+      return createErrorResult('Failed to retrieve created template');
+    }
 
     // Import items into the new template
     let importResult: TxtImportResult | CsvImportResult;
@@ -257,13 +254,6 @@ export class ImportService {
     if (importResult.errors.length > 0 && importResult.imported === 0) {
       return createErrorResult(importResult.errors[0]);
     }
-
-    // Add template to root
-    if (!account.root) {
-      return createErrorResult('Account root not found');
-    }
-
-    account.root.templates.$jazz.push(newTemplate);
 
     return createSuccessResult(
       {

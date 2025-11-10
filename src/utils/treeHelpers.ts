@@ -46,9 +46,10 @@ export function buildTreeFromDirectory(
   for (const entry of activeEntries) {
     const node: TreeNode = {
       entry,
-      template: entry.type === 'template-ref' && entry.templateId
-        ? templateMap.get(entry.templateId)
-        : undefined,
+      template:
+        entry.type === 'template-ref' && entry.templateId
+          ? templateMap.get(entry.templateId)
+          : undefined,
       children: [],
     };
     nodeMap.set(entry.path, node);
@@ -87,8 +88,8 @@ export function buildTreeFromDirectory(
  * @deprecated Use buildTreeFromDirectory with directory entries instead
  */
 export function buildTreeFromTemplates(
-  templates: readonly (InstanceOfSchema<typeof Template> | null)[],
-  folderExpanded: Record<string, boolean> = {},
+  _templates: readonly (InstanceOfSchema<typeof Template> | null)[],
+  _folderExpanded: Record<string, boolean> = {},
 ): TreeNode[] {
   // This function is deprecated and should not be used
   // Return empty array as a placeholder

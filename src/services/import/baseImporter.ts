@@ -4,7 +4,6 @@
  * Shared logic for CSV and TXT importers to reduce duplication.
  */
 
-
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
@@ -78,7 +77,7 @@ export function calculateNextSortOrder(template: InstanceOfSchema<typeof Templat
 export function importItems(
   items: ItemToImport[],
   template: InstanceOfSchema<typeof Template>,
-  account: InstanceOfSchema<typeof Account>,
+  _account: InstanceOfSchema<typeof Account>,
 ): BaseImportResult {
   const result: BaseImportResult = {
     imported: 0,
