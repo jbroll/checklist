@@ -300,7 +300,6 @@ export function TreeView({
           isTemplateRef && template ? () => onEditTemplate?.(template.$jazz.id) : undefined
         }
         account={account}
-        showArchived={showArchived}
       >
         {/* Render children only when expanded */}
         {entry.expanded && (

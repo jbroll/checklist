@@ -95,14 +95,15 @@ export function getDirectoryEntry(
 }
 
 /**
- * Get all directory entries (optionally including archived)
+ * Get all directory entries (filter by archived status)
  */
 export function getAllDirectoryEntries(
   account: InstanceOfSchema<typeof Account>,
   showArchived = false,
 ): DirectoryEntry[] {
   if (!account.root?.directory) return [];
-  return account.root.directory.filter((e) => showArchived || !e.archived);
+  // Show only archived entries when showArchived=true, only active when false
+  return account.root.directory.filter((e) => (showArchived ? e.archived : !e.archived));
 }
 
 /**
