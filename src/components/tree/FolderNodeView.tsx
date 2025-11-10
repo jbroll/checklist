@@ -31,7 +31,6 @@ interface FolderNodeViewProps {
   onEditTemplate?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
-  showArchived?: boolean;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({
@@ -49,7 +48,6 @@ export const FolderNodeView = memo(function FolderNodeView({
   onEditTemplate: _onEditTemplate,
   children,
   account,
-  showArchived = false,
 }: FolderNodeViewProps) {
   const isTemplateRef = entry.type === 'template-ref';
   const isFolder = entry.type === 'folder';
@@ -236,7 +234,7 @@ export const FolderNodeView = memo(function FolderNodeView({
                   >
                     Archived
                   </DropdownMenuCheckboxItem>
-                  {showArchived && (
+                  {entry.archived && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleDelete} className="text-red-600">
