@@ -29,6 +29,8 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
 
   // Selection state - tracks currently selected template
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  // Selection state - tracks currently selected directory entry (folder or template-ref)
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
   // Navigation state for shopping session view
   const [activeSessionTemplateId, setActiveSessionTemplateId] = useState<string | null>(null);
@@ -53,19 +55,22 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
-    // Determine parent path based on selected template
+    // Determine parent path based on selected entry
     let parentPath: string | undefined;
-    if (selectedTemplateId) {
-      // Find the directory entry for the selected template
+    if (selectedEntryId) {
+      // Find the directory entry for the selected entry
       // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
       const entries = directoryService.getAllDirectoryEntries(me);
-      const selectedEntry = entries.find(
-        (e) => e.type === 'template-ref' && e.templateId === selectedTemplateId,
-      );
+      const selectedEntry = entries.find((e) => e.id === selectedEntryId);
       if (selectedEntry) {
-        // Use the parent path of the selected entry
-        const pathParts = selectedEntry.path.split('/');
-        parentPath = pathParts.slice(0, -1).join('/') || undefined;
+        if (selectedEntry.type === 'folder') {
+          // If selected entry is a folder, create inside it
+          parentPath = selectedEntry.path;
+        } else {
+          // If selected entry is a template-ref, create at the same level (sibling)
+          const pathParts = selectedEntry.path.split('/');
+          parentPath = pathParts.slice(0, -1).join('/') || undefined;
+        }
       }
     }
 
@@ -106,9 +111,14 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
     setSelectedTemplateId(templateId);
   };
 
+  const handleEntrySelect = (entryId: string) => {
+    setSelectedEntryId(entryId);
+  };
+
   const handleHeaderClick = () => {
     // Clicking on BubbleList header deselects everything
     setSelectedTemplateId(null);
+    setSelectedEntryId(null);
   };
 
   const handleExportSession = (templateId: string, sessionId: string) => {
@@ -149,7 +159,9 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
         <TreeView
           account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
+          selectedEntryId={selectedEntryId}
           onTemplateSelect={handleTemplateSelect}
+          onEntrySelect={handleEntrySelect}
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
           onOpenSession={(templateId, sessionId) => {

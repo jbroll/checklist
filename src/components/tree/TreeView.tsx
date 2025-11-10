@@ -29,7 +29,9 @@ interface DirectoryNode {
 interface TreeViewProps {
   account: InstanceOfSchema<typeof Account>;
   selectedTemplateId?: string | null;
+  selectedEntryId?: string | null;
   onTemplateSelect?: (templateId: string) => void;
+  onEntrySelect?: (entryId: string) => void;
   onAddItem?: (parentTemplateId: string) => void;
   onUseTemplate?: (templateId: string) => void;
   onEditTemplate?: (templateId: string) => void;
@@ -109,7 +111,9 @@ function buildDirectoryTree(account: InstanceOfSchema<typeof Account>): Director
 export function TreeView({
   account,
   selectedTemplateId,
+  selectedEntryId,
   onTemplateSelect,
+  onEntrySelect,
   onAddItem: _onAddItem,
   onUseTemplate,
   onEditTemplate,
@@ -260,10 +264,14 @@ export function TreeView({
         template={template}
         level={node.level}
         hasChildren={hasChildren}
-        isSelected={isTemplateRef && selectedTemplateId === template?.$jazz.id}
-        onSelect={
-          isTemplateRef && template ? () => onTemplateSelect?.(template.$jazz.id) : undefined
-        }
+        isSelected={selectedEntryId === entry.id}
+        onSelect={() => {
+          onEntrySelect?.(entry.id);
+          // Also call onTemplateSelect for backward compatibility with template-refs
+          if (isTemplateRef && template) {
+            onTemplateSelect?.(template.$jazz.id);
+          }
+        }}
         onToggleExpand={() => handleToggleEntryExpand(entry.id)}
         onRename={handleRenameEntry}
         onDelete={handleDeleteEntry}
