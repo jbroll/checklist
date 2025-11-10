@@ -92,10 +92,14 @@ export function TemplateItemView({
     }
   };
 
-  const handleClick = () => {
+  const handleCheckboxChange = () => {
     if (onSelect && !isEditing) {
       onSelect(item.id);
     }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -113,17 +117,26 @@ export function TemplateItemView({
         className="group"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Selection Checkbox */}
+          {onSelect && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={handleCheckboxChange}
+              onClick={handleCheckboxClick}
+              className="h-4 w-4 shrink-0 rounded border-neutral-300 text-green-600 focus:ring-green-500 cursor-pointer"
+            />
+          )}
+
           <div
             ref={setDragRef}
             {...dragAttributes}
             {...dragListeners}
             className="cursor-grab active:cursor-grabbing flex-1 min-w-0"
           >
-            <button
-              type="button"
-              onClick={handleClick}
+            <div
               className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
-                isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
+                isSelected ? 'bg-green-50' : ''
               }`}
             >
               {/* Icon */}
@@ -156,7 +169,7 @@ export function TemplateItemView({
                   {item.defaultQuantity}
                 </span>
               )}
-            </button>
+            </div>
           </div>
 
           {/* Actions Menu */}

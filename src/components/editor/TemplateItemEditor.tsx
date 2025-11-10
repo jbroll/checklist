@@ -30,6 +30,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   const { me } = useAccount<typeof Account>();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -83,6 +84,75 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
       ItemService.toggleCategoryExpanded(me, template.$jazz.id, itemId);
     }
+  };
+
+  // Helper function to get all descendant IDs for an item (including the item itself)
+  const getAllDescendantIds = (itemId: string): string[] => {
+    const item = items.find((i) => i?.id === itemId);
+    if (!item) return [itemId];
+
+    const descendants = [itemId];
+
+    // If it's a category, recursively find all children
+    if (item.type === 'category') {
+      const children = activeItems.filter((i) => {
+        const parentPath = i.path.substring(0, i.path.lastIndexOf('/'));
+        return parentPath === item.path;
+      });
+
+      for (const child of children) {
+        descendants.push(...getAllDescendantIds(child.id));
+      }
+    }
+
+    return descendants;
+  };
+
+  const handleToggleSelect = (itemId: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      const allIds = getAllDescendantIds(itemId);
+
+      // If the item is selected, deselect it and all descendants
+      if (newSet.has(itemId)) {
+        for (const id of allIds) {
+          newSet.delete(id);
+        }
+      } else {
+        // Otherwise, select it and all descendants
+        for (const id of allIds) {
+          newSet.add(id);
+        }
+      }
+
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(activeItems.map((item) => item.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+
+    const count = selectedIds.size;
+    if (!confirm(`Delete ${count} selected item${count > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    // Archive all selected items
+    for (const itemId of selectedIds) {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+      ItemService.archiveItem(me, template.$jazz.id, itemId);
+    }
+
+    // Clear selection
+    setSelectedIds(new Set());
   };
 
   // Drag and drop handlers
@@ -163,6 +233,8 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
           item={item}
           level={depth}
           hasChildren={children.length > 0}
+          isSelected={selectedIds.has(item.id)}
+          onSelect={handleToggleSelect}
           onRename={handleRenameItem}
           onDelete={handleDeleteItem}
           onToggleExpand={handleToggleExpand}
@@ -195,6 +267,46 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
               onBack={onBack}
               onAddItem={() => setShowAddDialog(true)}
             />
+
+            {/* Selection Toolbar */}
+            {itemTree.length > 0 && (
+              <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAll}
+                      className="rounded px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-200 transition-colors"
+                    >
+                      Select All
+                    </button>
+                    {selectedIds.size > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleDeselectAll}
+                          className="rounded px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-200 transition-colors"
+                        >
+                          Deselect All
+                        </button>
+                        <span className="text-sm text-neutral-600">
+                          {selectedIds.size} selected
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {selectedIds.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteSelected}
+                      className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected ({selectedIds.size})
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {itemTree.length === 0 ? (
               <div className="p-8 text-center text-neutral-500">
