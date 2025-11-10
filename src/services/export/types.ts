@@ -1,7 +1,9 @@
 /**
  * Type definitions for Export functionality
  *
- * These interfaces define the structure for exporting grocery list data.
+ * These interfaces define the structure for exporting list data.
+ *
+ * Version 2.0: Hierarchical structure with neutral terminology
  */
 
 /**
@@ -45,20 +47,23 @@ export interface ExportedFolder {
 }
 
 /**
- * Exported template item
+ * Exported template item (v2.0 - hierarchical structure)
  *
- * Represents a reusable grocery item or category in a template folder.
+ * Represents a reusable item or category in a template folder.
+ * Uses nested children instead of flat paths for more compact representation.
  */
 export interface ExportedTemplateItem {
+  /** Unique item ID (required for session state references) */
+  id: string;
   /** Item name */
   name: string;
   /** Item type: 'category' (folder) or 'item' (leaf) */
   type: 'category' | 'item';
-  /** Hierarchical path (e.g., "produce/fruits/apples") */
-  path: string;
+  /** Child items (categories only) - hierarchical nesting */
+  children?: ExportedTemplateItem[];
   /** Whether the category is expanded in the UI (categories only) */
   expanded?: boolean;
-  /** Sort order within the template list */
+  /** Sort order within parent */
   sortOrder: number;
   /** Default quantity for the item (items only) */
   defaultQuantity?: string;
@@ -95,19 +100,20 @@ export interface ExportedSession {
 }
 
 /**
- * Exported item state
+ * Exported item state (v2.0 - neutral terminology)
  *
- * Represents the shopping state for one item in a session.
+ * Represents the session state for one item.
+ * Uses neutral terminology (selected/checked) instead of shopping-specific terms.
  */
 export interface ExportedItemState {
-  /** Whether item is in cart */
-  inCart: boolean;
-  /** Whether item has been purchased */
-  purchased: boolean;
-  /** ISO 8601 timestamp when added to cart (if in cart) */
-  addedToCartAt?: string;
-  /** ISO 8601 timestamp when purchased (if purchased) */
-  purchasedAt?: string;
+  /** Whether item is selected (left checkbox) */
+  selected: boolean;
+  /** Whether item is checked (right checkbox) */
+  checked: boolean;
+  /** ISO 8601 timestamp when selected */
+  selectedAt?: string;
+  /** ISO 8601 timestamp when checked */
+  checkedAt?: string;
 }
 
 /**

@@ -2,11 +2,13 @@
  * JSON export functionality
  *
  * Exports folder structures with all template items and session history to JSON format.
+ * Version 2.0: Uses hierarchical structure and neutral terminology.
  */
 
 import type { CoList, InstanceOfSchema } from 'jazz-tools';
 import type { Account, Session, Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
+import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import type {
   ExportedData,
   ExportedFolder,
@@ -55,7 +57,7 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
   }
 
   return {
-    version: '1.0',
+    version: '2.0',
     exportDate: new Date().toISOString(),
     appVersion: '1.0.0', // TODO: Get from package.json
     folders,
@@ -74,7 +76,7 @@ export function exportTemplate(
   path: string,
 ): ExportedData {
   return {
-    version: '1.0',
+    version: '2.0',
     exportDate: new Date().toISOString(),
     appVersion: '1.0.0', // TODO: Get from package.json
     folders: [exportTemplateNode(template, path)],
@@ -114,36 +116,54 @@ function exportTemplateNode(
 }
 
 /**
- * Export template items from an array
+ * Export template items in hierarchical structure (v2.0)
  *
- * @param items - Array of TemplateItems
- * @returns Array of exported template items
+ * Uses buildItemTree() to convert flat items to hierarchical structure.
+ *
+ * @param items - Array of TemplateItems (flat with paths)
+ * @returns Hierarchical array of exported template items
  */
 function exportTemplateItems(items: TemplateItem[]): ExportedTemplateItem[] {
-  const exportedItems: ExportedTemplateItem[] = [];
+  // Build hierarchical tree from flat items (reuses existing code!)
+  const itemTree = buildItemTree(items);
 
-  for (const item of items) {
-    // Skip archived items (soft-deleted)
-    if (item.archived) {
-      continue;
-    }
+  // Convert tree nodes to export format
+  return itemTree.map((node) => convertTreeNodeToExport(node));
+}
 
-    const exportedItem: ExportedTemplateItem = {
-      name: item.name,
-      type: item.type,
-      path: item.path,
-      expanded: item.expanded,
-      sortOrder: item.sortOrder,
-      defaultQuantity: item.defaultQuantity,
-      color: item.color,
-      createdAt: toISOString(item.createdAt) || new Date().toISOString(),
-      updatedAt: toISOString(item.createdAt) || new Date().toISOString(), // Use createdAt for both since plain items don't have updatedAt
-    };
+/**
+ * Recursively convert ItemTreeNode to ExportedTemplateItem
+ *
+ * @param node - ItemTreeNode from buildItemTree()
+ * @returns ExportedTemplateItem with nested children
+ */
+function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
+  const { item, children } = node;
 
-    exportedItems.push(exportedItem);
+  const exportedItem: ExportedTemplateItem = {
+    id: item.id, // Required for session state references
+    name: item.name,
+    type: item.type,
+    sortOrder: item.sortOrder,
+    color: item.color,
+    createdAt: toISOString(item.createdAt) || new Date().toISOString(),
+    updatedAt: toISOString(item.createdAt) || new Date().toISOString(), // Use createdAt for both since plain items don't have updatedAt
+  };
+
+  // Add optional fields
+  if (item.expanded) {
+    exportedItem.expanded = item.expanded;
+  }
+  if (item.defaultQuantity) {
+    exportedItem.defaultQuantity = item.defaultQuantity;
   }
 
-  return exportedItems;
+  // Recursively add children for categories
+  if (item.type === 'category' && children.length > 0) {
+    exportedItem.children = children.map((child) => convertTreeNodeToExport(child));
+  }
+
+  return exportedItem;
 }
 
 /**
@@ -158,20 +178,20 @@ function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): Exp
   for (const session of sessions) {
     const itemStates: Record<string, ExportedItemState> = {};
 
-    // Export item states (now plain objects)
+    // Export item states with neutral terminology (v2.0)
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
-        inCart: state.selected,
-        purchased: state.checked,
+        selected: state.selected,
+        checked: state.checked,
       };
 
-      const addedToCartAt = toISOString(state.selectedAt);
-      if (addedToCartAt) {
-        exportedState.addedToCartAt = addedToCartAt;
+      const selectedAt = toISOString(state.selectedAt);
+      if (selectedAt) {
+        exportedState.selectedAt = selectedAt;
       }
-      const purchasedAt = toISOString(state.checkedAt);
-      if (purchasedAt) {
-        exportedState.purchasedAt = purchasedAt;
+      const checkedAt = toISOString(state.checkedAt);
+      if (checkedAt) {
+        exportedState.checkedAt = checkedAt;
       }
 
       itemStates[itemId] = exportedState;

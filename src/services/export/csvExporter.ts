@@ -72,9 +72,9 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Templ
 }
 
 /**
- * Export session to CSV format
+ * Export session to CSV format (v2.0 - neutral terminology)
  *
- * Format: name,path,inCart,purchased,addedToCartAt,purchasedAt
+ * Format: name,path,selected,checked,selectedAt,checkedAt
  *
  * @param template - Template containing the session
  * @param sessionId - ID of the session to export
@@ -96,7 +96,7 @@ export function exportSessionToCsv(
   const lines: string[] = [];
 
   // Header row
-  lines.push('name,path,inCart,purchased,addedToCartAt,purchasedAt');
+  lines.push('name,path,selected,checked,selectedAt,checkedAt');
 
   if (!template.items) {
     return lines.join('\n');
@@ -119,12 +119,12 @@ export function exportSessionToCsv(
 
     const name = escapeCsvField(item.name);
     const path = escapeCsvField(item.path);
-    const inCart = itemState?.selected ? 'true' : 'false';
-    const purchased = itemState?.checked ? 'true' : 'false';
-    const addedToCartAt = toISOString(itemState?.selectedAt);
-    const purchasedAt = toISOString(itemState?.checkedAt);
+    const selected = itemState?.selected ? 'true' : 'false';
+    const checked = itemState?.checked ? 'true' : 'false';
+    const selectedAt = toISOString(itemState?.selectedAt);
+    const checkedAt = toISOString(itemState?.checkedAt);
 
-    lines.push(`${name},${path},${inCart},${purchased},${addedToCartAt},${purchasedAt}`);
+    lines.push(`${name},${path},${selected},${checked},${selectedAt},${checkedAt}`);
   }
 
   return lines.join('\n');

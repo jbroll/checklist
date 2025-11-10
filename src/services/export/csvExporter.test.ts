@@ -163,7 +163,7 @@ describe('csvExporter', () => {
 
       expect(result).toBeTruthy();
       const lines = result?.split('\n');
-      expect(lines[0]).toBe('name,path,inCart,purchased,addedToCartAt,purchasedAt');
+      expect(lines[0]).toBe('name,path,selected,checked,selectedAt,checkedAt');
       expect(lines[1]).toContain('Apples,produce/apples,true,false,2024-11-01T00:00:00.000Z,');
       expect(lines[2]).toContain(
         'Bananas,produce/bananas,true,true,2024-11-01T00:00:00.000Z,2024-11-01T00:00:00.000Z',
