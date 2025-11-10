@@ -30,8 +30,6 @@ export interface ExportedData {
 export interface ExportedFolder {
   /** Folder display name */
   name: string;
-  /** Full path in the tree (e.g., "grocery-stores/wegmans") */
-  path: string;
   /** Folder type discriminator */
   type: 'folder' | 'template-folder';
   /** Template items (only for template-folder type) */
@@ -81,22 +79,18 @@ export interface ExportedTemplateItem {
  * Represents a shopping trip with state for each item.
  */
 export interface ExportedSession {
-  /** Session name (e.g., "[2025-11-01]") */
+  /** Session name (generated from createdAt, e.g., "2025-11-01" or "2025-11-01 14:30") */
   name: string;
-  /** Session status */
-  status: 'active' | 'completed' | 'abandoned';
   /** Soft delete flag - archived sessions are hidden by default */
   archived: boolean;
   /** View mode for displaying items */
   viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat';
   /** Map of template item IDs to their shopping state */
   itemStates: Record<string, ExportedItemState>;
-  /** ISO 8601 timestamp when session started */
-  startedAt: string;
+  /** ISO 8601 timestamp when session was created */
+  createdAt: string;
   /** ISO 8601 timestamp of last activity */
   lastActivityAt: string;
-  /** ISO 8601 timestamp when session was completed (if completed) */
-  completedAt?: string;
 }
 
 /**

@@ -32,8 +32,6 @@ const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: 
         sessions: [
           {
             $jazz: { id: 'session-1' },
-            name: '[2024-11-01]',
-            status: 'active' as const,
             archived: false,
             viewMode: 'flat' as const,
             itemStates: {
@@ -47,7 +45,7 @@ const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: 
             selectedCount: 1,
             checkedCount: 0,
             remainingCount: 1,
-            startedAt: date,
+            createdAt: date,
             lastActivityAt: date,
           },
         ],
@@ -215,7 +213,6 @@ describe('jsonExporter', () => {
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Test Template');
-      expect(result.folders[0].path).toBe('/test-template');
       expect(result.folders[0].items).toHaveLength(1);
       expect(result.folders[0].sessions).toHaveLength(1);
     });
@@ -229,7 +226,7 @@ describe('jsonExporter', () => {
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
       expect(result.folders[0].items?.[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
-      expect(result.folders[0].sessions?.[0].startedAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].sessions?.[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
     });
 
     it('should handle empty templates list', () => {
@@ -288,7 +285,6 @@ describe('jsonExporter', () => {
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Test Template');
-      expect(result.folders[0].path).toBe('/test-template');
     });
 
     it('should export a single template with date strings', () => {
@@ -487,8 +483,6 @@ describe('jsonExporter', () => {
               sessions: [
                 {
                   $jazz: { id: 'session-1' },
-                  name: '[2024-11-01]',
-                  status: 'active' as const,
                   archived: false,
                   viewMode: 'flat' as const,
                   itemStates: {
@@ -508,7 +502,7 @@ describe('jsonExporter', () => {
                   selectedCount: 2,
                   checkedCount: 1,
                   remainingCount: 1,
-                  startedAt: date,
+                  createdAt: date,
                   lastActivityAt: date,
                 },
               ],

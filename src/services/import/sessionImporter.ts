@@ -43,7 +43,7 @@ export function importSessionFromCsv(
   csvContent: string,
   template: InstanceOfSchema<typeof Template>,
   account: InstanceOfSchema<typeof Account>,
-  options: SessionImportOptions = {},
+  _options: SessionImportOptions = {},
 ): SessionImportResult {
   const result: SessionImportResult = {
     imported: false,
@@ -163,22 +163,17 @@ export function importSessionFromCsv(
     return result;
   }
 
-  // Determine session name
-  const sessionName = options.sessionName || `[${new Date().toISOString().split('T')[0]}]`;
-
-  // Determine session status
+  // Calculate counts
   const totalItems = result.matched;
   const remainingCount = totalItems - totalPurchased;
-  const status: 'active' | 'completed' | 'abandoned' =
-    totalPurchased === totalItems ? 'completed' : 'active';
+
+  const now = new Date();
 
   // Create shopping session
   try {
     const session = Session.create(
       {
-        name: sessionName,
         itemStates: itemStatesRecord,
-        status,
         archived: false,
         viewMode: 'hierarchy-in-zones', // Default view mode
         categoryExpanded: {},
@@ -186,9 +181,8 @@ export function importSessionFromCsv(
         checkedCount: totalPurchased,
         remainingCount,
         owner: account,
-        startedAt: new Date(),
-        lastActivityAt: new Date(),
-        completedAt: status === 'completed' ? new Date() : undefined,
+        createdAt: now,
+        lastActivityAt: now,
       },
       { owner: account },
     );

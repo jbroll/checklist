@@ -212,6 +212,8 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
               (s) => s?.$jazz.id === sessionExportData.sessionId,
             );
             if (template && session) {
+              // Generate session name from createdAt
+              const sessionName = session.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
               return (
                 <SessionExportDialog
                   open={showSessionExportDialog}
@@ -219,7 +221,7 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
                   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
                   template={template as any}
                   sessionId={sessionExportData.sessionId}
-                  sessionName={session.name}
+                  sessionName={sessionName}
                   account={accountAsAny}
                 />
               );

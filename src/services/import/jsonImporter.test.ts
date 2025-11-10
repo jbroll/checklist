@@ -29,7 +29,6 @@ describe('jsonImporter', () => {
           {
             name: 'Groceries',
             type: 'template-folder',
-            path: '/groceries',
             items: [
               {
                 id: 'cat-1',
@@ -100,7 +99,6 @@ describe('jsonImporter', () => {
           {
             name: 'Shopping List',
             type: 'template-folder',
-            path: '/shopping',
             items: [
               {
                 id: 'exported-item-1',
@@ -126,7 +124,6 @@ describe('jsonImporter', () => {
             sessions: [
               {
                 name: '[2024-11-01]',
-                status: 'active',
                 archived: false,
                 viewMode: 'flat',
                 itemStates: {
@@ -142,7 +139,7 @@ describe('jsonImporter', () => {
                     checkedAt: '2024-11-01T11:00:00.000Z',
                   },
                 },
-                startedAt: '2024-11-01T10:00:00.000Z',
+                createdAt: '2024-11-01T10:00:00.000Z',
                 lastActivityAt: '2024-11-01T11:00:00.000Z',
               },
             ],
@@ -170,7 +167,6 @@ describe('jsonImporter', () => {
           {
             name: 'Task List',
             type: 'template-folder',
-            path: '/tasks',
             items: [
               {
                 id: 'task-1',
@@ -185,7 +181,6 @@ describe('jsonImporter', () => {
             sessions: [
               {
                 name: '[2024-11-01]',
-                status: 'active',
                 archived: false,
                 viewMode: 'flat',
                 itemStates: {
@@ -196,7 +191,7 @@ describe('jsonImporter', () => {
                     checkedAt: '2024-11-01T11:00:00.000Z',
                   },
                 },
-                startedAt: '2024-11-01T10:00:00.000Z',
+                createdAt: '2024-11-01T10:00:00.000Z',
                 lastActivityAt: '2024-11-01T11:00:00.000Z',
               },
             ],
@@ -223,7 +218,6 @@ describe('jsonImporter', () => {
           {
             name: 'Deep Structure',
             type: 'template-folder',
-            path: '/deep',
             items: [
               {
                 id: 'level-1',

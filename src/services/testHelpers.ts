@@ -107,8 +107,8 @@ export function exposeServicesToWindow(
 
     // Session operations
     session: {
-      create: (templateId: string, sessionName?: string) =>
-        withAccount((acc) => SessionService.createSession(acc, templateId, sessionName)),
+      create: (templateId: string) =>
+        withAccount((acc) => SessionService.createSession(acc, templateId)),
       get: (templateId: string, sessionId: string) =>
         withAccount((acc) => SessionService.getSession(acc, templateId, sessionId)),
       getAll: (templateId: string) =>
@@ -119,10 +119,6 @@ export function exposeServicesToWindow(
         withAccount((acc) => SessionService.toggleItemChecked(acc, templateId, sessionId, itemId)),
       updateCounts: (templateId: string, sessionId: string) =>
         withAccount((acc) => SessionService.updateSessionCounts(acc, templateId, sessionId)),
-      complete: (templateId: string, sessionId: string) =>
-        withAccount((acc) => SessionService.completeSession(acc, templateId, sessionId)),
-      abandon: (templateId: string, sessionId: string) =>
-        withAccount((acc) => SessionService.abandonSession(acc, templateId, sessionId)),
     },
 
     // Utility operations
@@ -192,8 +188,6 @@ declare global {
         toggleItemSelected: (templateId: string, sessionId: string, itemId: string) => void;
         toggleItemChecked: (templateId: string, sessionId: string, itemId: string) => void;
         updateCounts: (templateId: string, sessionId: string) => void;
-        complete: (templateId: string, sessionId: string) => void;
-        abandon: (templateId: string, sessionId: string) => void;
       };
       util: {
         waitForSync: () => Promise<void>;

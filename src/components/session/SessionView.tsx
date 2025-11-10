@@ -93,8 +93,6 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   };
 
   const handleFinishSession = () => {
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.completeSession(me, template.$jazz.id, sessionId);
     onBack();
   };
 

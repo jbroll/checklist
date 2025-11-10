@@ -112,8 +112,9 @@ export function validateJsonData(
           stats.totalSessions += folder.sessions.length;
         }
 
-        // Check for path conflicts in directory
-        if (folder.path && directoryPathExists(folder.path, account)) {
+        // Check for name conflicts (generate path from name)
+        const normalizedName = folder.name.trim().replace(/\s+/g, '-');
+        if (directoryPathExists(normalizedName, account)) {
           stats.duplicateFolders++;
         }
       }
@@ -142,9 +143,6 @@ function validateFolder(folder: Partial<ExportedFolder>, index: number): string[
   // Required fields
   if (!folder.name) {
     errors.push(`${prefix}: Missing required field "name"`);
-  }
-  if (!folder.path) {
-    errors.push(`${prefix}: Missing required field "path"`);
   }
   if (!folder.type) {
     errors.push(`${prefix}: Missing required field "type"`);
@@ -278,19 +276,13 @@ function validateSession(session: unknown, index: number, prefix: string): strin
   const typedSession = session as Record<string, unknown>;
 
   // Required fields
-  if (!typedSession.name || typeof typedSession.name !== 'string') {
-    errors.push(`${sessionPrefix}: Missing or invalid "name"`);
-  }
-  if (!typedSession.status || typeof typedSession.status !== 'string') {
-    errors.push(`${sessionPrefix}: Missing or invalid "status"`);
-  } else if (!['active', 'completed', 'abandoned'].includes(typedSession.status as string)) {
-    errors.push(`${sessionPrefix}: Invalid status "${typedSession.status}"`);
-  }
   if (!typedSession.itemStates || typeof typedSession.itemStates !== 'object') {
     errors.push(`${sessionPrefix}: Missing or invalid "itemStates"`);
   }
-  if (!typedSession.startedAt || !isValidISODate(typedSession.startedAt as string)) {
-    errors.push(`${sessionPrefix}: Missing or invalid "startedAt"`);
+
+  // Validate timestamps
+  if (!typedSession.createdAt || !isValidISODate(typedSession.createdAt as string)) {
+    errors.push(`${sessionPrefix}: Missing or invalid "createdAt"`);
   }
   if (!typedSession.lastActivityAt || !isValidISODate(typedSession.lastActivityAt as string)) {
     errors.push(`${sessionPrefix}: Missing or invalid "lastActivityAt"`);

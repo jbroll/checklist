@@ -123,6 +123,44 @@ export function formatSessionDate(date: Date, showTime = true): string {
 }
 
 /**
+ * Generate a session name from its creation timestamp
+ * Format: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" if multiple sessions on same day
+ *
+ * @param createdAt - Session creation timestamp
+ * @param allSessions - All sessions to check for same-day duplicates
+ * @returns Session name string
+ */
+export function generateSessionName(
+  createdAt: Date,
+  allSessions?: readonly (InstanceOfSchema<typeof Session> | null)[],
+): string {
+  const dateStr = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // If no sessions list provided, just return date
+  if (!allSessions) {
+    return dateStr;
+  }
+
+  // Check if there are multiple sessions on the same day
+  const sessionDay = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate());
+
+  const sessionsOnSameDay = allSessions.filter((s) => {
+    if (!s) return false;
+    const sDate = s.createdAt;
+    const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
+    return sDay.getTime() === sessionDay.getTime();
+  });
+
+  // If multiple sessions on same day, include time
+  if (sessionsOnSameDay.length > 1) {
+    const timeStr = createdAt.toTimeString().slice(0, 5); // HH:MM
+    return `${dateStr} ${timeStr}`;
+  }
+
+  return dateStr;
+}
+
+/**
  * Check if there are multiple sessions on the same day as the given session
  * Used to determine whether to show time in session display
  */
@@ -132,17 +170,17 @@ export function hasMultipleSessionsOnSameDay(
 ): boolean {
   if (!session || !allSessions) return false;
 
-  const sessionDate = session.startedAt;
+  const sessionDate = session.createdAt;
   const sessionDay = new Date(
     sessionDate.getFullYear(),
     sessionDate.getMonth(),
     sessionDate.getDate(),
   );
 
-  // Count sessions on the same day (excluding abandoned sessions)
+  // Count sessions on the same day
   const sessionsOnSameDay = allSessions.filter((s) => {
-    if (!s || s.status === 'abandoned') return false;
-    const sDate = s.startedAt;
+    if (!s) return false;
+    const sDate = s.createdAt;
     const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
     return sDay.getTime() === sessionDay.getTime();
   });
