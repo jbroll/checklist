@@ -32,12 +32,14 @@ export class ImportService {
    * @param file - File object from input or drag-and-drop
    * @param account - User's Account
    * @param fileType - Expected file type (optional, auto-detected from extension)
+   * @param parentPath - Optional parent folder path for JSON imports
    * @returns Import result with success/failure info
    */
   static async importFromFile(
     file: File,
     account: InstanceOfSchema<typeof Account>,
     fileType?: ImportFileType,
+    parentPath?: string,
   ): Promise<ImportResult> {
     // Determine file type
     const detectedType = fileType || ImportService.detectFileType(file);
@@ -66,7 +68,7 @@ export class ImportService {
     // Import based on type
     switch (detectedType) {
       case 'json':
-        return await importJson(content, account);
+        return await importJson(content, account, parentPath);
 
       case 'txt':
         // TODO: Phase 2 - Template list import from TXT
@@ -197,7 +199,7 @@ export class ImportService {
   }
 
   /**
-   * Import TXT/CSV file as a new template at root
+   * Import TXT/CSV file as a new template
    *
    * Creates a new template with the given name and imports all items into it.
    *
@@ -205,6 +207,7 @@ export class ImportService {
    * @param account - User's Account
    * @param templateName - Name for the new template folder
    * @param fileType - File type ('txt' or 'csv')
+   * @param parentPath - Optional parent folder path (if not provided, creates at root)
    * @returns Import result with statistics
    */
   static async importAsNewTemplate(
@@ -212,6 +215,7 @@ export class ImportService {
     account: InstanceOfSchema<typeof Account>,
     templateName: string,
     fileType: 'txt' | 'csv',
+    parentPath?: string,
   ): Promise<ImportResult> {
     // Validate file
     try {
@@ -228,9 +232,9 @@ export class ImportService {
     // Read file content
     const content = await readFileAsText(file);
 
-    // Create new template at root using directoryService
+    // Create new template using directoryService (at root or in specified folder)
     const { createDirectoryEntry } = await import('../directoryService');
-    const { templateId } = createDirectoryEntry(account, templateName, true);
+    const { templateId } = createDirectoryEntry(account, templateName, true, parentPath);
 
     if (!templateId) {
       return createErrorResult('Failed to create template');
