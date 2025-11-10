@@ -309,3 +309,30 @@ export function updateItemColor(
   template.$jazz.set('items', updatedItems);
   template.$jazz.set('updatedAt', new Date());
 }
+
+/**
+ * Toggle category expanded state
+ */
+export function toggleCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+
+  const item = template.items[itemIndex];
+  if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
+
+  const updatedItems = [...template.items];
+  updatedItems[itemIndex] = {
+    ...item,
+    expanded: !item.expanded,
+  };
+
+  template.$jazz.set('items', updatedItems);
+  template.$jazz.set('updatedAt', new Date());
+}
