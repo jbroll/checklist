@@ -82,6 +82,7 @@ export function HierarchyInZonesRenderer({
       {zones.map((zone) => {
         const categories = buildCategoryTree(zone.items);
         const isZoneExpanded = zoneExpanded[zone.key];
+        const hasCategories = categories.length > 0;
 
         return (
           <SessionZone
@@ -89,8 +90,8 @@ export function HierarchyInZonesRenderer({
             title={zone.title}
             icon={zone.icon}
             zone={zone.key}
-            items={[]}
-            itemStates={{}}
+            items={hasCategories ? [] : zone.items}
+            itemStates={session.itemStates || {}}
             expanded={isZoneExpanded}
             onToggleExpand={() => onToggleZoneExpanded(zone.key)}
             onToggleSelected={onToggleSelected}
@@ -98,24 +99,7 @@ export function HierarchyInZonesRenderer({
             count={zone.items.length}
             showHeading={showZoneHeadings}
           >
-            {categories.length === 0 ? (
-              <div className="flex flex-col gap-2">
-                {zone.items.map((item) => (
-                  <SessionZone
-                    key={item.id}
-                    title={item.name}
-                    zone={zone.key}
-                    items={[item]}
-                    itemStates={session.itemStates || {}}
-                    expanded={true}
-                    onToggleExpand={() => {}}
-                    onToggleSelected={onToggleSelected}
-                    onToggleChecked={onToggleChecked}
-                    count={1}
-                  />
-                ))}
-              </div>
-            ) : (
+            {hasCategories && (
               <div className="flex flex-col gap-2">
                 {renderCategoryTree(categories, zone.key, zone.key)}
               </div>

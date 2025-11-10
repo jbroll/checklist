@@ -30,6 +30,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   const { me } = useAccount<typeof Account>();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -153,6 +154,23 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     setActiveItem(null);
   };
 
+  const handleSelectItem = (itemId: string) => {
+    const item = items.find((i) => i?.id === itemId);
+    if (item?.type === 'category') {
+      // Category clicked - toggle if same, or switch to this category
+      setSelectedCategoryId(selectedCategoryId === itemId ? null : itemId);
+    } else {
+      // Item clicked - deselect any category
+      setSelectedCategoryId(null);
+    }
+  };
+
+  // Get the selected category's path for the AddItemDialog
+  const selectedCategory = selectedCategoryId
+    ? items.find((i) => i?.id === selectedCategoryId)
+    : null;
+  const defaultParentPath = selectedCategory?.path;
+
   // Recursive function to render item tree
   const renderItemNode = (node: ReturnType<typeof buildItemTree>[number], depth = 0) => {
     const { item, children } = node;
@@ -163,6 +181,8 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
           item={item}
           level={depth}
           hasChildren={children.length > 0}
+          isSelected={item.id === selectedCategoryId}
+          onSelect={handleSelectItem}
           onRename={handleRenameItem}
           onDelete={handleDeleteItem}
           onToggleExpand={handleToggleExpand}
@@ -194,6 +214,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
               folderName={template.name}
               onBack={onBack}
               onAddItem={() => setShowAddDialog(true)}
+              onHeaderClick={() => setSelectedCategoryId(null)}
             />
 
             {itemTree.length === 0 ? (
@@ -216,6 +237,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
             onAddCategory={handleAddCategory}
             folderName={template.name}
             categories={activeItems}
+            defaultParentPath={defaultParentPath}
           />
         </div>
       </div>

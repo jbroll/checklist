@@ -31,6 +31,23 @@ export function ZoneInHierarchyRenderer({
   const cartAndCompletedItems = [...cartItems, ...completedItems];
   const categoriesWithItems = buildCategoryTree(cartAndCompletedItems);
 
+  // Find items that aren't in any category (root-level items)
+  const categorizedItemIds = new Set<string>();
+  const collectItemIds = (categories: CategoryNode[]) => {
+    for (const cat of categories) {
+      for (const item of cat.items) {
+        categorizedItemIds.add(item.id);
+      }
+      collectItemIds(cat.children);
+    }
+  };
+  collectItemIds(categoriesWithItems);
+
+  const uncategorizedCartItems = cartItems.filter((item) => !categorizedItemIds.has(item.id));
+  const uncategorizedCompletedItems = completedItems.filter(
+    (item) => !categorizedItemIds.has(item.id),
+  );
+
   // Recursive function to count all items in a category tree (including children)
   const countAllItems = (category: CategoryNode): { cart: number; completed: number } => {
     let cartCount = 0;
@@ -138,5 +155,44 @@ export function ZoneInHierarchyRenderer({
     });
   };
 
-  return <>{renderZoneInHierarchy(categoriesWithItems)}</>;
+  return (
+    <>
+      {renderZoneInHierarchy(categoriesWithItems)}
+      {/* Render uncategorized items */}
+      {(uncategorizedCartItems.length > 0 || uncategorizedCompletedItems.length > 0) && (
+        <>
+          {uncategorizedCartItems.length > 0 && (
+            <SessionZone
+              title="In Cart"
+              icon={ShoppingCart}
+              zone="cart"
+              items={uncategorizedCartItems}
+              itemStates={session.itemStates || {}}
+              expanded={categoryExpanded['uncategorized-cart'] ?? true}
+              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-cart')}
+              onToggleSelected={onToggleSelected}
+              onToggleChecked={onToggleChecked}
+              count={uncategorizedCartItems.length}
+              showHeading={showZoneHeadings}
+            />
+          )}
+          {uncategorizedCompletedItems.length > 0 && (
+            <SessionZone
+              title="Completed"
+              icon={CheckCircle2}
+              zone="completed"
+              items={uncategorizedCompletedItems}
+              itemStates={session.itemStates || {}}
+              expanded={categoryExpanded['uncategorized-completed'] ?? true}
+              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-completed')}
+              onToggleSelected={onToggleSelected}
+              onToggleChecked={onToggleChecked}
+              count={uncategorizedCompletedItems.length}
+              showHeading={showZoneHeadings}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
 }
