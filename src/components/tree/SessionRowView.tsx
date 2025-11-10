@@ -8,17 +8,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { ListSession } from '@/schemas/tree';
+import type { Session } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
 interface SessionRowViewProps {
-  session: InstanceOfSchema<typeof ListSession>;
+  session: InstanceOfSchema<typeof Session>;
   templateName: string;
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
   onExport?: (sessionId: string) => void;
-  allSessions: readonly (InstanceOfSchema<typeof ListSession> | null)[];
+  allSessions: readonly (InstanceOfSchema<typeof Session> | null)[];
 }
 
 export const SessionRowView = memo(function SessionRowView({

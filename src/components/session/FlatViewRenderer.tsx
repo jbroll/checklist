@@ -1,13 +1,13 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ShoppingCart } from 'lucide-react';
-import type { FolderNode, ListSession, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 import { SessionZone } from './SessionZone';
 
 interface FlatViewRendererProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession>;
-  cartItems: InstanceOfSchema<typeof TemplateItem>[];
-  completedItems: InstanceOfSchema<typeof TemplateItem>[];
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
+  cartItems: TemplateItem[];
+  completedItems: TemplateItem[];
   zoneExpanded: {
     cart: boolean;
     completed: boolean;
@@ -18,7 +18,7 @@ interface FlatViewRendererProps {
 }
 
 export function FlatViewRenderer({
-  folder,
+  template,
   session,
   cartItems,
   completedItems,
@@ -27,7 +27,7 @@ export function FlatViewRenderer({
   onToggleSelected,
   onToggleChecked,
 }: FlatViewRendererProps) {
-  const showZoneHeadings = folder.showZoneHeadings ?? false;
+  const showZoneHeadings = template.showZoneHeadings ?? false;
 
   return (
     <>

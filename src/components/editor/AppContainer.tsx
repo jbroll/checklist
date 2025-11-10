@@ -6,7 +6,7 @@ import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
-import * as FolderService from '@/services/folderService';
+import * as directoryService from '@/services/directoryService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
@@ -23,19 +23,19 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
   const [sessionExportData, setSessionExportData] = useState<{
-    folderId: string;
+    templateId: string;
     sessionId: string;
   } | null>(null);
 
-  // Selection state - tracks currently selected folder/template
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Selection state - tracks currently selected template
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   // Navigation state for shopping session view
-  const [activeSessionFolderId, setActiveSessionFolderId] = useState<string | null>(null);
+  const [activeSessionTemplateId, setActiveSessionTemplateId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // Navigation state for template editing view
-  const [activeEditFolderId, setActiveEditFolderId] = useState<string | null>(null);
+  const [activeEditTemplateId, setActiveEditTemplateId] = useState<string | null>(null);
 
   if (!me) {
     return (
@@ -48,85 +48,91 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
     );
   }
 
-  const nodes = me.root?.nodes || [];
+  const templates = me.root?.templates || [];
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
-    // If a folder is selected, use its path as parent
-    const selectedNode = selectedNodeId ? nodes.find((n) => n?.$jazz.id === selectedNodeId) : null;
-    const isFolder = selectedNode?.type === 'folder';
-    const parentPath = isFolder ? selectedNode?.path : undefined;
+    // Determine parent path based on selected template
+    let parentPath: string | undefined;
+    if (selectedTemplateId) {
+      // Find the directory entry for the selected template
+      // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+      const entries = directoryService.getAllDirectoryEntries(me);
+      const selectedEntry = entries.find((e) =>
+        e.type === 'template-ref' && e.templateId === selectedTemplateId
+      );
+      if (selectedEntry) {
+        // Use the parent path of the selected entry
+        const pathParts = selectedEntry.path.split('/');
+        parentPath = pathParts.slice(0, -1).join('/') || undefined;
+      }
+    }
 
-    // Use folder service to create folder with proper Jazz CoList mutation
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    FolderService.createFolder(me, name, isTemplate, parentPath);
+    // Create directory entry (folder or template-ref)
+    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+    directoryService.createDirectoryEntry(me, name, isTemplate, parentPath);
   };
 
   const handleUseTemplate = () => {
-    if (!selectedNodeId) return;
+    if (!selectedTemplateId) return;
 
     // Create session using service
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    const sessionId = SessionService.createSession(me, selectedNodeId);
+    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+    const sessionId = SessionService.createSession(me, selectedTemplateId);
 
     // Navigate to shopping session view
-    setActiveSessionFolderId(selectedNodeId);
+    setActiveSessionTemplateId(selectedTemplateId);
     setActiveSessionId(sessionId);
   };
 
   const handleEditTemplate = () => {
-    if (!selectedNodeId) return;
+    if (!selectedTemplateId) return;
 
     // Navigate to template editing view
-    setActiveEditFolderId(selectedNodeId);
+    setActiveEditTemplateId(selectedTemplateId);
   };
 
   const handleBackToTemplates = () => {
-    setActiveSessionFolderId(null);
+    setActiveSessionTemplateId(null);
     setActiveSessionId(null);
   };
 
   const handleBackFromEdit = () => {
-    setActiveEditFolderId(null);
+    setActiveEditTemplateId(null);
   };
 
-  const handleNodeSelect = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
   };
 
   const handleHeaderClick = () => {
     // Clicking on BubbleList header deselects everything
-    setSelectedNodeId(null);
+    setSelectedTemplateId(null);
   };
 
-  const handleExportSession = (folderId: string, sessionId: string) => {
-    setSessionExportData({ folderId, sessionId });
+  const handleExportSession = (templateId: string, sessionId: string) => {
+    setSessionExportData({ templateId, sessionId });
     setShowSessionExportDialog(true);
   };
 
   // If editing a template, show TemplateItemEditor
-  if (activeEditFolderId) {
-    const editFolder = nodes.find((n) => n?.$jazz.id === activeEditFolderId);
-    if (editFolder) {
-      return (
-        <TemplateItemEditor
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-          folder={editFolder}
-          onBack={handleBackFromEdit}
-        />
-      );
+  if (activeEditTemplateId) {
+    const editTemplate = templates.find((t) => t?.$jazz.id === activeEditTemplateId);
+    if (editTemplate) {
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+      return <TemplateItemEditor template={editTemplate as any} onBack={handleBackFromEdit} />;
     }
   }
 
   // If viewing a shopping session, show SessionView
-  if (activeSessionFolderId && activeSessionId) {
-    const sessionFolder = nodes.find((n) => n?.$jazz.id === activeSessionFolderId);
-    if (sessionFolder) {
+  if (activeSessionTemplateId && activeSessionId) {
+    const sessionTemplate = templates.find((t) => t?.$jazz.id === activeSessionTemplateId);
+    if (sessionTemplate) {
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
       return (
         <SessionView
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-          folder={sessionFolder}
+          template={sessionTemplate as any}
           sessionId={activeSessionId}
           onBack={handleBackToTemplates}
         />
@@ -135,20 +141,19 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   }
 
   // Otherwise show Template Editor
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  const accountAsAny = me as any;
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <main id="main-content" className="mx-auto max-w-4xl">
         <TreeView
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-          nodes={nodes}
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-          account={me}
-          selectedNodeId={selectedNodeId}
-          onNodeSelect={handleNodeSelect}
+          account={accountAsAny}
+          selectedTemplateId={selectedTemplateId}
+          onTemplateSelect={handleTemplateSelect}
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
-          onOpenSession={(folderId, sessionId) => {
-            setActiveSessionFolderId(folderId);
+          onOpenSession={(templateId, sessionId) => {
+            setActiveSessionTemplateId(templateId);
             setActiveSessionId(sessionId);
           }}
           onExportSession={handleExportSession}
@@ -175,30 +180,35 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
           description="Create a new list folder for frequently purchased items."
         />
 
-        {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
-        <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} account={me} />
+        <ExportDialog
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+          account={accountAsAny}
+        />
 
-        {/* @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists */}
-        <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} account={me} />
+        <ImportDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          account={accountAsAny}
+        />
 
         {/* Session Export Dialog */}
         {sessionExportData &&
           (() => {
-            const folder = nodes.find((n) => n?.$jazz.id === sessionExportData.folderId);
-            const session = folder?.sessions?.find(
+            const template = templates.find((t) => t?.$jazz.id === sessionExportData.templateId);
+            const session = template?.sessions?.find(
               (s) => s?.$jazz.id === sessionExportData.sessionId,
             );
-            if (folder && session) {
+            if (template && session) {
+              // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
               return (
                 <SessionExportDialog
                   open={showSessionExportDialog}
                   onOpenChange={setShowSessionExportDialog}
-                  // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-                  folder={folder}
+                  template={template as any}
                   sessionId={sessionExportData.sessionId}
                   sessionName={session.name}
-                  // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-                  account={me}
+                  account={accountAsAny}
                 />
               );
             }

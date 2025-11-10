@@ -1,13 +1,13 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
-import type { FolderNode, ListSession, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
 interface InventoryZoneRendererProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession>;
-  inventoryItems: InstanceOfSchema<typeof TemplateItem>[];
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
+  inventoryItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   zoneExpanded: boolean;
   onToggleZoneExpanded: () => void;
@@ -17,7 +17,7 @@ interface InventoryZoneRendererProps {
 }
 
 export function InventoryZoneRenderer({
-  folder,
+  template,
   session,
   inventoryItems,
   categoryExpanded,
@@ -27,7 +27,7 @@ export function InventoryZoneRenderer({
   onToggleSelected,
   onToggleChecked,
 }: InventoryZoneRendererProps) {
-  const showZoneHeadings = folder.showZoneHeadings ?? false;
+  const showZoneHeadings = template.showZoneHeadings ?? false;
   const inventoryCategories = buildCategoryTree(inventoryItems);
 
   const renderCategoryTree = (
@@ -81,7 +81,7 @@ export function InventoryZoneRenderer({
         <div className="flex flex-col gap-2">
           {inventoryItems.map((item) => (
             <SessionZone
-              key={item.$jazz.id}
+              key={item.id}
               title={item.name}
               zone="inventory"
               items={[item]}

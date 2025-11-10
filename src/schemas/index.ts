@@ -1,21 +1,42 @@
-import { co } from 'jazz-tools';
+import { co, z } from 'jazz-tools';
 import {
-  FolderNode,
-  ItemState,
-  ListSession,
+  Session,
+  Template,
   setAccountReference,
-  TemplateFolderNode,
-  TemplateItem,
+  type DirectoryEntry,
+  type ItemState,
+  type TemplateItem,
 } from './tree';
 
-// Root Schema for user's lists
-// Flat list of folder nodes (both organizational and template folders)
-// Template folders contain hierarchical TemplateItems organized by path
+/**
+ * ListsRoot - Root schema with directory + templates
+ *
+ * Like a filesystem:
+ * - directory: Lightweight entries (dentries) with folder structure and template IDs
+ * - templates: Template "inodes" loaded on-demand
+ */
 export const ListsRoot = co.map({
-  nodes: co.list(FolderNode),
+  // Lightweight directory - fast loading tree structure
+  directory: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.enum(['folder', 'template-ref']),
+    path: z.string(),
+    expanded: z.boolean(),
+    archived: z.boolean(),
+    templateId: z.optional(z.string()),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  })),
+
+  // Template "inodes" - loaded on-demand when editing/using
+  templates: co.list(Template),
 });
 
-// Account Schema (must be defined after ListsRoot)
+/**
+ * Account Schema
+ * Each user has a root containing their directory and templates.
+ */
 export const Account = co
   .account({
     root: ListsRoot,
@@ -24,25 +45,28 @@ export const Account = co
   .withMigration(async (account) => {
     // Initialize root for new accounts
     if (!account.$jazz.has('root')) {
-      const nodes = co.list(FolderNode).create([], { owner: account });
-      account.$jazz.set('root', ListsRoot.create({ nodes }, { owner: account }));
+      const templates = co.list(Template).create([], { owner: account });
+      const directory: DirectoryEntry[] = [];
+      account.$jazz.set(
+        'root',
+        ListsRoot.create({ directory, templates }, { owner: account })
+      );
       return;
     }
 
-    // Fix existing accounts with broken root.nodes (migration from old initialization)
+    // Fix existing accounts with broken root
     const { root } = await account.$jazz.ensureLoaded({ resolve: { root: {} } });
-    if (root && !root.$jazz.has('nodes')) {
-      const nodes = co.list(FolderNode).create([], { owner: account });
-      root.$jazz.set('nodes', nodes);
+    if (root && !root.$jazz.has('templates')) {
+      const templates = co.list(Template).create([], { owner: account });
+      root.$jazz.set('templates', templates);
+    }
+    if (root && !root.$jazz.has('directory')) {
+      root.$jazz.set('directory', []);
     }
   });
 
 // Wire up the forward reference from tree.ts to Account
 setAccountReference(Account);
 
-// NOTE: CATEGORIES constant and autoCategorize() function have been removed.
-// Templates now use hierarchical TemplateItems with custom categories per template.
-// Each template can define its own category structure with custom icons and colors.
-
-// Re-export tree schemas for easy importing
-export { FolderNode, TemplateFolderNode, TemplateItem, ListSession, ItemState };
+// Re-export tree schemas and types for easy importing
+export { Template, Session, type DirectoryEntry, type TemplateItem, type ItemState };

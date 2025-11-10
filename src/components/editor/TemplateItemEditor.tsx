@@ -14,7 +14,7 @@ import { Folder } from 'lucide-react';
 import { useState } from 'react';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
-import type { Account, FolderNode, TemplateItem } from '@/schemas';
+import type { Account, Template, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/itemService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -22,14 +22,14 @@ import { AddItemDialog } from './AddItemDialog';
 import { RootDropZone } from './RootDropZone';
 
 interface TemplateItemEditorProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
+  template: InstanceOfSchema<typeof Template>;
   onBack: () => void;
 }
 
-export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) {
+export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps) {
   const { me } = useAccount<typeof Account>();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [activeItem, setActiveItem] = useState<InstanceOfSchema<typeof TemplateItem> | null>(null);
+  const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -51,7 +51,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
     );
   }
 
-  const items = folder.items || [];
+  const items = template.items || [];
   const activeItems = items.filter((item) => item && !item.archived);
 
   // Build hierarchical tree structure
@@ -59,34 +59,35 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
 
   const handleAddItem = (name: string, parentPath?: string, defaultQuantity?: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createItem(me, folder.$jazz.id, name, parentPath, defaultQuantity);
+    ItemService.createItem(me, template.$jazz.id, name, parentPath, defaultQuantity);
   };
 
   const handleAddCategory = (name: string, parentPath?: string, color?: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createCategory(me, folder.$jazz.id, name, parentPath, color);
+    ItemService.createCategory(me, template.$jazz.id, name, parentPath, color);
   };
 
   const handleRenameItem = (itemId: string, newName: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.renameItem(me, folder.$jazz.id, itemId, newName);
+    ItemService.renameItem(me, template.$jazz.id, itemId, newName);
   };
 
   const handleDeleteItem = (itemId: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.archiveItem(me, folder.$jazz.id, itemId);
+    ItemService.archiveItem(me, template.$jazz.id, itemId);
   };
 
   const handleToggleExpand = (itemId: string) => {
-    const item = items.find((i) => i?.$jazz.id === itemId);
+    const item = items.find((i) => i?.id === itemId);
     if (item && item.type === 'category') {
-      item.$jazz.set('expanded', !item.expanded);
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+      ItemService.toggleCategoryExpanded(me, template.$jazz.id, itemId);
     }
   };
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
-    const draggedItem = event.active.data.current?.item as InstanceOfSchema<typeof TemplateItem>;
+    const draggedItem = event.active.data.current?.item as TemplateItem;
     setActiveItem(draggedItem);
   };
 
@@ -103,7 +104,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
       return;
     }
 
-    const draggedItem = active.data.current.item as InstanceOfSchema<typeof TemplateItem>;
+    const draggedItem = active.data.current.item as TemplateItem;
     const overData = over.data.current;
 
     // Don't allow dropping on itself
@@ -122,7 +123,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
       newParentPath = overData.path as string;
     } else if (overData?.item) {
       // Dropped on another item - move to same parent as that item
-      const targetItem = overData.item as InstanceOfSchema<typeof TemplateItem>;
+      const targetItem = overData.item as TemplateItem;
       newParentPath = getParentPath(targetItem.path);
     } else {
       // No valid drop target
@@ -142,7 +143,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
 
     try {
       // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-      ItemService.moveItem(me, folder.$jazz.id, draggedItem.$jazz.id, newParentPath);
+      ItemService.moveItem(me, template.$jazz.id, draggedItem.id, newParentPath);
     } catch {
       // Silently ignore expected validation errors
     }
@@ -157,7 +158,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
     const { item, children } = node;
 
     return (
-      <div key={item.$jazz.id}>
+      <div key={item.id}>
         <TemplateItemView
           item={item}
           level={depth}
@@ -190,7 +191,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
             {/* Root-level drop zone with header */}
             <RootDropZone
               isDragging={!!activeItem}
-              folderName={folder.name}
+              folderName={template.name}
               onBack={onBack}
               onAddItem={() => setShowAddDialog(true)}
             />
@@ -213,7 +214,7 @@ export function TemplateItemEditor({ folder, onBack }: TemplateItemEditorProps) 
             onOpenChange={setShowAddDialog}
             onAddItem={handleAddItem}
             onAddCategory={handleAddCategory}
-            folderName={folder.name}
+            folderName={template.name}
             categories={activeItems}
           />
         </div>

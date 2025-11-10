@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { twMerge } from 'tailwind-merge';
-import type { ListSession } from '@/schemas/tree';
+import type { Session } from '@/schemas';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -126,8 +126,8 @@ export function formatSessionDate(date: Date, showTime = true): string {
  * Used to determine whether to show time in session display
  */
 export function hasMultipleSessionsOnSameDay(
-  session: InstanceOfSchema<typeof ListSession> | null,
-  allSessions: readonly (InstanceOfSchema<typeof ListSession> | null)[],
+  session: InstanceOfSchema<typeof Session> | null,
+  allSessions: readonly (InstanceOfSchema<typeof Session> | null)[],
 ): boolean {
   if (!session || !allSessions) return false;
 

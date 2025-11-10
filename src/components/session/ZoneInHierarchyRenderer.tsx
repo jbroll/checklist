@@ -1,14 +1,14 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ShoppingCart } from 'lucide-react';
-import type { FolderNode, ListSession, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
 interface ZoneInHierarchyRendererProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession>;
-  cartItems: InstanceOfSchema<typeof TemplateItem>[];
-  completedItems: InstanceOfSchema<typeof TemplateItem>[];
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
+  cartItems: TemplateItem[];
+  completedItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
@@ -16,7 +16,7 @@ interface ZoneInHierarchyRendererProps {
 }
 
 export function ZoneInHierarchyRenderer({
-  folder,
+  template,
   session,
   cartItems,
   completedItems,
@@ -25,7 +25,7 @@ export function ZoneInHierarchyRenderer({
   onToggleSelected,
   onToggleChecked,
 }: ZoneInHierarchyRendererProps) {
-  const showZoneHeadings = folder.showZoneHeadings ?? false;
+  const showZoneHeadings = template.showZoneHeadings ?? false;
 
   // Only include categories that have items in cart or completed
   const cartAndCompletedItems = [...cartItems, ...completedItems];
@@ -38,7 +38,7 @@ export function ZoneInHierarchyRenderer({
 
     // Count items at this level
     category.items.forEach((item) => {
-      const state = session.itemStates?.[item.$jazz.id];
+      const state = session.itemStates?.[item.id];
       if (state?.selected && !state.checked) cartCount++;
       if (state?.checked) completedCount++;
     });
@@ -65,11 +65,11 @@ export function ZoneInHierarchyRenderer({
 
       // Split category items by zone (just at this level, not children)
       const catCart = category.items.filter((item) => {
-        const state = session.itemStates?.[item.$jazz.id];
+        const state = session.itemStates?.[item.id];
         return state?.selected && !state.checked;
       });
       const catCompleted = category.items.filter((item) => {
-        const state = session.itemStates?.[item.$jazz.id];
+        const state = session.itemStates?.[item.id];
         return state?.checked;
       });
 

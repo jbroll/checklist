@@ -1,14 +1,14 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ShoppingCart } from 'lucide-react';
-import type { FolderNode, ListSession, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
 interface HierarchyInZonesRendererProps {
-  folder: InstanceOfSchema<typeof FolderNode>;
-  session: InstanceOfSchema<typeof ListSession>;
-  cartItems: InstanceOfSchema<typeof TemplateItem>[];
-  completedItems: InstanceOfSchema<typeof TemplateItem>[];
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
+  cartItems: TemplateItem[];
+  completedItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   zoneExpanded: {
     cart: boolean;
@@ -21,7 +21,7 @@ interface HierarchyInZonesRendererProps {
 }
 
 export function HierarchyInZonesRenderer({
-  folder,
+  template,
   session,
   cartItems,
   completedItems,
@@ -32,7 +32,7 @@ export function HierarchyInZonesRenderer({
   onToggleSelected,
   onToggleChecked,
 }: HierarchyInZonesRendererProps) {
-  const showZoneHeadings = folder.showZoneHeadings ?? false;
+  const showZoneHeadings = template.showZoneHeadings ?? false;
 
   const renderCategoryTree = (
     categories: CategoryNode[],
@@ -102,7 +102,7 @@ export function HierarchyInZonesRenderer({
               <div className="flex flex-col gap-2">
                 {zone.items.map((item) => (
                   <SessionZone
-                    key={item.$jazz.id}
+                    key={item.id}
                     title={item.name}
                     zone={zone.key}
                     items={[item]}

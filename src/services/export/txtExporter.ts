@@ -8,10 +8,11 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, TemplateItem } from '../../schemas';
+import type { Template } from '../../schemas';
+import type { TemplateItem } from '../../schemas/tree';
 
 interface TreeNode {
-  item: InstanceOfSchema<typeof TemplateItem>;
+  item: TemplateItem;
   children: TreeNode[];
 }
 
@@ -22,16 +23,16 @@ interface TreeNode {
  * - If categories exist: exports hierarchical indented format
  * - If no categories: exports flat format (one item per line)
  *
- * @param folder - Folder to export items from
+ * @param template - Template to export items from
  * @returns Plain text string
  */
-export function exportTemplateItemsToText(folder: InstanceOfSchema<typeof FolderNode>): string {
-  if (!folder.items || folder.items.length === 0) {
+export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Template>): string {
+  if (!template.items || template.items.length === 0) {
     return '';
   }
 
   // Get non-archived items, sorted by sortOrder
-  const items = Array.from(folder.items)
+  const items = template.items
     .filter((item) => item && !item.archived)
     .sort((a, b) => {
       if (!a || !b) return 0;
@@ -57,9 +58,7 @@ export function exportTemplateItemsToText(folder: InstanceOfSchema<typeof Folder
  * @param items - Sorted items to export
  * @returns Indented text string
  */
-function exportHierarchical(
-  items: (InstanceOfSchema<typeof TemplateItem> | null | undefined)[],
-): string {
+function exportHierarchical(items: TemplateItem[]): string {
   // Build tree structure from flat items
   const tree = buildTreeFromPaths(items);
 
@@ -73,9 +72,7 @@ function exportHierarchical(
  * @param items - Flat array of items with paths
  * @returns Tree nodes
  */
-function buildTreeFromPaths(
-  items: (InstanceOfSchema<typeof TemplateItem> | null | undefined)[],
-): TreeNode[] {
+function buildTreeFromPaths(items: TemplateItem[]): TreeNode[] {
   const root: TreeNode[] = [];
   const nodeMap = new Map<string, TreeNode>();
 
@@ -151,19 +148,19 @@ function treeToIndentedText(nodes: TreeNode[], indent = 0): string {
  * ✓ Item Name (purchased)
  *   Item Name (not purchased)
  *
- * @param folder - Folder containing the session
+ * @param template - Template containing the session
  * @param sessionId - ID of the session to export
  * @returns Plain text string with checkmarks
  */
 export function exportSessionToText(
-  folder: InstanceOfSchema<typeof FolderNode>,
+  template: InstanceOfSchema<typeof Template>,
   sessionId: string,
 ): string | null {
-  if (!folder.sessions) {
+  if (!template.sessions) {
     return null;
   }
 
-  const session = Array.from(folder.sessions).find((s) => s?.$jazz.id === sessionId);
+  const session = Array.from(template.sessions).find((s) => s?.$jazz.id === sessionId);
   if (!session) {
     return null;
   }
@@ -171,8 +168,8 @@ export function exportSessionToText(
   const lines: string[] = [];
 
   // Get all items from the template
-  if (folder.items) {
-    const items = Array.from(folder.items)
+  if (template.items) {
+    const items = template.items
       .filter((item) => item && !item.archived)
       .sort((a, b) => {
         if (!a || !b) return 0;
@@ -182,7 +179,7 @@ export function exportSessionToText(
     for (const item of items) {
       if (!item) continue;
 
-      const itemId = item.$jazz.id;
+      const itemId = item.id;
       const itemState = session.itemStates?.[itemId];
 
       // Check if item was purchased

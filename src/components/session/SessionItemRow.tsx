@@ -1,12 +1,10 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { memo } from 'react';
 import { useAccount } from '@/lib/jazz';
-import type { Account } from '@/schemas';
-import type { ItemState, TemplateItem } from '@/schemas/tree';
+import type { Account, ItemState, TemplateItem } from '@/schemas';
 
 interface SessionItemRowProps {
-  item: InstanceOfSchema<typeof TemplateItem>;
-  state: InstanceOfSchema<typeof ItemState> | null;
+  item: TemplateItem;
+  state: ItemState | null;
   zone: 'inventory' | 'cart' | 'completed';
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
@@ -53,9 +51,9 @@ export const SessionItemRow = memo(function SessionItemRow({
         onClick={(e) => {
           e.stopPropagation();
           if (leftCheckboxControlsPurchased) {
-            onToggleChecked(item.$jazz.id);
+            onToggleChecked(item.id);
           } else {
-            onToggleSelected(item.$jazz.id);
+            onToggleSelected(item.id);
           }
         }}
         className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${getCheckboxClassName()}`}
@@ -93,7 +91,7 @@ export const SessionItemRow = memo(function SessionItemRow({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleSelected(item.$jazz.id);
+            onToggleSelected(item.id);
           }}
           className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
           aria-label="Remove from cart"
