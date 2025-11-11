@@ -24,7 +24,7 @@
  * ```
  */
 
-import { normalizePathSegment } from './pathUtils';
+import { PATH_SEPARATOR } from './pathUtils';
 
 export interface ParsedItem {
   name: string;
@@ -214,9 +214,8 @@ function flattenTree(nodes: TreeNode[], parentPath = ''): ParsedItem[] {
   const items: ParsedItem[] = [];
 
   for (const node of nodes) {
-    // Generate path
-    const segment = normalizePathSegment(node.name);
-    const path = parentPath ? `${parentPath}/${segment}` : segment;
+    // Generate path - use name as-is without normalization
+    const path = parentPath ? `${parentPath}${PATH_SEPARATOR}${node.name}` : node.name;
 
     // Determine type: category if has children, item if leaf
     const type = node.children.length > 0 ? 'category' : 'item';

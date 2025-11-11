@@ -10,6 +10,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Template } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
+import { PATH_SEPARATOR } from '../../utils/pathUtils';
 
 interface TreeNode {
   item: TemplateItem;
@@ -96,13 +97,13 @@ function buildTreeFromPaths(items: TemplateItem[]): TreeNode[] {
     if (!node) continue;
 
     // Find parent by checking if path is a child of another path
-    const pathParts = item.path.split('/');
+    const pathParts = item.path.split(PATH_SEPARATOR);
     if (pathParts.length === 1) {
       // Root level item
       root.push(node);
     } else {
       // Find parent
-      const parentPath = pathParts.slice(0, -1).join('/');
+      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
       const parent = nodeMap.get(parentPath);
 
       if (parent) {

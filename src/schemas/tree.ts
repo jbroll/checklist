@@ -35,7 +35,7 @@ export type TemplateItem = {
   id: string;
   name: string;
   type: 'category' | 'item';
-  path: string; // Hierarchical path: "produce/fruits/apples"
+  path: string; // Hierarchical path using \x01 separator (ASCII SOH)
   expanded: boolean; // For category nodes - UI state
   sortOrder: number;
   archived: boolean; // Soft delete flag

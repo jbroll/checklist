@@ -8,6 +8,7 @@ import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
 import * as SessionService from '@/services/sessionService';
+import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
 
@@ -84,8 +85,8 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
           parentPath = selectedEntry.path;
         } else {
           // If selected entry is a template-ref, create at the same level (sibling)
-          const pathParts = selectedEntry.path.split('/');
-          parentPath = pathParts.slice(0, -1).join('/') || undefined;
+          const pathParts = selectedEntry.path.split(PATH_SEPARATOR);
+          parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR) || undefined;
         }
       }
     }

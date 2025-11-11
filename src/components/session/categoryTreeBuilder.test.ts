@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { TemplateItem } from '@/schemas';
+import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { buildCategoryTree } from './categoryTreeBuilder';
 
 const createItem = (
@@ -29,9 +30,9 @@ describe('buildCategoryTree', () => {
   describe('sorting by sortOrder', () => {
     it('should sort items by sortOrder within categories', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'Oranges', 'produce/oranges', 3.0),
-        createItem('2', 'Apples', 'produce/apples', 1.0),
-        createItem('3', 'Bananas', 'produce/bananas', 2.0),
+        createItem('1', 'Oranges', `produce${PATH_SEPARATOR}oranges`, 3.0),
+        createItem('2', 'Apples', `produce${PATH_SEPARATOR}apples`, 1.0),
+        createItem('3', 'Bananas', `produce${PATH_SEPARATOR}bananas`, 2.0),
       ];
 
       const tree = buildCategoryTree(items);
@@ -45,8 +46,8 @@ describe('buildCategoryTree', () => {
 
     it('should sort categories by their sortOrder when provided', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'Milk', 'dairy/milk', 1.0),
-        createItem('2', 'Apple', 'produce/apple', 1.0),
+        createItem('1', 'Milk', `dairy${PATH_SEPARATOR}milk`, 1.0),
+        createItem('2', 'Apple', `produce${PATH_SEPARATOR}apple`, 1.0),
       ];
 
       const allTemplateItems: TemplateItem[] = [
@@ -68,8 +69,8 @@ describe('buildCategoryTree', () => {
 
     it('should fall back to item sortOrder when category sortOrder not available', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'Milk', 'dairy/milk', 2.0),
-        createItem('2', 'Apple', 'produce/apple', 1.0),
+        createItem('1', 'Milk', `dairy${PATH_SEPARATOR}milk`, 2.0),
+        createItem('2', 'Apple', `produce${PATH_SEPARATOR}apple`, 1.0),
       ];
 
       // No category template items provided
@@ -86,9 +87,9 @@ describe('buildCategoryTree', () => {
 
     it('should handle fractional sortOrder values', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'C', 'cat/c', 3.0),
-        createItem('2', 'A', 'cat/a', 1.0),
-        createItem('3', 'B', 'cat/b', 1.5),
+        createItem('1', 'C', `cat${PATH_SEPARATOR}c`, 3.0),
+        createItem('2', 'A', `cat${PATH_SEPARATOR}a`, 1.0),
+        createItem('3', 'B', `cat${PATH_SEPARATOR}b`, 1.5),
       ];
 
       const tree = buildCategoryTree(items);
@@ -102,8 +103,18 @@ describe('buildCategoryTree', () => {
   describe('hierarchical structure', () => {
     it('should build nested category structure', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'Gala', 'produce/fruits/apples/gala', 1.0),
-        createItem('2', 'Fuji', 'produce/fruits/apples/fuji', 2.0),
+        createItem(
+          '1',
+          'Gala',
+          `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples${PATH_SEPARATOR}gala`,
+          1.0,
+        ),
+        createItem(
+          '2',
+          'Fuji',
+          `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples${PATH_SEPARATOR}fuji`,
+          2.0,
+        ),
       ];
 
       const tree = buildCategoryTree(items);
@@ -119,14 +130,14 @@ describe('buildCategoryTree', () => {
 
     it('should sort nested categories by sortOrder', () => {
       const items: TemplateItem[] = [
-        createItem('1', 'Orange', 'produce/citrus/orange', 1.0),
-        createItem('2', 'Apple', 'produce/pome/apple', 1.0),
+        createItem('1', 'Orange', `produce${PATH_SEPARATOR}citrus${PATH_SEPARATOR}orange`, 1.0),
+        createItem('2', 'Apple', `produce${PATH_SEPARATOR}pome${PATH_SEPARATOR}apple`, 1.0),
       ];
 
       const allTemplateItems: TemplateItem[] = [
         createItem('cat-1', 'Produce', 'produce', 1.0, 'category'),
-        createItem('cat-2', 'Citrus', 'produce/citrus', 2.0, 'category'),
-        createItem('cat-3', 'Pome', 'produce/pome', 1.0, 'category'),
+        createItem('cat-2', 'Citrus', `produce${PATH_SEPARATOR}citrus`, 2.0, 'category'),
+        createItem('cat-3', 'Pome', `produce${PATH_SEPARATOR}pome`, 1.0, 'category'),
         ...items,
       ];
 
@@ -155,7 +166,7 @@ describe('buildCategoryTree', () => {
     });
 
     it('should use category name from template when available', () => {
-      const items: TemplateItem[] = [createItem('1', 'Milk', 'dairy/milk', 1.0)];
+      const items: TemplateItem[] = [createItem('1', 'Milk', `dairy${PATH_SEPARATOR}milk`, 1.0)];
 
       const allTemplateItems: TemplateItem[] = [
         createItem('cat-1', 'Fresh Dairy Products', 'dairy', 1.0, 'category'),
@@ -168,7 +179,9 @@ describe('buildCategoryTree', () => {
     });
 
     it('should capitalize inferred category names', () => {
-      const items: TemplateItem[] = [createItem('1', 'Apple', 'produce/apple', 1.0)];
+      const items: TemplateItem[] = [
+        createItem('1', 'Apple', `produce${PATH_SEPARATOR}apple`, 1.0),
+      ];
 
       const tree = buildCategoryTree(items);
 
