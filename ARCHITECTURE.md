@@ -21,7 +21,7 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 2. **Hierarchical Items**: Templates use a category/item tree structure (see `src/schemas/tree.ts:26-49`)
 3. **Path-Based Organization**: Folders and items use path strings for hierarchy (e.g., "stores/wegmans")
 4. **Soft Deletes**: Items marked `archived: true`, never hard deleted
-5. **Jazz CoValues**: Real-time sync, offline-first, end-to-end encrypted
+5. **Jazz CoValues**: Real-time sync, offline-first, encrypted data storage
 
 ## Data Model
 

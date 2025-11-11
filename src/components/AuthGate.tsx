@@ -161,7 +161,7 @@ export function AuthGate() {
 
         <div className="text-center text-sm text-neutral-500">
           <p>Built with Jazz.tools & BetterAuth</p>
-          <p className="mt-1">Real-time sync • Offline-first • End-to-end encrypted</p>
+          <p className="mt-1">Real-time sync • Offline-first • Encrypted storage</p>
         </div>
       </div>
     </div>
