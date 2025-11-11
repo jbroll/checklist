@@ -147,7 +147,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     const count = selectedIds.size;
     const confirmed = await showConfirm({
       title: 'Delete Selected Items',
-      message: `Delete ${count} selected item${count > 1 ? 's' : ''}?`,
+      message: `${count} item${count > 1 ? 's' : ''}`,
       confirmText: 'Delete',
       variant: 'danger',
     });

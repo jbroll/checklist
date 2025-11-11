@@ -86,7 +86,7 @@ export function TemplateItemView({
     if (onDelete) {
       const confirmed = await showConfirm({
         title: 'Delete Item',
-        message: `Delete "${item.name}"?`,
+        message: item.name,
         confirmText: 'Delete',
         variant: 'danger',
       });

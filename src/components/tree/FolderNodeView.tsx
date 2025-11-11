@@ -128,7 +128,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       if (onArchive) {
         const confirmed = await showConfirm({
           title: 'Archive Item',
-          message: `Archive "${name}"?`,
+          message: name,
           confirmText: 'Archive',
           variant: 'danger',
         });
@@ -145,7 +145,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       if (onArchive) {
         const confirmed = await showConfirm({
           title: 'Delete Item',
-          message: `Delete "${name}"?`,
+          message: name,
           confirmText: 'Delete',
           variant: 'danger',
         });
@@ -158,7 +158,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       if (onDelete) {
         const confirmed = await showConfirm({
           title: 'Permanent Delete',
-          message: `Permanently delete "${name}"?`,
+          message: name,
           confirmText: 'Delete Permanently',
           variant: 'danger',
         });

@@ -51,7 +51,7 @@ export const SessionRowView = memo(function SessionRowView({
       if (onArchive) {
         const confirmed = await showConfirm({
           title: 'Archive Session',
-          message: `Archive session "${displayName}"?`,
+          message: displayName,
           confirmText: 'Archive',
           variant: 'danger',
         });
@@ -69,7 +69,7 @@ export const SessionRowView = memo(function SessionRowView({
       if (onArchive) {
         const confirmed = await showConfirm({
           title: 'Delete Session',
-          message: `Delete "${displayName}"?`,
+          message: displayName,
           confirmText: 'Delete',
           variant: 'danger',
         });
@@ -82,7 +82,7 @@ export const SessionRowView = memo(function SessionRowView({
       if (onDelete) {
         const confirmed = await showConfirm({
           title: 'Permanent Delete',
-          message: `Permanently delete "${displayName}"?`,
+          message: displayName,
           confirmText: 'Delete Permanently',
           variant: 'danger',
         });
