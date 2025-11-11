@@ -6,7 +6,7 @@ A real-time collaborative grocery list app built with Jazz.tools and BetterAuth.
 
 - Real-time sync across all devices
 - Offline-first (works without internet)
-- End-to-end encrypted
+- Encrypted data storage and sync (Jazz.tools)
 - Multi-provider OAuth (Google + Apple)
 - Hierarchical template organization
 - Session-based shopping tracking
@@ -65,7 +65,7 @@ VITE_JAZZ_PEER=wss://cloud.jazz.tools
 **Jazz.tools** provides:
 - Real-time sync
 - Offline support
-- End-to-end encryption
+- Encrypted data storage
 - Conflict resolution
 
 **BetterAuth** provides:
