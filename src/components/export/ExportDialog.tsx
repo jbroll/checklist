@@ -66,7 +66,7 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
 
       // Close dialog
       onOpenChange(false);
-    } catch (error) {
+    } catch (_error) {
       await showAlert({
         title: 'Export Failed',
         message: 'Export failed.',

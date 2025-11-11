@@ -1,7 +1,9 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
-import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
+import { buildItemTree, type ItemTreeNode } from '@/utils/itemTreeHelpers';
+import type { CategoryNode } from './categoryTreeBuilder';
+import { SessionItemRow } from './SessionItemRow';
 import { SessionZone } from './SessionZone';
 
 interface AvailableZoneRendererProps {
@@ -34,23 +36,65 @@ export function AvailableZoneRenderer({
   onBatchToggle,
 }: AvailableZoneRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
-  const availableCategories = buildCategoryTree(availableItems, template.items);
 
-  const renderCategoryTree = (
-    categories: CategoryNode[],
-    zone: 'available',
-    keyPrefix: string,
-  ): React.ReactNode => {
-    return categories.map((category) => {
-      const catKey = `${keyPrefix}-${category.path}`;
-      const hasChildren = category.children.length > 0;
+  // Build tree from ALL template items, not just availableItems
+  // availableItems only contains leaf items (type='item'), missing categories
+  const allItems = template.items || [];
+  const activeItems = allItems.filter((item) => item && !item.archived);
+  const itemTree = buildItemTree(activeItems);
 
-      return (
-        <div key={category.path} className="flex flex-col">
-          <SessionZone
-            title={category.name}
+  // Helper to collect all items from a tree node (including descendants)
+  const collectAllItems = (node: ItemTreeNode): TemplateItem[] => {
+    const items: TemplateItem[] = [];
+    if (node.item.type === 'item') {
+      items.push(node.item);
+    }
+    for (const child of node.children) {
+      items.push(...collectAllItems(child));
+    }
+    return items;
+  };
+
+  // Helper to convert ItemTreeNode to CategoryNode structure for batch operations
+  const toCategoryNode = (node: ItemTreeNode): CategoryNode => {
+    const allChildItems = node.children.flatMap(collectAllItems);
+    return {
+      name: node.item.name,
+      path: node.item.path,
+      items: allChildItems,
+      children: node.children.map(toCategoryNode),
+      depth: 0,
+      sortOrder: node.item.sortOrder,
+    };
+  };
+
+  const renderItemTree = (nodes: ItemTreeNode[], zone: 'available'): React.ReactNode => {
+    return nodes.map((node) => {
+      const item = node.item;
+      const hasChildren = node.children.length > 0;
+
+      // Leaf items - render as SessionItemRow
+      if (item.type === 'item') {
+        return (
+          <SessionItemRow
+            key={item.id}
+            item={item}
+            state={session.itemStates?.[item.id] || null}
             zone={zone}
-            items={category.items}
+            onToggleSelected={onToggleSelected}
+            onToggleChecked={onToggleChecked}
+          />
+        );
+      }
+
+      // Categories - render as SessionZone with children
+      const catKey = `available-${item.path}`;
+      return (
+        <div key={item.path} className="flex flex-col">
+          <SessionZone
+            title={item.name}
+            zone={zone}
+            items={[]}
             itemStates={session?.itemStates || {}}
             expanded={categoryExpanded[catKey] ?? true}
             onToggleExpand={() => onToggleCategoryExpanded(catKey)}
@@ -59,13 +103,11 @@ export function AvailableZoneRenderer({
             onBatchSelectAll={onBatchSelectAll}
             onBatchDeselectAll={onBatchDeselectAll}
             onBatchToggle={onBatchToggle}
-            count={category.items.length}
-            category={category}
+            count={node.children.length}
+            category={toCategoryNode(node)}
           >
             {hasChildren && (
-              <div className="flex flex-col pl-4">
-                {renderCategoryTree(category.children, zone, keyPrefix)}
-              </div>
+              <div className="flex flex-col pl-4">{renderItemTree(node.children, zone)}</div>
             )}
           </SessionZone>
         </div>
@@ -73,18 +115,21 @@ export function AvailableZoneRenderer({
     });
   };
 
-  // If there are no categories, render items directly in the zone
-  // Otherwise render the category tree
-  const hasCategories = availableCategories.length > 0;
+  // Create top-level category node for batch operations
+  const topLevelCategory = {
+    name: 'List',
+    path: 'list',
+    items: availableItems,
+    children: itemTree.map(toCategoryNode),
+    depth: 0,
+  };
 
-  // For top-level zone with categories, we still want to show batch selection
-  // based on all items, not just direct children
   return (
     <SessionZone
       title="List"
       icon={Package}
       zone="available"
-      items={hasCategories ? [] : availableItems}
+      items={[]}
       itemStates={session.itemStates || {}}
       expanded={zoneExpanded}
       onToggleExpand={onToggleZoneExpanded}
@@ -96,17 +141,9 @@ export function AvailableZoneRenderer({
       count={availableItems.length}
       showHeading={showZoneHeadings}
       isTopLevelZone={true}
-      category={
-        hasCategories
-          ? { name: 'List', path: 'list', items: [], children: availableCategories, depth: 0 }
-          : null
-      }
+      category={topLevelCategory}
     >
-      {hasCategories && (
-        <div className="flex flex-col">
-          {renderCategoryTree(availableCategories, 'available', 'available')}
-        </div>
-      )}
+      <div className="flex flex-col">{renderItemTree(itemTree, 'available')}</div>
     </SessionZone>
   );
 }

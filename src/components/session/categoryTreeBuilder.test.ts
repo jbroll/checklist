@@ -162,7 +162,14 @@ describe('buildCategoryTree', () => {
       ];
 
       const tree = buildCategoryTree(items);
-      expect(tree).toEqual([]);
+      // Root items are now returned as pseudo-category nodes
+      expect(tree).toHaveLength(2);
+      expect(tree[0].name).toBe('Item1');
+      expect(tree[0].items).toEqual([items[0]]);
+      expect(tree[0].children).toEqual([]);
+      expect(tree[1].name).toBe('Item2');
+      expect(tree[1].items).toEqual([items[1]]);
+      expect(tree[1].children).toEqual([]);
     });
 
     it('should use category name from template when available', () => {

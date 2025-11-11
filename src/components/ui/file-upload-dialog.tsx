@@ -1,7 +1,6 @@
 import { Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { useDialog } from '@/lib/dialog-context';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useDialog } from '@/lib/dialog-context';
 
 type FileType = 'json' | 'txt' | 'csv';
 
@@ -118,7 +118,7 @@ export function FileUploadDialog<TResult>({
     try {
       const uploadResult = await onUpload(selectedFile, fileType);
       setResult(uploadResult);
-    } catch (error) {
+    } catch (_error) {
       await showAlert({
         title: 'Upload Failed',
         message: 'Upload failed.',

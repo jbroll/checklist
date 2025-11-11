@@ -3,8 +3,8 @@ import { XCircle } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { AuthGate } from './components/AuthGate';
 import { LoadingScreen } from './components/ui/loading';
-import { JazzProvider } from './lib/jazz';
 import { DialogProvider } from './lib/dialog-context';
+import { JazzProvider } from './lib/jazz';
 
 // Lazy load TestPage only in development to avoid bundling it in production
 const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
