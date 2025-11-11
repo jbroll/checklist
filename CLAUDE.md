@@ -11,7 +11,7 @@ A collaborative list application built with Jazz.tools and BetterAuth.
 - Session-based shopping tracking
 - Real-time sync across devices
 - Offline-first with automatic sync
-- End-to-end encryption
+- Encrypted data storage and sync (Jazz.tools)
 - Multi-provider OAuth (Google + Apple)
 
 ## Technology Stack
@@ -92,7 +92,7 @@ bubblelist/
 
 ## Jazz.tools Integration
 
-Jazz is a distributed database that syncs across devices in real-time with offline support and end-to-end encryption.
+Jazz is a distributed database that syncs across devices in real-time with offline support and encrypted data storage.
 
 **Key Concepts**:
 - **CoValues**: Collaborative values (CoMap, CoList, etc.) that sync automatically
