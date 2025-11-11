@@ -112,6 +112,30 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     }
   };
 
+  const handleBatchSelectAll = (itemIds: string[]) => {
+    console.log('[handleBatchSelectAll] Called with:', itemIds);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
+  };
+
+  const handleBatchDeselectAll = (itemIds: string[]) => {
+    console.log('[handleBatchDeselectAll] Called with:', itemIds);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
+  };
+
+  const handleBatchToggle = (itemIds: string[]) => {
+    console.log('[handleBatchToggle] Called with:', itemIds);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
+  };
+
   const renderSelectedAndChecked = () => {
     if (!session) return null;
 
@@ -147,6 +171,9 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
           onToggleCategoryExpanded={handleToggleCategoryExpanded}
           onToggleSelected={handleToggleSelected}
           onToggleChecked={handleToggleChecked}
+          onBatchSelectAll={handleBatchSelectAll}
+          onBatchDeselectAll={handleBatchDeselectAll}
+          onBatchToggle={handleBatchToggle}
         />
       );
     }
@@ -205,6 +232,9 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
               onToggleCategoryExpanded={handleToggleCategoryExpanded}
               onToggleSelected={handleToggleSelected}
               onToggleChecked={handleToggleChecked}
+              onBatchSelectAll={handleBatchSelectAll}
+              onBatchDeselectAll={handleBatchDeselectAll}
+              onBatchToggle={handleBatchToggle}
             />
           </div>
         </div>

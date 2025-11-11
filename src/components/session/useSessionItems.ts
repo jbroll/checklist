@@ -26,11 +26,14 @@ export function useSessionItems({ template, session }: UseSessionItemsParams) {
 
     active.forEach((item) => {
       const state = session.itemStates?.[item.id];
-      if (!state || (!state.selected && !state.checked)) {
-        available.push(item);
-      } else if (state.checked) {
+
+      // Always show all items in available zone
+      available.push(item);
+
+      // Also add to selected/checked zones as appropriate
+      if (state?.checked) {
         checked.push(item);
-      } else if (state.selected) {
+      } else if (state?.selected) {
         selected.push(item);
       }
     });

@@ -18,6 +18,9 @@ interface HierarchyInZonesRendererProps {
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
+  onBatchSelectAll?: (itemIds: string[]) => void;
+  onBatchDeselectAll?: (itemIds: string[]) => void;
+  onBatchToggle?: (itemIds: string[]) => void;
 }
 
 export function HierarchyInZonesRenderer({
@@ -31,6 +34,9 @@ export function HierarchyInZonesRenderer({
   onToggleCategoryExpanded,
   onToggleSelected,
   onToggleChecked,
+  onBatchSelectAll,
+  onBatchDeselectAll,
+  onBatchToggle,
 }: HierarchyInZonesRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -54,7 +60,11 @@ export function HierarchyInZonesRenderer({
             onToggleExpand={() => onToggleCategoryExpanded(catKey)}
             onToggleSelected={onToggleSelected}
             onToggleChecked={onToggleChecked}
+            onBatchSelectAll={onBatchSelectAll}
+            onBatchDeselectAll={onBatchDeselectAll}
+            onBatchToggle={onBatchToggle}
             count={category.items.length}
+            category={category}
           >
             {hasChildren && (
               <div className="flex flex-col gap-2 pl-4">
