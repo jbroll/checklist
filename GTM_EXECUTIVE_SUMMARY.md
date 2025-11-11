@@ -195,7 +195,6 @@
 
 ### Week -2 (Nov 11-17)
 - [x] Code review complete
-- [x] Critical analysis of claims
 - [ ] Security hardening
 - [ ] Landing page design
 
