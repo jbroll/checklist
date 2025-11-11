@@ -2,472 +2,270 @@
 
 **Status**: Planning Phase
 **Date**: 2025-11-11
-**Goal**: Migrate from path-based flat structure to true hierarchical CoValues with per-level permissions
+**Goal**: Migrate from path-based flat structure to true hierarchical CoValues with granular permissions
 
 ---
 
-## Executive Summary
+## Overview
 
-This plan outlines the migration from the current path-based directory system to a fully hierarchical structure where:
+This plan migrates from the current path-based directory system to a fully hierarchical structure where:
 
 1. **Folders are CoValues** at each level with their own Jazz groups for permissions
-2. **Templates are standalone CoValues** with a list of session references
-3. **Sessions have back-references** to templates for independent sharing
-4. **JSON format compatibility** is maintained with current import/export structure
+2. **Templates extend folders** with polymorphic children (SessionStorage vs child folders)
+3. **Sessions are plain JSON** stored in SessionStorage CoValue (not independently shareable)
+4. **Items are plain JSON** with stable IDs (not Jazz CoValue IDs)
+5. **JSON export format** remains compatible with current structure
 
 **Key Benefits**:
-- Granular permissions management at any folder level
-- Efficient parent-child navigation without path parsing
-- Templates and sessions can be shared independently
-- Simpler move/copy operations without path recalculation
-- Better alignment with Jazz's permission model
+- Granular permissions at any folder level
+- O(1) move/rename operations (no path recalculation)
+- Atomic template+sessions loading for simple re-renders
+- Clean separation of concerns (structure vs data vs state)
 
 ---
 
-## Current System Analysis
+## Current System Limitations
 
-### Current Structure
 ```
 ListsRoot
-├── directory: DirectoryEntry[]        # Flat array with paths
-└── templates: CoList<Template>        # Flat list of templates
+├── directory: DirectoryEntry[]     // Flat array with paths (strings)
+└── templates: CoList<Template>     // Flat list, O(n) lookup
 ```
 
-### Key Limitations
-1. **No true hierarchy**: Paths simulate nesting
-2. **No folder CoValues**: Can't attach permissions to folder levels
-3. **Inefficient operations**: Move/rename requires path updates
-4. **Monolithic permissions**: All-or-nothing at root level
-5. **Template lookup**: O(n) search through flat list
+**Problems**:
+- No true hierarchy (paths simulate nesting via `\x01` separator)
+- Move/rename requires updating all descendant paths (O(n))
+- No granular permissions (all-or-nothing at root)
+- Template lookup by ID requires searching entire list
+- Path conflicts require name munging
 
 ---
 
-## New Hierarchical Data Structure
+## New Hierarchical Structure
 
-### 1. Root Structure
+### Core Schemas
 
 ```typescript
-export const ListsRoot = co.map({
-  // Root-level folders (each is a CoValue with own group)
-  folders: co.list(Folder),
+// Root of user's data
+ListsRoot {
+  folders: CoList<Folder>,     // Root-level folders only
+  owner: Account,
+}
 
-  // Metadata
-  owner: () => Account,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
+// Organizational folder (container)
+Folder {
+  name: string,
+  type: 'organizational',
+  children: CoList<Folder>,    // Nested folders
+  parent?: Folder,             // Back-reference for breadcrumbs
+  expanded: boolean,
+  archived: boolean,
+  owner: Account,
+  createdAt: Date,
+  updatedAt: Date,
+}
+
+// Template folder (leaf in folder tree, has template+sessions)
+Template extends Folder {
+  type: 'template',
+  children: SessionStorage,    // Polymorphic! Not folders, but sessions
+  items: TemplateItem[],       // Plain JSON array (nested hierarchy)
+  showZoneHeadings: boolean,
+}
+
+// Session storage (CoValue for atomic loading)
+SessionStorage {
+  sessions: Session[],         // Plain JSON array
+}
+
+// Template item (plain JSON, not CoValue)
+TemplateItem {
+  id: string,                  // Stable nanoid (exported, not Jazz CoValue ID)
+  name: string,
+  type: 'category' | 'item',
+  children: TemplateItem[],    // Plain JSON nested
+  sortOrder: number,
+  expanded: boolean,
+  defaultQuantity?: string,
+  color?: string,
+  archived: boolean,
+}
+
+// Session (plain JSON, not CoValue)
+Session {
+  itemStates: Record<string, ItemState>,  // Plain JSON Record (itemId → state)
+  viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat',
+  categoryExpanded: Record<string, boolean>,
+  archived: boolean,
+  createdAt: Date,
+  lastActivityAt: Date,        // This IS updatedAt
+}
+
+// Item state (plain JSON, not CoValue)
+ItemState {
+  selected: boolean,
+  checked: boolean,
+  selectedAt?: Date,
+  checkedAt?: Date,
+}
 ```
-
-**Changes from Current**:
-- ❌ Remove: `directory` (flat array)
-- ❌ Remove: `templates` (flat list)
-- ✅ Add: `folders` (CoList of Folder CoValues)
 
 ---
 
-### 2. Folder CoValue
+## Key Design Decisions
 
-Each folder is a CoValue with its own Jazz group for granular permissions.
+### 1. Polymorphic Children Field
+
+The `children` field is **type-dependent**:
+- **Organizational folder**: `children: CoList<Folder>` (nested folders)
+- **Template folder**: `children: SessionStorage` (sessions)
+
+**Why?**
+- Elegant: single field for "child content"
+- Atomic loading: loading template = loading its sessions
+- Simple re-render: one subscription point
+- Template folders are **leaves** in folder tree (no child folders)
+- Sessions are **conceptual children** (via SessionStorage, not folder hierarchy)
+
+### 2. Template Extends Folder
 
 ```typescript
-export const Folder = co.map({
-  // Identity
-  name: z.string(),
-  description: z.optional(z.string()),
-
-  // Type discrimination
-  type: z.enum(['organizational', 'template']),
-
-  // Hierarchical relationships
-  children: co.list(Folder),           // Nested folders (CoList)
-  parent: co.optional(Folder),         // Back-reference for navigation
-
-  // Template data (only if type === 'template')
-  template: co.optional(Template),     // The actual template CoValue
-
-  // UI state
-  expanded: z.boolean(),
-
-  // Metadata
-  archived: z.boolean(),
-  owner: () => Account,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-
-  // Tags/categorization (future)
-  tags: z.optional(z.array(z.string())),
-});
+Template extends Folder {
+  type: 'template',            // Override discriminant
+  children: SessionStorage,    // Override type
+  items: TemplateItem[],       // Add fields
+  showZoneHeadings: boolean,
+}
 ```
 
-**Key Design Decisions**:
+**Why?**
+- DRY: reuse folder fields (name, parent, expanded, etc.)
+- Type system: discriminated union with `type` field
+- Single type hierarchy for navigation
 
-1. **Discriminated Union**: `type` determines if folder contains a template
-   - `'organizational'`: Container folder (has children, no template)
-   - `'template'`: Leaf folder (has template, may have children for organization)
+**Note**: If Jazz `co.map()` doesn't support inheritance, use discriminated union with conditional types.
 
-2. **Bidirectional References**:
-   - `children`: Forward references to child folders
-   - `parent`: Back reference for upward navigation
+### 3. Items Are Plain JSON (Not CoValues)
 
-3. **Template Embedding**: Template is a property of folder (1:1 relationship)
-   - Each template folder owns exactly one template
-   - Template can't exist without its folder
+**Why?**
+- **Granularity**: Too many CoValues (hundreds per template)
+- **Coupling**: Items are tightly bound to template structure
+- **Performance**: Sync overhead outweighs benefits
+- **Simplicity**: Current approach works well
 
-4. **Own Jazz Group**: Each Folder is a CoValue with its own group
-   - Permissions can be set at any folder level
-   - Shared folder automatically includes all descendants
+Items have **stable nanoid IDs** (not Jazz CoValue IDs):
+- IDs are part of the data (stored, exported, imported)
+- Session states reference these stable IDs
+- IDs survive export/import without remapping
 
-5. **No Paths**: Hierarchy is explicit through parent-child references
-   - Paths can be computed on-demand for display
-   - No path synchronization needed on moves/renames
+### 4. Sessions Are Plain JSON in SessionStorage
 
----
+**Why?**
+- **Not independently shareable**: Sessions are bound to template
+- **No back-references needed**: Navigation is always folder → template → sessions
+- **Atomic loading**: SessionStorage is one CoValue, loads all sessions together
+- **Simpler**: No CoValue management per session
 
-### 3. Template CoValue
+SessionStorage is a **separate CoValue** (like inode block list):
+- Sessions sync independently from template structure
+- Can load sessions on-demand (if needed)
+- Clean separation of concerns
 
-The actual template data structure with items and session references.
+### 5. No Session Names (Just createdAt)
 
-```typescript
-export const Template = co.map({
-  // Items (hierarchical structure)
-  items: co.list(TemplateItem),        // CoList of items
+Sessions don't have custom names:
+- Display formatted `createdAt` date
+- One less field to manage
+- Current approach works fine
 
-  // Session management
-  sessions: co.list(SessionRef),       // CoList of session references
-  currentSessionId: z.optional(z.string()),
+### 6. CurrentSessionId Is Local UI State
 
-  // Settings
-  showZoneHeadings: z.boolean(),
+**Critical**: `currentSessionId` is **NOT stored in Jazz**:
+- Stored in React local state only
+- Each user tracks their own active session
+- Avoids conflicts when multiple users view same template
 
-  // Metadata
-  owner: () => Account,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-```
+### 7. No CoValue IDs in Exports
 
-**Changes from Current**:
-- ❌ Remove: `name` (now in Folder)
-- ✅ Change: `items` from plain array to `co.list(TemplateItem)`
-- ✅ Change: `sessions` from `co.list(Session)` to `co.list(SessionRef)`
+Exports are **portable** (not Jazz-specific):
+- Use stable nanoid IDs for items
+- Don't export Jazz CoValue IDs
+- Exports are for backup/restore/interchange
 
-**Key Design Decisions**:
+### 8. Computed Paths
 
-1. **Items as CoList**: Enables better sync and reactivity
-   - Currently plain JSON array
-   - CoList allows individual item updates to sync efficiently
-
-2. **Session References**: Template holds references, not full sessions
-   - Sessions are independent CoValues
-   - Can be shared separately from template
-   - Template maintains list of session IDs/refs
-
-3. **No Name**: Name lives in parent Folder
-   - Template is data, Folder is container/metadata
-   - One source of truth for naming
-
----
-
-### 4. TemplateItem CoValue
-
-Individual items within a template, now as CoValues instead of plain JSON.
+Paths are **computed on-demand** from hierarchy:
 
 ```typescript
-export const TemplateItem = co.map({
-  // Identity
-  name: z.string(),
-
-  // Type discrimination
-  type: z.enum(['category', 'item']),
-
-  // Hierarchical relationships
-  children: co.list(TemplateItem),     // Nested items
-  parent: co.optional(TemplateItem),   // Back-reference
-
-  // Item properties (only for type === 'item')
-  defaultQuantity: z.optional(z.string()),
-  color: z.optional(z.string()),
-
-  // Ordering & UI
-  sortOrder: z.number(),
-  expanded: z.boolean(),               // For categories
-
-  // Metadata
-  archived: z.boolean(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-```
-
-**Changes from Current**:
-- ❌ Remove: `path` (replaced by parent-child refs)
-- ❌ Remove: `id` (Jazz CoValue ID is sufficient)
-- ✅ Add: `children` (co.list for nested items)
-- ✅ Add: `parent` (back-reference)
-- ✅ Upgrade: From plain JSON to CoValue
-
-**Key Design Decisions**:
-
-1. **CoValue Instead of JSON**: Enables individual item sync
-   - Currently entire items array syncs as one unit
-   - CoValue items sync individually
-
-2. **Explicit Hierarchy**: Parent-child references replace paths
-   - Root items have `parent: undefined`
-   - Categories contain `children` list
-
-3. **No Separate ID**: Jazz CoValue ID serves as unique identifier
-   - Session states reference by CoValue ID
-   - Import/export uses CoValue IDs
-
-4. **Category vs Item**: Same schema, discriminated by `type`
-   - Categories have children
-   - Items have defaultQuantity and color
-
----
-
-### 5. Session CoValue
-
-Shopping session with back-reference to template.
-
-```typescript
-export const Session = co.map({
-  // Identity & back-reference
-  name: z.string(),                           // Custom name (not auto-generated date)
-  template: Template,                         // Back-reference to parent template
-  templateFolder: Folder,                     // Back-reference to folder (for sharing context)
-
-  // Item states (keyed by TemplateItem CoValue ID)
-  itemStates: co.map({
-    // Dynamic keys: CoValue ID → ItemState CoValue
-  }),
-
-  // View state
-  viewMode: z.enum(['zone-in-hierarchy', 'hierarchy-in-zones', 'flat']),
-  categoryExpanded: z.record(z.string(), z.boolean()),
-
-  // Computed counts (can be removed if computed on-demand)
-  selectedCount: z.number(),
-  checkedCount: z.number(),
-  remainingCount: z.number(),
-
-  // Metadata
-  archived: z.boolean(),
-  owner: () => Account,
-  createdAt: z.date(),
-  lastActivityAt: z.date(),
-});
-```
-
-**Changes from Current**:
-- ✅ Add: `name` (custom session naming)
-- ✅ Add: `template` (back-reference)
-- ✅ Add: `templateFolder` (back-reference for context)
-- ✅ Change: `itemStates` from Record to co.map
-
-**Key Design Decisions**:
-
-1. **Back-References**: Session knows its template and folder
-   - Enables independent session sharing
-   - User receives session → can navigate to template
-   - Provides context for shared sessions
-
-2. **Named Sessions**: Custom names instead of auto-generated dates
-   - More meaningful for sharing ("Weekly Shopping")
-   - Date still available in `createdAt`
-
-3. **ItemStates as CoMap**: Better sync granularity
-   - Currently plain Record
-   - CoMap allows per-item state updates to sync
-
-4. **Stable Item IDs**: References TemplateItem CoValue IDs
-   - IDs don't change on import (if importing with same IDs)
-   - No ID remapping needed
-
----
-
-### 6. SessionRef Schema
-
-Lightweight reference from Template to Session.
-
-```typescript
-export const SessionRef = co.map({
-  session: Session,                    // Reference to actual Session CoValue
-  isPinned: z.boolean(),               // Pin important sessions
-  createdAt: z.date(),
-});
-```
-
-**Why Separate Schema?**
-
-1. **Metadata**: Attach data to the reference (pinning, ordering)
-2. **Indirection**: Template can list sessions without loading them all
-3. **Permissions**: Can grant/revoke access by managing references
-
----
-
-### 7. ItemState CoValue
-
-Individual item state within a session, now as CoValue.
-
-```typescript
-export const ItemState = co.map({
-  // State flags
-  selected: z.boolean(),               // Left checkbox (in cart)
-  checked: z.boolean(),                // Right checkbox (purchased)
-
-  // Timestamps
-  selectedAt: z.optional(z.date()),
-  checkedAt: z.optional(z.date()),
-
-  // Custom modifications (future)
-  customQuantity: z.optional(z.string()),   // Override template default
-  notes: z.optional(z.string()),            // Per-session notes
-});
-```
-
-**Changes from Current**:
-- ✅ Upgrade: From plain JSON to CoValue
-- ✅ Add: `customQuantity` (per-session overrides)
-- ✅ Add: `notes` (per-session notes)
-
-**Key Design Decisions**:
-
-1. **CoValue**: Enables atomic updates per item state
-   - Currently entire itemStates Record syncs together
-   - CoValue allows individual state changes to sync
-
-2. **Extensible**: Room for session-specific customizations
-   - Quantity overrides
-   - Notes per item per session
-
----
-
-## Computed vs Stored Data
-
-### Paths (Computed)
-
-**Not Stored**: Paths are computed on-demand from hierarchy
-
-```typescript
-// Pseudo-code for path computation
 function getPath(folder: Folder): string[] {
   const segments: string[] = [];
   let current = folder;
-
   while (current) {
     segments.unshift(current.name);
     current = current.parent;
   }
-
   return segments;
 }
-
-// Display as: "Grocery Stores / Wegmans / Weekly"
-const displayPath = getPath(folder).join(' / ');
 ```
 
 **Benefits**:
 - No synchronization needed
-- Rename/move operations are simple (update parent ref)
-- No path conflicts to manage
+- Rename/move doesn't update paths (they don't exist!)
+- Always consistent
 
-### Counts (Computed)
+### 9. Parent Back-References
 
-**Consider Removing**: `selectedCount`, `checkedCount`, `remainingCount`
+Folders have `parent?: Folder` back-reference:
+- Enables upward navigation (breadcrumbs)
+- Simplifies path computation
+- Must maintain on move operations
 
-These can be computed on-demand from `itemStates`:
+---
 
-```typescript
-function getCounts(session: Session) {
-  let selected = 0, checked = 0;
+## CoValue Boundaries
 
-  for (const state of session.itemStates.values()) {
-    if (state.selected) selected++;
-    if (state.checked) checked++;
-  }
+**CoValues** (sync units with Jazz groups):
+1. **Folder** (organizational folders)
+2. **Template** (extends Folder, template folders)
+3. **SessionStorage** (one per template)
 
-  return {
-    selectedCount: selected,
-    checkedCount: checked,
-    remainingCount: selected - checked,
-  };
-}
-```
+**Plain JSON** (syncs as part of parent CoValue):
+1. **TemplateItem** (array in Template)
+2. **Session** (array in SessionStorage)
+3. **ItemState** (Record in Session)
 
-**Trade-off**: CPU vs storage/sync overhead
-- Storing: Faster reads, must update on every state change
-- Computing: Slower reads (O(n)), always accurate
-
-**Recommendation**: Compute on-demand (current sync approach is error-prone)
+This minimizes CoValue overhead while maintaining necessary sync granularity.
 
 ---
 
 ## Permissions Model
 
-### Jazz Group per Folder
+Each **Folder** (including Template) is a CoValue with its own Jazz group:
 
-Each Folder CoValue has its own Jazz group, enabling:
-
-1. **Granular Sharing**: Share any folder independently
+1. **Granular sharing**: Share any folder independently
 2. **Inheritance**: Sharing folder includes all descendants
-3. **Role-Based Access**: Different permissions per folder
-   - Admin: Can modify, delete, share
-   - Write: Can modify items/sessions
-   - Read: Can view only
+3. **Role-based access**: admin/writer/reader (Jazz built-in)
 
-### Sharing Scenarios
-
-#### Scenario 1: Share Entire Folder Tree
+**Example**:
 ```typescript
-// Share "Grocery Stores" folder with all templates
+// Share "Grocery Stores" folder → includes all nested templates
 await groceryStoresFolder.addMember(otherUser, 'reader');
-// → otherUser can see all nested folders and templates
+
+// Share single "Wegmans" template → just that template
+await wegmansTemplate.addMember(otherUser, 'writer');
 ```
 
-#### Scenario 2: Share Single Template
-```typescript
-// Share "Wegmans Weekly" template only
-await wegmansWeeklyFolder.addMember(otherUser, 'reader');
-// → otherUser sees just this template, not siblings
-```
-
-#### Scenario 3: Share Session Independently
-```typescript
-// Share "2024-11-11 Shopping" session
-await session.addMember(otherUser, 'writer');
-// → otherUser can check off items
-// → Back-reference lets them navigate to template (if they have access)
-```
-
-#### Scenario 4: Collaborative Template
-```typescript
-// Multiple users editing same template
-await templateFolder.addMember(alice, 'writer');
-await templateFolder.addMember(bob, 'writer');
-// → Alice and Bob can both modify items
-// → Changes sync in real-time
-```
-
-### Permission Levels (Jazz Built-in)
-
-Jazz supports these permission levels:
-- `admin`: Full control (modify, delete, share)
-- `writer`: Can modify content
-- `reader`: Read-only access
+Sessions are **not independently shareable** (they're part of template's SessionStorage).
 
 ---
 
-## JSON Import/Export Compatibility
+## JSON Export Format
 
-### Export Format (Unchanged)
-
-The JSON export format remains the same:
+The JSON format **remains unchanged** (backwards compatible):
 
 ```json
 {
   "version": "2.0",
-  "exportDate": "2025-11-11T12:00:00.000Z",
   "folders": [
     {
       "name": "Grocery Stores",
@@ -478,10 +276,12 @@ The JSON export format remains the same:
           "type": "template",
           "items": [
             {
+              "id": "item_abc123",
               "name": "Produce",
               "type": "category",
               "children": [
                 {
+                  "id": "item_def456",
                   "name": "Apples",
                   "type": "item",
                   "defaultQuantity": "5 lbs",
@@ -489,24 +289,24 @@ The JSON export format remains the same:
                   "sortOrder": 0
                 }
               ],
-              "sortOrder": 0,
-              "color": "#00ff00"
+              "sortOrder": 0
             }
           ],
           "sessions": [
             {
-              "name": "Weekly Shopping",
               "viewMode": "hierarchy-in-zones",
               "itemStates": {
-                "co_abc123": {
+                "item_def456": {
                   "selected": true,
-                  "checked": false
+                  "checked": false,
+                  "selectedAt": "2024-11-01T10:00:00.000Z"
                 }
               },
-              "createdAt": "2024-11-01T10:00:00.000Z"
+              "archived": false,
+              "createdAt": "2024-11-01T10:00:00.000Z",
+              "lastActivityAt": "2024-11-01T11:00:00.000Z"
             }
-          ],
-          "currentSessionId": "co_session_xyz"
+          ]
         }
       ]
     }
@@ -515,103 +315,41 @@ The JSON export format remains the same:
 ```
 
 **Key Points**:
+- Hierarchical structure (nested `folders` array)
+- Items use stable IDs (`id` field, not Jazz CoValue IDs)
+- Session states reference item IDs
+- No paths stored (hierarchy is explicit)
+- No Jazz-specific data (portable)
 
-1. **Hierarchical Structure**: Nested folders with `folders` array
-2. **Item Hierarchy**: Nested items with `children` array
-3. **CoValue IDs**: Export includes CoValue IDs for item states
-4. **Type Discrimination**: `organizational` vs `template` folders
+### Import/Export Process
 
-### Import Mapping
+**Export**: Hierarchical → JSON
+1. Walk folder tree recursively
+2. For each template, export items with nested children
+3. Export sessions with itemStates (using stable item IDs)
+4. No Jazz CoValue IDs included
 
-```
-JSON Folder
-  ↓
-Folder CoValue (with group)
-  ├─ children → nested Folder CoValues
-  └─ template → Template CoValue
-       ├─ items → TemplateItem CoValues (with hierarchy)
-       └─ sessions → Session CoValues
-            └─ itemStates → ItemState CoValues (keyed by TemplateItem ID)
-```
-
-**Import Process**:
-
-1. **Parse JSON**: Validate structure and version
-2. **Create Folder Hierarchy**: Recursively create Folder CoValues
-3. **Create Template Items**: Build TemplateItem tree with parent-child refs
-4. **Map Session States**: Use exported CoValue IDs (or generate new ones)
-5. **Create Sessions**: Build Session CoValues with back-references
-6. **Link Everything**: Connect all references (parent, template, session)
-
-**ID Handling**:
-
-- **Option A** (Preserve IDs): If JSON includes CoValue IDs, reuse them
-  - Enables cross-device imports without session state remapping
-  - Requires ID collision detection
-
-- **Option B** (Generate New IDs): Always create new CoValue IDs
-  - Simpler, no collisions
-  - Requires session state remapping (old ID → new ID)
-
-**Recommendation**: Option A for better user experience
+**Import**: JSON → Hierarchical
+1. Parse and validate JSON structure
+2. Create Folder CoValues recursively
+3. Create Template CoValues (extends Folder)
+4. Create SessionStorage CoValues
+5. Build items array (plain JSON with nested children)
+6. Build sessions array (plain JSON)
+7. Preserve item IDs from JSON (no remapping needed)
 
 ---
 
-## Migration Strategy (Future)
+## Key Operations
 
-**Note**: Not concerned with migrating current data, but documenting approach for reference.
+### Create Folder
 
-### Phase 1: Read Both Formats
-- Support reading old path-based structure
-- Support reading new hierarchical structure
-- Detect format version on load
-
-### Phase 2: Dual-Write
-- Write to both old and new structures
-- Validate consistency
-- Allows rollback if issues found
-
-### Phase 3: Migrate Data
-- Convert path-based to hierarchical for each user
-- Run in background on first load
-- Mark migration complete
-
-### Phase 4: Remove Old Code
-- Remove path-based code
-- Remove migration code
-- Clean up unused schemas
-
----
-
-## Key Operations: Before & After
-
-### 1. Create Folder
-
-**Before (Path-Based)**:
 ```typescript
-// Create directory entry
-const entry: DirectoryEntry = {
-  id: nanoid(),
-  name: 'New Folder',
-  type: 'folder',
-  path: parentPath + '\x01' + 'New Folder',  // Must compute path
-  expanded: false,
-  archived: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-me.root.directory.push(entry);
-```
-
-**After (Hierarchical)**:
-```typescript
-// Create Folder CoValue
 const folder = Folder.create({
   name: 'New Folder',
   type: 'organizational',
   children: [],
-  parent: parentFolder,      // Direct reference
+  parent: parentFolder,
   expanded: false,
   archived: false,
   owner: me,
@@ -619,609 +357,312 @@ const folder = Folder.create({
   updatedAt: new Date(),
 }, { owner: me });
 
-parentFolder.children.push(folder);  // Add to parent's children
+parentFolder.children.push(folder);
 ```
 
-**Complexity**: Before: O(1) | After: O(1)
-**Benefits**: No path computation, cleaner code
+**Complexity**: O(1)
 
----
+### Move Folder
 
-### 2. Move Folder
-
-**Before (Path-Based)**:
 ```typescript
-// Must update paths for folder and ALL descendants
-const oldPath = folder.path;
-const newPath = calculateNewPath(targetParent.path, folder.name);
+// Remove from old parent
+currentParent.children.remove(folder);
 
-// Update folder
-folder.path = newPath;
+// Add to new parent
+newParent.children.push(folder);
+folder.parent = newParent;
 folder.updatedAt = new Date();
-
-// Update ALL descendants (requires finding them)
-const descendants = me.root.directory.filter(e =>
-  e.path.startsWith(oldPath + '\x01')
-);
-
-for (const desc of descendants) {
-  desc.path = desc.path.replace(oldPath, newPath);
-  desc.updatedAt = new Date();
-}
 ```
 
-**After (Hierarchical)**:
+**Complexity**: O(1) — no descendant path updates!
+
+### Rename Folder
+
 ```typescript
-// Simply update parent references
-currentParent.children.remove(folder);  // Remove from old parent
-newParent.children.push(folder);        // Add to new parent
-folder.parent = newParent;              // Update back-reference
-folder.updatedAt = new Date();
-
-// No descendant updates needed!
-```
-
-**Complexity**: Before: O(n) for n descendants | After: O(1)
-**Benefits**: Dramatically simpler, no path recalculation
-
----
-
-### 3. Rename Folder
-
-**Before (Path-Based)**:
-```typescript
-// Must update paths for folder and ALL descendants
-const oldPath = folder.path;
-const newPath = oldPath.replace(/[^\x01]+$/, newName);  // Replace last segment
-
-folder.path = newPath;
 folder.name = newName;
 folder.updatedAt = new Date();
-
-// Update ALL descendants
-const descendants = me.root.directory.filter(e =>
-  e.path.startsWith(oldPath + '\x01')
-);
-
-for (const desc of descendants) {
-  desc.path = desc.path.replace(oldPath, newPath);
-  desc.updatedAt = new Date();
-}
 ```
 
-**After (Hierarchical)**:
+**Complexity**: O(1) — no descendant path updates!
+
+### Find Template by Path
+
 ```typescript
-// Just update the name
-folder.name = newName;
-folder.updatedAt = new Date();
-
-// That's it! Descendants unaffected.
-```
-
-**Complexity**: Before: O(n) for n descendants | After: O(1)
-**Benefits**: Instant renames, no side effects
-
----
-
-### 4. Find Template by Path
-
-**Before (Path-Based)**:
-```typescript
-// Find directory entry by path
-const entry = me.root.directory.find(e =>
-  e.path === targetPath && e.type === 'template-ref'
-);
-
-if (!entry?.templateId) return null;
-
-// Search templates list for ID
-const template = me.root.templates.find(t =>
-  t.id === entry.templateId
-);
-
-return template;
-```
-
-**After (Hierarchical)**:
-```typescript
-// Walk hierarchy from root
-let current = me.root;
-const segments = targetPath.split('/');
+let current: Folder | undefined = root;
+const segments = displayPath.split('/');
 
 for (const segment of segments) {
-  current = current.folders.find(f => f.name === segment);
+  current = current.children.find(f => f.name === segment);
   if (!current) return null;
 }
 
-// Template is right there
-return current.type === 'template' ? current.template : null;
+return current.type === 'template' ? current : null;
 ```
 
-**Complexity**: Before: O(n) + O(m) | After: O(d) for d depth
-**Benefits**: No ID lookup, follows natural structure
+**Complexity**: O(d) for depth d (typically <5 levels)
 
----
+### Add Item to Template
 
-### 5. List All Templates (Flat)
-
-**Before (Path-Based)**:
-```typescript
-// Templates are already in flat list
-const templates = me.root.templates;
-```
-
-**After (Hierarchical)**:
-```typescript
-// Must walk hierarchy recursively
-function* iterateTemplates(folder: Folder): Iterable<Template> {
-  if (folder.type === 'template' && folder.template) {
-    yield folder.template;
-  }
-
-  for (const child of folder.children) {
-    yield* iterateTemplates(child);
-  }
-}
-
-const templates = Array.from(iterateTemplates(me.root));
-```
-
-**Complexity**: Before: O(1) | After: O(n) for n folders
-**Trade-off**: Hierarchical structure requires traversal for flat views
-
-**Mitigation**: Cache flat list if needed frequently
-
----
-
-### 6. Get Folder Path (Display)
-
-**Before (Path-Based)**:
-```typescript
-// Path is stored directly
-const displayPath = folder.path.replace(/\x01/g, ' / ');
-```
-
-**After (Hierarchical)**:
-```typescript
-// Compute from hierarchy
-function getDisplayPath(folder: Folder): string {
-  const segments: string[] = [];
-  let current = folder;
-
-  while (current) {
-    segments.unshift(current.name);
-    current = current.parent;
-  }
-
-  return segments.join(' / ');
-}
-
-const displayPath = getDisplayPath(folder);
-```
-
-**Complexity**: Before: O(1) | After: O(d) for d depth
-**Trade-off**: Path computation vs storage
-
-**Benefits**:
-- Paths always consistent (no sync issues)
-- No updates needed on rename/move
-- Can cache computed paths if needed
-
----
-
-### 7. Add Item to Template
-
-**Before (Path-Based)**:
 ```typescript
 const item: TemplateItem = {
   id: nanoid(),
   name: 'Apples',
   type: 'item',
-  path: parentPath + '\x01' + 'Apples',  // Compute path
-  expanded: false,
+  children: [],
   sortOrder: 0,
-  archived: false,
+  expanded: false,
   defaultQuantity: '5 lbs',
   color: '#ff0000',
-  createdAt: new Date(),
+  archived: false,
 };
 
-template.items.push(item);  // Push to array
+// Add to parent category (or template.items if root)
+parentCategory.children.push(item);
 ```
 
-**After (Hierarchical)**:
+**Complexity**: O(1)
+
+### Update Session Item State
+
 ```typescript
-const item = TemplateItem.create({
-  name: 'Apples',
-  type: 'item',
-  children: [],
-  parent: parentCategory,    // Direct reference
-  expanded: false,
-  sortOrder: 0,
-  archived: false,
-  defaultQuantity: '5 lbs',
-  color: '#ff0000',
-  owner: me,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-}, { owner: me });
-
-template.items.push(item);           // Add to template's items list
-parentCategory.children.push(item);   // Add to parent's children (if not root)
-```
-
-**Complexity**: Before: O(1) | After: O(1)
-**Benefits**: Better sync granularity (individual item updates)
-
----
-
-### 8. Update Session Item State
-
-**Before (Path-Based)**:
-```typescript
-// Update plain object in Record
 session.itemStates[itemId] = {
   selected: true,
   checked: false,
   selectedAt: new Date(),
 };
-
-// Update counts manually
-session.selectedCount++;
-session.updatedAt = new Date();
+session.lastActivityAt = new Date();
 ```
 
-**After (Hierarchical)**:
+**Complexity**: O(1)
+
+---
+
+## Visual Hierarchy
+
+```
+Root
+├── Grocery Stores (organizational folder, CoValue)
+│   ├── Wegmans (template folder, CoValue extends Folder)
+│   │   ├── items: TemplateItem[] (plain JSON, nested)
+│   │   │   └── Produce → Fruits → Apples
+│   │   └── children: SessionStorage (CoValue)
+│   │       └── sessions: Session[] (plain JSON)
+│   │           └── { createdAt: 2024-11-01, itemStates: {...} }
+│   └── Trader Joe's (template folder)
+│       └── ...
+└── Meal Planning (organizational folder)
+    └── Week 1 (template folder)
+        └── ...
+```
+
+**Navigation**:
+- Folder tree: `root.folders` → `folder.children` (CoList)
+- Template items: `template.items` → `item.children` (plain arrays)
+- Sessions: `template.children` (SessionStorage) → `sessionStorage.sessions` (plain array)
+
+**Two hierarchies**:
+1. Folder hierarchy: organizational folders → template folders (tree)
+2. Item hierarchy: categories → items (nested, within each template)
+
+Sessions are conceptual children of template, accessed via polymorphic `children` field.
+
+---
+
+## Internal Service APIs
+
+**Maintain current API signatures** (implementation changes, but interfaces stay stable):
+
 ```typescript
-// Update CoValue in CoMap
-const state = session.itemStates.get(itemId);
-if (state) {
-  state.selected = true;
-  state.checked = false;
-  state.selectedAt = new Date();
-} else {
-  const newState = ItemState.create({
-    selected: true,
-    checked: false,
-    selectedAt: new Date(),
-    owner: me,
-  }, { owner: me });
+// folderService.ts
+createFolder(parent: Folder, name: string, type: 'organizational' | 'template')
+moveFolder(folder: Folder, newParent: Folder)
+renameFolder(folder: Folder, newName: string)
+deleteFolder(folder: Folder)  // soft delete (archived)
 
-  session.itemStates.set(itemId, newState);
-}
+// templateService.ts
+createItem(template: Template, parent: TemplateItem | null, name: string)
+moveItem(item: TemplateItem, newParent: TemplateItem | null)
+updateItem(item: TemplateItem, updates: Partial<TemplateItem>)
 
-// Counts computed on-demand (no manual updates)
+// sessionService.ts
+createSession(template: Template)
+updateItemState(session: Session, itemId: string, state: Partial<ItemState>)
+archiveSession(session: Session)
+
+// importService.ts
+importFromJSON(data: ExportData): Folder[]
+
+// exportService.ts
+exportToJSON(folders: Folder[]): ExportData
 ```
 
-**Complexity**: Before: O(1) + manual count update | After: O(1)
-**Benefits**:
-- Finer-grained sync (only changed state syncs)
-- No count synchronization bugs
-- Simpler code (no count management)
+**Implementation** changes to use hierarchy, but **API contracts** stay the same.
 
 ---
 
-## Implementation Phases (Future Reference)
+## Migration Approach (Future)
 
-### Phase 1: Schema Design & Review
-- ✅ Define new schemas (this document)
-- Review with team
-- Validate JSON compatibility
-- Consider edge cases
+**Note**: Not concerned with migrating existing data, but documenting for reference.
 
-### Phase 2: Core Data Structures
-- Implement Folder CoValue
-- Implement Template CoValue
-- Implement TemplateItem CoValue
-- Implement Session & SessionRef CoValues
-- Implement ItemState CoValue
-- Write unit tests for each
+### Strategy
 
-### Phase 3: Service Layer
-- Create folderService.ts (hierarchical operations)
-- Update importService.ts (JSON → hierarchical)
-- Update exportService.ts (hierarchical → JSON)
-- Implement path computation utilities
-- Write integration tests
+1. **Dual read**: Support both path-based and hierarchical structures
+2. **Convert on load**: Migrate user's data on first access with new version
+3. **Validate**: Ensure no data loss
+4. **Clean up**: Remove old path-based code after rollout
 
-### Phase 4: UI Updates
-- Update folder tree component (use hierarchy)
-- Update template editor (use TemplateItem CoValues)
-- Update session view (use new session structure)
-- Update import/export dialogs
-- Update all references to paths
+### Conversion Logic
 
-### Phase 5: Permissions UI
-- Add sharing dialogs
-- Add permission management
-- Add member lists
-- Implement permission checking
-
-### Phase 6: Testing & Migration
-- Comprehensive E2E tests
-- Performance testing
-- Migration script (if needed)
-- Rollout plan
+```
+Old: DirectoryEntry[] + templates
+  ↓
+Parse paths to reconstruct hierarchy
+  ↓
+Create Folder CoValues with parent-child references
+  ↓
+Embed Template in template folders
+  ↓
+Convert items to nested structure (already have paths)
+  ↓
+Create SessionStorage CoValue per template
+  ↓
+Copy sessions into SessionStorage
+```
 
 ---
 
-## Open Questions & Decisions Needed
+## What This Enables
 
-### 1. Item State Storage
+### 1. Granular Permissions
+- Share entire folder trees OR individual templates
+- Role-based access (admin/writer/reader)
+- Collaborative editing (multiple users, real-time sync)
 
-**Question**: Should itemStates be a CoMap or Record?
+### 2. Simpler Operations
+- Move/rename: O(1) instead of O(n)
+- No path synchronization bugs
+- Cleaner code (direct references instead of path strings)
 
-**Options**:
-- **CoMap**: Better sync, each state is CoValue
-  - Pro: Atomic per-item updates
-  - Con: More CoValues to manage
+### 3. Better Performance
+- Efficient lookups (walk hierarchy, not search flat list)
+- Atomic loading (template + sessions together)
+- Fine-grained sync (only changed folders sync)
 
-- **Record**: Simpler, current approach
-  - Pro: Fewer CoValues
-  - Con: Entire map syncs on any change
-
-**Recommendation**: CoMap for better sync granularity
-
----
-
-### 2. Count Caching
-
-**Question**: Store or compute selectedCount/checkedCount?
-
-**Options**:
-- **Store**: Faster reads, risk of desync
-- **Compute**: Always accurate, O(n) cost
-
-**Recommendation**: Compute on-demand (counts are cheap to calculate)
+### 4. Future Features
+- Folder descriptions/tags
+- Usage statistics per template
+- Version history (Jazz supports this)
+- Public template sharing
+- Template marketplace
 
 ---
 
-### 3. Organizational vs Template Folders
+## Implementation Notes
 
-**Question**: Can template folders have children?
+### Jazz Schema Syntax
 
-**Options**:
-- **No Children**: Template folders are always leaves
-  - Pro: Simpler model
-  - Con: Can't organize templates hierarchically
+If Jazz `co.map()` doesn't support inheritance:
 
-- **Allow Children**: Template folders can have subfolders
-  - Pro: Flexible organization ("Wegmans" template + "Wegmans/Seasonal" template)
-  - Con: More complex
+```typescript
+// Use discriminated union instead of inheritance
+type FolderOrTemplate = OrganizationalFolder | Template;
 
-**Recommendation**: Allow children (more flexible)
+const OrganizationalFolder = co.map({
+  type: z.literal('organizational'),
+  name: z.string(),
+  children: co.list(() => FolderOrTemplate),
+  ...
+});
 
----
+const Template = co.map({
+  type: z.literal('template'),
+  name: z.string(),
+  children: SessionStorage,  // Different type!
+  items: z.array(...),
+  ...
+});
+```
 
-### 4. Session Back-References
+TypeScript conditional types handle polymorphic `children` field.
 
-**Question**: Should sessions reference both template AND folder?
+### Parent Reference Management
 
-**Current Design**: Yes, both references
+When moving folders, **must update both sides**:
 
-**Rationale**:
-- `template`: Access template data when using session
-- `templateFolder`: Access folder context (name, location, permissions)
+```typescript
+// Remove from old parent
+currentParent.children.remove(folder);
 
-**Alternative**: Just reference folder, access template via folder.template
-- Pro: One less reference to manage
-- Con: Assumes folder.template always exists
+// Add to new parent
+newParent.children.push(folder);
 
-**Recommendation**: Keep both for robustness
+// Update back-reference
+folder.parent = newParent;
+```
 
----
+Consider helper functions to encapsulate this logic.
 
-### 5. Import ID Handling
+### Path Computation Caching
 
-**Question**: Preserve CoValue IDs on import or generate new?
+Paths are computed on-demand. If profiling shows this is expensive:
 
-**Options**:
-- **Preserve**: Use IDs from JSON
-  - Pro: Session states don't need remapping
-  - Con: Requires collision detection
+```typescript
+// Add computed path cache (invalidate on rename/move)
+const pathCache = new WeakMap<Folder, string[]>();
 
-- **Generate New**: Always create new IDs
-  - Pro: Simpler, no collisions
-  - Con: Session states require remapping
+function getPath(folder: Folder): string[] {
+  if (pathCache.has(folder)) return pathCache.get(folder)!;
 
-**Recommendation**: Preserve IDs when possible, remap only on collision
+  const path = computePath(folder);
+  pathCache.set(folder, path);
+  return path;
+}
+```
 
----
-
-### 6. Path Caching
-
-**Question**: Should we cache computed paths for performance?
-
-**Options**:
-- **No Cache**: Compute on-demand every time
-  - Pro: Always correct, no invalidation needed
-  - Con: O(d) computation per access
-
-- **Cache**: Store computed path in memory
-  - Pro: O(1) lookups
-  - Con: Must invalidate on rename/move
-
-**Recommendation**: Start without cache, add if profiling shows need
-
----
-
-### 7. Template Item vs Folder Item
-
-**Question**: Should template items also have permissions (own groups)?
-
-**Current Design**: No, items are properties of template
-- Sharing template includes all items
-- Items don't have independent permissions
-
-**Alternative**: Each item is CoValue with own group
-- Pro: Could share individual items
-- Con: Much more complex, unclear use case
-
-**Recommendation**: Keep items as template properties (current design)
-
----
-
-## Risk Assessment
-
-### High Risk
-1. **Migration Complexity**: Converting existing data without loss
-   - Mitigation: Not concerned with data migration for this phase
-
-2. **Permission Model Mismatch**: Jazz permissions may not map perfectly
-   - Mitigation: Study Jazz permissions deeply before implementation
-
-### Medium Risk
-1. **Performance**: More CoValues = more network overhead
-   - Mitigation: Profile before/after, optimize hot paths
-
-2. **Import/Export Compatibility**: Breaking existing exports
-   - Mitigation: Version exports, support reading both formats
-
-### Low Risk
-1. **UI Complexity**: More complex state management
-   - Mitigation: Jazz handles reactivity, should be simpler
-
-2. **Path Computation**: Computing paths on-demand may be slow
-   - Mitigation: Paths are shallow (typically <5 levels), O(d) is fine
+Start **without caching** (simpler, always correct).
 
 ---
 
 ## Success Criteria
 
-1. **Functional Requirements**:
-   - ✅ Folders are true CoValues with own groups
-   - ✅ Parent-child references replace paths
-   - ✅ Templates embed in folders (1:1)
-   - ✅ Sessions have back-references
-   - ✅ JSON import/export maintains compatibility
-
-2. **Performance Requirements**:
-   - Move/rename operations: O(1) instead of O(n)
-   - Template lookup: O(d) instead of O(n)
-   - Sync efficiency: Only changed items sync
-
-3. **Usability Requirements**:
-   - No visible changes to users (same features)
-   - Sharing works at any folder level
-   - Import/export still works with old exports
+1. ✅ Folders are CoValues with own Jazz groups
+2. ✅ Parent-child references replace paths
+3. ✅ Template folders are leaves (children is SessionStorage)
+4. ✅ Items are plain JSON with stable IDs
+5. ✅ Sessions are plain JSON (not independently shareable)
+6. ✅ JSON export format unchanged
+7. ✅ Internal service APIs maintain signatures
+8. ✅ Move/rename operations are O(1)
+9. ✅ No CoValue IDs in exports
+10. ✅ currentSessionId is local UI state
 
 ---
 
-## Next Steps
+## Summary
 
-1. **Review this plan** with stakeholders
-2. **Validate Jazz permissions** model (ensure it supports our needs)
-3. **Prototype key schemas** to validate approach
-4. **Test JSON roundtrip** (export → import → export should match)
-5. **Plan implementation timeline** (when ready to code)
+This migration establishes a true hierarchical structure:
 
----
+**CoValue Boundaries**:
+- Folder (organizational)
+- Template (extends Folder)
+- SessionStorage (one per template)
 
-## Appendix: Schema Comparison
+**Plain JSON**:
+- TemplateItem (stable nanoid IDs)
+- Session (no back-refs, not shareable)
+- ItemState (minimal)
 
-### Current (Path-Based)
+**Key Benefits**:
+- Granular permissions (Jazz groups per folder)
+- O(1) operations (no path recalculation)
+- Clean architecture (structure vs data vs state)
+- JSON compatibility (portable exports)
+- Simpler code (direct references)
 
-```
-ListsRoot
-├── directory: DirectoryEntry[]     // Flat array with paths
-│   ├── { type: 'folder', path: 'stores' }
-│   └── { type: 'template-ref', path: 'stores\x01wegmans', templateId: 'T1' }
-└── templates: CoList<Template>     // Flat list
-    └── Template (id: 'T1')
-        ├── items: TemplateItem[]           // Plain JSON array (with paths)
-        └── sessions: CoList<Session>
-            └── Session
-                └── itemStates: Record<id, ItemState>   // Plain JSON Record
-```
+**Elegant Design**:
+- Polymorphic `children` field (folders vs sessions)
+- Template extends Folder (DRY)
+- Atomic loading (template + sessions)
+- Computed paths (always consistent)
 
-### New (Hierarchical)
-
-```
-ListsRoot
-└── folders: CoList<Folder>         // Hierarchical CoValues
-    └── Folder (type: 'organizational')
-        ├── children: CoList<Folder>
-        └── Folder (type: 'template')
-            ├── template: Template          // Embedded template
-            │   ├── items: CoList<TemplateItem>     // CoList with hierarchy
-            │   │   └── TemplateItem
-            │   │       └── children: CoList<TemplateItem>
-            │   └── sessions: CoList<SessionRef>
-            │       └── SessionRef
-            │           └── session: Session        // Independent CoValue
-            │               ├── template: Template          // Back-ref
-            │               ├── templateFolder: Folder      // Back-ref
-            │               └── itemStates: CoMap<id, ItemState>    // CoMap
-            └── children: CoList<Folder>    // Can still have subfolders
-```
-
-**Key Differences**:
-- ❌ No flat directory array
-- ❌ No paths stored
-- ✅ True parent-child references
-- ✅ CoValues at every level
-- ✅ Back-references for navigation
-- ✅ Granular permissions (folder level)
-
----
-
-## Appendix: Example Hierarchy
-
-### Visual Representation
-
-```
-Root
-├── Grocery Stores (organizational folder)
-│   ├── Wegmans (template folder)
-│   │   ├── template: Weekly Shopping Template
-│   │   │   ├── items:
-│   │   │   │   ├── Produce (category)
-│   │   │   │   │   ├── Fruits (category)
-│   │   │   │   │   │   └── Apples (item)
-│   │   │   │   │   └── Vegetables (category)
-│   │   │   │   │       └── Carrots (item)
-│   │   │   │   └── Dairy (category)
-│   │   │   │       └── Milk (item)
-│   │   │   └── sessions:
-│   │   │       ├── "2024-11-01 Trip"
-│   │   │       └── "2024-11-08 Trip"
-│   │   └── Seasonal (template folder)
-│   │       └── template: Holiday Shopping
-│   │           └── items: [...]
-│   └── Trader Joe's (template folder)
-│       └── template: TJ's Favorites
-│           └── items: [...]
-└── Meal Planning (organizational folder)
-    └── Week 1 (template folder)
-        └── template: Weekly Meal Plan
-            └── items: [...]
-```
-
-### Sharing Example
-
-1. **Share "Grocery Stores" folder** → recipient sees all templates (Wegmans, TJ's)
-2. **Share "Wegmans" template** → recipient sees just that template + sessions
-3. **Share "2024-11-01 Trip" session** → recipient can check off items
-   - Back-reference lets them view template (if they have access)
-   - Back-reference shows context ("Wegmans Weekly Shopping")
-
----
-
-## Conclusion
-
-This migration plan establishes a true hierarchical structure with:
-
-1. **CoValues at every level** (folders, templates, items, sessions, states)
-2. **Parent-child references** instead of path strings
-3. **Granular permissions** via Jazz groups per folder
-4. **Independent sharing** of templates and sessions
-5. **JSON compatibility** with current import/export format
-
-The new structure is:
-- **Simpler**: No path synchronization
-- **Faster**: O(1) operations instead of O(n)
-- **More powerful**: Granular sharing and permissions
-- **Better aligned**: Matches Jazz's permission model
-- **Future-proof**: Supports collaboration and sharing
-
-Next step: Review and validate this design before implementation.
+Next: Validate with team, prototype schemas, implement.
