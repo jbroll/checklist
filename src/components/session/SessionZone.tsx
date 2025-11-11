@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { ListChecks, ListMinus, ListX } from 'lucide-react';
 import { IndentedRow } from '@/components/tree/IndentedRow';
@@ -62,36 +61,16 @@ export function SessionZone({
     children
   ) : (
     <div className="flex flex-col">
-      <AnimatePresence mode="popLayout">
-        {items.map((item) => (
-          <motion.div
-            key={item.id}
-            layout
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, x: 30 }}
-            transition={{
-              layout: {
-                type: 'spring',
-                stiffness: 150,
-                damping: 25,
-              },
-              opacity: { duration: 0.8, ease: 'easeInOut' },
-              scale: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
-              y: { duration: 1.0, ease: [0.34, 1.56, 0.64, 1] },
-              x: { duration: 0.8, ease: 'easeInOut' },
-            }}
-          >
-            <SessionItemRow
-              item={item}
-              state={itemStates[item.id] || null}
-              zone={zone}
-              onToggleSelected={onToggleSelected}
-              onToggleChecked={onToggleChecked}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {items.map((item) => (
+        <SessionItemRow
+          key={item.id}
+          item={item}
+          state={itemStates[item.id] || null}
+          zone={zone}
+          onToggleSelected={onToggleSelected}
+          onToggleChecked={onToggleChecked}
+        />
+      ))}
     </div>
   );
 
@@ -211,36 +190,16 @@ export function SessionZone({
           {Icon && <Icon className="h-4 w-4" />}
           <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>
           {count !== undefined && (
-            <motion.span
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700"
-            >
+            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
               {count}
-            </motion.span>
+            </span>
           )}
           {renderBatchButtons()}
         </div>
       </IndentedRow>
 
-      {/* Zone items with expand/collapse animation */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              height: { duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] },
-              opacity: { duration: 0.3, ease: 'easeInOut' },
-            }}
-            className="overflow-hidden"
-          >
-            {content}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Zone items - no animations to avoid scroll jumping */}
+      {expanded && <div className="overflow-hidden">{content}</div>}
     </div>
   );
 }
