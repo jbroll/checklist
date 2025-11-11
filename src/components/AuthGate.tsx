@@ -1,6 +1,7 @@
 import { ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { betterAuthClient } from '@/lib/auth-client';
+import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
 import { AppContainer } from './editor/AppContainer';
@@ -10,6 +11,7 @@ import { LoadingScreen } from './ui/loading';
 export function AuthGate() {
   const [isLoading, setIsLoading] = useState(false);
   const { me, logOut } = useAccount(Account);
+  const { showAlert } = useDialog();
 
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
@@ -47,16 +49,20 @@ export function AuthGate() {
       });
       // Note: Profile name will be synced via useEffect after redirect
     } catch {
-      alert('Google sign-in failed. Please try again.');
+      await showAlert({
+        title: 'Sign-in Failed',
+        message: 'Google sign-in failed. Please try again.',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAppleSignIn = async () => {
-    alert(
-      'Apple OAuth is not yet configured. Please add Apple credentials to the backend/.env file.',
-    );
+    await showAlert({
+      title: 'Apple Sign-in Not Available',
+      message: 'Apple OAuth is not yet configured. Please add Apple credentials to the backend/.env file.',
+    });
   };
 
   const handleSignOut = async () => {
