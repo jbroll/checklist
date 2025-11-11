@@ -194,6 +194,91 @@ Category1
       });
     });
 
+    it('parses with single space indents', () => {
+      const text = `
+Category1
+ Item1
+ Item2
+Category2
+ SubCategory
+  Item3
+  Item4
+      `.trim();
+
+      const result = parseIndentedList(text);
+
+      expect(result).toHaveLength(7);
+      expect(result[0]).toMatchObject({
+        name: 'Category1',
+        type: 'category',
+        path: 'Category1',
+        level: 0,
+      });
+      expect(result[1]).toMatchObject({
+        name: 'Item1',
+        type: 'item',
+        path: `Category1${PATH_SEPARATOR}Item1`,
+        level: 1,
+      });
+      expect(result[2]).toMatchObject({
+        name: 'Item2',
+        type: 'item',
+        path: `Category1${PATH_SEPARATOR}Item2`,
+        level: 1,
+      });
+      expect(result[3]).toMatchObject({
+        name: 'Category2',
+        type: 'category',
+        path: 'Category2',
+        level: 0,
+      });
+      expect(result[4]).toMatchObject({
+        name: 'SubCategory',
+        type: 'category',
+        path: `Category2${PATH_SEPARATOR}SubCategory`,
+        level: 1,
+      });
+      expect(result[5]).toMatchObject({
+        name: 'Item3',
+        type: 'item',
+        path: `Category2${PATH_SEPARATOR}SubCategory${PATH_SEPARATOR}Item3`,
+        level: 2,
+      });
+      expect(result[6]).toMatchObject({
+        name: 'Item4',
+        type: 'item',
+        path: `Category2${PATH_SEPARATOR}SubCategory${PATH_SEPARATOR}Item4`,
+        level: 2,
+      });
+    });
+
+    it('parses with 3 spaces', () => {
+      const text = `
+Category1
+   Item1
+   Item2
+      `.trim();
+
+      const result = parseIndentedList(text);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toMatchObject({
+        name: 'Category1',
+        type: 'category',
+        level: 0,
+      });
+      expect(result[1]).toMatchObject({
+        name: 'Item1',
+        type: 'item',
+        level: 1,
+      });
+      expect(result[2]).toMatchObject({
+        name: 'Item2',
+        type: 'item',
+        level: 1,
+      });
+    });
+
     it('ignores blank lines', () => {
       const text = `
 Category1

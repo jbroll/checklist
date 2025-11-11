@@ -14,7 +14,7 @@ export interface CategoryNode {
  * Builds a multi-level category tree structure from a flat list of items
  *
  * @param items - Leaf items (type='item') to organize into categories
- * @param allTemplateItems - All template items including categories for sortOrder lookup
+ * @param allTemplateItems - All template items including categories for full hierarchy
  */
 export function buildCategoryTree(
   items: TemplateItem[],
@@ -23,17 +23,26 @@ export function buildCategoryTree(
   const categoryMap = new Map<string, CategoryNode>();
   const rootCategories: CategoryNode[] = [];
 
-  // Create a lookup map for category TemplateItems
-  const categoryLookup = new Map<string, TemplateItem>();
+  // First pass: Create ALL category nodes from allTemplateItems (if provided)
+  // This ensures categories without leaf items are still shown
   if (allTemplateItems) {
     for (const item of allTemplateItems) {
       if (item.type === 'category') {
-        categoryLookup.set(item.path, item);
+        const pathParts = item.path.split(PATH_SEPARATOR);
+        categoryMap.set(item.path, {
+          name: item.name,
+          path: item.path,
+          items: [],
+          children: [],
+          depth: pathParts.length - 1,
+          sortOrder: item.sortOrder,
+        });
       }
     }
   }
 
-  // First pass: Create all category nodes
+  // Second pass: Create any missing category nodes from item paths
+  // This handles cases where categories are implicit from paths but not in allTemplateItems
   items.forEach((item) => {
     const pathParts = item.path.split(PATH_SEPARATOR);
 
@@ -43,15 +52,14 @@ export function buildCategoryTree(
 
       if (!categoryMap.has(categoryPath)) {
         const categoryName = pathParts[i - 1];
-        const categoryItem = categoryLookup.get(categoryPath);
 
         categoryMap.set(categoryPath, {
-          name: categoryItem?.name || categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
+          name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
           path: categoryPath,
           items: [],
           children: [],
           depth: i - 1,
-          sortOrder: categoryItem?.sortOrder,
+          sortOrder: undefined,
         });
       }
     }
@@ -63,7 +71,7 @@ export function buildCategoryTree(
     }
   });
 
-  // Second pass: Build hierarchy by connecting parents and children
+  // Third pass: Build hierarchy by connecting parents and children
   categoryMap.forEach((category, path) => {
     const pathParts = path.split(PATH_SEPARATOR);
 
