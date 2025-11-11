@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { exportSessionToText, exportTemplateItemsToText } from './txtExporter';
 
 // Mock template data
@@ -15,7 +16,7 @@ const createMockTemplate = (options: { withCategories?: boolean } = {}) => {
       id: 'item-1',
       name: 'Apples',
       type: 'item' as const,
-      path: 'produce/apples',
+      path: `produce${PATH_SEPARATOR}apples`,
       expanded: false,
       sortOrder: 0,
       archived: false,
@@ -27,7 +28,7 @@ const createMockTemplate = (options: { withCategories?: boolean } = {}) => {
       id: 'item-2',
       name: 'Bananas',
       type: 'item' as const,
-      path: 'produce/bananas',
+      path: `produce${PATH_SEPARATOR}bananas`,
       expanded: false,
       sortOrder: 1,
       archived: false,
@@ -100,8 +101,8 @@ describe('txtExporter', () => {
     it('should export items in hierarchical format when categories exist', () => {
       const template = createMockTemplate({ withCategories: true });
       // Update item paths to be hierarchical
-      template.items[0].path = 'produce/apples';
-      template.items[1].path = 'produce/bananas';
+      template.items[0].path = `produce${PATH_SEPARATOR}apples`;
+      template.items[1].path = `produce${PATH_SEPARATOR}bananas`;
       template.items[2].path = 'produce';
 
       const result = exportTemplateItemsToText(template as any);
@@ -161,7 +162,7 @@ describe('txtExporter', () => {
           id: 'item-1',
           name: 'Apples',
           type: 'item' as const,
-          path: 'produce/apples',
+          path: `produce${PATH_SEPARATOR}apples`,
           expanded: false,
           sortOrder: 1,
           archived: false,
@@ -185,7 +186,7 @@ describe('txtExporter', () => {
           id: 'item-2',
           name: 'Milk',
           type: 'item' as const,
-          path: 'dairy/milk',
+          path: `dairy${PATH_SEPARATOR}milk`,
           expanded: false,
           sortOrder: 3,
           archived: false,
@@ -227,7 +228,7 @@ describe('txtExporter', () => {
         id: 'item-3',
         name: 'Oranges',
         type: 'item' as const,
-        path: 'produce/oranges',
+        path: `produce${PATH_SEPARATOR}oranges`,
         expanded: false,
         sortOrder: 3,
         archived: false,

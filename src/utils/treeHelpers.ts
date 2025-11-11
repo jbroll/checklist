@@ -1,5 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { DirectoryEntry, Template } from '@/schemas';
+import { PATH_SEPARATOR } from './pathUtils';
 
 /**
  * TreeNode representing a directory entry with its children
@@ -60,13 +61,13 @@ export function buildTreeFromDirectory(
     const node = nodeMap.get(entry.path);
     if (!node) continue;
 
-    const parts = entry.path.split('/');
+    const parts = entry.path.split(PATH_SEPARATOR);
     if (parts.length === 1) {
       // Root level entry
       rootNodes.push(node);
     } else {
       // Child entry - find parent
-      const parentPath = parts.slice(0, -1).join('/');
+      const parentPath = parts.slice(0, -1).join(PATH_SEPARATOR);
       const parentNode = nodeMap.get(parentPath);
       if (parentNode) {
         parentNode.children.push(node);
