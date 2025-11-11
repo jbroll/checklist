@@ -106,10 +106,10 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
       (e) => e.type === 'template-ref' && e.templateId === selectedTemplateId,
     );
 
-    // Expand ancestor folders so the template is visible when returning
+    // Expand the template and its ancestors so it's visible when returning
     if (templateEntry) {
       // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-      directoryService.expandAncestorFolders(me, templateEntry.path);
+      directoryService.expandPathAndAncestors(me, templateEntry.path);
     }
 
     // Create session using service

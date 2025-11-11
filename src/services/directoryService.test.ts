@@ -1085,4 +1085,284 @@ describe('directoryService', () => {
       expect(newDirectory.map((e) => e.id)).toEqual(['1', '3', '4', '2']);
     });
   });
+
+  describe('expandAncestorFolders', () => {
+    it('should expand all ancestor folders but not the path itself', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'parent',
+          type: 'folder',
+          path: 'parent',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'child',
+          type: 'folder',
+          path: `parent${PATH_SEPARATOR}child`,
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'grandchild',
+          type: 'template-ref',
+          path: `parent${PATH_SEPARATOR}child${PATH_SEPARATOR}grandchild`,
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandAncestorFolders(
+        account,
+        `parent${PATH_SEPARATOR}child${PATH_SEPARATOR}grandchild`,
+      );
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Parent and child should be expanded, grandchild should NOT be expanded
+      expect(newDirectory[0].expanded).toBe(true); // parent
+      expect(newDirectory[1].expanded).toBe(true); // child
+      expect(newDirectory[2].expanded).toBe(false); // grandchild (not included)
+    });
+
+    it('should not expand anything for root-level path', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'root-item',
+          type: 'template-ref',
+          path: 'root-item',
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandAncestorFolders(account, 'root-item');
+
+      // Should not call set since there are no ancestors to expand
+      expect(account.root.$jazz.set).not.toHaveBeenCalled();
+    });
+
+    it('should only expand ancestors that are not already expanded', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'parent',
+          type: 'folder',
+          path: 'parent',
+          expanded: true, // Already expanded
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'child',
+          type: 'folder',
+          path: `parent${PATH_SEPARATOR}child`,
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandAncestorFolders(account, `parent${PATH_SEPARATOR}child`);
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Parent should remain expanded (not duplicated)
+      expect(newDirectory[0].expanded).toBe(true);
+      expect(newDirectory[0].id).toBe('1');
+    });
+  });
+
+  describe('expandPathAndAncestors', () => {
+    it('should expand the path itself and all ancestors by default', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'parent',
+          type: 'folder',
+          path: 'parent',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'child',
+          type: 'folder',
+          path: `parent${PATH_SEPARATOR}child`,
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'grandchild',
+          type: 'template-ref',
+          path: `parent${PATH_SEPARATOR}child${PATH_SEPARATOR}grandchild`,
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandPathAndAncestors(
+        account,
+        `parent${PATH_SEPARATOR}child${PATH_SEPARATOR}grandchild`,
+      );
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // All three should be expanded
+      expect(newDirectory[0].expanded).toBe(true); // parent
+      expect(newDirectory[1].expanded).toBe(true); // child
+      expect(newDirectory[2].expanded).toBe(true); // grandchild
+    });
+
+    it('should only expand ancestors when includeSelf is false', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'parent',
+          type: 'folder',
+          path: 'parent',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'child',
+          type: 'template-ref',
+          path: `parent${PATH_SEPARATOR}child`,
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandPathAndAncestors(account, `parent${PATH_SEPARATOR}child`, false);
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Parent should be expanded, child should NOT
+      expect(newDirectory[0].expanded).toBe(true); // parent
+      expect(newDirectory[1].expanded).toBe(false); // child
+    });
+
+    it('should expand root-level path when includeSelf is true', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'root-item',
+          type: 'template-ref',
+          path: 'root-item',
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandPathAndAncestors(account, 'root-item', true);
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Root item should be expanded
+      expect(newDirectory[0].expanded).toBe(true);
+    });
+
+    it('should handle deeply nested paths', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'level1',
+          type: 'folder',
+          path: 'level1',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'level2',
+          type: 'folder',
+          path: `level1${PATH_SEPARATOR}level2`,
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'level3',
+          type: 'folder',
+          path: `level1${PATH_SEPARATOR}level2${PATH_SEPARATOR}level3`,
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '4',
+          name: 'level4',
+          type: 'template-ref',
+          path: `level1${PATH_SEPARATOR}level2${PATH_SEPARATOR}level3${PATH_SEPARATOR}level4`,
+          expanded: false,
+          archived: false,
+          templateId: 'template-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.expandPathAndAncestors(
+        account,
+        `level1${PATH_SEPARATOR}level2${PATH_SEPARATOR}level3${PATH_SEPARATOR}level4`,
+      );
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // All levels should be expanded
+      expect(newDirectory.every((e) => e.expanded)).toBe(true);
+    });
+  });
 });

@@ -306,6 +306,8 @@ export function TreeView({
           templateName={template.name}
           level={node.level + 1}
           onOpen={(sessionId) => {
+            // Expand the template and its ancestors so it's visible when returning from session
+            directoryService.expandPathAndAncestors(account, entry.path);
             onOpenSession?.(template.$jazz.id, sessionId);
           }}
           onArchive={(sessionId) => handleToggleArchiveSession(template.$jazz.id, sessionId)}
