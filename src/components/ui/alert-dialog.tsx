@@ -39,7 +39,7 @@ export function AlertDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="whitespace-pre-wrap">{message}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="mt-6">
           <Button onClick={handleClose} variant="primary" autoFocus>
             {buttonText}
           </Button>

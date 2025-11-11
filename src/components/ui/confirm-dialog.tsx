@@ -55,7 +55,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="whitespace-pre-wrap">{message}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="mt-6">
           <Button onClick={handleCancel} variant="secondary" autoFocus>
             {cancelText}
           </Button>
