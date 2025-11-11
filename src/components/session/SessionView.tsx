@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { Account, Template } from '@/schemas';
@@ -26,6 +26,10 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     checked: false,
   });
 
+  // Refs for scroll position preservation
+  const availableZoneRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<{ scrollTop: number; availableTop: number } | null>(null);
+
   // Find session first (before any early returns)
   const session = template.sessions?.find((s) => s?.$jazz.id === sessionId);
 
@@ -47,6 +51,36 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     sessionId,
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     me,
+  });
+
+  // Restore scroll position after DOM updates
+  useLayoutEffect(() => {
+    if (scrollPositionRef.current && availableZoneRef.current) {
+      const { scrollTop, availableTop } = scrollPositionRef.current;
+
+      // Measure immediately after render
+      const newAvailableTop = availableZoneRef.current.getBoundingClientRect().top;
+      const heightDiff = newAvailableTop - availableTop;
+
+      console.log(
+        '[Restore] Old availableTop:',
+        availableTop,
+        'New:',
+        newAvailableTop,
+        'Diff:',
+        heightDiff,
+      );
+      console.log('[Restore] Current scrollTop:', window.scrollY, 'Saved:', scrollTop);
+
+      if (heightDiff !== 0) {
+        // Adjust scroll to compensate for height change
+        const newScrollTop = scrollTop + heightDiff;
+        console.log('[Restore] Setting scroll to:', newScrollTop);
+        window.scrollTo(0, newScrollTop);
+      }
+
+      scrollPositionRef.current = null;
+    }
   });
 
   // Now handle early returns after hooks
@@ -79,6 +113,20 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   }
 
   const handleToggleSelected = (itemId: string) => {
+    // Capture scroll state before DOM changes
+    if (availableZoneRef.current) {
+      scrollPositionRef.current = {
+        scrollTop: window.scrollY,
+        availableTop: availableZoneRef.current.getBoundingClientRect().top,
+      };
+      console.log(
+        '[Capture] scrollTop:',
+        window.scrollY,
+        'availableTop:',
+        scrollPositionRef.current.availableTop,
+      );
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -114,6 +162,15 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   const handleBatchSelectAll = (itemIds: string[]) => {
     console.log('[handleBatchSelectAll] Called with:', itemIds);
+
+    // Capture scroll state before DOM changes
+    if (availableZoneRef.current) {
+      scrollPositionRef.current = {
+        scrollTop: window.scrollY,
+        availableTop: availableZoneRef.current.getBoundingClientRect().top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -122,6 +179,15 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   const handleBatchDeselectAll = (itemIds: string[]) => {
     console.log('[handleBatchDeselectAll] Called with:', itemIds);
+
+    // Capture scroll state before DOM changes
+    if (availableZoneRef.current) {
+      scrollPositionRef.current = {
+        scrollTop: window.scrollY,
+        availableTop: availableZoneRef.current.getBoundingClientRect().top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -130,6 +196,15 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   const handleBatchToggle = (itemIds: string[]) => {
     console.log('[handleBatchToggle] Called with:', itemIds);
+
+    // Capture scroll state before DOM changes
+    if (availableZoneRef.current) {
+      scrollPositionRef.current = {
+        scrollTop: window.scrollY,
+        availableTop: availableZoneRef.current.getBoundingClientRect().top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -220,22 +295,24 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
             {(selectedItems.length > 0 || checkedItems.length > 0) && availableItems.length > 0 && (
               <div className="my-2 border-t-2 border-neutral-200" />
             )}
-            <AvailableZoneRenderer
-              template={template}
-              session={session}
-              availableItems={availableItems}
-              categoryExpanded={categoryExpanded}
-              zoneExpanded={zoneExpanded.available}
-              onToggleZoneExpanded={() =>
-                setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
-              }
-              onToggleCategoryExpanded={handleToggleCategoryExpanded}
-              onToggleSelected={handleToggleSelected}
-              onToggleChecked={handleToggleChecked}
-              onBatchSelectAll={handleBatchSelectAll}
-              onBatchDeselectAll={handleBatchDeselectAll}
-              onBatchToggle={handleBatchToggle}
-            />
+            <div ref={availableZoneRef}>
+              <AvailableZoneRenderer
+                template={template}
+                session={session}
+                availableItems={availableItems}
+                categoryExpanded={categoryExpanded}
+                zoneExpanded={zoneExpanded.available}
+                onToggleZoneExpanded={() =>
+                  setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
+                }
+                onToggleCategoryExpanded={handleToggleCategoryExpanded}
+                onToggleSelected={handleToggleSelected}
+                onToggleChecked={handleToggleChecked}
+                onBatchSelectAll={handleBatchSelectAll}
+                onBatchDeselectAll={handleBatchDeselectAll}
+                onBatchToggle={handleBatchToggle}
+              />
+            </div>
           </div>
         </div>
       </div>
