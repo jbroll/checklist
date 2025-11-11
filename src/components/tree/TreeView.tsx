@@ -170,14 +170,25 @@ export function TreeView({
     directoryService.deleteDirectoryEntry(account, entryId);
   };
 
-  const handleDeleteSession = (templateId: string, sessionId: string) => {
+  const handleToggleArchiveSession = (templateId: string, sessionId: string) => {
     const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
     if (template?.sessions) {
       const session = template.sessions.find((s) => s?.$jazz.id === sessionId);
       if (session) {
-        // Soft delete by setting archived flag
-        session.$jazz.set('archived', true);
+        // Toggle archived flag
+        session.$jazz.set('archived', !session.archived);
         session.$jazz.set('lastActivityAt', new Date());
+      }
+    }
+  };
+
+  const handleDeleteSession = (templateId: string, sessionId: string) => {
+    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
+    if (template?.sessions) {
+      const sessionIndex = template.sessions.findIndex((s) => s?.$jazz.id === sessionId);
+      if (sessionIndex !== -1) {
+        // Hard delete by removing from sessions array using Jazz's splice method
+        template.sessions.$jazz.splice(sessionIndex, 1);
       }
     }
   };
@@ -297,6 +308,7 @@ export function TreeView({
           onOpen={(sessionId) => {
             onOpenSession?.(template.$jazz.id, sessionId);
           }}
+          onArchive={(sessionId) => handleToggleArchiveSession(template.$jazz.id, sessionId)}
           onDelete={(sessionId) => handleDeleteSession(template.$jazz.id, sessionId)}
           onExport={(sessionId) => onExportSession?.(template.$jazz.id, sessionId)}
           allSessions={activeSessions}

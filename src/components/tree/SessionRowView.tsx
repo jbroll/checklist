@@ -1,10 +1,11 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Archive, Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
+import { Archive, ArchiveX, Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
@@ -17,6 +18,7 @@ interface SessionRowViewProps {
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
+  onArchive?: (sessionId: string) => void;
   onExport?: (sessionId: string) => void;
   allSessions: readonly (InstanceOfSchema<typeof Session> | null)[];
 }
@@ -27,6 +29,7 @@ export const SessionRowView = memo(function SessionRowView({
   level,
   onOpen,
   onDelete,
+  onArchive,
   onExport,
   allSessions,
 }: SessionRowViewProps) {
@@ -34,10 +37,36 @@ export const SessionRowView = memo(function SessionRowView({
 
   const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
 
+  const handleToggleArchived = () => {
+    const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
+    if (session.archived) {
+      // Unarchive
+      if (onArchive) {
+        onArchive(session.$jazz.id);
+      }
+    } else {
+      // Archive
+      if (onArchive && confirm(`Archive session "${displayName}"?`)) {
+        onArchive(session.$jazz.id);
+      }
+    }
+  };
+
   const handleDelete = () => {
     const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
-    if (onDelete && confirm(`Delete session "${displayName}"?`)) {
-      onDelete(session.$jazz.id);
+    // If not archived, archive first (soft delete)
+    if (!session.archived) {
+      if (onArchive && confirm(`Archive session "${displayName}"?`)) {
+        onArchive(session.$jazz.id);
+      }
+    } else {
+      // If already archived, permanent deletion
+      if (
+        onDelete &&
+        confirm(`⚠️ PERMANENTLY DELETE session "${displayName}"?\n\nThis action CANNOT be undone!`)
+      ) {
+        onDelete(session.$jazz.id);
+      }
     }
   };
 
@@ -90,9 +119,24 @@ export const SessionRowView = memo(function SessionRowView({
                 Export
               </DropdownMenuItem>
             )}
+            {onExport && <DropdownMenuSeparator />}
+            <DropdownMenuItem onClick={handleToggleArchived}>
+              {session.archived ? (
+                <>
+                  <ArchiveX className="mr-2 h-4 w-4" />
+                  Restore
+                </>
+              ) : (
+                <>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Session
+              Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
