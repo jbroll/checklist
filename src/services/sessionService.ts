@@ -203,3 +203,137 @@ export function updateViewMode(
   session.$jazz.set('viewMode', viewMode);
   session.$jazz.set('lastActivityAt', new Date());
 }
+
+/**
+ * Batch select items
+ */
+export function batchSelectItems(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemIds: string[],
+  selected: boolean,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+  const updatedStates = { ...itemStates };
+  const now = new Date();
+
+  itemIds.forEach((itemId) => {
+    const currentState = updatedStates[itemId];
+
+    if (!currentState && selected) {
+      updatedStates[itemId] = {
+        selected: true,
+        checked: false,
+        selectedAt: now,
+      };
+    } else if (currentState) {
+      updatedStates[itemId] = {
+        ...currentState,
+        selected,
+        selectedAt: selected ? now : currentState.selectedAt,
+        checked: selected ? currentState.checked : false,
+        checkedAt: selected ? currentState.checkedAt : undefined,
+      };
+    }
+  });
+
+  session.$jazz.set('itemStates', updatedStates);
+  session.$jazz.set('lastActivityAt', now);
+}
+
+/**
+ * Toggle selection for all items (select all if some unselected, deselect all if all selected)
+ */
+export function toggleSelectAllItems(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemIds: string[],
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+
+  // Check if all items are selected
+  const allSelected = itemIds.every((id) => itemStates[id]?.selected);
+
+  console.log('[toggleSelectAllItems] BEFORE:', {
+    itemIds,
+    allSelected,
+    willSelect: !allSelected,
+    itemStates: itemIds.map((id) => ({ id, selected: itemStates[id]?.selected })),
+  });
+
+  // Toggle: if all selected, deselect all; otherwise select all
+  batchSelectItems(account, templateId, sessionId, itemIds, !allSelected);
+
+  // Log after
+  const newSession = getSession(account, templateId, sessionId);
+  const newItemStates = newSession?.itemStates || {};
+  console.log('[toggleSelectAllItems] AFTER:', {
+    itemIds,
+    newAllSelected: itemIds.every((id) => newItemStates[id]?.selected),
+    newItemStates: itemIds.map((id) => ({ id, selected: newItemStates[id]?.selected })),
+  });
+}
+
+/**
+ * Invert selection for all items (selected → unselected, unselected → selected)
+ */
+export function invertItemSelection(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemIds: string[],
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+  const updatedStates = { ...itemStates };
+  const now = new Date();
+
+  console.log('[invertItemSelection] BEFORE:', {
+    itemIds,
+    itemStates: itemIds.map((id) => ({ id, selected: itemStates[id]?.selected })),
+  });
+
+  itemIds.forEach((itemId) => {
+    const currentState = updatedStates[itemId];
+    const currentlySelected = currentState?.selected || false;
+
+    if (!currentState) {
+      // Item has no state, so it's unselected - invert to selected
+      updatedStates[itemId] = {
+        selected: true,
+        checked: false,
+        selectedAt: now,
+      };
+    } else {
+      // Invert the current selection state
+      updatedStates[itemId] = {
+        ...currentState,
+        selected: !currentlySelected,
+        selectedAt: !currentlySelected ? now : currentState.selectedAt,
+        checked: !currentlySelected ? currentState.checked : false,
+        checkedAt: !currentlySelected ? currentState.checkedAt : undefined,
+      };
+    }
+  });
+
+  session.$jazz.set('itemStates', updatedStates);
+  session.$jazz.set('lastActivityAt', now);
+
+  // Log after
+  const newSession = getSession(account, templateId, sessionId);
+  const newItemStates = newSession?.itemStates || {};
+  console.log('[invertItemSelection] AFTER:', {
+    itemIds,
+    newItemStates: itemIds.map((id) => ({ id, selected: newItemStates[id]?.selected })),
+  });
+}

@@ -14,6 +14,9 @@ interface AvailableZoneRendererProps {
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
+  onBatchSelectAll: (itemIds: string[]) => void;
+  onBatchDeselectAll: (itemIds: string[]) => void;
+  onBatchToggle: (itemIds: string[]) => void;
 }
 
 export function AvailableZoneRenderer({
@@ -26,6 +29,9 @@ export function AvailableZoneRenderer({
   onToggleCategoryExpanded,
   onToggleSelected,
   onToggleChecked,
+  onBatchSelectAll,
+  onBatchDeselectAll,
+  onBatchToggle,
 }: AvailableZoneRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
   const availableCategories = buildCategoryTree(availableItems, template.items);
@@ -50,7 +56,11 @@ export function AvailableZoneRenderer({
             onToggleExpand={() => onToggleCategoryExpanded(catKey)}
             onToggleSelected={onToggleSelected}
             onToggleChecked={onToggleChecked}
+            onBatchSelectAll={onBatchSelectAll}
+            onBatchDeselectAll={onBatchDeselectAll}
+            onBatchToggle={onBatchToggle}
             count={category.items.length}
+            category={category}
           >
             {hasChildren && (
               <div className="flex flex-col pl-4">
@@ -67,6 +77,8 @@ export function AvailableZoneRenderer({
   // Otherwise render the category tree
   const hasCategories = availableCategories.length > 0;
 
+  // For top-level zone with categories, we still want to show batch selection
+  // based on all items, not just direct children
   return (
     <SessionZone
       title="List"
@@ -78,9 +90,17 @@ export function AvailableZoneRenderer({
       onToggleExpand={onToggleZoneExpanded}
       onToggleSelected={onToggleSelected}
       onToggleChecked={onToggleChecked}
+      onBatchSelectAll={onBatchSelectAll}
+      onBatchDeselectAll={onBatchDeselectAll}
+      onBatchToggle={onBatchToggle}
       count={availableItems.length}
       showHeading={showZoneHeadings}
       isTopLevelZone={true}
+      category={
+        hasCategories
+          ? { name: 'List', path: 'list', items: [], children: availableCategories, depth: 0 }
+          : null
+      }
     >
       {hasCategories && (
         <div className="flex flex-col">
