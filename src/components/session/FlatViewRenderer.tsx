@@ -1,18 +1,18 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { SessionZone } from './SessionZone';
 
 interface FlatViewRendererProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
-  cartItems: TemplateItem[];
-  completedItems: TemplateItem[];
+  selectedItems: TemplateItem[];
+  checkedItems: TemplateItem[];
   zoneExpanded: {
-    cart: boolean;
-    completed: boolean;
+    selected: boolean;
+    checked: boolean;
   };
-  onToggleZoneExpanded: (zone: 'cart' | 'completed') => void;
+  onToggleZoneExpanded: (zone: 'selected' | 'checked') => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
 }
@@ -20,8 +20,8 @@ interface FlatViewRendererProps {
 export function FlatViewRenderer({
   template,
   session,
-  cartItems,
-  completedItems,
+  selectedItems,
+  checkedItems,
   zoneExpanded,
   onToggleZoneExpanded,
   onToggleSelected,
@@ -32,29 +32,29 @@ export function FlatViewRenderer({
   return (
     <>
       <SessionZone
-        title="In Cart"
-        icon={ShoppingCart}
-        zone="cart"
-        items={cartItems}
+        title="Selected"
+        icon={ListChecks}
+        zone="selected"
+        items={selectedItems}
         itemStates={session.itemStates || {}}
-        expanded={zoneExpanded.cart}
-        onToggleExpand={() => onToggleZoneExpanded('cart')}
+        expanded={zoneExpanded.selected}
+        onToggleExpand={() => onToggleZoneExpanded('selected')}
         onToggleSelected={onToggleSelected}
         onToggleChecked={onToggleChecked}
-        count={cartItems.length}
+        count={selectedItems.length}
         showHeading={showZoneHeadings}
       />
       <SessionZone
-        title="Completed"
+        title="Checked"
         icon={CheckCircle2}
-        zone="completed"
-        items={completedItems}
+        zone="checked"
+        items={checkedItems}
         itemStates={session.itemStates || {}}
-        expanded={zoneExpanded.completed}
-        onToggleExpand={() => onToggleZoneExpanded('completed')}
+        expanded={zoneExpanded.checked}
+        onToggleExpand={() => onToggleZoneExpanded('checked')}
         onToggleSelected={onToggleSelected}
         onToggleChecked={onToggleChecked}
-        count={completedItems.length}
+        count={checkedItems.length}
         showHeading={showZoneHeadings}
       />
     </>

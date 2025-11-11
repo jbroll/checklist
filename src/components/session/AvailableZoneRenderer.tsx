@@ -4,10 +4,10 @@ import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
-interface InventoryZoneRendererProps {
+interface AvailableZoneRendererProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
-  inventoryItems: TemplateItem[];
+  availableItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   zoneExpanded: boolean;
   onToggleZoneExpanded: () => void;
@@ -16,23 +16,23 @@ interface InventoryZoneRendererProps {
   onToggleChecked: (itemId: string) => void;
 }
 
-export function InventoryZoneRenderer({
+export function AvailableZoneRenderer({
   template,
   session,
-  inventoryItems,
+  availableItems,
   categoryExpanded,
   zoneExpanded,
   onToggleZoneExpanded,
   onToggleCategoryExpanded,
   onToggleSelected,
   onToggleChecked,
-}: InventoryZoneRendererProps) {
+}: AvailableZoneRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
-  const inventoryCategories = buildCategoryTree(inventoryItems, template.items);
+  const availableCategories = buildCategoryTree(availableItems, template.items);
 
   const renderCategoryTree = (
     categories: CategoryNode[],
-    zone: 'inventory',
+    zone: 'available',
     keyPrefix: string,
   ): React.ReactNode => {
     return categories.map((category) => {
@@ -65,25 +65,25 @@ export function InventoryZoneRenderer({
 
   // If there are no categories, render items directly in the zone
   // Otherwise render the category tree
-  const hasCategories = inventoryCategories.length > 0;
+  const hasCategories = availableCategories.length > 0;
 
   return (
     <SessionZone
       title="List"
       icon={Package}
-      zone="inventory"
-      items={hasCategories ? [] : inventoryItems}
+      zone="available"
+      items={hasCategories ? [] : availableItems}
       itemStates={session.itemStates || {}}
       expanded={zoneExpanded}
       onToggleExpand={onToggleZoneExpanded}
       onToggleSelected={onToggleSelected}
       onToggleChecked={onToggleChecked}
-      count={inventoryItems.length}
+      count={availableItems.length}
       showHeading={showZoneHeadings}
     >
       {hasCategories && (
         <div className="flex flex-col gap-2">
-          {renderCategoryTree(inventoryCategories, 'inventory', 'inventory')}
+          {renderCategoryTree(availableCategories, 'available', 'available')}
         </div>
       )}
     </SessionZone>

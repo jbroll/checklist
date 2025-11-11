@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
@@ -7,14 +7,14 @@ import { SessionZone } from './SessionZone';
 interface HierarchyInZonesRendererProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
-  cartItems: TemplateItem[];
-  completedItems: TemplateItem[];
+  selectedItems: TemplateItem[];
+  checkedItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   zoneExpanded: {
-    cart: boolean;
-    completed: boolean;
+    selected: boolean;
+    checked: boolean;
   };
-  onToggleZoneExpanded: (zone: 'cart' | 'completed') => void;
+  onToggleZoneExpanded: (zone: 'selected' | 'checked') => void;
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
@@ -23,8 +23,8 @@ interface HierarchyInZonesRendererProps {
 export function HierarchyInZonesRenderer({
   template,
   session,
-  cartItems,
-  completedItems,
+  selectedItems,
+  checkedItems,
   categoryExpanded,
   zoneExpanded,
   onToggleZoneExpanded,
@@ -36,7 +36,7 @@ export function HierarchyInZonesRenderer({
 
   const renderCategoryTree = (
     categories: CategoryNode[],
-    zone: 'cart' | 'completed',
+    zone: 'selected' | 'checked',
     keyPrefix: string,
   ): React.ReactNode => {
     return categories.map((category) => {
@@ -68,12 +68,12 @@ export function HierarchyInZonesRenderer({
   };
 
   const zones = [
-    { key: 'cart' as const, title: 'In Cart', icon: ShoppingCart, items: cartItems },
+    { key: 'selected' as const, title: 'Selected', icon: ListChecks, items: selectedItems },
     {
-      key: 'completed' as const,
-      title: 'Completed',
+      key: 'checked' as const,
+      title: 'Checked',
       icon: CheckCircle2,
-      items: completedItems,
+      items: checkedItems,
     },
   ];
 
