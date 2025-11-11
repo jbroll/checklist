@@ -1,13 +1,21 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Download, Folder, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
+import {
+  Archive,
+  ArchiveX,
+  Download,
+  Folder,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { memo, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -228,12 +236,19 @@ export const FolderNodeView = memo(function FolderNodeView({
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem
-                    checked={entry.archived}
-                    onCheckedChange={handleToggleArchived}
-                  >
-                    Archived
-                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuItem onClick={handleToggleArchived}>
+                    {entry.archived ? (
+                      <>
+                        <ArchiveX className="mr-2 h-4 w-4" />
+                        Unarchive
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                      </>
+                    )}
+                  </DropdownMenuItem>
                   {entry.archived && (
                     <>
                       <DropdownMenuSeparator />
