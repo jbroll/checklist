@@ -44,7 +44,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded px-2 py-1 hover:bg-neutral-100">
+    <div className="flex items-center gap-3 rounded px-1 py-0.5 hover:bg-neutral-100">
       {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
       <button
         type="button"
