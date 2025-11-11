@@ -35,12 +35,19 @@ export function useSessionItems({ template, session }: UseSessionItemsParams) {
       }
     });
 
-    // Sort all items alphabetically by name
+    // Sort all items by sortOrder (with name as fallback)
+    const sortItems = (a: TemplateItem, b: TemplateItem) => {
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+      return a.name.localeCompare(b.name);
+    };
+
     return {
       activeItems: active,
-      inventoryItems: inventory.sort((a, b) => a.name.localeCompare(b.name)),
-      cartItems: cart.sort((a, b) => a.name.localeCompare(b.name)),
-      completedItems: completed.sort((a, b) => a.name.localeCompare(b.name)),
+      inventoryItems: inventory.sort(sortItems),
+      cartItems: cart.sort(sortItems),
+      completedItems: completed.sort(sortItems),
     };
   }, [template, session]);
 

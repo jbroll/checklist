@@ -337,3 +337,29 @@ export function toggleCategoryExpanded(
   template.$jazz.set('items', updatedItems);
   template.$jazz.set('updatedAt', new Date());
 }
+
+/**
+ * Reorder an item by changing its sortOrder (fractional indexing)
+ * This updates the sortOrder of the dragged item to place it between two siblings
+ */
+export function reorderItem(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+  newSortOrder: number,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+
+  const updatedItems = [...template.items];
+  updatedItems[itemIndex] = {
+    ...updatedItems[itemIndex],
+    sortOrder: newSortOrder,
+  };
+
+  template.$jazz.set('items', updatedItems);
+  template.$jazz.set('updatedAt', new Date());
+}

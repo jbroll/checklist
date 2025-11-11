@@ -926,4 +926,162 @@ describe('directoryService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('reorderDirectoryEntry', () => {
+    it('should move entry from position 0 to position 2', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'First',
+          type: 'folder',
+          path: 'first',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'Second',
+          type: 'folder',
+          path: 'second',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'Third',
+          type: 'folder',
+          path: 'third',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.reorderDirectoryEntry(account, '1', 2);
+
+      expect(account.root.$jazz.set).toHaveBeenCalled();
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      expect(setCall[0]).toBe('directory');
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Check order: Second, Third, First
+      expect(newDirectory[0].id).toBe('2');
+      expect(newDirectory[1].id).toBe('3');
+      expect(newDirectory[2].id).toBe('1');
+    });
+
+    it('should move entry from position 2 to position 0', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'First',
+          type: 'folder',
+          path: 'first',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'Second',
+          type: 'folder',
+          path: 'second',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'Third',
+          type: 'folder',
+          path: 'third',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.reorderDirectoryEntry(account, '3', 0);
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Check order: Third, First, Second
+      expect(newDirectory[0].id).toBe('3');
+      expect(newDirectory[1].id).toBe('1');
+      expect(newDirectory[2].id).toBe('2');
+    });
+
+    it('should throw error for nonexistent entry', () => {
+      const account = createMockAccount([]);
+
+      expect(() => {
+        directoryService.reorderDirectoryEntry(account, 'nonexistent', 0);
+      }).toThrow('Entry nonexistent not found');
+    });
+
+    it('should handle reordering within middle positions', () => {
+      const entries: DirectoryEntry[] = [
+        {
+          id: '1',
+          name: 'A',
+          type: 'folder',
+          path: 'a',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'B',
+          type: 'folder',
+          path: 'b',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'C',
+          type: 'folder',
+          path: 'c',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '4',
+          name: 'D',
+          type: 'folder',
+          path: 'd',
+          expanded: false,
+          archived: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      const account = createMockAccount(entries);
+      directoryService.reorderDirectoryEntry(account, '2', 3);
+
+      const setCall = account.root.$jazz.set.mock.calls[0];
+      const newDirectory = setCall[1] as DirectoryEntry[];
+
+      // Check order: A, C, D, B
+      expect(newDirectory.map((e) => e.id)).toEqual(['1', '3', '4', '2']);
+    });
+  });
 });

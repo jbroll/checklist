@@ -12,12 +12,14 @@ import {
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Folder } from 'lucide-react';
 import { useState } from 'react';
+import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Template, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/itemService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
+import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 import { AddItemDialog } from './AddItemDialog';
 import { RootDropZone } from './RootDropZone';
 
@@ -182,7 +184,45 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       return;
     }
 
-    // Determine the new parent path
+    // Check if dropped on a reorder zone
+    if (overData?.type === 'reorder-zone') {
+      // Get siblings at the same level as the dragged item
+      const currentParentPath = getParentPath(draggedItem.path);
+      const siblings = activeItems.filter((item) => getParentPath(item.path) === currentParentPath);
+
+      // Sort siblings by current sortOrder
+      siblings.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const afterItemId = overData.afterItemId as string | undefined;
+      const beforeItemId = overData.beforeItemId as string | undefined;
+
+      // Find the sortOrder values to calculate midpoint
+      let beforeSortOrder: number | undefined;
+      let afterSortOrder: number | undefined;
+
+      if (afterItemId) {
+        const afterItem = siblings.find((item) => item.id === afterItemId);
+        afterSortOrder = afterItem?.sortOrder;
+      }
+
+      if (beforeItemId) {
+        const beforeItem = siblings.find((item) => item.id === beforeItemId);
+        beforeSortOrder = beforeItem?.sortOrder;
+      }
+
+      // Calculate new sortOrder using fractional indexing
+      const newSortOrder = calculateMidpointSortOrder(afterSortOrder, beforeSortOrder);
+
+      try {
+        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+        ItemService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
+      } catch {
+        // Silently ignore errors
+      }
+      return;
+    }
+
+    // Otherwise, handle hierarchy changes (move into categories)
     let newParentPath: string | undefined;
 
     // IMPORTANT: Check virtual root zone FIRST
@@ -224,11 +264,26 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   };
 
   // Recursive function to render item tree
-  const renderItemNode = (node: ReturnType<typeof buildItemTree>[number], depth = 0) => {
+  const renderItemNode = (
+    node: ReturnType<typeof buildItemTree>[number],
+    depth = 0,
+    siblings: ReturnType<typeof buildItemTree> = [],
+    index = 0,
+  ) => {
     const { item, children } = node;
+    const parentPath = getParentPath(item.path);
 
     return (
       <div key={item.id}>
+        {/* Reorder zone before first sibling */}
+        {index === 0 && (
+          <ReorderDropZone
+            id={`reorder-before-${item.id}`}
+            beforeItemId={item.id}
+            parentPath={parentPath}
+            isDragging={!!activeItem}
+          />
+        )}
         <TemplateItemView
           item={item}
           level={depth}
@@ -239,9 +294,21 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
           onDelete={handleDeleteItem}
           onToggleExpand={handleToggleExpand}
         />
+        {/* Reorder zone after each sibling */}
+        <ReorderDropZone
+          id={`reorder-after-${item.id}`}
+          afterItemId={item.id}
+          beforeItemId={siblings[index + 1]?.item.id}
+          parentPath={parentPath}
+          isDragging={!!activeItem}
+        />
         {/* Render children if category is expanded */}
         {item.type === 'category' && item.expanded && children.length > 0 && (
-          <div>{children.map((child) => renderItemNode(child, depth + 1))}</div>
+          <div>
+            {children.map((child, childIndex) =>
+              renderItemNode(child, depth + 1, children, childIndex),
+            )}
+          </div>
         )}
       </div>
     );
@@ -315,7 +382,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
               </div>
             ) : (
               <div className="divide-y divide-neutral-100">
-                {itemTree.map((node) => renderItemNode(node, 0))}
+                {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
               </div>
             )}
           </div>

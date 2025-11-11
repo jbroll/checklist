@@ -15,6 +15,7 @@ import type { Account, DirectoryEntry, Template } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
 import * as templateService from '@/services/templateService';
 import { FolderNodeView } from './FolderNodeView';
+import { ReorderDropZone } from './ReorderDropZone';
 import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
 
@@ -99,15 +100,8 @@ function buildDirectoryTree(
     }
   }
 
-  // Sort children by name
-  const sortNodes = (nodes: DirectoryNode[]) => {
-    nodes.sort((a, b) => a.entry.name.localeCompare(b.entry.name));
-    for (const node of nodes) {
-      sortNodes(node.children);
-    }
-  };
-  sortNodes(rootNodes);
-
+  // Children are already in correct order from directory array
+  // No need to sort - array position determines visual order
   return rootNodes;
 }
 
@@ -209,7 +203,33 @@ export function TreeView({
     const draggedEntryId = active.data.current.entryId as string;
     const overData = over.data.current;
 
-    // Determine the new parent path
+    // Check if dropped on a reorder zone
+    if (overData?.type === 'reorder-zone') {
+      // Calculate the new position in the array
+      const directory = account.root?.directory || [];
+      const afterItemId = overData.afterItemId as string | undefined;
+      const beforeItemId = overData.beforeItemId as string | undefined;
+
+      // Find the target index
+      let newIndex: number;
+      if (afterItemId) {
+        const afterIndex = directory.findIndex((e) => e.id === afterItemId);
+        newIndex = afterIndex + 1;
+      } else if (beforeItemId) {
+        newIndex = directory.findIndex((e) => e.id === beforeItemId);
+      } else {
+        newIndex = 0; // Insert at beginning
+      }
+
+      try {
+        directoryService.reorderDirectoryEntry(account, draggedEntryId, newIndex);
+      } catch {
+        // Silently ignore errors
+      }
+      return;
+    }
+
+    // Otherwise, handle hierarchy changes (move into folders)
     let newParentPath: string | undefined;
 
     // IMPORTANT: Check virtual root zone FIRST
@@ -382,7 +402,26 @@ export function TreeView({
           </div>
         ) : (
           <div className="divide-y divide-neutral-100 p-2">
-            {directoryTree.map((node) => renderNode(node))}
+            {directoryTree.map((node, index) => (
+              <div key={node.entry.id}>
+                {/* Reorder zone before first item */}
+                {index === 0 && (
+                  <ReorderDropZone
+                    id={`reorder-before-${node.entry.id}`}
+                    beforeItemId={node.entry.id}
+                    isDragging={!!activeEntryId}
+                  />
+                )}
+                {renderNode(node)}
+                {/* Reorder zone after each item */}
+                <ReorderDropZone
+                  id={`reorder-after-${node.entry.id}`}
+                  afterItemId={node.entry.id}
+                  beforeItemId={directoryTree[index + 1]?.entry.id}
+                  isDragging={!!activeEntryId}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -28,7 +28,7 @@ export function InventoryZoneRenderer({
   onToggleChecked,
 }: InventoryZoneRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
-  const inventoryCategories = buildCategoryTree(inventoryItems);
+  const inventoryCategories = buildCategoryTree(inventoryItems, template.items);
 
   const renderCategoryTree = (
     categories: CategoryNode[],
