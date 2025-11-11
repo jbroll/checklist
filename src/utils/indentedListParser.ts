@@ -116,20 +116,8 @@ function detectIndentation(lines: string[]): IndentConfig {
     return { type: 'spaces', size: 2 };
   }
 
-  // Find GCD of all indent sizes to determine base indent
-  const gcd = indentSizes.reduce((a, b) => {
-    while (b !== 0) {
-      const temp = b;
-      b = a % b;
-      a = temp;
-    }
-    return a;
-  });
-
-  // Clamp to reasonable values (2, 3, or 4)
-  let size = gcd;
-  if (size < 2) size = 2;
-  if (size > 4) size = 4;
+  // Use the minimum indent as the base unit - any amount of leading space counts
+  const size = Math.min(...indentSizes);
 
   return { type: 'spaces', size };
 }
