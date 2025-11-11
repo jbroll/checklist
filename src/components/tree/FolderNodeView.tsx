@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useDialog } from '@/lib/dialog-context';
 import type { Account, DirectoryEntry, Template } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
@@ -69,6 +70,7 @@ export const FolderNodeView = memo(function FolderNodeView({
   const [editedName, setEditedName] = useState(name);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const { showConfirm } = useDialog();
 
   // Draggable setup - all entries are draggable
   const {
@@ -115,7 +117,7 @@ export const FolderNodeView = memo(function FolderNodeView({
     }
   };
 
-  const handleToggleArchived = () => {
+  const handleToggleArchived = async () => {
     if (entry.archived) {
       // Unarchive
       if (onArchive) {
@@ -123,27 +125,46 @@ export const FolderNodeView = memo(function FolderNodeView({
       }
     } else {
       // Archive
-      if (onArchive && confirm(`Archive "${name}"?`)) {
-        onArchive(entryId);
+      if (onArchive) {
+        const confirmed = await showConfirm({
+          title: 'Archive Item',
+          message: name,
+          confirmText: 'Archive',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onArchive(entryId);
+        }
       }
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     // If not archived, archive first (soft delete)
     if (!entry.archived) {
-      if (onArchive && confirm(`Archive "${name}"?`)) {
-        onArchive(entryId);
+      if (onArchive) {
+        const confirmed = await showConfirm({
+          title: 'Delete Item',
+          message: name,
+          confirmText: 'Delete',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onArchive(entryId);
+        }
       }
     } else {
       // If already archived, permanent deletion
-      const warningMessage =
-        entry.type === 'template-ref'
-          ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
-          : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
-
-      if (onDelete && confirm(warningMessage)) {
-        onDelete(entryId);
+      if (onDelete) {
+        const confirmed = await showConfirm({
+          title: 'Permanent Delete',
+          message: name,
+          confirmText: 'Delete Permanently',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onDelete(entryId);
+        }
       }
     }
   };

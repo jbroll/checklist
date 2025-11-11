@@ -1,6 +1,7 @@
 import { Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { useDialog } from '@/lib/dialog-context';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -52,6 +53,7 @@ export function FileUploadDialog<TResult>({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<TResult | null>(null);
+  const { showAlert } = useDialog();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -79,21 +81,26 @@ export function FileUploadDialog<TResult>({
     }
   };
 
-  const validateAndSetFile = (file: File) => {
+  const validateAndSetFile = async (file: File) => {
     // Validate file type
     const fileName = file.name.toLowerCase();
     const detectedType = acceptedFileTypes.find((type) => fileName.endsWith(`.${type}`));
 
     if (!detectedType) {
-      const typeList = acceptedFileTypes.map((t) => `.${t}`).join(', ');
-      alert(`Please select a valid file (${typeList})`);
+      await showAlert({
+        title: 'Invalid File Type',
+        message: 'Invalid file type.',
+      });
       return;
     }
 
     // Validate file size
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > maxSizeMB) {
-      alert(`File size exceeds ${maxSizeMB}MB limit`);
+      await showAlert({
+        title: 'File Too Large',
+        message: 'File too large.',
+      });
       return;
     }
 
@@ -112,7 +119,10 @@ export function FileUploadDialog<TResult>({
       const uploadResult = await onUpload(selectedFile, fileType);
       setResult(uploadResult);
     } catch (error) {
-      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await showAlert({
+        title: 'Upload Failed',
+        message: 'Upload failed.',
+      });
     } finally {
       setIsUploading(false);
     }

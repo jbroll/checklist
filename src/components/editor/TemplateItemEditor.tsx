@@ -14,6 +14,7 @@ import { Folder } from 'lucide-react';
 import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
+import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Template, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/itemService';
@@ -33,6 +34,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { showConfirm } = useDialog();
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -139,11 +141,18 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     setSelectedIds(new Set());
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
 
     const count = selectedIds.size;
-    if (!confirm(`Delete ${count} selected item${count > 1 ? 's' : ''}?`)) {
+    const confirmed = await showConfirm({
+      title: 'Delete Selected Items',
+      message: `${count} item${count > 1 ? 's' : ''}`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 

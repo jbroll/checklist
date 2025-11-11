@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useDialog } from '@/lib/dialog-context';
 import type { Account, Template } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import type { ExportScope } from '@/services/export/types';
@@ -29,8 +30,9 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
   // For template-level export, allow format selection
   const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
   const [isExporting, setIsExporting] = useState(false);
+  const { showAlert } = useDialog();
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
 
     try {
@@ -65,7 +67,10 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
       // Close dialog
       onOpenChange(false);
     } catch (error) {
-      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await showAlert({
+        title: 'Export Failed',
+        message: 'Export failed.',
+      });
     } finally {
       setIsExporting(false);
     }
