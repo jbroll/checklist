@@ -10,7 +10,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../lib/utils';
 import { type Account, type DirectoryEntry, Template } from '../schemas';
-import { calculateDescendantPaths, calculateNewPath } from '../utils/pathUtils';
+import { calculateDescendantPaths, calculateNewPath, PATH_SEPARATOR } from '../utils/pathUtils';
 
 /**
  * Create a new directory entry (folder or template-ref)
@@ -23,9 +23,9 @@ export function createDirectoryEntry(
 ): { entryId: string; templateId?: string; path: string } {
   if (!account.root) throw new Error('Account root not initialized');
 
-  // Normalize name for path
-  const normalizedName = name.trim().replace(/\s+/g, '-');
-  const path = parentPath ? `${parentPath}/${normalizedName}` : normalizedName;
+  // Use name as-is without normalization
+  const normalizedName = name.trim();
+  const path = parentPath ? `${parentPath}${PATH_SEPARATOR}${normalizedName}` : normalizedName;
 
   const now = new Date();
   const entryId = generateId();
@@ -102,8 +102,8 @@ export function getAllDirectoryEntries(
   showArchived = false,
 ): DirectoryEntry[] {
   if (!account.root?.directory) return [];
-  // Show all entries when showArchived=true, only active entries when false
-  return account.root.directory.filter((e) => showArchived || !e.archived);
+  // Show only archived entries when showArchived=true, only active when false
+  return account.root.directory.filter((e) => (showArchived ? e.archived : !e.archived));
 }
 
 /**
@@ -168,7 +168,7 @@ export function archiveDirectoryEntry(
       return { ...e, archived: true, updatedAt: now };
     }
     // Archive all entries whose paths start with this folder's path (if it's a folder)
-    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}/`)) {
+    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}${PATH_SEPARATOR}`)) {
       return { ...e, archived: true, updatedAt: now };
     }
     return e;
@@ -199,7 +199,7 @@ export function unarchiveDirectoryEntry(
       return { ...e, archived: false, updatedAt: now };
     }
     // Unarchive all entries whose paths start with this folder's path (if it's a folder)
-    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}/`)) {
+    if (entry.type === 'folder' && e.path.startsWith(`${entry.path}${PATH_SEPARATOR}`)) {
       return { ...e, archived: false, updatedAt: now };
     }
     return e;
@@ -231,7 +231,9 @@ export function deleteDirectoryEntry(
 
   // If it's a folder, recursively delete all children first
   if (entry.type === 'folder') {
-    const childEntries = account.root.directory.filter((e) => e.path.startsWith(`${entry.path}/`));
+    const childEntries = account.root.directory.filter((e) =>
+      e.path.startsWith(`${entry.path}${PATH_SEPARATOR}`),
+    );
     for (const child of childEntries) {
       // Recursively delete each child (which will handle their children too)
       deleteDirectoryEntry(account, child.id);

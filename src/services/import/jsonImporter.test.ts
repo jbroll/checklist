@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import type { ExportedData } from '../export/types';
 import { importJson } from './jsonImporter';
 
@@ -325,11 +326,11 @@ describe('jsonImporter', () => {
       };
 
       const account = createMockAccount();
-      const parentPath = 'grocery-stores/wegmans';
+      const parentPath = `grocery-stores${PATH_SEPARATOR}wegmans`;
       const _result = await importJson(JSON.stringify(exportData), account as any, parentPath);
 
       // Should create path under parent folder
-      // Path would be: grocery-stores/wegmans/Weekly-Shopping
+      // Path would be: grocery-stores<SEP>wegmans<SEP>Weekly-Shopping
       expect(exportData.folders[0].name).toBe('Weekly Shopping');
     });
   });

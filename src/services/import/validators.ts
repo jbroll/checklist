@@ -112,8 +112,8 @@ export function validateJsonData(
           stats.totalSessions += folder.sessions.length;
         }
 
-        // Check for name conflicts (generate path from name)
-        const normalizedName = folder.name.trim().replace(/\s+/g, '-');
+        // Check for name conflicts (use name as-is without normalization)
+        const normalizedName = folder.name.trim();
         if (directoryPathExists(normalizedName, account)) {
           stats.duplicateFolders++;
         }
