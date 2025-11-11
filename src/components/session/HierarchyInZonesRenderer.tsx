@@ -2,6 +2,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
+import { SessionItemRow } from './SessionItemRow';
 import { SessionZone } from './SessionZone';
 
 interface HierarchyInZonesRendererProps {
@@ -54,7 +55,7 @@ export function HierarchyInZonesRenderer({
           <SessionZone
             title={category.name}
             zone={zone}
-            items={category.items}
+            items={[]}
             itemStates={session?.itemStates || {}}
             expanded={categoryExpanded[catKey] ?? true}
             onToggleExpand={() => onToggleCategoryExpanded(catKey)}
@@ -66,11 +67,21 @@ export function HierarchyInZonesRenderer({
             count={category.items.length}
             category={category}
           >
-            {hasChildren && (
-              <div className="flex flex-col pl-4">
-                {renderCategoryTree(category.children, zone, keyPrefix)}
-              </div>
-            )}
+            <div className="pl-4 flex flex-col">
+              {/* Render items first */}
+              {category.items.map((item) => (
+                <SessionItemRow
+                  key={item.id}
+                  item={item}
+                  state={session.itemStates?.[item.id] || null}
+                  zone={zone}
+                  onToggleSelected={onToggleSelected}
+                  onToggleChecked={onToggleChecked}
+                />
+              ))}
+              {/* Then render child categories */}
+              {hasChildren && renderCategoryTree(category.children, zone, keyPrefix)}
+            </div>
           </SessionZone>
         </div>
       );
