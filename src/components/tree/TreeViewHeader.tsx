@@ -180,7 +180,7 @@ export function TreeViewHeader({
                   onCheckedChange={onToggleShowArchived}
                 >
                   <Archive className="mr-2 h-4 w-4" />
-                  Archived
+                  Show Archived
                 </DropdownMenuCheckboxItem>
                 {onSignOut && (
                   <>

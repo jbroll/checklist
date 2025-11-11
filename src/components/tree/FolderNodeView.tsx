@@ -130,14 +130,21 @@ export const FolderNodeView = memo(function FolderNodeView({
   };
 
   const handleDelete = () => {
-    // Permanent deletion - show warning
-    const warningMessage =
-      entry.type === 'template-ref'
-        ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
-        : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
+    // If not archived, archive first (soft delete)
+    if (!entry.archived) {
+      if (onArchive && confirm(`Archive "${name}"?`)) {
+        onArchive(entryId);
+      }
+    } else {
+      // If already archived, permanent deletion
+      const warningMessage =
+        entry.type === 'template-ref'
+          ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
+          : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
 
-    if (onDelete && confirm(warningMessage)) {
-      onDelete(entryId);
+      if (onDelete && confirm(warningMessage)) {
+        onDelete(entryId);
+      }
     }
   };
 
@@ -240,7 +247,7 @@ export const FolderNodeView = memo(function FolderNodeView({
                     {entry.archived ? (
                       <>
                         <ArchiveX className="mr-2 h-4 w-4" />
-                        Unarchive
+                        Restore
                       </>
                     ) : (
                       <>
@@ -249,15 +256,11 @@ export const FolderNodeView = memo(function FolderNodeView({
                       </>
                     )}
                   </DropdownMenuItem>
-                  {entry.archived && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
