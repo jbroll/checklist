@@ -283,6 +283,46 @@ export function toggleEntryExpanded(
 }
 
 /**
+ * Expand all ancestor folders for a given path
+ * This ensures the full path hierarchy is visible in the tree
+ * @param path - The path whose ancestors should be expanded (e.g., "stores\x01wegmans\x01weekly")
+ */
+export function expandAncestorFolders(
+  account: InstanceOfSchema<typeof Account>,
+  path: string,
+): void {
+  if (!account.root?.directory) return;
+
+  const now = new Date();
+  const ancestorPaths = new Set<string>();
+
+  // Collect all ancestor paths
+  let currentPath: string | undefined = path;
+  while (currentPath) {
+    const parentPath = currentPath.substring(0, currentPath.lastIndexOf(PATH_SEPARATOR));
+    if (parentPath) {
+      ancestorPaths.add(parentPath);
+      currentPath = parentPath;
+    } else {
+      break;
+    }
+  }
+
+  // If no ancestors, nothing to expand
+  if (ancestorPaths.size === 0) return;
+
+  // Update entries: set expanded=true for all ancestors
+  const updatedEntries = account.root.directory.map((e) => {
+    if (ancestorPaths.has(e.path) && !e.expanded) {
+      return { ...e, expanded: true, updatedAt: now };
+    }
+    return e;
+  });
+
+  account.root.$jazz.set('directory', updatedEntries);
+}
+
+/**
  * Move a directory entry to a new parent location
  */
 export function moveDirectoryEntry(

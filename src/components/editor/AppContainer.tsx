@@ -99,6 +99,19 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
   const handleUseTemplate = () => {
     if (!selectedTemplateId) return;
 
+    // Find the template's directory entry to get its path
+    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+    const entries = directoryService.getAllDirectoryEntries(me);
+    const templateEntry = entries.find(
+      (e) => e.type === 'template-ref' && e.templateId === selectedTemplateId,
+    );
+
+    // Expand ancestor folders so the template is visible when returning
+    if (templateEntry) {
+      // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
+      directoryService.expandAncestorFolders(me, templateEntry.path);
+    }
+
     // Create session using service
     // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
     const sessionId = SessionService.createSession(me, selectedTemplateId);
