@@ -102,8 +102,8 @@ export function getAllDirectoryEntries(
   showArchived = false,
 ): DirectoryEntry[] {
   if (!account.root?.directory) return [];
-  // Show only archived entries when showArchived=true, only active when false
-  return account.root.directory.filter((e) => (showArchived ? e.archived : !e.archived));
+  // Show all entries (both archived and active) when showArchived=true, only active when false
+  return account.root.directory.filter((e) => showArchived || !e.archived);
 }
 
 /**

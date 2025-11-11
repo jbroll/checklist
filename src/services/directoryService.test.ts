@@ -231,7 +231,7 @@ describe('directoryService', () => {
       expect(result[0].id).toBe('1');
     });
 
-    it('should return only archived entries when showArchived=true', () => {
+    it('should return both archived and active entries when showArchived=true', () => {
       const entries: DirectoryEntry[] = [
         {
           id: '1',
@@ -269,10 +269,10 @@ describe('directoryService', () => {
       const account = createMockAccount(entries);
       const result = directoryService.getAllDirectoryEntries(account, true);
 
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(3);
+      expect(result.map((e) => e.id)).toContain('1');
       expect(result.map((e) => e.id)).toContain('2');
       expect(result.map((e) => e.id)).toContain('3');
-      expect(result.map((e) => e.id)).not.toContain('1');
     });
 
     it('should return only non-archived when showArchived=false (explicit)', () => {

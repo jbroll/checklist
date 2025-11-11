@@ -276,11 +276,11 @@ export function TreeView({
     let sessionChildren: React.ReactNode[] = [];
     if (isTemplateRef && template) {
       const sessions = template.sessions || [];
+      // Show all sessions (both archived and active) when showArchived=true, only active sessions when false
       const activeSessions = sessions
         .filter((s) => {
           if (!s) return false;
-          if (!showArchived && s.archived) return false;
-          return true;
+          return showArchived || !s.archived;
         })
         .sort((a, b) => {
           const dateA = a?.createdAt?.getTime() || 0;
