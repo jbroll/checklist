@@ -8,30 +8,30 @@ interface UseSessionItemsParams {
 }
 
 export function useSessionItems({ template, session }: UseSessionItemsParams) {
-  const { activeItems, inventoryItems, cartItems, completedItems } = useMemo(() => {
+  const { activeItems, availableItems, selectedItems, checkedItems } = useMemo(() => {
     const items = template?.items || [];
     const active = items.filter((item) => item && !item.archived && item.type === 'item');
-    const inventory: TemplateItem[] = [];
-    const cart: TemplateItem[] = [];
-    const completed: TemplateItem[] = [];
+    const available: TemplateItem[] = [];
+    const selected: TemplateItem[] = [];
+    const checked: TemplateItem[] = [];
 
     if (!session) {
       return {
         activeItems: active,
-        inventoryItems: inventory,
-        cartItems: cart,
-        completedItems: completed,
+        availableItems: available,
+        selectedItems: selected,
+        checkedItems: checked,
       };
     }
 
     active.forEach((item) => {
       const state = session.itemStates?.[item.id];
       if (!state || (!state.selected && !state.checked)) {
-        inventory.push(item);
+        available.push(item);
       } else if (state.checked) {
-        completed.push(item);
+        checked.push(item);
       } else if (state.selected) {
-        cart.push(item);
+        selected.push(item);
       }
     });
 
@@ -45,16 +45,16 @@ export function useSessionItems({ template, session }: UseSessionItemsParams) {
 
     return {
       activeItems: active,
-      inventoryItems: inventory.sort(sortItems),
-      cartItems: cart.sort(sortItems),
-      completedItems: completed.sort(sortItems),
+      availableItems: available.sort(sortItems),
+      selectedItems: selected.sort(sortItems),
+      checkedItems: checked.sort(sortItems),
     };
   }, [template, session]);
 
   return {
     activeItems,
-    inventoryItems,
-    cartItems,
-    completedItems,
+    availableItems,
+    selectedItems,
+    checkedItems,
   };
 }

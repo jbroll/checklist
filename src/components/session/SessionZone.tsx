@@ -7,7 +7,7 @@ import { SessionItemRow } from './SessionItemRow';
 interface SessionZoneProps {
   title: string;
   icon?: LucideIcon;
-  zone: 'inventory' | 'cart' | 'completed';
+  zone: 'available' | 'selected' | 'checked';
   items: TemplateItem[];
   itemStates: Record<string, ItemState>;
   expanded: boolean;

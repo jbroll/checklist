@@ -4,9 +4,9 @@ import { useAccount } from '@/lib/jazz';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { Account, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
+import { AvailableZoneRenderer } from './AvailableZoneRenderer';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { HierarchyInZonesRenderer } from './HierarchyInZonesRenderer';
-import { InventoryZoneRenderer } from './InventoryZoneRenderer';
 import { SessionHeader } from './SessionHeader';
 import { useSessionItems } from './useSessionItems';
 import { useViewMode } from './useViewMode';
@@ -21,9 +21,9 @@ interface SessionViewProps {
 export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
-    inventory: true,
-    cart: true,
-    completed: false,
+    available: true,
+    selected: true,
+    checked: false,
   });
 
   // Find session first (before any early returns)
@@ -37,7 +37,7 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   // Use hooks for partitioning items
   // @ts-expect-error Jazz TypeScript inference issue with Account root type
-  const { inventoryItems, cartItems, completedItems } = useSessionItems({ template, session });
+  const { availableItems, selectedItems, checkedItems } = useSessionItems({ template, session });
 
   // Use hook for view mode management
   const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
@@ -78,14 +78,14 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     );
   }
 
-  const handleToggleCart = (itemId: string) => {
+  const handleToggleSelected = (itemId: string) => {
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
   };
 
-  const handleTogglePurchased = (itemId: string) => {
+  const handleToggleChecked = (itemId: string) => {
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -112,7 +112,7 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     }
   };
 
-  const renderInCartAndCompleted = () => {
+  const renderSelectedAndChecked = () => {
     if (!session) return null;
 
     if (currentViewMode === 'flat') {
@@ -120,14 +120,14 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
         <FlatViewRenderer
           template={template}
           session={session}
-          cartItems={cartItems}
-          completedItems={completedItems}
-          zoneExpanded={{ cart: zoneExpanded.cart, completed: zoneExpanded.completed }}
+          selectedItems={selectedItems}
+          checkedItems={checkedItems}
+          zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
           onToggleZoneExpanded={(zone) =>
             setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
           }
-          onToggleSelected={handleToggleCart}
-          onToggleChecked={handleTogglePurchased}
+          onToggleSelected={handleToggleSelected}
+          onToggleChecked={handleToggleChecked}
         />
       );
     }
@@ -137,16 +137,16 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
         <HierarchyInZonesRenderer
           template={template}
           session={session}
-          cartItems={cartItems}
-          completedItems={completedItems}
+          selectedItems={selectedItems}
+          checkedItems={checkedItems}
           categoryExpanded={categoryExpanded}
-          zoneExpanded={{ cart: zoneExpanded.cart, completed: zoneExpanded.completed }}
+          zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
           onToggleZoneExpanded={(zone) =>
             setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
           }
           onToggleCategoryExpanded={handleToggleCategoryExpanded}
-          onToggleSelected={handleToggleCart}
-          onToggleChecked={handleTogglePurchased}
+          onToggleSelected={handleToggleSelected}
+          onToggleChecked={handleToggleChecked}
         />
       );
     }
@@ -156,12 +156,12 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
         <ZoneInHierarchyRenderer
           template={template}
           session={session}
-          cartItems={cartItems}
-          completedItems={completedItems}
+          selectedItems={selectedItems}
+          checkedItems={checkedItems}
           categoryExpanded={categoryExpanded}
           onToggleCategoryExpanded={handleToggleCategoryExpanded}
-          onToggleSelected={handleToggleCart}
-          onToggleChecked={handleTogglePurchased}
+          onToggleSelected={handleToggleSelected}
+          onToggleChecked={handleToggleChecked}
         />
       );
     }
@@ -188,23 +188,23 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
           />
 
           <div className="divide-y divide-neutral-100 p-2">
-            {renderInCartAndCompleted()}
-            {/* Divider between In Cart/Completed and Inventory */}
-            {(cartItems.length > 0 || completedItems.length > 0) && inventoryItems.length > 0 && (
+            {renderSelectedAndChecked()}
+            {/* Divider between Selected/Checked and Available */}
+            {(selectedItems.length > 0 || checkedItems.length > 0) && availableItems.length > 0 && (
               <div className="my-2 border-t-2 border-neutral-200" />
             )}
-            <InventoryZoneRenderer
+            <AvailableZoneRenderer
               template={template}
               session={session}
-              inventoryItems={inventoryItems}
+              availableItems={availableItems}
               categoryExpanded={categoryExpanded}
-              zoneExpanded={zoneExpanded.inventory}
+              zoneExpanded={zoneExpanded.available}
               onToggleZoneExpanded={() =>
-                setZoneExpanded((prev) => ({ ...prev, inventory: !prev.inventory }))
+                setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
               }
               onToggleCategoryExpanded={handleToggleCategoryExpanded}
-              onToggleSelected={handleToggleCart}
-              onToggleChecked={handleTogglePurchased}
+              onToggleSelected={handleToggleSelected}
+              onToggleChecked={handleToggleChecked}
             />
           </div>
         </div>

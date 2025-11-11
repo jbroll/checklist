@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
@@ -7,8 +7,8 @@ import { SessionZone } from './SessionZone';
 interface ZoneInHierarchyRendererProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
-  cartItems: TemplateItem[];
-  completedItems: TemplateItem[];
+  selectedItems: TemplateItem[];
+  checkedItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
@@ -18,8 +18,8 @@ interface ZoneInHierarchyRendererProps {
 export function ZoneInHierarchyRenderer({
   template,
   session,
-  cartItems,
-  completedItems,
+  selectedItems,
+  checkedItems,
   categoryExpanded,
   onToggleCategoryExpanded,
   onToggleSelected,
@@ -27,9 +27,9 @@ export function ZoneInHierarchyRenderer({
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
-  // Only include categories that have items in cart or completed
-  const cartAndCompletedItems = [...cartItems, ...completedItems];
-  const categoriesWithItems = buildCategoryTree(cartAndCompletedItems, template.items);
+  // Only include categories that have items selected or checked
+  const selectedAndCheckedItems = [...selectedItems, ...checkedItems];
+  const categoriesWithItems = buildCategoryTree(selectedAndCheckedItems, template.items);
 
   // Find items that aren't in any category (root-level items)
   const categorizedItemIds = new Set<string>();
@@ -43,31 +43,31 @@ export function ZoneInHierarchyRenderer({
   };
   collectItemIds(categoriesWithItems);
 
-  const uncategorizedCartItems = cartItems.filter((item) => !categorizedItemIds.has(item.id));
-  const uncategorizedCompletedItems = completedItems.filter(
+  const uncategorizedSelectedItems = selectedItems.filter(
     (item) => !categorizedItemIds.has(item.id),
   );
+  const uncategorizedCheckedItems = checkedItems.filter((item) => !categorizedItemIds.has(item.id));
 
   // Recursive function to count all items in a category tree (including children)
-  const countAllItems = (category: CategoryNode): { cart: number; completed: number } => {
-    let cartCount = 0;
-    let completedCount = 0;
+  const countAllItems = (category: CategoryNode): { selected: number; checked: number } => {
+    let selectedCount = 0;
+    let checkedCount = 0;
 
     // Count items at this level
     category.items.forEach((item) => {
       const state = session.itemStates?.[item.id];
-      if (state?.selected && !state.checked) cartCount++;
-      if (state?.checked) completedCount++;
+      if (state?.selected && !state.checked) selectedCount++;
+      if (state?.checked) checkedCount++;
     });
 
     // Count items in children
     category.children.forEach((child) => {
       const childCounts = countAllItems(child);
-      cartCount += childCounts.cart;
-      completedCount += childCounts.completed;
+      selectedCount += childCounts.selected;
+      checkedCount += childCounts.checked;
     });
 
-    return { cart: cartCount, completed: completedCount };
+    return { selected: selectedCount, checked: checkedCount };
   };
 
   // Recursive renderer for zone-in-hierarchy mode
@@ -75,29 +75,29 @@ export function ZoneInHierarchyRenderer({
     return categories.map((category) => {
       // Count all items in this category and its children
       const counts = countAllItems(category);
-      const totalItems = counts.cart + counts.completed;
+      const totalItems = counts.selected + counts.checked;
 
-      // Skip if no items in cart or completed
+      // Skip if no items selected or checked
       if (totalItems === 0) return null;
 
       // Split category items by zone (just at this level, not children)
-      const catCart = category.items.filter((item) => {
+      const catSelected = category.items.filter((item) => {
         const state = session.itemStates?.[item.id];
         return state?.selected && !state.checked;
       });
-      const catCompleted = category.items.filter((item) => {
+      const catChecked = category.items.filter((item) => {
         const state = session.itemStates?.[item.id];
         return state?.checked;
       });
 
-      const hasDirectItems = catCart.length > 0 || catCompleted.length > 0;
+      const hasDirectItems = catSelected.length > 0 || catChecked.length > 0;
       const hasChildren = category.children.length > 0;
 
       return (
         <SessionZone
           key={category.path}
           title={category.name}
-          zone="inventory"
+          zone="available"
           items={[]}
           itemStates={{}}
           expanded={categoryExpanded[`category-${category.path}`] ?? true}
@@ -110,33 +110,33 @@ export function ZoneInHierarchyRenderer({
             {/* Show zones for items at this level */}
             {hasDirectItems && (
               <>
-                {catCart.length > 0 && (
+                {catSelected.length > 0 && (
                   <SessionZone
-                    title="In Cart"
-                    icon={ShoppingCart}
-                    zone="cart"
-                    items={catCart}
+                    title="Selected"
+                    icon={ListChecks}
+                    zone="selected"
+                    items={catSelected}
                     itemStates={session.itemStates || {}}
-                    expanded={categoryExpanded[`${category.path}-cart`] ?? true}
-                    onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-cart`)}
+                    expanded={categoryExpanded[`${category.path}-selected`] ?? true}
+                    onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-selected`)}
                     onToggleSelected={onToggleSelected}
                     onToggleChecked={onToggleChecked}
-                    count={catCart.length}
+                    count={catSelected.length}
                     showHeading={showZoneHeadings}
                   />
                 )}
-                {catCompleted.length > 0 && (
+                {catChecked.length > 0 && (
                   <SessionZone
-                    title="Completed"
+                    title="Checked"
                     icon={CheckCircle2}
-                    zone="completed"
-                    items={catCompleted}
+                    zone="checked"
+                    items={catChecked}
                     itemStates={session.itemStates || {}}
-                    expanded={categoryExpanded[`${category.path}-completed`] ?? true}
-                    onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-completed`)}
+                    expanded={categoryExpanded[`${category.path}-checked`] ?? true}
+                    onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-checked`)}
                     onToggleSelected={onToggleSelected}
                     onToggleChecked={onToggleChecked}
-                    count={catCompleted.length}
+                    count={catChecked.length}
                     showHeading={showZoneHeadings}
                   />
                 )}
@@ -159,35 +159,35 @@ export function ZoneInHierarchyRenderer({
     <>
       {renderZoneInHierarchy(categoriesWithItems)}
       {/* Render uncategorized items */}
-      {(uncategorizedCartItems.length > 0 || uncategorizedCompletedItems.length > 0) && (
+      {(uncategorizedSelectedItems.length > 0 || uncategorizedCheckedItems.length > 0) && (
         <>
-          {uncategorizedCartItems.length > 0 && (
+          {uncategorizedSelectedItems.length > 0 && (
             <SessionZone
-              title="In Cart"
-              icon={ShoppingCart}
-              zone="cart"
-              items={uncategorizedCartItems}
+              title="Selected"
+              icon={ListChecks}
+              zone="selected"
+              items={uncategorizedSelectedItems}
               itemStates={session.itemStates || {}}
-              expanded={categoryExpanded['uncategorized-cart'] ?? true}
-              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-cart')}
+              expanded={categoryExpanded['uncategorized-selected'] ?? true}
+              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-selected')}
               onToggleSelected={onToggleSelected}
               onToggleChecked={onToggleChecked}
-              count={uncategorizedCartItems.length}
+              count={uncategorizedSelectedItems.length}
               showHeading={showZoneHeadings}
             />
           )}
-          {uncategorizedCompletedItems.length > 0 && (
+          {uncategorizedCheckedItems.length > 0 && (
             <SessionZone
-              title="Completed"
+              title="Checked"
               icon={CheckCircle2}
-              zone="completed"
-              items={uncategorizedCompletedItems}
+              zone="checked"
+              items={uncategorizedCheckedItems}
               itemStates={session.itemStates || {}}
-              expanded={categoryExpanded['uncategorized-completed'] ?? true}
-              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-completed')}
+              expanded={categoryExpanded['uncategorized-checked'] ?? true}
+              onToggleExpand={() => onToggleCategoryExpanded('uncategorized-checked')}
               onToggleSelected={onToggleSelected}
               onToggleChecked={onToggleChecked}
-              count={uncategorizedCompletedItems.length}
+              count={uncategorizedCheckedItems.length}
               showHeading={showZoneHeadings}
             />
           )}

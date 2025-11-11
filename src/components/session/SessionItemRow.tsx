@@ -5,7 +5,7 @@ import type { Account, ItemState, TemplateItem } from '@/schemas';
 interface SessionItemRowProps {
   item: TemplateItem;
   state: ItemState | null;
-  zone: 'inventory' | 'cart' | 'completed';
+  zone: 'available' | 'selected' | 'checked';
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
 }
@@ -24,33 +24,33 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Only leaf items should be shown in shopping sessions
   if (item.type === 'category') return null;
 
-  const inCart = state?.selected || false;
-  const purchased = state?.checked || false;
+  const isSelected = state?.selected || false;
+  const isChecked = state?.checked || false;
 
   // Determine which state the left checkbox controls based on zone
-  const leftCheckboxControlsPurchased = zone === 'cart' || zone === 'completed';
-  const leftCheckboxChecked = leftCheckboxControlsPurchased ? purchased : inCart;
+  const leftCheckboxControlsChecked = zone === 'selected' || zone === 'checked';
+  const leftCheckboxChecked = leftCheckboxControlsChecked ? isChecked : isSelected;
 
   // Compute checkbox styles based on state
   const getCheckboxClassName = () => {
     if (leftCheckboxChecked) {
-      return leftCheckboxControlsPurchased
+      return leftCheckboxControlsChecked
         ? 'border-green-500 bg-green-500 text-white'
         : 'border-blue-500 bg-blue-500 text-white';
     }
-    return leftCheckboxControlsPurchased
+    return leftCheckboxControlsChecked
       ? 'border-neutral-300 hover:border-green-400'
       : 'border-neutral-300 hover:border-blue-400';
   };
 
   return (
     <div className="flex items-center gap-3 rounded px-2 py-1 hover:bg-neutral-100">
-      {/* Left checkbox - Controls inCart (inventory) or purchased (cart/completed) */}
+      {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          if (leftCheckboxControlsPurchased) {
+          if (leftCheckboxControlsChecked) {
             onToggleChecked(item.id);
           } else {
             onToggleSelected(item.id);
@@ -65,7 +65,7 @@ export const SessionItemRow = memo(function SessionItemRow({
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={3}
-            aria-label={leftCheckboxControlsPurchased ? 'Purchased' : 'In Cart'}
+            aria-label={leftCheckboxControlsChecked ? 'Checked' : 'Selected'}
             role="img"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -76,7 +76,7 @@ export const SessionItemRow = memo(function SessionItemRow({
       {/* Item name */}
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <span className={`text-neutral-900 ${purchased ? 'line-through opacity-50' : ''}`}>
+          <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
             {item.name}
           </span>
           {item.defaultQuantity && (
@@ -85,8 +85,8 @@ export const SessionItemRow = memo(function SessionItemRow({
         </div>
       </div>
 
-      {/* Right button - Trash icon to remove from cart (visible in cart and completed zones) */}
-      {(zone === 'cart' || zone === 'completed') && (
+      {/* Right button - Trash icon to deselect (visible in selected and checked zones) */}
+      {(zone === 'selected' || zone === 'checked') && (
         <button
           type="button"
           onClick={(e) => {
@@ -94,7 +94,7 @@ export const SessionItemRow = memo(function SessionItemRow({
             onToggleSelected(item.id);
           }}
           className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
-          aria-label="Remove from cart"
+          aria-label="Deselect item"
         >
           <svg
             className="h-4 w-4"
