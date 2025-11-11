@@ -22,7 +22,7 @@ export function IndentedRow({
 
   return (
     <div
-      className={`flex items-center gap-1 py-1 ${className}`}
+      className={`flex items-center gap-1 py-0.5 ${className}`}
       style={{ paddingLeft: `${indent}px` }}
     >
       {/* Expand/Collapse Toggle */}
