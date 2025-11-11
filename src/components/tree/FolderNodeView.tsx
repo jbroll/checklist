@@ -144,9 +144,9 @@ export const FolderNodeView = memo(function FolderNodeView({
     if (!entry.archived) {
       if (onArchive) {
         const confirmed = await showConfirm({
-          title: 'Archive Item',
-          message: `Archive "${name}"?`,
-          confirmText: 'Archive',
+          title: 'Delete Item',
+          message: `Delete "${name}"?\n\nThis will move it to archived items.`,
+          confirmText: 'Delete',
           variant: 'danger',
         });
         if (confirmed) {

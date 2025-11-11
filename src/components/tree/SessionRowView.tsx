@@ -68,9 +68,9 @@ export const SessionRowView = memo(function SessionRowView({
     if (!session.archived) {
       if (onArchive) {
         const confirmed = await showConfirm({
-          title: 'Archive Session',
-          message: `Archive session "${displayName}"?`,
-          confirmText: 'Archive',
+          title: 'Delete Session',
+          message: `Delete session "${displayName}"?\n\nThis will move it to archived sessions.`,
+          confirmText: 'Delete',
           variant: 'danger',
         });
         if (confirmed) {
