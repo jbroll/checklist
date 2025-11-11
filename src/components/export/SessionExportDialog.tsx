@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useDialog } from '@/lib/dialog-context';
 import type { Account, Template } from '@/schemas';
 import { ExportService } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
@@ -35,8 +36,9 @@ export function SessionExportDialog({
 }: SessionExportDialogProps) {
   const [format, setFormat] = useState<'txt' | 'csv'>('txt');
   const [isExporting, setIsExporting] = useState(false);
+  const { showAlert } = useDialog();
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
 
     try {
@@ -59,7 +61,10 @@ export function SessionExportDialog({
       // Close dialog
       onOpenChange(false);
     } catch (error) {
-      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await showAlert({
+        title: 'Export Failed',
+        message: `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
     } finally {
       setIsExporting(false);
     }

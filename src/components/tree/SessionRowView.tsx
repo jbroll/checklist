@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useDialog } from '@/lib/dialog-context';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { Session } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
@@ -34,10 +35,11 @@ export const SessionRowView = memo(function SessionRowView({
   allSessions,
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const { showConfirm } = useDialog();
 
   const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
 
-  const handleToggleArchived = () => {
+  const handleToggleArchived = async () => {
     const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
     if (session.archived) {
       // Unarchive
@@ -46,26 +48,47 @@ export const SessionRowView = memo(function SessionRowView({
       }
     } else {
       // Archive
-      if (onArchive && confirm(`Archive session "${displayName}"?`)) {
-        onArchive(session.$jazz.id);
+      if (onArchive) {
+        const confirmed = await showConfirm({
+          title: 'Archive Session',
+          message: `Archive session "${displayName}"?`,
+          confirmText: 'Archive',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onArchive(session.$jazz.id);
+        }
       }
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
     // If not archived, archive first (soft delete)
     if (!session.archived) {
-      if (onArchive && confirm(`Archive session "${displayName}"?`)) {
-        onArchive(session.$jazz.id);
+      if (onArchive) {
+        const confirmed = await showConfirm({
+          title: 'Archive Session',
+          message: `Archive session "${displayName}"?`,
+          confirmText: 'Archive',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onArchive(session.$jazz.id);
+        }
       }
     } else {
       // If already archived, permanent deletion
-      if (
-        onDelete &&
-        confirm(`⚠️ PERMANENTLY DELETE session "${displayName}"?\n\nThis action CANNOT be undone!`)
-      ) {
-        onDelete(session.$jazz.id);
+      if (onDelete) {
+        const confirmed = await showConfirm({
+          title: 'Permanent Delete',
+          message: `PERMANENTLY DELETE session "${displayName}"?\n\nThis action CANNOT be undone!`,
+          confirmText: 'Delete Permanently',
+          variant: 'danger',
+        });
+        if (confirmed) {
+          onDelete(session.$jazz.id);
+        }
       }
     }
   };

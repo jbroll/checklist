@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useDialog } from '@/lib/dialog-context';
 import type { TemplateItem } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
@@ -33,6 +34,7 @@ export function TemplateItemView({
 }: TemplateItemViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
+  const { showConfirm } = useDialog();
 
   const isCategory = item.type === 'category';
 
@@ -80,9 +82,17 @@ export function TemplateItemView({
     }
   };
 
-  const handleDelete = () => {
-    if (onDelete && confirm(`Delete "${item.name}"?`)) {
-      onDelete(item.id);
+  const handleDelete = async () => {
+    if (onDelete) {
+      const confirmed = await showConfirm({
+        title: 'Delete Item',
+        message: `Delete "${item.name}"?`,
+        confirmText: 'Delete',
+        variant: 'danger',
+      });
+      if (confirmed) {
+        onDelete(item.id);
+      }
     }
   };
 
