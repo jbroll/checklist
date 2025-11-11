@@ -1,13 +1,21 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Download, Folder, MoreVertical, Pencil, Trash2, Upload } from 'lucide-react';
+import {
+  Archive,
+  ArchiveX,
+  Download,
+  Folder,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { memo, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -122,14 +130,21 @@ export const FolderNodeView = memo(function FolderNodeView({
   };
 
   const handleDelete = () => {
-    // Permanent deletion - show warning
-    const warningMessage =
-      entry.type === 'template-ref'
-        ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
-        : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
+    // If not archived, archive first (soft delete)
+    if (!entry.archived) {
+      if (onArchive && confirm(`Archive "${name}"?`)) {
+        onArchive(entryId);
+      }
+    } else {
+      // If already archived, permanent deletion
+      const warningMessage =
+        entry.type === 'template-ref'
+          ? `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
+          : `⚠️ PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
 
-    if (onDelete && confirm(warningMessage)) {
-      onDelete(entryId);
+      if (onDelete && confirm(warningMessage)) {
+        onDelete(entryId);
+      }
     }
   };
 
@@ -196,6 +211,11 @@ export const FolderNodeView = memo(function FolderNodeView({
               </button>
             </div>
 
+            {/* Archived indicator */}
+            {entry.archived && !isEditing && (
+              <Archive className="h-4 w-4 shrink-0 text-neutral-400" />
+            )}
+
             {/* Actions Menu - for both folders and template-refs */}
             {!isEditing && (
               <DropdownMenu>
@@ -228,21 +248,24 @@ export const FolderNodeView = memo(function FolderNodeView({
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem
-                    checked={entry.archived}
-                    onCheckedChange={handleToggleArchived}
-                  >
-                    Archived
-                  </DropdownMenuCheckboxItem>
-                  {entry.archived && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuItem onClick={handleToggleArchived}>
+                    {entry.archived ? (
+                      <>
+                        <ArchiveX className="mr-2 h-4 w-4" />
+                        Restore
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

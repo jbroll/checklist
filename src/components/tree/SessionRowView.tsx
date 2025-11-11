@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
+import { Archive, Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
   DropdownMenu,
@@ -68,6 +68,9 @@ export const SessionRowView = memo(function SessionRowView({
             </span>
           </div>
         </button>
+
+        {/* Archived indicator */}
+        {session.archived && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}
 
         {/* Actions menu */}
         <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
