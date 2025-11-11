@@ -18,8 +18,8 @@
  * // Returns: "my-list-2025-01-15.json"
  *
  * @example
- * buildExportFilename("Groceries", "csv", true, "session")
- * // Returns: "session-groceries-2025-01-15.csv"
+ * buildExportFilename("Shopping List", "csv", true, "session")
+ * // Returns: "session-shopping-list-2025-01-15.csv"
  */
 export function buildExportFilename(
   baseName: string,

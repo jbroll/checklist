@@ -97,11 +97,9 @@ export function AuthGate() {
         <div className="text-center">
           <h1 className="flex items-center justify-center gap-3 text-4xl font-bold text-neutral-900">
             <ShoppingCart className="h-10 w-10" />
-            GroceryList
+            BubbleList
           </h1>
-          <p className="mt-2 text-neutral-600">
-            Collaborative shopping lists that sync in real-time
-          </p>
+          <p className="mt-2 text-neutral-600">Collaborative lists that sync in real-time</p>
         </div>
 
         <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">

@@ -11,8 +11,8 @@ describe('ExportService', () => {
       const scope = { type: 'all-folders' as const };
       const filename = ExportService.generateFilename(scope, 'json');
 
-      // Should match pattern: grocery-data-YYYY-MM-DD.json
-      expect(filename).toMatch(/^grocery-data-\d{4}-\d{2}-\d{2}\.json$/);
+      // Should match pattern: bubblelist-data-YYYY-MM-DD.json
+      expect(filename).toMatch(/^bubblelist-data-\d{4}-\d{2}-\d{2}\.json$/);
     });
 
     it('should generate filename for all-folders export with different formats', () => {
@@ -24,10 +24,10 @@ describe('ExportService', () => {
 
     it('should generate filename for single-folder export with folder name', () => {
       const scope = { type: 'single-folder' as const, folderId: 'test-id' };
-      const filename = ExportService.generateFilename(scope, 'json', 'Grocery List');
+      const filename = ExportService.generateFilename(scope, 'json', 'Shopping List');
 
       // Should sanitize folder name and include it
-      expect(filename).toMatch(/^grocery-list-\d{4}-\d{2}-\d{2}\.json$/);
+      expect(filename).toMatch(/^shopping-list-\d{4}-\d{2}-\d{2}\.json$/);
     });
 
     it('should sanitize folder names with special characters', () => {

@@ -1,6 +1,6 @@
-# Groceries - Collaborative Shopping Lists
+# BubbleList
 
-A real-time collaborative grocery list app built with Jazz.tools and BetterAuth.
+A real-time collaborative list app built with Jazz.tools and BetterAuth.
 
 ## Features
 

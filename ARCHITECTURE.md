@@ -1,6 +1,6 @@
 # System Architecture
 
-A collaborative grocery list application built with Jazz.tools and BetterAuth.
+A collaborative list application built with Jazz.tools and BetterAuth.
 
 ## Core Architecture
 
@@ -19,7 +19,7 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 
 1. **Templates Stay Clean**: Shopping state (checked/purchased) lives in sessions, never in template items
 2. **Hierarchical Items**: Templates use a category/item tree structure (see `src/schemas/tree.ts:26-49`)
-3. **Path-Based Organization**: Folders and items use path strings for hierarchy (e.g., "grocery-stores/wegmans")
+3. **Path-Based Organization**: Folders and items use path strings for hierarchy (e.g., "stores/wegmans")
 4. **Soft Deletes**: Items marked `archived: true`, never hard deleted
 5. **Jazz CoValues**: Real-time sync, offline-first, end-to-end encrypted
 
