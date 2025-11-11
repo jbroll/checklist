@@ -1,5 +1,5 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -171,6 +171,9 @@ export function TemplateItemView({
               )}
             </div>
           </div>
+
+          {/* Archived indicator */}
+          {item.archived && !isEditing && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}
 
           {/* Actions Menu */}
           {!isEditing && (

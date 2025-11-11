@@ -211,6 +211,11 @@ export const FolderNodeView = memo(function FolderNodeView({
               </button>
             </div>
 
+            {/* Archived indicator */}
+            {entry.archived && !isEditing && (
+              <Archive className="h-4 w-4 shrink-0 text-neutral-400" />
+            )}
+
             {/* Actions Menu - for both folders and template-refs */}
             {!isEditing && (
               <DropdownMenu>
