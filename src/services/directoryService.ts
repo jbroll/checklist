@@ -291,29 +291,48 @@ export function expandAncestorFolders(
   account: InstanceOfSchema<typeof Account>,
   path: string,
 ): void {
+  expandPathAndAncestors(account, path, false);
+}
+
+/**
+ * Expand a path and all its ancestor folders
+ * This ensures the path and its full hierarchy are visible in the tree
+ * @param path - The path to expand along with its ancestors
+ * @param includeSelf - If true, also expand the path itself (default: true)
+ */
+export function expandPathAndAncestors(
+  account: InstanceOfSchema<typeof Account>,
+  path: string,
+  includeSelf = true,
+): void {
   if (!account.root?.directory) return;
 
   const now = new Date();
-  const ancestorPaths = new Set<string>();
+  const pathsToExpand = new Set<string>();
+
+  // Add the path itself if requested
+  if (includeSelf) {
+    pathsToExpand.add(path);
+  }
 
   // Collect all ancestor paths
   let currentPath: string | undefined = path;
   while (currentPath) {
     const parentPath = currentPath.substring(0, currentPath.lastIndexOf(PATH_SEPARATOR));
     if (parentPath) {
-      ancestorPaths.add(parentPath);
+      pathsToExpand.add(parentPath);
       currentPath = parentPath;
     } else {
       break;
     }
   }
 
-  // If no ancestors, nothing to expand
-  if (ancestorPaths.size === 0) return;
+  // Nothing to expand
+  if (pathsToExpand.size === 0) return;
 
-  // Update entries: set expanded=true for all ancestors
+  // Update entries: set expanded=true for specified paths
   const updatedEntries = account.root.directory.map((e) => {
-    if (ancestorPaths.has(e.path) && !e.expanded) {
+    if (pathsToExpand.has(e.path) && !e.expanded) {
       return { ...e, expanded: true, updatedAt: now };
     }
     return e;
