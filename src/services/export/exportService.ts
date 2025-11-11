@@ -14,7 +14,7 @@ import type { ExportedData, ExportScope } from './types';
 /**
  * Export Service
  *
- * Provides methods for exporting grocery data in various formats.
+ * Provides methods for exporting data in various formats.
  */
 // biome-ignore lint/complexity/noStaticOnlyClass: Service class pattern
 export class ExportService {
@@ -85,7 +85,7 @@ export class ExportService {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     if (scope.type === 'all-folders') {
-      return `grocery-data-${timestamp}.${format}`;
+      return `bubblelist-data-${timestamp}.${format}`;
     }
 
     // Single folder - use folder name
