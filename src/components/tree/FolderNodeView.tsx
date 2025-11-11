@@ -145,7 +145,7 @@ export const FolderNodeView = memo(function FolderNodeView({
       if (onArchive) {
         const confirmed = await showConfirm({
           title: 'Delete Item',
-          message: `Delete "${name}"?\n\nThis will move it to archived items.`,
+          message: `Delete "${name}"?`,
           confirmText: 'Delete',
           variant: 'danger',
         });
@@ -155,15 +155,10 @@ export const FolderNodeView = memo(function FolderNodeView({
       }
     } else {
       // If already archived, permanent deletion
-      const warningMessage =
-        entry.type === 'template-ref'
-          ? `PERMANENTLY DELETE "${name}"?\n\nThis will remove the list and all its sessions.\n\nThis action CANNOT be undone!`
-          : `PERMANENTLY DELETE "${name}"?\n\nThis action CANNOT be undone!`;
-
       if (onDelete) {
         const confirmed = await showConfirm({
           title: 'Permanent Delete',
-          message: warningMessage,
+          message: `Permanently delete "${name}"?`,
           confirmText: 'Delete Permanently',
           variant: 'danger',
         });

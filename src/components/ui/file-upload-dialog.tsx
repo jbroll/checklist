@@ -87,10 +87,9 @@ export function FileUploadDialog<TResult>({
     const detectedType = acceptedFileTypes.find((type) => fileName.endsWith(`.${type}`));
 
     if (!detectedType) {
-      const typeList = acceptedFileTypes.map((t) => `.${t}`).join(', ');
       await showAlert({
         title: 'Invalid File Type',
-        message: `Please select a valid file (${typeList})`,
+        message: 'Invalid file type.',
       });
       return;
     }
@@ -100,7 +99,7 @@ export function FileUploadDialog<TResult>({
     if (fileSizeMB > maxSizeMB) {
       await showAlert({
         title: 'File Too Large',
-        message: `File size exceeds ${maxSizeMB}MB limit`,
+        message: 'File too large.',
       });
       return;
     }
@@ -122,7 +121,7 @@ export function FileUploadDialog<TResult>({
     } catch (error) {
       await showAlert({
         title: 'Upload Failed',
-        message: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: 'Upload failed.',
       });
     } finally {
       setIsUploading(false);

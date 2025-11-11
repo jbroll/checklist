@@ -69,7 +69,7 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
     } catch (error) {
       await showAlert({
         title: 'Export Failed',
-        message: `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: 'Export failed.',
       });
     } finally {
       setIsExporting(false);
