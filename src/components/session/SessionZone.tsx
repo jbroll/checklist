@@ -48,7 +48,8 @@ export function SessionZone({
 }: SessionZoneProps) {
   // Determine background class based on zone type - only for top-level available zone
   const bgClass = zone === 'available' && isTopLevelZone ? 'bg-blue-50 rounded-md' : '';
-  const paddingClass = zone === 'available' && isTopLevelZone ? 'p-2' : '';
+  // Remove padding - let parent control all padding
+  const paddingClass = '';
 
   // Get all item IDs for batch operations
   const allItemIds = category ? collectAllItemIds(category) : items.map((i) => i.id);
@@ -74,14 +75,9 @@ export function SessionZone({
     </div>
   );
 
-  // If headings are disabled, show content directly with a divider
+  // If headings are disabled, show content directly
   if (!showHeading) {
-    return (
-      <div className={bgClass}>
-        <div className="border-t border-neutral-100 my-1" />
-        {content}
-      </div>
-    );
+    return <div className={bgClass}>{content}</div>;
   }
 
   // Render batch selection buttons - always show all three

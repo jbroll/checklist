@@ -289,12 +289,8 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
             onToggleArchived={handleToggleArchived}
           />
 
-          <div className="divide-y divide-neutral-100 p-2">
+          <div>
             {renderSelectedAndChecked()}
-            {/* Divider between Selected/Checked and Available */}
-            {(selectedItems.length > 0 || checkedItems.length > 0) && availableItems.length > 0 && (
-              <div className="my-2 border-t-2 border-neutral-200" />
-            )}
             <div ref={availableZoneRef}>
               <AvailableZoneRenderer
                 template={template}
