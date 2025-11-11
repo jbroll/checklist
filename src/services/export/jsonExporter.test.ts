@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import { exportAllFolders, exportTemplate, toJsonString } from './jsonExporter';
 import type { ExportedData } from './types';
 
@@ -353,7 +354,7 @@ describe('jsonExporter', () => {
                   id: 'cat-2',
                   name: 'Fruits',
                   type: 'category' as const,
-                  path: 'produce/fruits',
+                  path: `produce${PATH_SEPARATOR}fruits`,
                   expanded: true,
                   sortOrder: 1,
                   archived: false,
@@ -365,7 +366,7 @@ describe('jsonExporter', () => {
                   id: 'item-1',
                   name: 'Apples',
                   type: 'item' as const,
-                  path: 'produce/fruits/apples',
+                  path: `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples`,
                   expanded: false,
                   sortOrder: 2,
                   archived: false,
@@ -377,7 +378,7 @@ describe('jsonExporter', () => {
                   id: 'item-2',
                   name: 'Bananas',
                   type: 'item' as const,
-                  path: 'produce/fruits/bananas',
+                  path: `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}bananas`,
                   expanded: false,
                   sortOrder: 3,
                   archived: false,
@@ -584,7 +585,7 @@ describe('jsonExporter', () => {
                   id: 'level-2',
                   name: 'Level 2',
                   type: 'category' as const,
-                  path: 'level-1/level-2',
+                  path: `level-1${PATH_SEPARATOR}level-2`,
                   expanded: true,
                   sortOrder: 1,
                   archived: false,
@@ -596,7 +597,7 @@ describe('jsonExporter', () => {
                   id: 'level-3',
                   name: 'Level 3',
                   type: 'category' as const,
-                  path: 'level-1/level-2/level-3',
+                  path: `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3`,
                   expanded: true,
                   sortOrder: 2,
                   archived: false,
@@ -608,7 +609,7 @@ describe('jsonExporter', () => {
                   id: 'deep-item',
                   name: 'Deep Item',
                   type: 'item' as const,
-                  path: 'level-1/level-2/level-3/deep-item',
+                  path: `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3${PATH_SEPARATOR}deep-item`,
                   expanded: false,
                   sortOrder: 3,
                   archived: false,

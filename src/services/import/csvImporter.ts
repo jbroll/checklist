@@ -7,7 +7,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, Template } from '../../schemas';
 import { parseCsv } from '../../utils/csvParser';
-import { normalizePathSegment } from '../../utils/pathUtils';
 import { type BaseImportResult, importItems } from './baseImporter';
 
 export type CsvImportResult = BaseImportResult;
@@ -56,8 +55,7 @@ export function importItemsFromCsv(
     }
 
     const name = row.name.trim();
-    const pathSegment = normalizePathSegment(name);
-    const path = row.path?.trim() || pathSegment;
+    const path = row.path?.trim() || name;
     const defaultQuantity = row.defaultQuantity?.trim() || '';
 
     itemsToImport.push({

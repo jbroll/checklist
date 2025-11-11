@@ -1,4 +1,5 @@
 import type { TemplateItem } from '@/schemas';
+import { PATH_SEPARATOR } from '@/utils/pathUtils';
 
 export interface CategoryNode {
   name: string;
@@ -34,11 +35,11 @@ export function buildCategoryTree(
 
   // First pass: Create all category nodes
   items.forEach((item) => {
-    const pathParts = item.path.split('/');
+    const pathParts = item.path.split(PATH_SEPARATOR);
 
     // Create category nodes for all levels (excluding the item itself)
     for (let i = 1; i < pathParts.length; i++) {
-      const categoryPath = pathParts.slice(0, i).join('/');
+      const categoryPath = pathParts.slice(0, i).join(PATH_SEPARATOR);
 
       if (!categoryMap.has(categoryPath)) {
         const categoryName = pathParts[i - 1];
@@ -56,7 +57,7 @@ export function buildCategoryTree(
     }
 
     // Add item to its immediate parent category
-    const parentPath = pathParts.slice(0, -1).join('/');
+    const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
     if (parentPath) {
       categoryMap.get(parentPath)?.items.push(item);
     }
@@ -64,14 +65,14 @@ export function buildCategoryTree(
 
   // Second pass: Build hierarchy by connecting parents and children
   categoryMap.forEach((category, path) => {
-    const pathParts = path.split('/');
+    const pathParts = path.split(PATH_SEPARATOR);
 
     if (pathParts.length === 1) {
       // Top-level category
       rootCategories.push(category);
     } else {
       // Nested category - find parent and add as child
-      const parentPath = pathParts.slice(0, -1).join('/');
+      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
       const parent = categoryMap.get(parentPath);
       if (parent) {
         parent.children.push(category);

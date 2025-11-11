@@ -9,7 +9,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../lib/utils';
 import type { Account, TemplateItem } from '../schemas';
-import { createChildPath, getParentPath, normalizePathSegment } from '../utils/pathUtils';
+import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
 import { getTemplate } from './templateService';
 
 /**
@@ -21,9 +21,9 @@ function updateDescendantPaths(
   newParentPath: string,
 ): TemplateItem[] {
   return items.map((item) => {
-    if (item.path.startsWith(`${oldParentPath}/`)) {
+    if (item.path.startsWith(`${oldParentPath}${PATH_SEPARATOR}`)) {
       const relativePath = item.path.substring(oldParentPath.length + 1);
-      const newDescendantPath = `${newParentPath}/${relativePath}`;
+      const newDescendantPath = `${newParentPath}${PATH_SEPARATOR}${relativePath}`;
       return { ...item, path: newDescendantPath };
     }
     return item;
@@ -43,9 +43,8 @@ export function createCategory(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  // Generate path from name
-  const pathSegment = normalizePathSegment(name);
-  const path = createChildPath(parentPath, pathSegment);
+  // Generate path from name (no normalization)
+  const path = createChildPath(parentPath, name);
 
   // Check for duplicates at the same level
   const existingItem = template.items.find((i) => i.path === path);
@@ -86,9 +85,8 @@ export function createItem(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  // Generate path from name
-  const pathSegment = normalizePathSegment(name);
-  const path = createChildPath(parentPath, pathSegment);
+  // Generate path from name (no normalization)
+  const path = createChildPath(parentPath, name);
 
   // Check for duplicates at the same level
   const existingItem = template.items.find((i) => i.path === path);
@@ -174,8 +172,8 @@ export function renameItem(
   const item = template.items[itemIndex];
   const oldPath = item.path;
   const parentPath = getParentPath(oldPath);
-  const newPathSegment = normalizePathSegment(newName);
-  const newPath = createChildPath(parentPath, newPathSegment);
+  // Use new name as-is without normalization
+  const newPath = createChildPath(parentPath, newName);
 
   // Check for duplicates
   if (oldPath !== newPath) {
@@ -228,7 +226,7 @@ export function archiveItem(
   // If this is a category, archive all descendants
   if (item.type === 'category') {
     updatedItems = updatedItems.map((i) => {
-      if (i.path.startsWith(`${item.path}/`)) {
+      if (i.path.startsWith(`${item.path}${PATH_SEPARATOR}`)) {
         return { ...i, archived: true };
       }
       return i;
@@ -257,8 +255,8 @@ export function moveItem(
 
   const item = template.items[itemIndex];
   const oldPath = item.path;
-  const pathSegment = normalizePathSegment(item.name);
-  const newPath = createChildPath(newParentPath, pathSegment);
+  // Use item name as-is without normalization
+  const newPath = createChildPath(newParentPath, item.name);
 
   // Don't move if it's the same location
   if (oldPath === newPath) return;

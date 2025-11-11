@@ -3,6 +3,13 @@
  * These functions work with path strings only - no UI, no Jazz objects
  */
 
+/**
+ * Separator character for hierarchical paths.
+ * Using ASCII control character (SOH - Start of Heading) to avoid conflicts
+ * with user-entered category names that might contain forward slashes.
+ */
+export const PATH_SEPARATOR = '\x01';
+
 export interface PathUpdateResult {
   newPath: string;
   isValid: boolean;
@@ -11,82 +18,82 @@ export interface PathUpdateResult {
 
 /**
  * Extracts the parent path from a full path
- * @example getParentPath("stores/wegmans") => "stores"
+ * @example getParentPath("stores\x01wegmans") => "stores"
  * @example getParentPath("stores") => undefined
  */
 export function getParentPath(fullPath: string): string | undefined {
-  const lastSlashIndex = fullPath.lastIndexOf('/');
+  const lastSlashIndex = fullPath.lastIndexOf(PATH_SEPARATOR);
   return lastSlashIndex > 0 ? fullPath.substring(0, lastSlashIndex) : undefined;
 }
 
 /**
  * Extracts the name from a full path
- * @example getNameFromPath("stores/wegmans") => "wegmans"
+ * @example getNameFromPath("stores\x01wegmans") => "wegmans"
  * @example getNameFromPath("stores") => "stores"
  */
 export function getNameFromPath(fullPath: string): string {
-  const lastSlashIndex = fullPath.lastIndexOf('/');
+  const lastSlashIndex = fullPath.lastIndexOf(PATH_SEPARATOR);
   return lastSlashIndex >= 0 ? fullPath.substring(lastSlashIndex + 1) : fullPath;
 }
 
 /**
  * Creates a child path by combining parent and child names
- * @example createChildPath("produce", "fruits") => "produce/fruits"
+ * @example createChildPath("produce", "fruits") => "produce\x01fruits"
  * @example createChildPath(undefined, "produce") => "produce"
  */
 export function createChildPath(parentPath: string | undefined, childName: string): string {
-  return parentPath ? `${parentPath}/${childName}` : childName;
+  return parentPath ? `${parentPath}${PATH_SEPARATOR}${childName}` : childName;
 }
 
 /**
  * Gets the depth level of a path (0-indexed)
  * @example getPathDepth("produce") => 0
- * @example getPathDepth("produce/fruits") => 1
- * @example getPathDepth("produce/fruits/apples") => 2
+ * @example getPathDepth("produce\x01fruits") => 1
+ * @example getPathDepth("produce\x01fruits\x01apples") => 2
  */
 export function getPathDepth(path: string): number {
-  return path.split('/').length - 1;
+  return path.split(PATH_SEPARATOR).length - 1;
 }
 
 /**
  * Checks if one path is a descendant of another
- * @example isDescendantPath("produce/fruits/apples", "produce") => true
- * @example isDescendantPath("produce", "produce/fruits") => false
+ * @example isDescendantPath("produce\x01fruits\x01apples", "produce") => true
+ * @example isDescendantPath("produce", "produce\x01fruits") => false
  */
 export function isDescendantPath(descendantPath: string, ancestorPath: string): boolean {
-  return descendantPath.startsWith(`${ancestorPath}/`);
+  return descendantPath.startsWith(`${ancestorPath}${PATH_SEPARATOR}`);
 }
 
 /**
- * Normalizes a name for use in a path (lowercase, replace spaces with hyphens)
- * @example normalizePathSegment("Fresh Produce") => "fresh-produce"
+ * @deprecated No longer needed - path segments are used as-is without normalization
  */
 export function normalizePathSegment(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, '-');
+  return name.trim();
 }
 
 /**
- * Normalizes a name for use in a path (replace spaces with hyphens, preserve case)
- * @example normalizeNameForPath("My Folder") => "My-Folder"
+ * @deprecated No longer needed - path segments are used as-is without normalization
  */
 export function normalizeNameForPath(name: string): string {
-  return name.trim().replace(/\s+/g, '-');
+  return name.trim();
 }
 
 /**
  * Calculate what the new path should be when moving a node
- * Simple: target path + "/" + folder name (or just folder name if no target)
+ * Simple: target path + PATH_SEPARATOR + folder name (or just folder name if no target)
  */
 export function calculateNewPath(
   nodeName: string,
   currentPath: string,
   targetParentPath: string | undefined,
 ): PathUpdateResult {
-  // Normalize name (replace spaces with hyphens)
-  const normalizedName = nodeName.trim().replace(/\s+/g, '-');
+  // Use name as-is (no normalization)
+  const normalizedName = nodeName.trim();
 
   // New path is simply: target path + name, or just name if at root
-  const newPath = targetParentPath ? `${targetParentPath}/${normalizedName}` : normalizedName;
+  const newPath = targetParentPath
+    ? `${targetParentPath}${PATH_SEPARATOR}${normalizedName}`
+    : normalizedName;
 
   // Validation: Can't move into itself
   if (targetParentPath === currentPath) {
@@ -98,7 +105,7 @@ export function calculateNewPath(
   }
 
   // Validation: Can't move into descendants
-  if (targetParentPath?.startsWith(`${currentPath}/`)) {
+  if (targetParentPath?.startsWith(`${currentPath}${PATH_SEPARATOR}`)) {
     return {
       newPath: currentPath,
       isValid: false,
@@ -131,12 +138,12 @@ export function calculateDescendantPaths(
   const updates: Array<{ id: string; oldPath: string; newPath: string }> = [];
 
   for (const item of allPaths) {
-    // If this is a descendant (path starts with old parent path + "/")
-    if (item.path.startsWith(`${oldParentPath}/`)) {
+    // If this is a descendant (path starts with old parent path + PATH_SEPARATOR)
+    if (item.path.startsWith(`${oldParentPath}${PATH_SEPARATOR}`)) {
       // Get the relative path (everything after the old parent)
       const relativePath = item.path.substring(oldParentPath.length + 1);
       // New path = new parent + relative path
-      const newPath = `${newParentPath}/${relativePath}`;
+      const newPath = `${newParentPath}${PATH_SEPARATOR}${relativePath}`;
       updates.push({
         id: item.id,
         oldPath: item.path,

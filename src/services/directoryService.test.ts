@@ -4,6 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DirectoryEntry } from '../schemas';
+import { PATH_SEPARATOR } from '../utils/pathUtils';
 import * as directoryService from './directoryService';
 
 // Mock the Template schema
@@ -77,7 +78,7 @@ describe('directoryService', () => {
           id: result.entryId,
           name: 'My Folder',
           type: 'folder',
-          path: 'My-Folder',
+          path: 'My Folder', // No normalization
           expanded: true,
           archived: false,
         }),
@@ -90,7 +91,7 @@ describe('directoryService', () => {
         account,
         'Subfolder',
         false,
-        'parent/path',
+        `parent${PATH_SEPARATOR}path`,
       );
 
       expect(result.entryId).toBeDefined();
@@ -99,7 +100,7 @@ describe('directoryService', () => {
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
           id: result.entryId,
-          path: 'parent/path/Subfolder',
+          path: `parent${PATH_SEPARATOR}path${PATH_SEPARATOR}Subfolder`,
           name: 'Subfolder',
           type: 'folder',
         }),
@@ -124,7 +125,7 @@ describe('directoryService', () => {
           id: result.entryId,
           name: 'My List',
           type: 'template-ref',
-          path: 'My-List',
+          path: 'My List', // No normalization
           expanded: false,
           archived: false,
           templateId: expect.any(String),
@@ -132,25 +133,25 @@ describe('directoryService', () => {
       ]);
     });
 
-    it('should normalize names with spaces to paths with hyphens', () => {
+    it('should NOT normalize names with spaces (paths equal names)', () => {
       const account = createMockAccount();
       directoryService.createDirectoryEntry(account, 'My Grocery List', false);
 
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
           name: 'My Grocery List',
-          path: 'My-Grocery-List',
+          path: 'My Grocery List', // No normalization
         }),
       ]);
     });
 
-    it('should handle multiple spaces in names', () => {
+    it('should preserve multiple spaces in names', () => {
       const account = createMockAccount();
       directoryService.createDirectoryEntry(account, 'My   Big   List', false);
 
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
-          path: 'My-Big-List',
+          path: 'My   Big   List', // Spaces preserved
         }),
       ]);
     });
@@ -542,7 +543,7 @@ describe('directoryService', () => {
           id: 'template-1',
           name: 'Child Template',
           type: 'template-ref',
-          path: 'parent/child',
+          path: `parent${PATH_SEPARATOR}child`,
           templateId: 'template-id-1',
           expanded: false,
           archived: false,
@@ -553,7 +554,7 @@ describe('directoryService', () => {
           id: 'folder-2',
           name: 'Nested Folder',
           type: 'folder',
-          path: 'parent/nested',
+          path: `parent${PATH_SEPARATOR}nested`,
           expanded: false,
           archived: false,
           createdAt: new Date(),
@@ -563,7 +564,7 @@ describe('directoryService', () => {
           id: 'template-2',
           name: 'Deeply Nested Template',
           type: 'template-ref',
-          path: 'parent/nested/deep',
+          path: `parent${PATH_SEPARATOR}nested${PATH_SEPARATOR}deep`,
           templateId: 'template-id-2',
           expanded: false,
           archived: false,
@@ -616,7 +617,7 @@ describe('directoryService', () => {
           id: 'template-1',
           name: 'Template',
           type: 'template-ref',
-          path: 'parent/template',
+          path: `parent${PATH_SEPARATOR}template`,
           templateId: 'template-id-1',
           expanded: false,
           archived: false,
@@ -679,7 +680,7 @@ describe('directoryService', () => {
           id: 'template-1',
           name: 'Child Template',
           type: 'template-ref',
-          path: 'parent/child',
+          path: `parent${PATH_SEPARATOR}child`,
           templateId: 'template-id-1',
           expanded: false,
           archived: true,
@@ -690,7 +691,7 @@ describe('directoryService', () => {
           id: 'folder-2',
           name: 'Nested Folder',
           type: 'folder',
-          path: 'parent/nested',
+          path: `parent${PATH_SEPARATOR}nested`,
           expanded: false,
           archived: true,
           createdAt: new Date(),
@@ -772,7 +773,7 @@ describe('directoryService', () => {
         id: 'entry-1',
         name: 'MovableFolder',
         type: 'folder',
-        path: 'old-parent/MovableFolder',
+        path: `old parent${PATH_SEPARATOR}MovableFolder`,
         expanded: false,
         archived: false,
         createdAt: new Date(),
@@ -780,12 +781,12 @@ describe('directoryService', () => {
       };
 
       const account = createMockAccount([entry]);
-      directoryService.moveDirectoryEntry(account, 'entry-1', 'new-parent');
+      directoryService.moveDirectoryEntry(account, 'entry-1', 'new parent');
 
       expect(account.root.$jazz.set).toHaveBeenCalledWith('directory', [
         expect.objectContaining({
           id: 'entry-1',
-          path: 'new-parent/MovableFolder',
+          path: `new parent${PATH_SEPARATOR}MovableFolder`,
         }),
       ]);
     });
@@ -795,7 +796,7 @@ describe('directoryService', () => {
         id: 'entry-1',
         name: 'MovableFolder',
         type: 'folder',
-        path: 'parent/MovableFolder',
+        path: `parent${PATH_SEPARATOR}MovableFolder`,
         expanded: false,
         archived: false,
         createdAt: new Date(),
@@ -818,7 +819,7 @@ describe('directoryService', () => {
           id: 'parent',
           name: 'Parent',
           type: 'folder',
-          path: 'old/Parent',
+          path: `old${PATH_SEPARATOR}Parent`,
           expanded: false,
           archived: false,
           createdAt: new Date(),
@@ -828,7 +829,7 @@ describe('directoryService', () => {
           id: 'child',
           name: 'Child',
           type: 'folder',
-          path: 'old/Parent/Child',
+          path: `old${PATH_SEPARATOR}Parent${PATH_SEPARATOR}Child`,
           expanded: false,
           archived: false,
           createdAt: new Date(),
@@ -842,8 +843,8 @@ describe('directoryService', () => {
       const calls = account.root.$jazz.set.mock.calls[0];
       const updatedDirectory = calls[1];
 
-      expect(updatedDirectory[0].path).toBe('new/Parent');
-      expect(updatedDirectory[1].path).toBe('new/Parent/Child');
+      expect(updatedDirectory[0].path).toBe(`new${PATH_SEPARATOR}Parent`);
+      expect(updatedDirectory[1].path).toBe(`new${PATH_SEPARATOR}Parent${PATH_SEPARATOR}Child`);
     });
 
     it('should do nothing if already at location', () => {
@@ -851,7 +852,7 @@ describe('directoryService', () => {
         id: 'entry-1',
         name: 'Folder',
         type: 'folder',
-        path: 'parent/Folder',
+        path: `parent${PATH_SEPARATOR}Folder`,
         expanded: false,
         archived: false,
         createdAt: new Date(),

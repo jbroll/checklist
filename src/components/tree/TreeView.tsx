@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Account, DirectoryEntry, Template } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
 import * as templateService from '@/services/templateService';
+import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
 import { SessionRowView } from './SessionRowView';
@@ -76,13 +77,13 @@ function buildDirectoryTree(
 
   // Build tree structure using paths
   for (const node of nodeMap.values()) {
-    const pathParts = node.entry.path.split('/');
+    const pathParts = node.entry.path.split(PATH_SEPARATOR);
     if (pathParts.length === 1) {
       // Root level
       rootNodes.push(node);
     } else {
       // Find parent by path
-      const parentPath = pathParts.slice(0, -1).join('/');
+      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
       const parentEntry = entries.find((e) => e.path === parentPath);
       if (parentEntry) {
         const parentNode = nodeMap.get(parentEntry.id);

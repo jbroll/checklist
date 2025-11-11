@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isIndentedFormat, parseIndentedList } from './indentedListParser';
+import { PATH_SEPARATOR } from './pathUtils';
 
 describe('indentedListParser', () => {
   describe('isIndentedFormat', () => {
@@ -71,31 +72,31 @@ Category2
       expect(result[0]).toMatchObject({
         name: 'Category1',
         type: 'category',
-        path: 'category1',
+        path: 'Category1',
         level: 0,
       });
       expect(result[1]).toMatchObject({
         name: 'Item1',
         type: 'item',
-        path: 'category1/item1',
+        path: `Category1${PATH_SEPARATOR}Item1`,
         level: 1,
       });
       expect(result[2]).toMatchObject({
         name: 'Item2',
         type: 'item',
-        path: 'category1/item2',
+        path: `Category1${PATH_SEPARATOR}Item2`,
         level: 1,
       });
       expect(result[3]).toMatchObject({
         name: 'Category2',
         type: 'category',
-        path: 'category2',
+        path: 'Category2',
         level: 0,
       });
       expect(result[4]).toMatchObject({
         name: 'Item3',
         type: 'item',
-        path: 'category2/item3',
+        path: `Category2${PATH_SEPARATOR}Item3`,
         level: 1,
       });
     });
@@ -116,32 +117,32 @@ Category1
       expect(result[0]).toMatchObject({
         name: 'Category1',
         type: 'category',
-        path: 'category1',
+        path: 'Category1',
       });
       expect(result[1]).toMatchObject({
         name: 'SubCategory1',
         type: 'category',
-        path: 'category1/subcategory1',
+        path: `Category1${PATH_SEPARATOR}SubCategory1`,
       });
       expect(result[2]).toMatchObject({
         name: 'Item1',
         type: 'item',
-        path: 'category1/subcategory1/item1',
+        path: `Category1${PATH_SEPARATOR}SubCategory1${PATH_SEPARATOR}Item1`,
       });
       expect(result[3]).toMatchObject({
         name: 'Item2',
         type: 'item',
-        path: 'category1/subcategory1/item2',
+        path: `Category1${PATH_SEPARATOR}SubCategory1${PATH_SEPARATOR}Item2`,
       });
       expect(result[4]).toMatchObject({
         name: 'SubCategory2',
         type: 'category',
-        path: 'category1/subcategory2',
+        path: `Category1${PATH_SEPARATOR}SubCategory2`,
       });
       expect(result[5]).toMatchObject({
         name: 'Item3',
         type: 'item',
-        path: 'category1/subcategory2/item3',
+        path: `Category1${PATH_SEPARATOR}SubCategory2${PATH_SEPARATOR}Item3`,
       });
     });
 
@@ -160,12 +161,12 @@ Category1
       expect(result[1]).toMatchObject({
         name: 'Item1',
         type: 'item',
-        path: 'category1/item1',
+        path: `Category1${PATH_SEPARATOR}Item1`,
       });
       expect(result[2]).toMatchObject({
         name: 'Item2',
         type: 'item',
-        path: 'category1/item2',
+        path: `Category1${PATH_SEPARATOR}Item2`,
       });
     });
 
@@ -264,22 +265,22 @@ Item3
       expect(result[0]).toMatchObject({
         name: 'Category1',
         type: 'category',
-        path: 'category1',
+        path: 'Category1',
       });
       expect(result[1]).toMatchObject({
         name: 'Item1',
         type: 'item',
-        path: 'category1/item1',
+        path: `Category1${PATH_SEPARATOR}Item1`,
       });
       expect(result[2]).toMatchObject({
         name: 'Item2',
         type: 'item',
-        path: 'item2',
+        path: 'Item2',
       });
       expect(result[3]).toMatchObject({
         name: 'Item3',
         type: 'item',
-        path: 'item3',
+        path: 'Item3',
       });
     });
 

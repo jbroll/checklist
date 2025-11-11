@@ -5,6 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateItem } from '../schemas';
+import { PATH_SEPARATOR } from '../utils/pathUtils';
 import * as itemService from './itemService';
 
 // Mock Template for testing
@@ -57,7 +58,7 @@ describe('itemService', () => {
 
   describe('toggleCategoryExpanded', () => {
     it('should toggle category expanded state from false to true', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce', false);
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce', false);
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
@@ -76,7 +77,7 @@ describe('itemService', () => {
     });
 
     it('should toggle category expanded state from true to false', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce', true);
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce', true);
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
@@ -111,7 +112,7 @@ describe('itemService', () => {
     });
 
     it('should throw error if item is not a category', () => {
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
@@ -121,9 +122,9 @@ describe('itemService', () => {
     });
 
     it('should not affect other items when toggling', () => {
-      const category1 = createMockItem('cat-1', 'Produce', 'category', 'produce', false);
-      const category2 = createMockItem('cat-2', 'Dairy', 'category', 'dairy', true);
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const category1 = createMockItem('cat-1', 'Produce', 'category', 'Produce', false);
+      const category2 = createMockItem('cat-2', 'Dairy', 'category', 'Dairy', true);
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [category1, category2, item]);
       const account = createMockAccount([template]);
 
@@ -137,7 +138,7 @@ describe('itemService', () => {
     });
 
     it('should preserve all other item properties when toggling', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce', false);
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce', false);
       category.color = '#FF0000';
       category.sortOrder = 5;
       category.defaultQuantity = '1';
@@ -152,7 +153,7 @@ describe('itemService', () => {
       expect(updatedCategory.sortOrder).toBe(5);
       expect(updatedCategory.defaultQuantity).toBe('1');
       expect(updatedCategory.name).toBe('Produce');
-      expect(updatedCategory.path).toBe('produce');
+      expect(updatedCategory.path).toBe('Produce'); // Case preserved
     });
   });
 
@@ -170,7 +171,7 @@ describe('itemService', () => {
           expect.objectContaining({
             name: 'Produce',
             type: 'category',
-            path: 'produce',
+            path: 'Produce', // Case preserved, no normalization
             expanded: true, // Categories start expanded by default
           }),
         ]),
@@ -188,15 +189,15 @@ describe('itemService', () => {
     });
 
     it('should create a nested category under parent', () => {
-      const parentCategory = createMockItem('cat-1', 'Produce', 'category', 'produce');
+      const parentCategory = createMockItem('cat-1', 'Produce', 'category', 'Produce');
       const template = createMockTemplate('template-1', [parentCategory]);
       const account = createMockAccount([template]);
 
-      itemService.createCategory(account, 'template-1', 'Fruits', 'produce');
+      itemService.createCategory(account, 'template-1', 'Fruits', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const newCategory = updatedItems.find((i: TemplateItem) => i.name === 'Fruits');
-      expect(newCategory?.path).toBe('produce/fruits');
+      expect(newCategory?.path).toBe(`Produce${PATH_SEPARATOR}Fruits`);
     });
   });
 
@@ -214,7 +215,7 @@ describe('itemService', () => {
           expect.objectContaining({
             name: 'Apple',
             type: 'item',
-            path: 'apple',
+            path: 'Apple', // Case preserved, no normalization
             defaultQuantity: '1 lb',
           }),
         ]),
@@ -222,21 +223,21 @@ describe('itemService', () => {
     });
 
     it('should create item under parent category', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce');
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
-      itemService.createItem(account, 'template-1', 'Apple', 'produce');
+      itemService.createItem(account, 'template-1', 'Apple', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const newItem = updatedItems.find((i: TemplateItem) => i.name === 'Apple');
-      expect(newItem?.path).toBe('produce/apple');
+      expect(newItem?.path).toBe(`Produce${PATH_SEPARATOR}Apple`);
     });
   });
 
   describe('archiveItem', () => {
     it('should set archived flag to true', () => {
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
@@ -254,8 +255,8 @@ describe('itemService', () => {
     });
 
     it('should archive category and all descendants', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce');
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
@@ -269,7 +270,7 @@ describe('itemService', () => {
 
   describe('renameItem', () => {
     it('should rename item and update path', () => {
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
@@ -277,12 +278,12 @@ describe('itemService', () => {
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].name).toBe('Orange');
-      expect(updatedItems[0].path).toBe('produce/orange');
+      expect(updatedItems[0].path).toBe(`Produce${PATH_SEPARATOR}Orange`);
     });
 
     it('should rename category and update descendant paths', () => {
-      const category = createMockItem('cat-1', 'Produce', 'category', 'produce');
-      const item = createMockItem('item-1', 'Apple', 'item', 'produce/apple');
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
+      const item = createMockItem('item-1', 'Apple', 'item', `Produce${PATH_SEPARATOR}Apple`);
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
@@ -290,8 +291,8 @@ describe('itemService', () => {
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].name).toBe('Fresh Produce');
-      expect(updatedItems[0].path).toBe('fresh-produce');
-      expect(updatedItems[1].path).toBe('fresh-produce/apple');
+      expect(updatedItems[0].path).toBe('Fresh Produce');
+      expect(updatedItems[1].path).toBe(`Fresh Produce${PATH_SEPARATOR}Apple`);
     });
   });
 
