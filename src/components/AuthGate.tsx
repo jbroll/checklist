@@ -51,7 +51,7 @@ export function AuthGate() {
     } catch {
       await showAlert({
         title: 'Sign-in Failed',
-        message: 'Google sign-in failed. Please try again.',
+        message: 'Sign-in failed.',
       });
     } finally {
       setIsLoading(false);
@@ -60,8 +60,8 @@ export function AuthGate() {
 
   const handleAppleSignIn = async () => {
     await showAlert({
-      title: 'Apple Sign-in Not Available',
-      message: 'Apple OAuth is not yet configured. Please add Apple credentials to the backend/.env file.',
+      title: 'Not Available',
+      message: 'Apple sign-in not available.',
     });
   };
 
