@@ -50,7 +50,7 @@ export function HierarchyInZonesRenderer({
       const hasChildren = category.children.length > 0;
 
       return (
-        <div key={category.path} className="flex flex-col gap-2">
+        <div key={category.path} className="flex flex-col">
           <SessionZone
             title={category.name}
             zone={zone}
@@ -67,7 +67,7 @@ export function HierarchyInZonesRenderer({
             category={category}
           >
             {hasChildren && (
-              <div className="flex flex-col gap-2 pl-4">
+              <div className="flex flex-col pl-4">
                 {renderCategoryTree(category.children, zone, keyPrefix)}
               </div>
             )}
@@ -110,7 +110,7 @@ export function HierarchyInZonesRenderer({
             showHeading={showZoneHeadings}
           >
             {hasCategories && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col">
                 {renderCategoryTree(categories, zone.key, zone.key)}
               </div>
             )}

@@ -106,7 +106,7 @@ export function ZoneInHierarchyRenderer({
           onToggleChecked={onToggleChecked}
           count={totalItems}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col">
             {/* Show zones for items at this level */}
             {hasDirectItems && (
               <>
@@ -145,9 +145,7 @@ export function ZoneInHierarchyRenderer({
 
             {/* Recursively render child categories */}
             {hasChildren && (
-              <div className="flex flex-col gap-2 pl-4">
-                {renderZoneInHierarchy(category.children)}
-              </div>
+              <div className="flex flex-col pl-4">{renderZoneInHierarchy(category.children)}</div>
             )}
           </div>
         </SessionZone>
