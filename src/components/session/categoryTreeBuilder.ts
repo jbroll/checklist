@@ -4,8 +4,8 @@ import { PATH_SEPARATOR } from '@/utils/pathUtils';
 export interface CategoryNode {
   name: string;
   path: string;
-  items: TemplateItem[];
-  children: CategoryNode[];
+  items: TemplateItem[]; // Direct child items (not in subcategories)
+  children: CategoryNode[]; // Child categories
   depth: number;
   sortOrder?: number; // For sorting categories
 }
@@ -13,15 +13,19 @@ export interface CategoryNode {
 /**
  * Builds a multi-level category tree structure from a flat list of items
  *
+ * Items and categories are mixed together at each level based on their paths.
+ * Root-level items (with no path separator) are returned as categories with no children.
+ *
  * @param items - Leaf items (type='item') to organize into categories
  * @param allTemplateItems - All template items including categories for full hierarchy
+ * @returns Array of category nodes (includes both actual categories and root items)
  */
 export function buildCategoryTree(
   items: TemplateItem[],
   allTemplateItems?: TemplateItem[],
 ): CategoryNode[] {
   const categoryMap = new Map<string, CategoryNode>();
-  const rootCategories: CategoryNode[] = [];
+  const rootNodes: CategoryNode[] = [];
 
   // First pass: Create ALL category nodes from allTemplateItems (if provided)
   // This ensures categories without leaf items are still shown
@@ -41,32 +45,43 @@ export function buildCategoryTree(
     }
   }
 
-  // Second pass: Create any missing category nodes from item paths
-  // This handles cases where categories are implicit from paths but not in allTemplateItems
+  // Second pass: Process items and create category nodes from paths
   items.forEach((item) => {
     const pathParts = item.path.split(PATH_SEPARATOR);
 
-    // Create category nodes for all levels (excluding the item itself)
-    for (let i = 1; i < pathParts.length; i++) {
-      const categoryPath = pathParts.slice(0, i).join(PATH_SEPARATOR);
-
-      if (!categoryMap.has(categoryPath)) {
-        const categoryName = pathParts[i - 1];
-
-        categoryMap.set(categoryPath, {
-          name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
-          path: categoryPath,
-          items: [],
+    if (pathParts.length === 1) {
+      // Root-level item - create a pseudo-category node for it
+      if (!categoryMap.has(item.path)) {
+        categoryMap.set(item.path, {
+          name: item.name,
+          path: item.path,
+          items: [item], // The item is its own content
           children: [],
-          depth: i - 1,
-          sortOrder: undefined,
+          depth: 0,
+          sortOrder: item.sortOrder,
         });
       }
-    }
+    } else {
+      // Nested item - create category nodes for all parent levels
+      for (let i = 1; i < pathParts.length; i++) {
+        const categoryPath = pathParts.slice(0, i).join(PATH_SEPARATOR);
 
-    // Add item to its immediate parent category
-    const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
-    if (parentPath) {
+        if (!categoryMap.has(categoryPath)) {
+          const categoryName = pathParts[i - 1];
+
+          categoryMap.set(categoryPath, {
+            name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
+            path: categoryPath,
+            items: [],
+            children: [],
+            depth: i - 1,
+            sortOrder: undefined,
+          });
+        }
+      }
+
+      // Add item to its immediate parent category
+      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
       categoryMap.get(parentPath)?.items.push(item);
     }
   });
@@ -76,8 +91,8 @@ export function buildCategoryTree(
     const pathParts = path.split(PATH_SEPARATOR);
 
     if (pathParts.length === 1) {
-      // Top-level category
-      rootCategories.push(category);
+      // Top-level node (category or root item)
+      rootNodes.push(category);
     } else {
       // Nested category - find parent and add as child
       const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
@@ -120,5 +135,5 @@ export function buildCategoryTree(
       }));
   };
 
-  return sortCategoryTree(rootCategories);
+  return sortCategoryTree(rootNodes);
 }

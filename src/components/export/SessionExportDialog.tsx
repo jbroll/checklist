@@ -60,7 +60,7 @@ export function SessionExportDialog({
 
       // Close dialog
       onOpenChange(false);
-    } catch (error) {
+    } catch (_error) {
       await showAlert({
         title: 'Export Failed',
         message: 'Export failed.',

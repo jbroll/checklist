@@ -412,5 +412,43 @@ Category3
         type: 'item',
       });
     });
+
+    it('handles actual items.txt from user', () => {
+      const text = `
+Item 0
+Cat 2
+ Item 1
+ Item 2
+Item 3
+Cat 4
+  Item 4
+  Cat 6
+   Item 5
+   Item 6
+      `.trim();
+
+      const result = parseIndentedList(text);
+
+      // Debug: log all items
+      result.forEach((item, i) => {
+        console.log(`[${i}] name="${item.name}" type=${item.type} level=${item.level}`);
+      });
+
+      // Item 0 should be type='item' (no children)
+      const item0 = result.find((r) => r.name === 'Item 0');
+      console.log('Item 0 found:', item0);
+      expect(item0).toBeDefined();
+      expect(item0?.type).toBe('item');
+
+      // Item 3 should be type='item' (no children)
+      const item3 = result.find((r) => r.name === 'Item 3');
+      expect(item3).toBeDefined();
+      expect(item3?.type).toBe('item');
+
+      // Item 4 should be type='item' (no children, even though indented)
+      const item4 = result.find((r) => r.name === 'Item 4');
+      expect(item4).toBeDefined();
+      expect(item4?.type).toBe('item');
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useState } from 'react';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -42,6 +42,7 @@ export function useDialog(): DialogContextValue {
 interface DialogState {
   type: 'alert' | 'confirm' | null;
   options: AlertOptions | ConfirmOptions | null;
+  // biome-ignore lint/suspicious/noExplicitAny: resolve can be for Promise<void> or Promise<boolean>
   resolve: ((value: any) => void) | null;
 }
 
