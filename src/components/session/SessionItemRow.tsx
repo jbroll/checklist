@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { memo } from 'react';
 import { useAccount } from '@/lib/jazz';
 import type { Account, ItemState, TemplateItem } from '@/schemas';
@@ -43,8 +44,16 @@ export const SessionItemRow = memo(function SessionItemRow({
       : 'border-neutral-300 hover:border-blue-400';
   };
 
+  // Only animate items in selected/checked zones (not available)
+  const shouldAnimate = zone === 'selected' || zone === 'checked';
+
   return (
-    <div className="flex items-center gap-3 rounded px-1 py-0.5 hover:bg-neutral-100">
+    <motion.div
+      layout={shouldAnimate}
+      layoutId={shouldAnimate ? item.id : undefined}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      className="flex items-center gap-3 rounded px-1 py-0.5 hover:bg-neutral-100"
+    >
       {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
       <button
         type="button"
@@ -113,6 +122,6 @@ export const SessionItemRow = memo(function SessionItemRow({
           </svg>
         </button>
       )}
-    </div>
+    </motion.div>
   );
 });
