@@ -294,4 +294,77 @@ describe('itemService', () => {
       expect(updatedItems[1].path).toBe('fresh-produce/apple');
     });
   });
+
+  describe('reorderItem', () => {
+    it('should update sortOrder of an item', () => {
+      const items = [
+        createMockItem('1', 'Apple', 'item', 'apple'),
+        createMockItem('2', 'Banana', 'item', 'banana'),
+        createMockItem('3', 'Cherry', 'item', 'cherry'),
+      ];
+      items[0].sortOrder = 1.0;
+      items[1].sortOrder = 2.0;
+      items[2].sortOrder = 3.0;
+
+      const template = createMockTemplate('template-1', items);
+      const account = createMockAccount([template]);
+
+      // Reorder Banana to position 1.5 (between Apple and Cherry)
+      itemService.reorderItem(account, 'template-1', '2', 1.5);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[1].id).toBe('2');
+      expect(updatedItems[1].sortOrder).toBe(1.5);
+    });
+
+    it('should handle fractional sortOrder values', () => {
+      const items = [
+        createMockItem('1', 'First', 'item', 'first'),
+        createMockItem('2', 'Second', 'item', 'second'),
+      ];
+      items[0].sortOrder = 1.0;
+      items[1].sortOrder = 2.0;
+
+      const template = createMockTemplate('template-1', items);
+      const account = createMockAccount([template]);
+
+      // Insert between with fractional value
+      itemService.reorderItem(account, 'template-1', '2', 1.25);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[1].sortOrder).toBe(1.25);
+    });
+
+    it('should throw error for nonexistent template', () => {
+      const account = createMockAccount([]);
+
+      expect(() => {
+        itemService.reorderItem(account, 'nonexistent', 'item-1', 1.0);
+      }).toThrow('Template nonexistent not found');
+    });
+
+    it('should throw error for nonexistent item', () => {
+      const template = createMockTemplate('template-1', []);
+      const account = createMockAccount([template]);
+
+      expect(() => {
+        itemService.reorderItem(account, 'template-1', 'nonexistent', 1.0);
+      }).toThrow('Item nonexistent not found');
+    });
+
+    it('should handle very small fractional differences', () => {
+      const items = [createMockItem('1', 'A', 'item', 'a'), createMockItem('2', 'B', 'item', 'b')];
+      items[0].sortOrder = 1.0;
+      items[1].sortOrder = 1.0001;
+
+      const template = createMockTemplate('template-1', items);
+      const account = createMockAccount([template]);
+
+      // Insert with tiny fractional value
+      itemService.reorderItem(account, 'template-1', '2', 1.00005);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[1].sortOrder).toBe(1.00005);
+    });
+  });
 });

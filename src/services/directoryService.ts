@@ -326,6 +326,34 @@ export function moveDirectoryEntry(
 }
 
 /**
+ * Reorder a directory entry to a new position in the array
+ * Uses array position to determine visual order
+ */
+export function reorderDirectoryEntry(
+  account: InstanceOfSchema<typeof Account>,
+  entryId: string,
+  newIndex: number,
+): void {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  const directory = [...account.root.directory];
+  const oldIndex = directory.findIndex((e) => e.id === entryId);
+
+  if (oldIndex === -1) {
+    throw new Error(`Entry ${entryId} not found`);
+  }
+
+  // Remove from old position
+  const [entry] = directory.splice(oldIndex, 1);
+
+  // Insert at new position
+  directory.splice(newIndex, 0, entry);
+
+  // Update directory array
+  account.root.$jazz.set('directory', directory);
+}
+
+/**
  * Check if directory entry exists (and is not archived)
  */
 export function entryExists(account: InstanceOfSchema<typeof Account>, entryId: string): boolean {

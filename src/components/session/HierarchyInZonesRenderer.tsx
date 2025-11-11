@@ -80,7 +80,7 @@ export function HierarchyInZonesRenderer({
   return (
     <>
       {zones.map((zone) => {
-        const categories = buildCategoryTree(zone.items);
+        const categories = buildCategoryTree(zone.items, template.items);
         const isZoneExpanded = zoneExpanded[zone.key];
         const hasCategories = categories.length > 0;
 

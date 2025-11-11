@@ -29,7 +29,7 @@ export function ZoneInHierarchyRenderer({
 
   // Only include categories that have items in cart or completed
   const cartAndCompletedItems = [...cartItems, ...completedItems];
-  const categoriesWithItems = buildCategoryTree(cartAndCompletedItems);
+  const categoriesWithItems = buildCategoryTree(cartAndCompletedItems, template.items);
 
   // Find items that aren't in any category (root-level items)
   const categorizedItemIds = new Set<string>();
