@@ -13,6 +13,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useMemo, useState } from 'react';
 import type { Account, DirectoryEntry, Template } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
+import * as sessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
 import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { FolderNodeView } from './FolderNodeView';
@@ -171,26 +172,18 @@ export function TreeView({
   };
 
   const handleToggleArchiveSession = (templateId: string, sessionId: string) => {
-    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
-    if (template?.sessions) {
-      const session = template.sessions.find((s) => s?.$jazz.id === sessionId);
-      if (session) {
-        // Toggle archived flag
-        session.$jazz.set('archived', !session.archived);
-        session.$jazz.set('lastActivityAt', new Date());
+    const session = sessionService.getSession(account, templateId, sessionId);
+    if (session) {
+      if (session.archived) {
+        sessionService.unarchiveSession(account, templateId, sessionId);
+      } else {
+        sessionService.archiveSession(account, templateId, sessionId);
       }
     }
   };
 
   const handleDeleteSession = (templateId: string, sessionId: string) => {
-    const template = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
-    if (template?.sessions) {
-      const sessionIndex = template.sessions.findIndex((s) => s?.$jazz.id === sessionId);
-      if (sessionIndex !== -1) {
-        // Hard delete by removing from sessions array using Jazz's splice method
-        template.sessions.$jazz.splice(sessionIndex, 1);
-      }
-    }
+    sessionService.deleteSession(account, templateId, sessionId);
   };
 
   // Drag and drop handlers

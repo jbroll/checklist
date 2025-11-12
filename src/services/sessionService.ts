@@ -337,3 +337,75 @@ export function invertItemSelection(
     newItemStates: itemIds.map((id) => ({ id, selected: newItemStates[id]?.selected })),
   });
 }
+
+/**
+ * Archive a session (soft delete)
+ */
+export function archiveSession(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  session.$jazz.set('archived', true);
+  session.$jazz.set('lastActivityAt', new Date());
+}
+
+/**
+ * Unarchive a session
+ */
+export function unarchiveSession(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  session.$jazz.set('archived', false);
+  session.$jazz.set('lastActivityAt', new Date());
+}
+
+/**
+ * Delete a session (hard delete - removes from template)
+ */
+export function deleteSession(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
+
+  const sessionIndex = template.sessions.findIndex((s) => s?.$jazz.id === sessionId);
+  if (sessionIndex === -1) {
+    throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+  }
+
+  // Hard delete by removing from sessions array
+  template.sessions.$jazz.splice(sessionIndex, 1);
+  template.$jazz.set('updatedAt', new Date());
+}
+
+/**
+ * Toggle category expanded state in session
+ */
+export function toggleCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  categoryKey: string,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const categoryExpanded = session.categoryExpanded || {};
+  const currentValue = categoryExpanded[categoryKey] ?? true;
+
+  session.$jazz.set('categoryExpanded', {
+    ...categoryExpanded,
+    [categoryKey]: !currentValue,
+  });
+}

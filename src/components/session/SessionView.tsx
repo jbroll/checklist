@@ -146,18 +146,16 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   const handleToggleArchived = () => {
     if (!session || !me) return;
-    session.$jazz.set('archived', !session.archived);
-    session.$jazz.set('lastActivityAt', new Date());
+    if (session.archived) {
+      SessionService.unarchiveSession(me, template.$jazz.id, sessionId);
+    } else {
+      SessionService.archiveSession(me, template.$jazz.id, sessionId);
+    }
   };
 
   const handleToggleCategoryExpanded = (catKey: string) => {
-    if (session?.categoryExpanded) {
-      const currentValue = categoryExpanded[catKey] ?? true;
-      session.$jazz.set('categoryExpanded', {
-        ...categoryExpanded,
-        [catKey]: !currentValue,
-      });
-    }
+    if (!session || !me) return;
+    SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
   };
 
   const handleBatchSelectAll = (itemIds: string[]) => {
