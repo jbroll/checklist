@@ -1,12 +1,12 @@
 /**
- * Unit tests for item service
+ * Unit tests for template service item operations
  * Tests item operations including create, rename, delete, and expand/collapse
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateItem } from '../schemas';
 import { PATH_SEPARATOR } from '../utils/pathUtils';
-import * as itemService from './templateService';
+import * as templateService from './templateService';
 
 // Mock Template for testing
 const createMockTemplate = (id: string, items: TemplateItem[] = []) => ({
@@ -50,7 +50,7 @@ const createMockItem = (
   createdAt: new Date(),
 });
 
-describe('itemService', () => {
+describe('templateService - item operations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -61,7 +61,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
-      itemService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
+      templateService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
 
       expect(template.$jazz.set).toHaveBeenCalledWith(
         'items',
@@ -80,7 +80,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
-      itemService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
+      templateService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
 
       expect(template.$jazz.set).toHaveBeenCalledWith(
         'items',
@@ -127,7 +127,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category1, category2, item]);
       const account = createMockAccount([template]);
 
-      itemService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
+      templateService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems).toHaveLength(3);
@@ -143,7 +143,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
-      itemService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
+      templateService.toggleCategoryExpanded(account, 'template-1', 'cat-1');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const updatedCategory = updatedItems[0];
@@ -159,7 +159,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', []);
       const account = createMockAccount([template]);
 
-      const categoryId = itemService.createCategory(account, 'template-1', 'Produce');
+      const categoryId = templateService.createCategory(account, 'template-1', 'Produce');
 
       expect(categoryId).toBeTruthy();
       expect(template.$jazz.set).toHaveBeenCalledWith(
@@ -180,7 +180,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [parentCategory]);
       const account = createMockAccount([template]);
 
-      itemService.createCategory(account, 'template-1', 'Fruits', 'Produce');
+      templateService.createCategory(account, 'template-1', 'Fruits', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const newCategory = updatedItems.find((i: TemplateItem) => i.name === 'Fruits');
@@ -193,7 +193,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', []);
       const account = createMockAccount([template]);
 
-      const itemId = itemService.createItem(account, 'template-1', 'Apple', undefined, '1 lb');
+      const itemId = templateService.createItem(account, 'template-1', 'Apple', undefined, '1 lb');
 
       expect(itemId).toBeTruthy();
       expect(template.$jazz.set).toHaveBeenCalledWith(
@@ -214,7 +214,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category]);
       const account = createMockAccount([template]);
 
-      itemService.createItem(account, 'template-1', 'Apple', 'Produce');
+      templateService.createItem(account, 'template-1', 'Apple', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const newItem = updatedItems.find((i: TemplateItem) => i.name === 'Apple');
@@ -228,7 +228,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
-      itemService.archiveItem(account, 'template-1', 'item-1');
+      templateService.archiveItem(account, 'template-1', 'item-1');
 
       expect(template.$jazz.set).toHaveBeenCalledWith(
         'items',
@@ -247,7 +247,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
-      itemService.archiveItem(account, 'template-1', 'cat-1');
+      templateService.archiveItem(account, 'template-1', 'cat-1');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].archived).toBe(true); // category archived
@@ -261,7 +261,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
-      itemService.renameItem(account, 'template-1', 'item-1', 'Orange');
+      templateService.renameItem(account, 'template-1', 'item-1', 'Orange');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].name).toBe('Orange');
@@ -274,7 +274,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
-      itemService.renameItem(account, 'template-1', 'cat-1', 'Fresh Produce');
+      templateService.renameItem(account, 'template-1', 'cat-1', 'Fresh Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].name).toBe('Fresh Produce');
@@ -290,7 +290,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'item-1', 'Produce');
+      templateService.moveItem(account, 'template-1', 'item-1', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const movedItem = updatedItems.find((i: TemplateItem) => i.id === 'item-1');
@@ -302,7 +302,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'item-1', undefined);
+      templateService.moveItem(account, 'template-1', 'item-1', undefined);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].path).toBe('Apple');
@@ -315,7 +315,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'item-1', 'Produce', 2.5);
+      templateService.moveItem(account, 'template-1', 'item-1', 'Produce', 2.5);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const movedItem = updatedItems.find((i: TemplateItem) => i.id === 'item-1');
@@ -329,7 +329,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'item-1', undefined, 3.0);
+      templateService.moveItem(account, 'template-1', 'item-1', undefined, 3.0);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].path).toBe('Apple');
@@ -342,7 +342,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [category, item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'cat-1', 'Produce');
+      templateService.moveItem(account, 'template-1', 'cat-1', 'Produce');
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[0].path).toBe(`Produce${PATH_SEPARATOR}Fruits`);
@@ -356,7 +356,7 @@ describe('itemService', () => {
       const account = createMockAccount([template]);
 
       expect(() => {
-        itemService.moveItem(account, 'template-1', 'item-2', undefined);
+        templateService.moveItem(account, 'template-1', 'item-2', undefined);
       }).toThrow('Item already exists at path: Apple');
     });
 
@@ -365,7 +365,7 @@ describe('itemService', () => {
       const template = createMockTemplate('template-1', [item]);
       const account = createMockAccount([template]);
 
-      itemService.moveItem(account, 'template-1', 'item-1', undefined);
+      templateService.moveItem(account, 'template-1', 'item-1', undefined);
 
       expect(template.$jazz.set).not.toHaveBeenCalled();
     });
@@ -386,7 +386,7 @@ describe('itemService', () => {
       const account = createMockAccount([template]);
 
       // Reorder Banana to position 1.5 (between Apple and Cherry)
-      itemService.reorderItem(account, 'template-1', '2', 1.5);
+      templateService.reorderItem(account, 'template-1', '2', 1.5);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[1].id).toBe('2');
@@ -405,7 +405,7 @@ describe('itemService', () => {
       const account = createMockAccount([template]);
 
       // Insert between with fractional value
-      itemService.reorderItem(account, 'template-1', '2', 1.25);
+      templateService.reorderItem(account, 'template-1', '2', 1.25);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[1].sortOrder).toBe(1.25);
@@ -415,7 +415,7 @@ describe('itemService', () => {
       const account = createMockAccount([]);
 
       expect(() => {
-        itemService.reorderItem(account, 'nonexistent', 'item-1', 1.0);
+        templateService.reorderItem(account, 'nonexistent', 'item-1', 1.0);
       }).toThrow('Template nonexistent not found');
     });
 
@@ -424,7 +424,7 @@ describe('itemService', () => {
       const account = createMockAccount([template]);
 
       expect(() => {
-        itemService.reorderItem(account, 'template-1', 'nonexistent', 1.0);
+        templateService.reorderItem(account, 'template-1', 'nonexistent', 1.0);
       }).toThrow('Item nonexistent not found');
     });
 
@@ -437,7 +437,7 @@ describe('itemService', () => {
       const account = createMockAccount([template]);
 
       // Insert with tiny fractional value
-      itemService.reorderItem(account, 'template-1', '2', 1.00005);
+      templateService.reorderItem(account, 'template-1', '2', 1.00005);
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       expect(updatedItems[1].sortOrder).toBe(1.00005);

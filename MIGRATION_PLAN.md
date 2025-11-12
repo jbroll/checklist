@@ -87,7 +87,7 @@
 **Files Modified (18 service files):**
 - `src/services/sessionService.ts` - Renamed functions, updated field accesses
 - `src/services/folderService.ts` - Updated Account type references
-- `src/services/itemService.ts` - Updated Account type references
+- `src/services/templateService.ts` - Updated Account type references (formerly itemService.ts)
 - `src/services/export/*` (4 files) - Updated field names in export logic
 - `src/services/import/*` (8 files) - Updated field names in import logic
 - `src/services/testHelpers.ts` - Updated function references
@@ -175,7 +175,7 @@ Implemented automatic migration in `ListSession.withMigration()`:
 **Services (18 files):**
 - src/services/sessionService.ts
 - src/services/folderService.ts
-- src/services/itemService.ts
+- src/services/templateService.ts (formerly itemService.ts)
 - src/services/testHelpers.ts
 - src/services/export/exportService.ts
 - src/services/export/jsonExporter.ts
