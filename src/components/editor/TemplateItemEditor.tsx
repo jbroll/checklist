@@ -17,7 +17,7 @@ import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Template, TemplateItem } from '@/schemas';
-import * as ItemService from '@/services/itemService';
+import * as ItemService from '@/services/templateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
