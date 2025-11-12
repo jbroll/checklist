@@ -4,6 +4,7 @@ import {
   CheckSquare,
   Download,
   FolderPlus,
+  LayoutGrid,
   ListPlus,
   LogOut,
   MoreVertical,
@@ -36,6 +37,7 @@ interface TreeViewHeaderProps {
   onImport: () => void;
   onToggleShowArchived: () => void;
   onSignOut?: () => void;
+  onSwitchToSimplified?: () => void;
 }
 
 /**
@@ -57,6 +59,7 @@ export function TreeViewHeader({
   onImport,
   onToggleShowArchived,
   onSignOut,
+  onSwitchToSimplified,
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -166,6 +169,15 @@ export function TreeViewHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onSwitchToSimplified && (
+                  <>
+                    <DropdownMenuItem onClick={onSwitchToSimplified}>
+                      <LayoutGrid className="mr-2 h-4 w-4" />
+                      Simplified View
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={onImport}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import

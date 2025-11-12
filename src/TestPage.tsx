@@ -68,7 +68,7 @@ export function TestPage() {
 
       {/* Main app with offset for banner */}
       <div className="pt-10">
-        <AppContainer onSignOut={handleSignOut} />
+        <AppContainer onSignOut={handleSignOut} viewMode="classic" onViewModeChange={() => {}} />
       </div>
     </div>
   );

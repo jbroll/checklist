@@ -1,0 +1,65 @@
+import type { InstanceOfSchema } from 'jazz-tools';
+import type { Session, Template } from '@/schemas';
+import { SimplifiedSessionItemRow } from './SimplifiedSessionItemRow';
+
+interface SimplifiedFlatViewProps {
+  template: InstanceOfSchema<typeof Template>;
+  session: InstanceOfSchema<typeof Session>;
+  showTrash: boolean;
+  onCheckToggle: (itemId: string) => void;
+  onDelete: (itemId: string) => void;
+}
+
+/**
+ * SimplifiedFlatView - Flat list view for simplified session
+ * Single list of all items (not grouped by zone)
+ */
+export function SimplifiedFlatView({
+  template,
+  session,
+  showTrash,
+  onCheckToggle,
+  onDelete,
+}: SimplifiedFlatViewProps) {
+  // Get all non-archived items in their original order
+  const items = template.items?.filter((item) => !item.archived) || [];
+
+  // Sort by path to maintain hierarchy order (depth-first)
+  const sortedItems = [...items].sort((a, b) => {
+    return a.path.localeCompare(b.path);
+  });
+
+  if (sortedItems.length === 0) {
+    return (
+      <div className="text-center py-12 text-neutral-500">
+        <p>No items in this list yet</p>
+        <p className="text-sm mt-1">Click "Add Item" to get started</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-neutral-200 divide-y divide-neutral-100">
+      {sortedItems.map((item) => {
+        const state = session.itemStates?.[item.id];
+        const checked = state?.checked || false;
+
+        // Calculate nesting level from path (count separators)
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: \x01 is the path separator used in schemas
+        const level = (item.path.match(/\x01/g) || []).length;
+
+        return (
+          <SimplifiedSessionItemRow
+            key={item.id}
+            item={item}
+            checked={checked}
+            showTrash={showTrash}
+            onCheckToggle={onCheckToggle}
+            onDelete={onDelete}
+            level={level}
+          />
+        );
+      })}
+    </div>
+  );
+}
