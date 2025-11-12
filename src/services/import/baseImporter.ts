@@ -121,7 +121,6 @@ export function importItems(
         sortOrder: nextSortOrder++,
         archived: false,
         defaultQuantity,
-        color: '#6b7280',
         createdAt: new Date(),
       };
 
