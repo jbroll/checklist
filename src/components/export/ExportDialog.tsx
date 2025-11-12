@@ -13,7 +13,12 @@ import {
 import { Label } from '@/components/ui/label';
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, Template } from '@/schemas';
-import { ExportService } from '@/services/export/exportService';
+import {
+  exportTemplateItemsToCsv,
+  exportTemplateItemsToText,
+  exportToJson,
+  generateFilename,
+} from '@/services/export/exportService';
 import type { ExportScope } from '@/services/export/types';
 import { downloadCsv, downloadJson, downloadText } from '@/utils/fileDownload';
 import { buildExportFilename } from '@/utils/fileUtils';
@@ -47,20 +52,20 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
 
         if (format === 'json') {
           const scope: ExportScope = { type: 'single-folder', folderId: fId };
-          const data = ExportService.exportToJson(account, scope);
+          const data = exportToJson(account, scope);
           downloadJson(data, filename);
         } else if (format === 'txt') {
-          const content = ExportService.exportTemplateItemsToText(account, fId);
+          const content = exportTemplateItemsToText(account, fId);
           downloadText(content, filename);
         } else {
-          const content = ExportService.exportTemplateItemsToCsv(account, fId);
+          const content = exportTemplateItemsToCsv(account, fId);
           downloadCsv(content, filename);
         }
       } else {
         // Top-level: JSON only, export all templates
         const scope: ExportScope = { type: 'all-folders' };
-        const data = ExportService.exportToJson(account, scope);
-        const filename = ExportService.generateFilename(scope, 'json', undefined);
+        const data = exportToJson(account, scope);
+        const filename = generateFilename(scope, 'json', undefined);
         downloadJson(data, filename);
       }
 

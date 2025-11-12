@@ -93,9 +93,7 @@ export function exposeServicesToWindow(
     // Export operations
     export: {
       toJson: () =>
-        withAccount((acc) =>
-          ExportService.ExportService.exportToJsonString(acc, { type: 'all-folders' }),
-        ),
+        withAccount((acc) => ExportService.exportToJsonString(acc, { type: 'all-folders' })),
     },
 
     // Import operations
