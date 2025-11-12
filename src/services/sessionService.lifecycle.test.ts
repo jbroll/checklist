@@ -106,7 +106,7 @@ describe('Session Lifecycle Functions', () => {
       const oldActivityTime = session1.lastActivityAt;
 
       // Wait a tiny bit to ensure time difference
-      const now = new Date(Date.now() + 10);
+      const _now = new Date(Date.now() + 10);
       archiveSession(account, 'template-1', 'session-1');
 
       expect(session1.lastActivityAt.getTime()).toBeGreaterThanOrEqual(oldActivityTime.getTime());
@@ -244,7 +244,7 @@ describe('Session Lifecycle Functions', () => {
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
 
-      expect(session1.categoryExpanded['cat1']).toBe(true);
+      expect(session1.categoryExpanded.cat1).toBe(true);
     });
 
     it('should collapse an expanded category', () => {
@@ -252,7 +252,7 @@ describe('Session Lifecycle Functions', () => {
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
 
-      expect(session1.categoryExpanded['cat1']).toBe(false);
+      expect(session1.categoryExpanded.cat1).toBe(false);
     });
 
     it('should default to true for new categories', () => {
@@ -273,9 +273,9 @@ describe('Session Lifecycle Functions', () => {
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat2');
 
-      expect(session1.categoryExpanded['cat1']).toBe(true);
-      expect(session1.categoryExpanded['cat2']).toBe(true);
-      expect(session1.categoryExpanded['cat3']).toBe(true);
+      expect(session1.categoryExpanded.cat1).toBe(true);
+      expect(session1.categoryExpanded.cat2).toBe(true);
+      expect(session1.categoryExpanded.cat3).toBe(true);
     });
 
     it('should throw error if session not found', () => {
@@ -298,7 +298,7 @@ describe('Session Lifecycle Functions', () => {
         toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
       }).not.toThrow();
 
-      expect(session1.categoryExpanded['cat1']).toBe(false);
+      expect(session1.categoryExpanded.cat1).toBe(false);
     });
 
     it('should handle null/undefined categoryExpanded', () => {
@@ -309,7 +309,7 @@ describe('Session Lifecycle Functions', () => {
         toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
       }).not.toThrow();
 
-      expect(session1.categoryExpanded['cat1']).toBe(false);
+      expect(session1.categoryExpanded.cat1).toBe(false);
     });
 
     it('should handle multiple toggles', () => {
@@ -317,15 +317,15 @@ describe('Session Lifecycle Functions', () => {
 
       // Toggle once
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(session1.categoryExpanded['cat1']).toBe(false);
+      expect(session1.categoryExpanded.cat1).toBe(false);
 
       // Toggle again
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(session1.categoryExpanded['cat1']).toBe(true);
+      expect(session1.categoryExpanded.cat1).toBe(true);
 
       // Toggle once more
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(session1.categoryExpanded['cat1']).toBe(false);
+      expect(session1.categoryExpanded.cat1).toBe(false);
     });
   });
 

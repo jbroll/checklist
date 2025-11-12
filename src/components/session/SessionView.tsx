@@ -84,7 +84,7 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   });
 
   // Now handle early returns after hooks
-  if (!me || !template.sessions) {
+  if (!me || !me.root || !template.sessions) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -147,14 +147,17 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const handleToggleArchived = () => {
     if (!session || !me) return;
     if (session.archived) {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
       SessionService.unarchiveSession(me, template.$jazz.id, sessionId);
     } else {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
       SessionService.archiveSession(me, template.$jazz.id, sessionId);
     }
   };
 
   const handleToggleCategoryExpanded = (catKey: string) => {
     if (!session || !me) return;
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
     SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
   };
 
