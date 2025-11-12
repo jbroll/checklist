@@ -11,14 +11,26 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 
 ## Service API Surface Area
 
-### Core Data Services (4 files)
+### Core Data Services (3 files)
 
 #### `templateService.ts`
-**Purpose:** Template CRUD operations
-**Functions (3):**
+**Purpose:** Template CRUD operations and template item management
+**Functions (15):**
 - `getTemplate(account, templateId)` → Template | null
 - `getAllTemplates(account)` → Template[]
 - `templateExists(account, templateId)` → boolean
+- `createCategory(account, templateId, name, parentPath?)` → itemId
+- `createItem(account, templateId, name, parentPath?, defaultQuantity?)` → itemId
+- `getItem(account, templateId, itemId)` → TemplateItem | null
+- `getItems(account, templateId)` → TemplateItem[]
+- `getLeafItems(account, templateId)` → TemplateItem[]
+- `renameItem(account, templateId, itemId, newName)` → void
+- `archiveItem(account, templateId, itemId)` → void
+- `moveItem(account, templateId, itemId, newParentPath, sortOrder?)` → void
+- `getCategoryExpanded(account, templateId, itemId)` → boolean
+- `setCategoryExpanded(account, templateId, itemId, expanded)` → void
+- `toggleCategoryExpanded(account, templateId, itemId)` → void
+- `reorderItem(account, templateId, itemId, newSortOrder)` → void
 
 #### `sessionService.ts`
 **Purpose:** Shopping session management
@@ -43,22 +55,6 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 - `getCategoryExpanded(account, templateId, sessionId, categoryKey)` → boolean 🔵 **NEW**
 - `setCategoryExpanded(account, templateId, sessionId, categoryKey, expanded)` → void 🔵 **NEW**
 - `toggleCategoryExpanded(account, templateId, sessionId, categoryKey)` → void ✨ **NEW**
-
-#### `itemService.ts`
-**Purpose:** Template item operations (categories & items)
-**Functions (12):**
-- `createCategory(account, templateId, name, parentPath?)` → itemId
-- `createItem(account, templateId, name, parentPath?, defaultQuantity?)` → itemId
-- `getItem(account, templateId, itemId)` → TemplateItem | null
-- `getItems(account, templateId)` → TemplateItem[]
-- `getLeafItems(account, templateId)` → TemplateItem[]
-- `renameItem(account, templateId, itemId, newName)` → void
-- `archiveItem(account, templateId, itemId)` → void
-- `moveItem(account, templateId, itemId, newParentPath, sortOrder?)` → void
-- `getCategoryExpanded(account, templateId, itemId)` → boolean 🔵 **NEW**
-- `setCategoryExpanded(account, templateId, itemId, expanded)` → void 🔵 **NEW**
-- `toggleCategoryExpanded(account, templateId, itemId)` → void
-- `reorderItem(account, templateId, itemId, newSortOrder)` → void
 
 #### `directoryService.ts`
 **Purpose:** Directory entry management (folders & template-refs)
@@ -174,7 +170,7 @@ All mutations use Jazz's `$jazz.set()` and `$jazz.splice()` methods correctly.
 ### ✅ Components Using Services Correctly
 
 - **AppContainer.tsx** - Uses `directoryService` and `sessionService`
-- **TemplateItemEditor.tsx** - Uses `itemService` exclusively
+- **TemplateItemEditor.tsx** - Uses `templateService` exclusively
 - **SessionView.tsx** - Uses `sessionService` for all operations (after updates)
 - **TreeView.tsx** - Uses `directoryService` and `sessionService` (after updates)
 - **Dashboard.tsx** - Uses `templateService`
@@ -243,7 +239,7 @@ export function toggleCategoryExpanded(
 
 **Applied consistently across:**
 - `sessionService` - item selected/checked state, category expanded
-- `itemService` - category expanded in templates
+- `templateService` - category expanded in templates
 - `directoryService` - entry expanded in directory tree
 
 ### Pattern: Pure Functions
@@ -301,7 +297,7 @@ updateEntity(item, { name: "New Name" });
 All services now use pure function exports: `export function foo() {}`
 
 This includes:
-- **Core services** (directoryService, templateService, itemService, sessionService)
+- **Core services** (directoryService, templateService, sessionService)
 - **Import services** (importService)
 - **Export services** (exportService)
 - **Utility services** (entityFinder, entityUpdater)
@@ -349,7 +345,7 @@ export function moveItemBetweenTemplates(
   toTemplateId: string,
   itemId: string,
 ): void {
-  // Would coordinate itemService + templateService atomically
+  // Would coordinate templateService + directoryService atomically
 }
 ```
 
