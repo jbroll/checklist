@@ -47,6 +47,7 @@ interface TreeViewProps {
   onExport?: () => void;
   onImport?: () => void;
   onSignOut?: () => void;
+  onSwitchToSimplified?: () => void;
 }
 
 /**
@@ -124,6 +125,7 @@ export function TreeView({
   onExport,
   onImport,
   onSignOut,
+  onSwitchToSimplified,
 }: TreeViewProps) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -401,6 +403,7 @@ export function TreeView({
           onImport={onImport || (() => {})}
           onToggleShowArchived={() => setShowArchived(!showArchived)}
           onSignOut={onSignOut}
+          onSwitchToSimplified={onSwitchToSimplified}
         />
 
         {directoryTree.length === 0 ? (

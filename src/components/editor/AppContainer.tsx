@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
+import type { ViewMode } from '@/components/AuthGate';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { SessionView } from '@/components/session/SessionView';
+import { SimplifiedApp } from '@/components/simplified/SimplifiedApp';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
 import type { Account } from '@/schemas';
@@ -14,9 +16,11 @@ import { TemplateItemEditor } from './TemplateItemEditor';
 
 interface AppContainerProps {
   onSignOut?: () => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }
 
-export function AppContainer({ onSignOut }: AppContainerProps) {
+export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
@@ -67,6 +71,13 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
     );
   }
 
+  // If view mode is simplified, render SimplifiedApp instead of classic UI
+  if (viewMode === 'simplified') {
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+    return <SimplifiedApp account={me as any} onViewModeChange={onViewModeChange} />;
+  }
+
+  // Otherwise render classic UI below
   const templates = me.root?.templates || [];
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
@@ -205,6 +216,7 @@ export function AppContainer({ onSignOut }: AppContainerProps) {
           onExport={() => setShowExportDialog(true)}
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
+          onSwitchToSimplified={() => onViewModeChange('simplified')}
         />
 
         <AddFolderDialog

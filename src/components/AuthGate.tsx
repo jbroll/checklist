@@ -8,10 +8,23 @@ import { AppContainer } from './editor/AppContainer';
 import { Button } from './ui/button';
 import { LoadingScreen } from './ui/loading';
 
+export type ViewMode = 'classic' | 'simplified';
+
 export function AuthGate() {
   const [isLoading, setIsLoading] = useState(false);
   const { me, logOut } = useAccount(Account);
   const { showAlert } = useDialog();
+
+  // View mode state - defaults to "classic" to preserve existing experience
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem('view-mode');
+    return (stored === 'simplified' ? 'simplified' : 'classic') as ViewMode;
+  });
+
+  // Persist view mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('view-mode', viewMode);
+  }, [viewMode]);
 
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
@@ -94,7 +107,9 @@ export function AuthGate() {
     // Otherwise show sign-in screen (will be shown below)
   } else if (me) {
     // User is authenticated and hasn't signed out, show the app
-    return <AppContainer onSignOut={handleSignOut} />;
+    return (
+      <AppContainer onSignOut={handleSignOut} viewMode={viewMode} onViewModeChange={setViewMode} />
+    );
   }
 
   return (
