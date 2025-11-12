@@ -195,9 +195,23 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
 
     // Check if dropped on a reorder zone
     if (overData?.type === 'reorder-zone') {
-      // Get siblings at the same level as the dragged item
       const currentParentPath = getParentPath(draggedItem.path);
-      const siblings = activeItems.filter((item) => getParentPath(item.path) === currentParentPath);
+      const targetParentPath = overData.parentPath as string | undefined;
+
+      // Check if moving to a different parent folder
+      if (targetParentPath !== currentParentPath) {
+        // First, move the item to the new parent (updates path)
+        try {
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          ItemService.moveItem(me, template.$jazz.id, draggedItem.id, targetParentPath);
+        } catch {
+          // Silently ignore errors (e.g., duplicate names)
+          return;
+        }
+      }
+
+      // Get siblings at the target level (after potential move)
+      const siblings = activeItems.filter((item) => getParentPath(item.path) === targetParentPath);
 
       // Sort siblings by current sortOrder
       siblings.sort((a, b) => a.sortOrder - b.sortOrder);
