@@ -97,7 +97,7 @@ describe('templateService - item operations', () => {
       const account = createMockAccount([]);
 
       expect(() => {
-        itemService.toggleCategoryExpanded(account, 'nonexistent', 'cat-1');
+        templateService.toggleCategoryExpanded(account, 'nonexistent', 'cat-1');
       }).toThrow('Template nonexistent not found');
     });
 
@@ -106,7 +106,7 @@ describe('templateService - item operations', () => {
       const account = createMockAccount([template]);
 
       expect(() => {
-        itemService.toggleCategoryExpanded(account, 'template-1', 'nonexistent');
+        templateService.toggleCategoryExpanded(account, 'template-1', 'nonexistent');
       }).toThrow('Item nonexistent not found');
     });
 
@@ -116,7 +116,7 @@ describe('templateService - item operations', () => {
       const account = createMockAccount([template]);
 
       expect(() => {
-        itemService.toggleCategoryExpanded(account, 'template-1', 'item-1');
+        templateService.toggleCategoryExpanded(account, 'template-1', 'item-1');
       }).toThrow('Item item-1 is not a category');
     });
 
