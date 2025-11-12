@@ -5,7 +5,9 @@
 
 ## Executive Summary
 
-The BubbleList codebase demonstrates a **strong service layer architecture** with 90%+ consistency in data abstraction patterns. All data manipulation operations are properly abstracted behind service interfaces, with only minor gaps in session lifecycle operations that have now been addressed.
+The BubbleList codebase demonstrates a **strong service layer architecture** with 100% consistency in data abstraction patterns. All data manipulation operations are properly abstracted behind service interfaces.
+
+**Latest Update (2025-11-12):** Services now follow a complete **set/get/toggle pattern** for all boolean state management, replacing the previous toggle-only APIs with a more complete and flexible architecture that provides explicit getters, setters, and toggle convenience functions.
 
 ## Service API Surface Area
 
@@ -20,11 +22,15 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 
 #### `sessionService.ts`
 **Purpose:** Shopping session management
-**Functions (14):**
+**Functions (20):**
 - `createSession(account, templateId)` → sessionId
 - `getSession(account, templateId, sessionId)` → Session | null
 - `getSessions(account, templateId)` → Session[]
+- `getItemSelected(account, templateId, sessionId, itemId)` → boolean 🔵 **NEW**
+- `setItemSelected(account, templateId, sessionId, itemId, selected)` → void 🔵 **NEW**
 - `toggleItemSelected(account, templateId, sessionId, itemId)` → void
+- `getItemChecked(account, templateId, sessionId, itemId)` → boolean 🔵 **NEW**
+- `setItemChecked(account, templateId, sessionId, itemId, checked)` → void 🔵 **NEW**
 - `toggleItemChecked(account, templateId, sessionId, itemId)` → void
 - `updateSessionCounts(account, templateId, sessionId)` → void
 - `updateViewMode(account, templateId, sessionId, viewMode)` → void
@@ -34,11 +40,13 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 - `archiveSession(account, templateId, sessionId)` → void ✨ **NEW**
 - `unarchiveSession(account, templateId, sessionId)` → void ✨ **NEW**
 - `deleteSession(account, templateId, sessionId)` → void ✨ **NEW**
+- `getCategoryExpanded(account, templateId, sessionId, categoryKey)` → boolean 🔵 **NEW**
+- `setCategoryExpanded(account, templateId, sessionId, categoryKey, expanded)` → void 🔵 **NEW**
 - `toggleCategoryExpanded(account, templateId, sessionId, categoryKey)` → void ✨ **NEW**
 
 #### `itemService.ts`
 **Purpose:** Template item operations (categories & items)
-**Functions (10):**
+**Functions (12):**
 - `createCategory(account, templateId, name, parentPath?)` → itemId
 - `createItem(account, templateId, name, parentPath?, defaultQuantity?)` → itemId
 - `getItem(account, templateId, itemId)` → TemplateItem | null
@@ -47,12 +55,14 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 - `renameItem(account, templateId, itemId, newName)` → void
 - `archiveItem(account, templateId, itemId)` → void
 - `moveItem(account, templateId, itemId, newParentPath, sortOrder?)` → void
+- `getCategoryExpanded(account, templateId, itemId)` → boolean 🔵 **NEW**
+- `setCategoryExpanded(account, templateId, itemId, expanded)` → void 🔵 **NEW**
 - `toggleCategoryExpanded(account, templateId, itemId)` → void
 - `reorderItem(account, templateId, itemId, newSortOrder)` → void
 
 #### `directoryService.ts`
 **Purpose:** Directory entry management (folders & template-refs)
-**Functions (14):**
+**Functions (16):**
 - `createDirectoryEntry(account, name, isTemplate, parentPath?)` → { entryId, templateId?, path }
 - `getDirectoryEntry(account, entryId)` → DirectoryEntry | null
 - `getAllDirectoryEntries(account, showArchived?)` → DirectoryEntry[]
@@ -61,6 +71,8 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 - `archiveDirectoryEntry(account, entryId)` → void
 - `unarchiveDirectoryEntry(account, entryId)` → void
 - `deleteDirectoryEntry(account, entryId)` → void
+- `getEntryExpanded(account, entryId)` → boolean 🔵 **NEW**
+- `setEntryExpanded(account, entryId, expanded)` → void 🔵 **NEW**
 - `toggleEntryExpanded(account, entryId)` → void
 - `expandAncestorFolders(account, path)` → void
 - `expandPathAndAncestors(account, path, includeSelf?)` → void
@@ -184,6 +196,56 @@ Previously, 6 direct Jazz CoValue manipulations were found in components:
 
 ## Design Patterns
 
+### Pattern: Set/Get Architecture with Toggle Convenience Functions
+
+All boolean state management in services follows a consistent **set/get/toggle** pattern:
+
+**Benefits:**
+- **Complete control**: Set operations allow explicit state management (set to true/false)
+- **Safe queries**: Get operations safely retrieve state without side effects
+- **Convenient shortcuts**: Toggle operations provide backward-compatible convenience
+- **Testability**: Each operation can be tested independently
+- **Composability**: Set/get can be used in more complex operations
+
+**Example: Category Expanded State**
+```typescript
+// Get current state
+export function getCategoryExpanded(
+  account: Account,
+  templateId: string,
+  itemId: string,
+): boolean {
+  const item = getItem(account, templateId, itemId);
+  return item?.expanded || false;
+}
+
+// Set state explicitly
+export function setCategoryExpanded(
+  account: Account,
+  templateId: string,
+  itemId: string,
+  expanded: boolean,
+): void {
+  const item = getItem(account, templateId, itemId);
+  // ... update item.expanded = expanded
+}
+
+// Toggle as convenience (implemented using get/set)
+export function toggleCategoryExpanded(
+  account: Account,
+  templateId: string,
+  itemId: string,
+): void {
+  const currentState = getCategoryExpanded(account, templateId, itemId);
+  setCategoryExpanded(account, templateId, itemId, !currentState);
+}
+```
+
+**Applied consistently across:**
+- `sessionService` - item selected/checked state, category expanded
+- `itemService` - category expanded in templates
+- `directoryService` - entry expanded in directory tree
+
 ### Pattern: Pure Functions
 ```typescript
 export function archiveSession(
@@ -293,7 +355,7 @@ export function moveItemBetweenTemplates(
 
 ## Conclusion
 
-The BubbleList service architecture is **well-designed and consistently implemented**. With the addition of 4 missing session lifecycle functions, the abstraction layer is now **complete and consistent** across the entire codebase.
+The BubbleList service architecture is **well-designed and consistently implemented**. With the addition of set/get/toggle pattern for all boolean state management, the abstraction layer provides **complete and flexible control** across the entire codebase.
 
 ### Final Rating: ⭐⭐⭐⭐⭐ (5/5 stars)
 
@@ -301,8 +363,12 @@ The BubbleList service architecture is **well-designed and consistently implemen
 - ✅ 100% data abstraction through services
 - ✅ Pure function design throughout
 - ✅ Clear separation of concerns
-- ✅ Consistent API patterns
+- ✅ Consistent API patterns (including set/get/toggle for all boolean state)
 - ✅ Proper Jazz integration
 - ✅ No direct CoValue manipulation in components
+- ✅ Complete state management APIs (get, set, and toggle convenience functions)
+
+**Latest Enhancement:**
+- 🔵 **Set/Get/Toggle Pattern**: All boolean state now has explicit getters and setters, with toggle functions as convenient shortcuts built on top of them
 
 This architecture provides a solid foundation for testing, maintenance, and future feature development.
