@@ -84,7 +84,12 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 ### Import Services (9 files)
 
 **Main Orchestrator:**
-- `import/importService.ts` - Class-based ImportService with 5 static methods
+- `import/importService.ts` - Pure functions for import operations (5 functions)
+  - `importFromFile(file, account, fileType?, parentPath?)` → Promise<ImportResult>
+  - `importItemsFromTxtFile(file, template, account)` → Promise<TxtImportResult>
+  - `importItemsFromCsvFile(file, template, account)` → Promise<CsvImportResult>
+  - `importSessionFromCsvFile(file, template, account, options?)` → Promise<SessionImportResult>
+  - `importAsNewTemplate(file, account, templateName, fileType, parentPath?)` → Promise<ImportResult>
 
 **Format Handlers:**
 - `import/jsonImporter.ts` - JSON import logic
@@ -101,7 +106,14 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 ### Export Services (4 files)
 
 **Main Orchestrator:**
-- `export/exportService.ts` - Class-based ExportService with 7 static methods
+- `export/exportService.ts` - Pure functions for export operations (7 functions)
+  - `exportToJson(account, scope)` → ExportedData
+  - `exportToJsonString(account, scope, pretty?)` → string
+  - `generateFilename(scope, format, folderName?)` → string
+  - `exportTemplateItemsToText(account, templateId)` → string
+  - `exportTemplateItemsToCsv(account, templateId)` → string
+  - `exportSessionToText(account, templateId, sessionId)` → string
+  - `exportSessionToCsv(account, templateId, sessionId)` → string
 
 **Format Handlers:**
 - `export/jsonExporter.ts` - JSON export logic
@@ -222,13 +234,22 @@ updateEntity(item, { name: "New Name" });
 - Consistent update tracking
 - Less boilerplate
 
-## Style Consistency Note
+## Style Consistency
 
-**Minor Inconsistency:**
-- **Core services** use function exports: `export function foo() {}`
-- **Import/Export services** use static classes: `class FooService { static bar() {} }`
+**Consistent Pattern:**
+All services now use pure function exports: `export function foo() {}`
 
-**Recommendation:** Consider converting `ImportService` and `ExportService` to function exports for consistency with the rest of the codebase. This is purely stylistic and doesn't affect functionality.
+This includes:
+- **Core services** (directoryService, templateService, itemService, sessionService)
+- **Import services** (importService)
+- **Export services** (exportService)
+- **Utility services** (entityFinder, entityUpdater)
+
+This consistent pattern ensures:
+- Easy to test (no class instantiation needed)
+- Simple to import and use
+- Clear function signatures
+- No hidden state or side effects
 
 ## Testing Considerations
 

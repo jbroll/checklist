@@ -13,7 +13,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, Template } from '@/schemas';
-import { ExportService } from '@/services/export/exportService';
+import { exportSessionToCsv, exportSessionToText } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
 import { buildExportFilename } from '@/utils/fileUtils';
 
@@ -51,10 +51,10 @@ export function SessionExportDialog({
       const filename = buildExportFilename(sessionName, format, true, 'session');
 
       if (format === 'txt') {
-        const content = ExportService.exportSessionToText(account, folderId, sessionId);
+        const content = exportSessionToText(account, folderId, sessionId);
         downloadText(content, filename);
       } else {
-        const content = ExportService.exportSessionToCsv(account, folderId, sessionId);
+        const content = exportSessionToCsv(account, folderId, sessionId);
         downloadCsv(content, filename);
       }
 
