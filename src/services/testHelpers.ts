@@ -13,7 +13,7 @@ import { importJson } from './import/jsonImporter';
 import type { TxtImportResult } from './import/txtImporter';
 import { importItemsFromText } from './import/txtImporter';
 import type { ImportResult } from './import/types';
-import * as ItemService from './itemService';
+import * as ItemService from './templateService';
 import * as SessionService from './sessionService';
 import * as TemplateService from './templateService';
 

@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateItem } from '../schemas';
 import { PATH_SEPARATOR } from '../utils/pathUtils';
-import * as itemService from './itemService';
+import * as itemService from './templateService';
 
 // Mock Template for testing
 const createMockTemplate = (id: string, items: TemplateItem[] = []) => ({
