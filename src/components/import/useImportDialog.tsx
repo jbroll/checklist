@@ -3,7 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
 import type { Account, Template } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
-import { ImportService } from '@/services/import/importService';
+import {
+  importAsNewTemplate,
+  importFromFile,
+  importItemsFromCsvFile,
+  importItemsFromTxtFile,
+} from '@/services/import/importService';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
 
@@ -95,11 +100,11 @@ export function useImportDialog({
       // Template import: JSON (items) or TXT/CSV (append items)
       if (detectedType === 'json') {
         // TODO: Import JSON items list - for now use TXT/CSV logic
-        result = await ImportService.importItemsFromCsvFile(file, template, account);
+        result = await importItemsFromCsvFile(file, template, account);
       } else if (detectedType === 'txt') {
-        result = await ImportService.importItemsFromTxtFile(file, template, account);
+        result = await importItemsFromTxtFile(file, template, account);
       } else {
-        result = await ImportService.importItemsFromCsvFile(file, template, account);
+        result = await importItemsFromCsvFile(file, template, account);
       }
 
       // Auto-close after successful import
@@ -110,13 +115,13 @@ export function useImportDialog({
       // Top-level import
       if (detectedType === 'json') {
         // Full account import (with optional parent folder)
-        result = await ImportService.importFromFile(file, account, 'json', parentPath);
+        result = await importFromFile(file, account, 'json', parentPath);
       } else {
         // Create new template at root
         if (!templateName.trim()) {
           throw new Error('Please enter a list name');
         }
-        result = await ImportService.importAsNewTemplate(
+        result = await importAsNewTemplate(
           file,
           account,
           templateName.trim(),
