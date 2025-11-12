@@ -225,7 +225,6 @@ function flattenHierarchicalItems(
       sortOrder: exportedItem.sortOrder ?? sortOrderCounter++,
       archived: false,
       defaultQuantity: exportedItem.defaultQuantity || '',
-      color: exportedItem.color || '#6b7280',
       createdAt: new Date(exportedItem.createdAt),
     };
 

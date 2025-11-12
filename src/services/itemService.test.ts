@@ -47,7 +47,6 @@ const createMockItem = (
   sortOrder: 0,
   archived: false,
   defaultQuantity: '',
-  color: '#000000',
   createdAt: new Date(),
 });
 
@@ -139,7 +138,6 @@ describe('itemService', () => {
 
     it('should preserve all other item properties when toggling', () => {
       const category = createMockItem('cat-1', 'Produce', 'category', 'Produce', false);
-      category.color = '#FF0000';
       category.sortOrder = 5;
       category.defaultQuantity = '1';
       const template = createMockTemplate('template-1', [category]);
@@ -149,7 +147,6 @@ describe('itemService', () => {
 
       const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
       const updatedCategory = updatedItems[0];
-      expect(updatedCategory.color).toBe('#FF0000');
       expect(updatedCategory.sortOrder).toBe(5);
       expect(updatedCategory.defaultQuantity).toBe('1');
       expect(updatedCategory.name).toBe('Produce');
@@ -176,16 +173,6 @@ describe('itemService', () => {
           }),
         ]),
       );
-    });
-
-    it('should create a category with custom color', () => {
-      const template = createMockTemplate('template-1', []);
-      const account = createMockAccount([template]);
-
-      itemService.createCategory(account, 'template-1', 'Produce', undefined, '#FF0000');
-
-      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
-      expect(updatedItems[0].color).toBe('#FF0000');
     });
 
     it('should create a nested category under parent', () => {

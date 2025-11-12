@@ -75,8 +75,8 @@ export function exposeServicesToWindow(
         withAccount((acc) =>
           ItemService.createItem(acc, templateId, name, parentPath, defaultQuantity),
         ),
-      createCategory: (templateId: string, name: string, parentPath?: string, color?: string) =>
-        withAccount((acc) => ItemService.createCategory(acc, templateId, name, parentPath, color)),
+      createCategory: (templateId: string, name: string, parentPath?: string) =>
+        withAccount((acc) => ItemService.createCategory(acc, templateId, name, parentPath)),
       get: (templateId: string, itemId: string) =>
         withAccount((acc) => ItemService.getItem(acc, templateId, itemId)),
       getAll: (templateId: string) => withAccount((acc) => ItemService.getItems(acc, templateId)),
@@ -84,8 +84,6 @@ export function exposeServicesToWindow(
         withAccount((acc) => ItemService.renameItem(acc, templateId, itemId, newName)),
       archive: (templateId: string, itemId: string) =>
         withAccount((acc) => ItemService.archiveItem(acc, templateId, itemId)),
-      updateColor: (templateId: string, itemId: string, color: string) =>
-        withAccount((acc) => ItemService.updateItemColor(acc, templateId, itemId, color)),
       toggleCategoryExpanded: (templateId: string, itemId: string) =>
         withAccount((acc) => ItemService.toggleCategoryExpanded(acc, templateId, itemId)),
     },
@@ -165,17 +163,11 @@ declare global {
           parentPath?: string,
           defaultQuantity?: string,
         ) => string;
-        createCategory: (
-          templateId: string,
-          name: string,
-          parentPath?: string,
-          color?: string,
-        ) => string;
+        createCategory: (templateId: string, name: string, parentPath?: string) => string;
         get: (templateId: string, itemId: string) => TemplateItem | null;
         getAll: (templateId: string) => TemplateItem[];
         rename: (templateId: string, itemId: string, newName: string) => void;
         archive: (templateId: string, itemId: string) => void;
-        updateColor: (templateId: string, itemId: string, color: string) => void;
         toggleCategoryExpanded: (templateId: string, itemId: string) => void;
       };
       export: {

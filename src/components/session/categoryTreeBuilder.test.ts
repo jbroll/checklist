@@ -22,7 +22,6 @@ const createItem = (
   sortOrder,
   archived: false,
   defaultQuantity: '',
-  color: '#000000',
   createdAt: new Date(),
 });
 

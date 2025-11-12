@@ -145,7 +145,6 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
     name: item.name,
     type: item.type,
     sortOrder: item.sortOrder,
-    color: item.color,
     createdAt: toISOString(item.createdAt) || new Date().toISOString(),
     updatedAt: toISOString(item.createdAt) || new Date().toISOString(), // Use createdAt for both since plain items don't have updatedAt
   };

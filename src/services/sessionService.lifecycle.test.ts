@@ -61,16 +61,16 @@ const createMockTemplate = (
 
   template.$jazz = {
     id: 'template-1',
-    set: function (key: string, value: any) {
+    set: (key: string, value: any) => {
       template[key] = value;
     },
-    splice: function (index: number, deleteCount: number) {
+    splice: (index: number, deleteCount: number) => {
       template.sessions.splice(index, deleteCount);
     },
   };
 
   template.sessions.$jazz = {
-    splice: function (index: number, deleteCount: number) {
+    splice: (index: number, deleteCount: number) => {
       template.sessions.splice(index, deleteCount);
     },
   };
@@ -240,7 +240,7 @@ describe('Session Lifecycle Functions', () => {
   describe('toggleCategoryExpanded', () => {
     it('should expand a collapsed category', () => {
       // Default is expanded (true), so set to collapsed
-      session1.categoryExpanded = { 'cat1': false };
+      session1.categoryExpanded = { cat1: false };
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
 
@@ -248,7 +248,7 @@ describe('Session Lifecycle Functions', () => {
     });
 
     it('should collapse an expanded category', () => {
-      session1.categoryExpanded = { 'cat1': true };
+      session1.categoryExpanded = { cat1: true };
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
 
@@ -266,9 +266,9 @@ describe('Session Lifecycle Functions', () => {
 
     it('should preserve other category states', () => {
       session1.categoryExpanded = {
-        'cat1': true,
-        'cat2': false,
-        'cat3': true,
+        cat1: true,
+        cat2: false,
+        cat3: true,
       };
 
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat2');
@@ -313,7 +313,7 @@ describe('Session Lifecycle Functions', () => {
     });
 
     it('should handle multiple toggles', () => {
-      session1.categoryExpanded = { 'cat1': true };
+      session1.categoryExpanded = { cat1: true };
 
       // Toggle once
       toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');

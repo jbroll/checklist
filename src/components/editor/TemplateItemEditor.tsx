@@ -67,9 +67,9 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     ItemService.createItem(me, template.$jazz.id, name, undefined, defaultQuantity);
   };
 
-  const handleAddCategory = (name: string, color?: string) => {
+  const handleAddCategory = (name: string) => {
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createCategory(me, template.$jazz.id, name, undefined, color);
+    ItemService.createCategory(me, template.$jazz.id, name, undefined);
   };
 
   const handleRenameItem = (itemId: string, newName: string) => {
@@ -228,7 +228,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       if (targetParentPath !== currentParentPath) {
         // Move and reorder in a single operation
         try {
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           ItemService.moveItem(
             me,
             template.$jazz.id,
