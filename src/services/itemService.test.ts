@@ -296,6 +296,94 @@ describe('itemService', () => {
     });
   });
 
+  describe('moveItem', () => {
+    it('should move item to new parent path', () => {
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
+      const item = createMockItem('item-1', 'Apple', 'item', `Fruits${PATH_SEPARATOR}Apple`);
+      const template = createMockTemplate('template-1', [category, item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'item-1', 'Produce');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      const movedItem = updatedItems.find((i: TemplateItem) => i.id === 'item-1');
+      expect(movedItem?.path).toBe(`Produce${PATH_SEPARATOR}Apple`);
+    });
+
+    it('should move item to root (undefined parent)', () => {
+      const item = createMockItem('item-1', 'Apple', 'item', `Fruits${PATH_SEPARATOR}Apple`);
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'item-1', undefined);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].path).toBe('Apple');
+    });
+
+    it('should move item and update sortOrder when provided', () => {
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
+      const item = createMockItem('item-1', 'Apple', 'item', `Fruits${PATH_SEPARATOR}Apple`);
+      item.sortOrder = 1.0;
+      const template = createMockTemplate('template-1', [category, item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'item-1', 'Produce', 2.5);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      const movedItem = updatedItems.find((i: TemplateItem) => i.id === 'item-1');
+      expect(movedItem?.path).toBe(`Produce${PATH_SEPARATOR}Apple`);
+      expect(movedItem?.sortOrder).toBe(2.5);
+    });
+
+    it('should update only sortOrder when path unchanged', () => {
+      const item = createMockItem('item-1', 'Apple', 'item', 'Apple');
+      item.sortOrder = 1.0;
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'item-1', undefined, 3.0);
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].path).toBe('Apple');
+      expect(updatedItems[0].sortOrder).toBe(3.0);
+    });
+
+    it('should move category and update all descendant paths', () => {
+      const category = createMockItem('cat-1', 'Fruits', 'category', 'Fruits');
+      const item = createMockItem('item-1', 'Apple', 'item', `Fruits${PATH_SEPARATOR}Apple`);
+      const template = createMockTemplate('template-1', [category, item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'cat-1', 'Produce');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].path).toBe(`Produce${PATH_SEPARATOR}Fruits`);
+      expect(updatedItems[1].path).toBe(`Produce${PATH_SEPARATOR}Fruits${PATH_SEPARATOR}Apple`);
+    });
+
+    it('should throw error for duplicate path', () => {
+      const item1 = createMockItem('item-1', 'Apple', 'item', 'Apple');
+      const item2 = createMockItem('item-2', 'Apple', 'item', `Fruits${PATH_SEPARATOR}Apple`);
+      const template = createMockTemplate('template-1', [item1, item2]);
+      const account = createMockAccount([template]);
+
+      expect(() => {
+        itemService.moveItem(account, 'template-1', 'item-2', undefined);
+      }).toThrow('Item already exists at path: Apple');
+    });
+
+    it('should not modify items when path unchanged and no sortOrder', () => {
+      const item = createMockItem('item-1', 'Apple', 'item', 'Apple');
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      itemService.moveItem(account, 'template-1', 'item-1', undefined);
+
+      expect(template.$jazz.set).not.toHaveBeenCalled();
+    });
+  });
+
   describe('reorderItem', () => {
     it('should update sortOrder of an item', () => {
       const items = [

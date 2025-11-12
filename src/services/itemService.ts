@@ -240,12 +240,14 @@ export function archiveItem(
 /**
  * Move an item to a different parent category
  * Updates the path and all descendant paths if it's a category
+ * Optionally updates sortOrder in the same operation
  */
 export function moveItem(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   itemId: string,
   newParentPath: string | undefined,
+  sortOrder?: number,
 ): void {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -258,21 +260,24 @@ export function moveItem(
   // Use item name as-is without normalization
   const newPath = createChildPath(newParentPath, item.name);
 
-  // Don't move if it's the same location
-  if (oldPath === newPath) return;
+  // Don't move if it's the same location and sortOrder isn't changing
+  if (oldPath === newPath && sortOrder === undefined) return;
 
-  // Check for duplicates
-  const existingItem = template.items.find((i) => i.path === newPath);
-  if (existingItem) {
-    throw new Error(`Item already exists at path: ${newPath}`);
+  // Check for duplicates only if path is changing
+  if (oldPath !== newPath) {
+    const existingItem = template.items.find((i) => i.path === newPath);
+    if (existingItem) {
+      throw new Error(`Item already exists at path: ${newPath}`);
+    }
   }
 
   let updatedItems = [...template.items];
 
-  // Update item path
+  // Update item path and optionally sortOrder
   updatedItems[itemIndex] = {
     ...item,
     path: newPath,
+    ...(sortOrder !== undefined && { sortOrder }),
   };
 
   // If this is a category, update all descendant paths
