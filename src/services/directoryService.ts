@@ -267,19 +267,44 @@ export function deleteDirectoryEntry(
 }
 
 /**
- * Toggle expanded state of a directory entry
+ * Get expanded state of a directory entry
+ */
+export function getEntryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  entryId: string,
+): boolean {
+  if (!account.root?.directory) return false;
+
+  const entry = account.root.directory.find((e) => e.id === entryId);
+  return entry?.expanded || false;
+}
+
+/**
+ * Set expanded state of a directory entry explicitly
+ */
+export function setEntryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  entryId: string,
+  expanded: boolean,
+): void {
+  if (!account.root?.directory) return;
+
+  const updatedEntries = account.root.directory.map((e) =>
+    e.id === entryId ? { ...e, expanded, updatedAt: new Date() } : e,
+  );
+
+  account.root.$jazz.set('directory', updatedEntries);
+}
+
+/**
+ * Toggle expanded state of a directory entry (convenience function)
  */
 export function toggleEntryExpanded(
   account: InstanceOfSchema<typeof Account>,
   entryId: string,
 ): void {
-  if (!account.root?.directory) return;
-
-  const updatedEntries = account.root.directory.map((e) =>
-    e.id === entryId ? { ...e, expanded: !e.expanded, updatedAt: new Date() } : e,
-  );
-
-  account.root.$jazz.set('directory', updatedEntries);
+  const currentState = getEntryExpanded(account, entryId);
+  setEntryExpanded(account, entryId, !currentState);
 }
 
 /**

@@ -286,12 +286,31 @@ export function moveItem(
 }
 
 /**
- * Toggle category expanded state
+ * Get category expanded state
  */
-export function toggleCategoryExpanded(
+export function getCategoryExpanded(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   itemId: string,
+): boolean {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const item = template.items.find((i) => i.id === itemId);
+  if (!item) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
+
+  return item.expanded;
+}
+
+/**
+ * Set category expanded state explicitly
+ */
+export function setCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+  expanded: boolean,
 ): void {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -305,11 +324,23 @@ export function toggleCategoryExpanded(
   const updatedItems = [...template.items];
   updatedItems[itemIndex] = {
     ...item,
-    expanded: !item.expanded,
+    expanded,
   };
 
   template.$jazz.set('items', updatedItems);
   template.$jazz.set('updatedAt', new Date());
+}
+
+/**
+ * Toggle category expanded state (convenience function)
+ */
+export function toggleCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+): void {
+  const currentState = getCategoryExpanded(account, templateId, itemId);
+  setCategoryExpanded(account, templateId, itemId, !currentState);
 }
 
 /**

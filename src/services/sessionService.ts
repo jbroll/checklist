@@ -77,23 +77,38 @@ export function getSessions(
 }
 
 /**
- * Toggle item's "selected" state
+ * Get item's "selected" state
  */
-export function toggleItemSelected(
+export function getItemSelected(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
   itemId: string,
+): boolean {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+  return itemStates[itemId]?.selected || false;
+}
+
+/**
+ * Set item's "selected" state explicitly
+ */
+export function setItemSelected(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+  selected: boolean,
 ): void {
   const session = getSession(account, templateId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
 
-  // Initialize itemStates if not present
   const itemStates = session.itemStates || {};
-
   const currentState = itemStates[itemId];
 
-  if (!currentState) {
+  if (!currentState && selected) {
     // Create new plain object state
     session.$jazz.set('itemStates', {
       ...itemStates,
@@ -103,17 +118,16 @@ export function toggleItemSelected(
         selectedAt: new Date(),
       },
     });
-  } else {
-    // Toggle selected
-    const newSelected = !currentState.selected;
+  } else if (currentState) {
+    // Update selected state
     session.$jazz.set('itemStates', {
       ...itemStates,
       [itemId]: {
         ...currentState,
-        selected: newSelected,
-        selectedAt: newSelected ? new Date() : currentState.selectedAt,
-        checked: newSelected ? currentState.checked : false,
-        checkedAt: newSelected ? currentState.checkedAt : undefined,
+        selected,
+        selectedAt: selected ? new Date() : currentState.selectedAt,
+        checked: selected ? currentState.checked : false,
+        checkedAt: selected ? currentState.checkedAt : undefined,
       },
     });
   }
@@ -123,13 +137,43 @@ export function toggleItemSelected(
 }
 
 /**
- * Toggle item's "checked" state
+ * Toggle item's "selected" state (convenience function)
  */
-export function toggleItemChecked(
+export function toggleItemSelected(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
   itemId: string,
+): void {
+  const currentState = getItemSelected(account, templateId, sessionId, itemId);
+  setItemSelected(account, templateId, sessionId, itemId, !currentState);
+}
+
+/**
+ * Get item's "checked" state
+ */
+export function getItemChecked(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+): boolean {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+  return itemStates[itemId]?.checked || false;
+}
+
+/**
+ * Set item's "checked" state explicitly
+ */
+export function setItemChecked(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+  checked: boolean,
 ): void {
   const session = getSession(account, templateId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
@@ -138,17 +182,29 @@ export function toggleItemChecked(
   const currentState = itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
-  const newCheckedState = !currentState.checked;
   session.$jazz.set('itemStates', {
     ...itemStates,
     [itemId]: {
       ...currentState,
-      checked: newCheckedState,
-      checkedAt: newCheckedState ? new Date() : undefined,
+      checked,
+      checkedAt: checked ? new Date() : undefined,
     },
   });
 
   session.$jazz.set('lastActivityAt', new Date());
+}
+
+/**
+ * Toggle item's "checked" state (convenience function)
+ */
+export function toggleItemChecked(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+): void {
+  const currentState = getItemChecked(account, templateId, sessionId, itemId);
+  setItemChecked(account, templateId, sessionId, itemId, !currentState);
 }
 
 /**
@@ -390,7 +446,44 @@ export function deleteSession(
 }
 
 /**
- * Toggle category expanded state in session
+ * Get category expanded state in session
+ */
+export function getCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  categoryKey: string,
+): boolean {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const categoryExpanded = session.categoryExpanded || {};
+  return categoryExpanded[categoryKey] ?? true;
+}
+
+/**
+ * Set category expanded state in session explicitly
+ */
+export function setCategoryExpanded(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  categoryKey: string,
+  expanded: boolean,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const categoryExpanded = session.categoryExpanded || {};
+
+  session.$jazz.set('categoryExpanded', {
+    ...categoryExpanded,
+    [categoryKey]: expanded,
+  });
+}
+
+/**
+ * Toggle category expanded state in session (convenience function)
  */
 export function toggleCategoryExpanded(
   account: InstanceOfSchema<typeof Account>,
@@ -398,14 +491,6 @@ export function toggleCategoryExpanded(
   sessionId: string,
   categoryKey: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  const categoryExpanded = session.categoryExpanded || {};
-  const currentValue = categoryExpanded[categoryKey] ?? true;
-
-  session.$jazz.set('categoryExpanded', {
-    ...categoryExpanded,
-    [categoryKey]: !currentValue,
-  });
+  const currentState = getCategoryExpanded(account, templateId, sessionId, categoryKey);
+  setCategoryExpanded(account, templateId, sessionId, categoryKey, !currentState);
 }
