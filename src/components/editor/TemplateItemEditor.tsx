@@ -198,19 +198,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       const currentParentPath = getParentPath(draggedItem.path);
       const targetParentPath = overData.parentPath as string | undefined;
 
-      // Check if moving to a different parent folder
-      if (targetParentPath !== currentParentPath) {
-        // First, move the item to the new parent (updates path)
-        try {
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-          ItemService.moveItem(me, template.$jazz.id, draggedItem.id, targetParentPath);
-        } catch {
-          // Silently ignore errors (e.g., duplicate names)
-          return;
-        }
-      }
-
-      // Get siblings at the target level (after potential move)
+      // Get siblings at the target level
       const siblings = activeItems.filter((item) => getParentPath(item.path) === targetParentPath);
 
       // Sort siblings by current sortOrder
@@ -236,11 +224,29 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       // Calculate new sortOrder using fractional indexing
       const newSortOrder = calculateMidpointSortOrder(afterSortOrder, beforeSortOrder);
 
-      try {
-        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-        ItemService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
-      } catch {
-        // Silently ignore errors
+      // Check if moving to a different parent folder or just reordering
+      if (targetParentPath !== currentParentPath) {
+        // Move and reorder in a single operation
+        try {
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          ItemService.moveItem(
+            me,
+            template.$jazz.id,
+            draggedItem.id,
+            targetParentPath,
+            newSortOrder,
+          );
+        } catch {
+          // Silently ignore errors (e.g., duplicate names)
+        }
+      } else {
+        // Just reordering within the same folder
+        try {
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          ItemService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
+        } catch {
+          // Silently ignore errors
+        }
       }
       return;
     }
