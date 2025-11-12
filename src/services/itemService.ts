@@ -38,7 +38,6 @@ export function createCategory(
   templateId: string,
   name: string,
   parentPath?: string,
-  color?: string,
 ): string {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -61,7 +60,6 @@ export function createCategory(
     sortOrder: template.items.length,
     archived: false,
     defaultQuantity: '',
-    color: color || '#6b7280',
     createdAt: new Date(),
   };
 
@@ -80,7 +78,6 @@ export function createItem(
   name: string,
   parentPath?: string,
   defaultQuantity?: string,
-  color?: string,
 ): string {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -103,7 +100,6 @@ export function createItem(
     sortOrder: template.items.length,
     archived: false,
     defaultQuantity: defaultQuantity || '',
-    color: color || '#6b7280',
     createdAt: new Date(),
   };
 
@@ -284,31 +280,6 @@ export function moveItem(
   if (item.type === 'category') {
     updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
   }
-
-  template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Update item color
- */
-export function updateItemColor(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  itemId: string,
-  color: string,
-): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  const itemIndex = template.items.findIndex((i) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
-
-  const updatedItems = [...template.items];
-  updatedItems[itemIndex] = {
-    ...updatedItems[itemIndex],
-    color,
-  };
 
   template.$jazz.set('items', updatedItems);
   template.$jazz.set('updatedAt', new Date());

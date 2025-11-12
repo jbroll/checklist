@@ -40,7 +40,6 @@ export type TemplateItem = {
   sortOrder: number;
   archived: boolean; // Soft delete flag
   defaultQuantity: string; // Default quantity for items
-  color: string; // Hex color for UI
   createdAt: Date;
 };
 
@@ -111,7 +110,6 @@ export const Template = co.map({
       sortOrder: z.number(),
       archived: z.boolean(),
       defaultQuantity: z.string(),
-      color: z.string(),
       createdAt: z.date(),
     }),
   ),

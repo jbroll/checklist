@@ -23,7 +23,6 @@ const createMockTemplate = (options: { datesAsStrings?: boolean } = {}) => {
         sortOrder: 0,
         archived: false,
         defaultQuantity: '5',
-        color: '#ff0000',
         createdAt: date,
       },
       {
@@ -35,7 +34,6 @@ const createMockTemplate = (options: { datesAsStrings?: boolean } = {}) => {
         sortOrder: 1,
         archived: false,
         defaultQuantity: '3',
-        color: '#ffff00',
         createdAt: date,
       },
       {
@@ -47,7 +45,6 @@ const createMockTemplate = (options: { datesAsStrings?: boolean } = {}) => {
         sortOrder: 2,
         archived: false,
         defaultQuantity: '',
-        color: '#00ff00',
         createdAt: date,
       },
     ],
@@ -198,7 +195,6 @@ describe('csvExporter', () => {
         sortOrder: 3,
         archived: false,
         defaultQuantity: '2',
-        color: '#ffa500',
         createdAt: new Date('2024-11-01T00:00:00.000Z'),
       });
 

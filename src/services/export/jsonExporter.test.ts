@@ -26,7 +26,6 @@ const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: 
             sortOrder: 0,
             archived: false,
             defaultQuantity: '1',
-            color: '#000000',
             createdAt: date,
           },
         ],
@@ -129,7 +128,6 @@ describe('jsonExporter', () => {
                 name: 'Test Item',
                 type: 'item',
                 sortOrder: 0,
-                color: '#000000',
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },
@@ -251,7 +249,6 @@ describe('jsonExporter', () => {
         sortOrder: 1,
         archived: true, // This should be skipped
         defaultQuantity: '1',
-        color: '#000000',
         createdAt: new Date('2024-11-01T00:00:00.000Z'),
       });
 
@@ -347,7 +344,6 @@ describe('jsonExporter', () => {
                   sortOrder: 0,
                   archived: false,
                   defaultQuantity: '',
-                  color: '#00ff00',
                   createdAt: date,
                 },
                 {
@@ -359,7 +355,6 @@ describe('jsonExporter', () => {
                   sortOrder: 1,
                   archived: false,
                   defaultQuantity: '',
-                  color: '#ffff00',
                   createdAt: date,
                 },
                 {
@@ -371,7 +366,6 @@ describe('jsonExporter', () => {
                   sortOrder: 2,
                   archived: false,
                   defaultQuantity: '5 lbs',
-                  color: '#ff0000',
                   createdAt: date,
                 },
                 {
@@ -383,7 +377,6 @@ describe('jsonExporter', () => {
                   sortOrder: 3,
                   archived: false,
                   defaultQuantity: '1 bunch',
-                  color: '#ffff00',
                   createdAt: date,
                 },
               ],
@@ -465,7 +458,6 @@ describe('jsonExporter', () => {
                   sortOrder: 0,
                   archived: false,
                   defaultQuantity: '1 gallon',
-                  color: '#ffffff',
                   createdAt: date,
                 },
                 {
@@ -477,7 +469,6 @@ describe('jsonExporter', () => {
                   sortOrder: 1,
                   archived: false,
                   defaultQuantity: '1 loaf',
-                  color: '#ffeecc',
                   createdAt: date,
                 },
               ],
@@ -578,7 +569,6 @@ describe('jsonExporter', () => {
                   sortOrder: 0,
                   archived: false,
                   defaultQuantity: '',
-                  color: '#111111',
                   createdAt: date,
                 },
                 {
@@ -590,7 +580,6 @@ describe('jsonExporter', () => {
                   sortOrder: 1,
                   archived: false,
                   defaultQuantity: '',
-                  color: '#222222',
                   createdAt: date,
                 },
                 {
@@ -602,7 +591,6 @@ describe('jsonExporter', () => {
                   sortOrder: 2,
                   archived: false,
                   defaultQuantity: '',
-                  color: '#333333',
                   createdAt: date,
                 },
                 {
@@ -614,7 +602,6 @@ describe('jsonExporter', () => {
                   sortOrder: 3,
                   archived: false,
                   defaultQuantity: '1',
-                  color: '#444444',
                   createdAt: date,
                 },
               ],

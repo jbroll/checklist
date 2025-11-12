@@ -38,16 +38,15 @@ The BubbleList codebase demonstrates a **strong service layer architecture** wit
 
 #### `itemService.ts`
 **Purpose:** Template item operations (categories & items)
-**Functions (11):**
-- `createCategory(account, templateId, name, parentPath?, color?)` → itemId
-- `createItem(account, templateId, name, parentPath?, defaultQuantity?, color?)` → itemId
+**Functions (10):**
+- `createCategory(account, templateId, name, parentPath?)` → itemId
+- `createItem(account, templateId, name, parentPath?, defaultQuantity?)` → itemId
 - `getItem(account, templateId, itemId)` → TemplateItem | null
 - `getItems(account, templateId)` → TemplateItem[]
 - `getLeafItems(account, templateId)` → TemplateItem[]
 - `renameItem(account, templateId, itemId, newName)` → void
 - `archiveItem(account, templateId, itemId)` → void
 - `moveItem(account, templateId, itemId, newParentPath, sortOrder?)` → void
-- `updateItemColor(account, templateId, itemId, color)` → void
 - `toggleCategoryExpanded(account, templateId, itemId)` → void
 - `reorderItem(account, templateId, itemId, newSortOrder)` → void
 

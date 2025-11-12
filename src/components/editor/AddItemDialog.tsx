@@ -16,7 +16,7 @@ interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddItem: (name: string, defaultQuantity?: string) => void;
-  onAddCategory: (name: string, color?: string) => void;
+  onAddCategory: (name: string) => void;
   folderName?: string;
 }
 
@@ -30,7 +30,6 @@ export function AddItemDialog({
   const [itemType, setItemType] = useState<'item' | 'category'>('item');
   const [name, setName] = useState('');
   const [defaultQuantity, setDefaultQuantity] = useState('');
-  const [color, setColor] = useState('#6b7280');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ export function AddItemDialog({
       if (itemType === 'item') {
         onAddItem(name.trim(), defaultQuantity.trim() || undefined);
       } else {
-        onAddCategory(name.trim(), color || undefined);
+        onAddCategory(name.trim());
       }
       handleReset();
       onOpenChange(false);
@@ -48,7 +47,6 @@ export function AddItemDialog({
   const handleReset = () => {
     setName('');
     setDefaultQuantity('');
-    setColor('#6b7280');
     setItemType('item');
   };
 
@@ -124,29 +122,6 @@ export function AddItemDialog({
                   placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
                 />
               </FormField>
-            )}
-
-            {/* Category-specific: Color */}
-            {itemType === 'category' && (
-              <div className="grid gap-2">
-                <Label htmlFor="color">Color (Optional)</Label>
-                <div className="flex gap-2">
-                  <input
-                    id="color"
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="h-10 w-16 rounded-md border border-neutral-300 bg-white"
-                  />
-                  <Input
-                    type="text"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    placeholder="#6b7280"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
             )}
           </div>
 
