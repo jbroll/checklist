@@ -45,7 +45,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     }),
   );
 
-  if (!me) {
+  if (!me || !me.root) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -229,6 +229,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
         // Move and reorder in a single operation
         try {
           ItemService.moveItem(
+            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
             me,
             template.$jazz.id,
             draggedItem.id,
