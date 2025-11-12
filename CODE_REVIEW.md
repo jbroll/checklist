@@ -140,7 +140,7 @@ export function ImportResultDisplay({
 
 **Files:**
 - `src/services/folderService.ts` - `getFolder()`
-- `src/services/itemService.ts` - `getItem()`
+- `src/services/templateService.ts` - `getItem()`
 - `src/services/sessionService.ts` - `getSession()`
 
 **Solution:**
@@ -206,9 +206,9 @@ updateEntity(item, { name: newName, color: newColor });
 
 #### 7. Descendant Path Updates (~30 lines)
 
-**Problem:** Update logic repeated in itemService
+**Problem:** Update logic repeated in templateService
 
-**File:** `src/services/itemService.ts`
+**File:** `src/services/templateService.ts`
 **Lines:** 189-198 (rename) vs 268-277 (move)
 
 **Solution:**
@@ -496,7 +496,7 @@ export const ListSession = co.map({
 **Files to Modify:**
 1. `src/services/sessionService.ts` - Rename functions + parameters
 2. `src/services/folderService.ts` - Update Account type references
-3. `src/services/itemService.ts` - Update Account type references
+3. `src/services/templateService.ts` - Update Account type references
 4. `src/services/export/*` - Update field names in export logic
 5. `src/services/import/*` - Update field names in import logic
 
@@ -813,7 +813,7 @@ export const ListSession = co.map({
 
 ### Services (10 files)
 - [ ] `src/services/folderService.ts`
-- [ ] `src/services/itemService.ts`
+- [ ] `src/services/templateService.ts`
 - [ ] `src/services/sessionService.ts`
 - [ ] `src/services/import/importService.ts`
 - [ ] `src/services/import/csvImporter.ts`
