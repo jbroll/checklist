@@ -1,8 +1,8 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Account, Session, Template } from '@/schemas';
-import { getOrCreateCurrentSession } from './simplifiedSessionService';
 import * as sessionService from '@/services/sessionService';
+import { getOrCreateCurrentSession } from './simplifiedSessionService';
 
 // Mock sessionService
 vi.mock('@/services/sessionService');
@@ -99,7 +99,7 @@ const createMockTemplate = (
   });
 
   // Override push to actually add to the array
-  template.sessions.push = function (newSession: any) {
+  template.sessions.push = (newSession: any) => {
     Array.prototype.push.call(sessionsArray, newSession);
     return sessionsArray.length;
   };
