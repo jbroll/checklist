@@ -145,8 +145,8 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
 
   // Otherwise show template selector using TreeView with sessionsEnabled=false
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <main id="main-content" className="mx-auto max-w-4xl">
+    <div className="fixed inset-0 bg-neutral-50 p-6 flex flex-col">
+      <main id="main-content" className="mx-auto max-w-4xl flex-1 flex flex-col overflow-hidden">
         <TreeView
           account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
