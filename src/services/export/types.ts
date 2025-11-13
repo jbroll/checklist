@@ -82,7 +82,7 @@ export interface ExportedSession {
   /** Soft delete flag - archived sessions are hidden by default */
   archived: boolean;
   /** View mode for displaying items */
-  viewMode: 'zone-in-hierarchy' | 'hierarchy-in-zones' | 'flat';
+  viewMode: 'zone-in-hierarchy' | 'flat';
   /** Map of template item IDs to their shopping state */
   itemStates: Record<string, ExportedItemState>;
   /** ISO 8601 timestamp when session was created */

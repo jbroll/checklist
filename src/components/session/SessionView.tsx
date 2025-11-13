@@ -8,7 +8,6 @@ import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
 import { AvailableZoneRenderer } from './AvailableZoneRenderer';
 import { FlatViewRenderer } from './FlatViewRenderer';
-import { HierarchyInZonesRenderer } from './HierarchyInZonesRenderer';
 import { SessionHeader } from './SessionHeader';
 import { useSessionItems } from './useSessionItems';
 import { useViewMode } from './useViewMode';
@@ -268,30 +267,6 @@ export function SessionView({
           }
           onToggleSelected={handleToggleSelected}
           onToggleChecked={handleToggleChecked}
-          showDeleteIcon={simplifiedUI && showAddForm}
-          onDeleteItem={handleDeleteItem}
-        />
-      );
-    }
-
-    if (currentViewMode === 'hierarchy-in-zones') {
-      return (
-        <HierarchyInZonesRenderer
-          template={template}
-          session={session}
-          selectedItems={selectedItems}
-          checkedItems={checkedItems}
-          categoryExpanded={categoryExpanded}
-          zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
-          onToggleZoneExpanded={(zone) =>
-            setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
-          }
-          onToggleCategoryExpanded={handleToggleCategoryExpanded}
-          onToggleSelected={handleToggleSelected}
-          onToggleChecked={handleToggleChecked}
-          onBatchSelectAll={handleBatchSelectAll}
-          onBatchDeselectAll={handleBatchDeselectAll}
-          onBatchToggle={handleBatchToggle}
           showDeleteIcon={simplifiedUI && showAddForm}
           onDeleteItem={handleDeleteItem}
         />
