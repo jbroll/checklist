@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { ShoppingCart } from 'lucide-react';
 import type { ViewMode } from '@/components/AuthGate';
+import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import { Button } from '@/components/ui/button';
 import type { Account, Template } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
@@ -43,7 +44,7 @@ export function SimplifiedTemplateSelector({
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <ShoppingCart className="h-10 w-10 text-neutral-900" />
+            <BubbleListIcon className="h-10 w-10" size={40} />
             <h1 className="text-4xl font-bold text-neutral-900">BubbleList</h1>
           </div>
           <p className="text-neutral-600">Select a list to start shopping</p>

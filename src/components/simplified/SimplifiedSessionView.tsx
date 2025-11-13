@@ -73,42 +73,46 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
   return (
     <div className="min-h-screen bg-neutral-50 p-6">
       <main id="main-content" className="mx-auto max-w-4xl">
-        <SimplifiedHeader
-          templateName={template.name}
-          sessionDate={session.createdAt.toLocaleDateString()}
-          viewMode={viewMode}
-          showAddForm={showAddForm}
-          onDone={onBack}
-          onClear={handleClear}
-          onViewModeToggle={() => setViewMode(viewMode === 'zone' ? 'flat' : 'zone')}
-          onToggleAddForm={() => setShowAddForm(!showAddForm)}
-        />
+        <div className="rounded-lg border border-neutral-200 bg-white">
+          <SimplifiedHeader
+            templateName={template.name}
+            sessionDate={session.createdAt.toLocaleDateString()}
+            viewMode={viewMode}
+            showAddForm={showAddForm}
+            onDone={onBack}
+            onClear={handleClear}
+            onViewModeToggle={() => setViewMode(viewMode === 'zone' ? 'flat' : 'zone')}
+            onToggleAddForm={() => setShowAddForm(!showAddForm)}
+          />
 
-        {/* Inline form */}
-        {showAddForm && (
-          <div className="mb-6">
-            <InlineItemForm onSubmit={handleAddItem} onClose={() => setShowAddForm(false)} />
+          {/* Inline form */}
+          {showAddForm && (
+            <div className="px-4 py-4">
+              <InlineItemForm onSubmit={handleAddItem} onClose={() => setShowAddForm(false)} />
+            </div>
+          )}
+
+          {/* Content - zone or flat view */}
+          <div className="p-4">
+            {viewMode === 'zone' ? (
+              <SimplifiedZoneView
+                template={template}
+                session={session}
+                showTrash={showAddForm}
+                onCheckToggle={handleCheckToggle}
+                onDelete={handleDelete}
+              />
+            ) : (
+              <SimplifiedFlatView
+                template={template}
+                session={session}
+                showTrash={showAddForm}
+                onCheckToggle={handleCheckToggle}
+                onDelete={handleDelete}
+              />
+            )}
           </div>
-        )}
-
-        {/* Content - zone or flat view */}
-        {viewMode === 'zone' ? (
-          <SimplifiedZoneView
-            template={template}
-            session={session}
-            showTrash={showAddForm}
-            onCheckToggle={handleCheckToggle}
-            onDelete={handleDelete}
-          />
-        ) : (
-          <SimplifiedFlatView
-            template={template}
-            session={session}
-            showTrash={showAddForm}
-            onCheckToggle={handleCheckToggle}
-            onDelete={handleDelete}
-          />
-        )}
+        </div>
       </main>
     </div>
   );
