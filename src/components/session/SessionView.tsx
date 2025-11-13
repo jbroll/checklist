@@ -295,9 +295,9 @@ export function SessionView({
   };
 
   return (
-    <div className="fixed inset-0 bg-neutral-50 p-6 flex flex-col">
-      <div className="mx-auto max-w-4xl flex-1 flex flex-col overflow-hidden">
-        <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 overflow-hidden">
+    <div className="h-screen bg-neutral-50 p-6 flex flex-col">
+      <div className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
+        <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
           <SessionHeader
             template={template}
             session={session}
@@ -323,7 +323,7 @@ export function SessionView({
             </div>
           )}
 
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
             {renderSelectedAndChecked()}
             <div ref={availableZoneRef}>
               <AvailableZoneRenderer

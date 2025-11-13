@@ -436,7 +436,7 @@ export function TreeView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 overflow-hidden">
+      <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
         {/* Root-level drop zone with header */}
         <TreeViewHeader
           isDragging={!!activeEntryId}
@@ -471,7 +471,7 @@ export function TreeView({
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div className="divide-y divide-neutral-100 p-2">
               {directoryTree.map((node, index) => (
                 <div key={node.entry.id}>
