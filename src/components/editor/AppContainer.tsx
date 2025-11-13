@@ -73,9 +73,9 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
 
   // If view mode is simplified, render SimplifiedApp instead of classic UI
   if (viewMode === 'simplified') {
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
     return (
       <SimplifiedApp
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
         account={me as any}
         onViewModeChange={onViewModeChange}
         onSignOut={onSignOut}
@@ -223,6 +223,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
+          sessionsEnabled={true}
         />
 
         <AddFolderDialog

@@ -48,6 +48,8 @@ interface TreeViewProps {
   onImport?: () => void;
   onSignOut?: () => void;
   onSwitchToSimplified?: () => void;
+  // Session display control
+  sessionsEnabled?: boolean; // When false, hides sessions and changes button behavior
 }
 
 /**
@@ -126,6 +128,7 @@ export function TreeView({
   onImport,
   onSignOut,
   onSwitchToSimplified,
+  sessionsEnabled = true,
 }: TreeViewProps) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -278,9 +281,9 @@ export function TreeView({
     const { entry, template, children } = node;
     const isTemplateRef = entry.type === 'template-ref';
 
-    // For template-refs, show sessions
+    // For template-refs, show sessions only when sessionsEnabled is true
     let sessionChildren: React.ReactNode[] = [];
-    if (isTemplateRef && template) {
+    if (sessionsEnabled && isTemplateRef && template) {
       const sessions = template.sessions || [];
       // Show all sessions (both archived and active) when showArchived=true, only active sessions when false
       const activeSessions = sessions
