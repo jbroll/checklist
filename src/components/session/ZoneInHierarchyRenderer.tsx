@@ -181,8 +181,7 @@ export function ZoneInHierarchyRenderer({
 
   return (
     <>
-      {renderZoneInHierarchy(categoriesWithItems)}
-      {/* Render uncategorized items */}
+      {/* Render uncategorized items first */}
       {(uncategorizedSelectedItems.length > 0 || uncategorizedCheckedItems.length > 0) && (
         <>
           {uncategorizedSelectedItems.length > 0 && (
@@ -221,6 +220,7 @@ export function ZoneInHierarchyRenderer({
           )}
         </>
       )}
+      {renderZoneInHierarchy(categoriesWithItems)}
     </>
   );
 }
