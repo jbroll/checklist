@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
 import { ExportDialog } from '@/components/export/ExportDialog';
@@ -26,6 +26,7 @@ interface SimplifiedAppProps {
 export function SimplifiedApp({ account, onViewModeChange, onSignOut }: SimplifiedAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -46,6 +47,20 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
 
     return undefined;
   }, [selectedEntryId, account]);
+
+  // Effect to get or create session when template is selected
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const template = templateService.getTemplate(account, selectedTemplateId);
+      if (template) {
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+        const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account as any, template);
+        setCurrentSessionId(sessionId);
+      }
+    } else {
+      setCurrentSessionId(null);
+    }
+  }, [selectedTemplateId, account]);
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!account.root) return;
@@ -74,19 +89,18 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
   };
 
   // If a template is selected, show session view
-  if (selectedTemplateId) {
+  if (selectedTemplateId && currentSessionId) {
     const template = templateService.getTemplate(account, selectedTemplateId);
 
     if (template) {
-      // Get or create current session for simplified mode
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account as any, template);
-
       return (
         <SessionView
           template={template}
-          sessionId={sessionId}
-          onBack={() => setSelectedTemplateId(null)}
+          sessionId={currentSessionId}
+          onBack={() => {
+            setSelectedTemplateId(null);
+            setCurrentSessionId(null);
+          }}
           simplifiedUI={true}
         />
       );
