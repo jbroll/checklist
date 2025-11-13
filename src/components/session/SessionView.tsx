@@ -21,7 +21,12 @@ interface SessionViewProps {
   simplifiedUI?: boolean;
 }
 
-export function SessionView({ template, sessionId, onBack, simplifiedUI = false }: SessionViewProps) {
+export function SessionView({
+  template,
+  sessionId,
+  onBack,
+  simplifiedUI = false,
+}: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
     available: true,
