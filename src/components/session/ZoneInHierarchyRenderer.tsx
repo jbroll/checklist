@@ -2,6 +2,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
+import { SessionItemRow } from './SessionItemRow';
 import { SessionZone } from './SessionZone';
 
 interface ZoneInHierarchyRendererProps {
@@ -104,45 +105,23 @@ export function ZoneInHierarchyRenderer({
         category.children.length === 0 &&
         category.items[0].path === category.path;
 
-      // If it's a root item, render zones directly without category wrapper
+      // If it's a root item, render it directly without any wrapper
       if (isRootItem) {
+        const item = category.items[0];
+        const state = session.itemStates?.[item.id];
+        const zone = state?.checked ? 'checked' : state?.selected ? 'selected' : 'available';
+
         return (
-          <div key={category.path}>
-            {catSelected.length > 0 && (
-              <SessionZone
-                title="Selected"
-                icon={ListChecks}
-                zone="selected"
-                items={catSelected}
-                itemStates={session.itemStates || {}}
-                expanded={categoryExpanded[`${category.path}-selected`] ?? true}
-                onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-selected`)}
-                onToggleSelected={onToggleSelected}
-                onToggleChecked={onToggleChecked}
-                count={catSelected.length}
-                showHeading={showZoneHeadings}
-                showDeleteIcon={showDeleteIcon}
-                onDeleteItem={onDeleteItem}
-              />
-            )}
-            {catChecked.length > 0 && (
-              <SessionZone
-                title="Checked"
-                icon={CheckCircle2}
-                zone="checked"
-                items={catChecked}
-                itemStates={session.itemStates || {}}
-                expanded={categoryExpanded[`${category.path}-checked`] ?? true}
-                onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-checked`)}
-                onToggleSelected={onToggleSelected}
-                onToggleChecked={onToggleChecked}
-                count={catChecked.length}
-                showHeading={showZoneHeadings}
-                showDeleteIcon={showDeleteIcon}
-                onDeleteItem={onDeleteItem}
-              />
-            )}
-          </div>
+          <SessionItemRow
+            key={item.id}
+            item={item}
+            state={state || null}
+            zone={zone}
+            onToggleSelected={onToggleSelected}
+            onToggleChecked={onToggleChecked}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
+          />
         );
       }
 
