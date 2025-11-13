@@ -54,7 +54,10 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
       const template = templateService.getTemplate(account, selectedTemplateId);
       if (template) {
         // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-        const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account as any, template);
+        const sessionId = simplifiedSessionService.getOrCreateCurrentSession(
+          account as any,
+          template,
+        );
         setCurrentSessionId(sessionId);
       }
     } else {
@@ -157,6 +160,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           onSwitchToSimplified={() => onViewModeChange('classic')}
           switchViewLabel="Classic View"
           sessionsEnabled={false}
+          hideArchivedToggle={true}
         />
 
         <AddFolderDialog

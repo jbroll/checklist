@@ -51,6 +51,7 @@ interface TreeViewProps {
   switchViewLabel?: string;
   // Session display control
   sessionsEnabled?: boolean; // When false, hides sessions and changes button behavior
+  hideArchivedToggle?: boolean; // When true, hides "Show Archived" option in header
 }
 
 /**
@@ -131,6 +132,7 @@ export function TreeView({
   onSwitchToSimplified,
   switchViewLabel,
   sessionsEnabled = true,
+  hideArchivedToggle = false,
 }: TreeViewProps) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -391,6 +393,7 @@ export function TreeView({
           canCreateFolderOrList={canCreateFolderOrList}
           canEditOrUse={canEditOrUse}
           showArchived={showArchived}
+          hideArchivedToggle={hideArchivedToggle}
           onHeaderClick={onHeaderClick || (() => {})}
           onEditTemplate={() => {
             if (selectedTemplateId && onEditTemplate) {
