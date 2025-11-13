@@ -38,26 +38,14 @@ export function ReorderDropZone({
     return null;
   }
 
-  // Debug: log when zone is rendered
-  console.log('ReorderDropZone rendered:', {
-    id,
-    beforeItemId,
-    afterItemId,
-    parentPath,
-    isOver,
-  });
-
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        'relative h-2 transition-all bg-blue-50 border border-dashed border-blue-300',
-        isOver && 'h-3 bg-green-100 border-green-500'
-      )}
+      className={cn('relative h-1 -my-0.5 transition-all', isOver && 'h-2 bg-green-100')}
     >
       {/* Visual indicator on hover */}
       {isOver && (
-        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-1 bg-green-500 rounded-full" />
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 bg-green-500 rounded-full" />
       )}
     </div>
   );
