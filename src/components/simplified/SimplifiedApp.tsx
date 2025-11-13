@@ -48,22 +48,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
     return undefined;
   }, [selectedEntryId, account]);
 
-  // Effect to get or create session when template is selected
-  useEffect(() => {
-    if (selectedTemplateId) {
-      const template = templateService.getTemplate(account, selectedTemplateId);
-      if (template) {
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-        const sessionId = simplifiedSessionService.getOrCreateCurrentSession(
-          account as any,
-          template,
-        );
-        setCurrentSessionId(sessionId);
-      }
-    } else {
-      setCurrentSessionId(null);
-    }
-  }, [selectedTemplateId, account]);
+  // No useEffect needed - session is created directly in handleTemplateSelect
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!account.root) return;
@@ -115,11 +100,29 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
   const accountAsAny = account as any;
 
   const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplateId(templateId);
+    const template = templateService.getTemplate(account, templateId);
+    if (template) {
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(
+        account as any,
+        template,
+      );
+      // Set all state together to avoid intermediate renders
+      setSelectedTemplateId(templateId);
+      setCurrentSessionId(sessionId);
+    }
   };
 
   const handleEntrySelect = (entryId: string) => {
-    setSelectedEntryId(entryId);
+    // Don't set selectedEntryId when navigating to a template in simplified mode
+    // This prevents the Edit/Use buttons from appearing before SessionView renders
+    const entries = directoryService.getAllDirectoryEntries(account as any);
+    const entry = entries.find((e) => e.id === entryId);
+
+    // Only set selectedEntryId for folders (not template-refs)
+    if (entry?.type === 'folder') {
+      setSelectedEntryId(entryId);
+    }
   };
 
   const handleHeaderClick = () => {
