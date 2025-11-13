@@ -175,7 +175,7 @@ export function importSessionFromCsv(
       {
         itemStates: itemStatesRecord,
         archived: false,
-        viewMode: 'hierarchy-in-zones', // Default view mode
+        viewMode: 'zone-in-hierarchy', // Default view mode
         categoryExpanded: {},
         selectedCount: totalInCart,
         checkedCount: totalPurchased,

@@ -77,7 +77,7 @@ export const Session = co.map({
   categoryExpanded: z.record(z.string(), z.boolean()),
 
   // UI state - view mode preference
-  viewMode: z.enum(['zone-in-hierarchy', 'hierarchy-in-zones', 'flat']),
+  viewMode: z.enum(['zone-in-hierarchy', 'flat']),
 
   // Cached counts for UI performance
   selectedCount: z.number(),
