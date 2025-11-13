@@ -13,6 +13,8 @@ interface ZoneInHierarchyRendererProps {
   onToggleCategoryExpanded: (key: string) => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export function ZoneInHierarchyRenderer({
@@ -24,6 +26,8 @@ export function ZoneInHierarchyRenderer({
   onToggleCategoryExpanded,
   onToggleSelected,
   onToggleChecked,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -123,6 +127,8 @@ export function ZoneInHierarchyRenderer({
                     onToggleChecked={onToggleChecked}
                     count={catSelected.length}
                     showHeading={showZoneHeadings}
+                    showDeleteIcon={showDeleteIcon}
+                    onDeleteItem={onDeleteItem}
                   />
                 )}
                 {catChecked.length > 0 && (
@@ -138,6 +144,8 @@ export function ZoneInHierarchyRenderer({
                     onToggleChecked={onToggleChecked}
                     count={catChecked.length}
                     showHeading={showZoneHeadings}
+                    showDeleteIcon={showDeleteIcon}
+                    onDeleteItem={onDeleteItem}
                   />
                 )}
               </>
@@ -170,6 +178,8 @@ export function ZoneInHierarchyRenderer({
               onToggleChecked={onToggleChecked}
               count={uncategorizedSelectedItems.length}
               showHeading={showZoneHeadings}
+              showDeleteIcon={showDeleteIcon}
+              onDeleteItem={onDeleteItem}
             />
           )}
           {uncategorizedCheckedItems.length > 0 && (
@@ -185,6 +195,8 @@ export function ZoneInHierarchyRenderer({
               onToggleChecked={onToggleChecked}
               count={uncategorizedCheckedItems.length}
               showHeading={showZoneHeadings}
+              showDeleteIcon={showDeleteIcon}
+              onDeleteItem={onDeleteItem}
             />
           )}
         </>
