@@ -223,6 +223,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
+          switchViewLabel="Simplified View"
           sessionsEnabled={true}
         />
 
