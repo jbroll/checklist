@@ -102,6 +102,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           sessionId={currentSessionId}
           onBack={() => {
             setSelectedTemplateId(null);
+            setSelectedEntryId(null);
             setCurrentSessionId(null);
           }}
           simplifiedUI={true}
