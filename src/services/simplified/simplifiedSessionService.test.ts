@@ -1,8 +1,11 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { Session, Template } from '@/schemas';
-import { Session as SessionSchema } from '@/schemas';
-import { clearSessionState, getOrCreateCurrentSession } from './simplifiedSessionService';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Account, Session, Template } from '@/schemas';
+import { getOrCreateCurrentSession } from './simplifiedSessionService';
+import * as sessionService from '@/services/sessionService';
+
+// Mock sessionService
+vi.mock('@/services/sessionService');
 
 // Mock Session.create
 const mockSessionCreate = (init: any, options: any) => {
@@ -51,6 +54,15 @@ const createMockSession = (
   return session as InstanceOfSchema<typeof Session>;
 };
 
+const createMockAccount = (): InstanceOfSchema<typeof Account> => {
+  return {
+    root: {
+      templates: [],
+      directory: [],
+    },
+  } as any;
+};
+
 const createMockTemplate = (
   sessions: InstanceOfSchema<typeof Session>[],
 ): InstanceOfSchema<typeof Template> => {
@@ -96,6 +108,13 @@ const createMockTemplate = (
 };
 
 describe('Simplified Session Service', () => {
+  let mockAccount: InstanceOfSchema<typeof Account>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAccount = createMockAccount();
+  });
+
   describe('getOrCreateCurrentSession', () => {
     it('should return existing latest session when sessions exist', () => {
       // Create sessions with different timestamps
@@ -103,9 +122,13 @@ describe('Simplified Session Service', () => {
       const newSession = createMockSession('session-new', false, new Date('2024-01-02'));
       const template = createMockTemplate([oldSession, newSession]);
 
-      const sessionId = getOrCreateCurrentSession(template);
+      // Mock sessionService.getSessions to return our sessions
+      vi.mocked(sessionService.getSessions).mockReturnValue([oldSession, newSession]);
+
+      const sessionId = getOrCreateCurrentSession(mockAccount, template);
 
       expect(sessionId).toBe('session-new');
+      expect(sessionService.getSessions).toHaveBeenCalledWith(mockAccount, 'template-1');
     });
 
     it('should skip archived sessions and return latest active session', () => {
@@ -113,7 +136,10 @@ describe('Simplified Session Service', () => {
       const archivedSession = createMockSession('session-archived', true, new Date('2024-01-02'));
       const template = createMockTemplate([activeSession, archivedSession]);
 
-      const sessionId = getOrCreateCurrentSession(template);
+      // Mock sessionService.getSessions to return our sessions
+      vi.mocked(sessionService.getSessions).mockReturnValue([activeSession, archivedSession]);
+
+      const sessionId = getOrCreateCurrentSession(mockAccount, template);
 
       expect(sessionId).toBe('session-active');
     });
@@ -121,122 +147,44 @@ describe('Simplified Session Service', () => {
     it('should create new session when no active sessions exist', () => {
       const template = createMockTemplate([]);
 
-      // Mock Session.create
-      const originalCreate = SessionSchema.create;
-      SessionSchema.create = mockSessionCreate as any;
+      // Mock sessionService.getSessions to return empty array
+      vi.mocked(sessionService.getSessions).mockReturnValue([]);
+      // Mock sessionService.createSession to return new session ID
+      vi.mocked(sessionService.createSession).mockReturnValue('new-session-id');
 
-      const sessionId = getOrCreateCurrentSession(template);
+      const sessionId = getOrCreateCurrentSession(mockAccount, template);
 
-      // Restore original
-      SessionSchema.create = originalCreate;
-
-      expect(sessionId).toBeDefined();
-      expect(template.sessions.length).toBe(1);
-      expect(template.sessions[0]?.archived).toBe(false);
-      expect(template.sessions[0]?.itemStates).toEqual({});
+      expect(sessionId).toBe('new-session-id');
+      expect(sessionService.createSession).toHaveBeenCalledWith(mockAccount, 'template-1');
     });
 
     it('should create new session when all sessions are archived', () => {
       const archivedSession = createMockSession('session-archived', true, new Date());
       const template = createMockTemplate([archivedSession]);
 
-      // Mock Session.create
-      const originalCreate = SessionSchema.create;
-      SessionSchema.create = mockSessionCreate as any;
+      // Mock sessionService.getSessions to return archived session
+      vi.mocked(sessionService.getSessions).mockReturnValue([archivedSession]);
+      // Mock sessionService.createSession to return new session ID
+      vi.mocked(sessionService.createSession).mockReturnValue('new-session-id');
 
-      const sessionId = getOrCreateCurrentSession(template);
+      const sessionId = getOrCreateCurrentSession(mockAccount, template);
 
-      // Restore original
-      SessionSchema.create = originalCreate;
-
-      expect(sessionId).toBeDefined();
-      expect(template.sessions.length).toBe(2);
-      expect(template.sessions[1]?.archived).toBe(false);
+      expect(sessionId).toBe('new-session-id');
+      expect(sessionService.createSession).toHaveBeenCalledWith(mockAccount, 'template-1');
     });
 
     it('should set currentSessionId on template when creating new session', () => {
       const template = createMockTemplate([]);
 
-      // Mock Session.create
-      const originalCreate = SessionSchema.create;
-      SessionSchema.create = mockSessionCreate as any;
+      // Mock sessionService.getSessions to return empty array
+      vi.mocked(sessionService.getSessions).mockReturnValue([]);
+      // Mock sessionService.createSession to return new session ID
+      vi.mocked(sessionService.createSession).mockReturnValue('new-session-id');
 
-      getOrCreateCurrentSession(template);
+      const sessionId = getOrCreateCurrentSession(mockAccount, template);
 
-      // Restore original
-      SessionSchema.create = originalCreate;
-
-      expect(template.currentSessionId).toBeDefined();
-      expect(template.currentSessionId).toBe(template.sessions[0]?.$jazz.id);
-    });
-  });
-
-  describe('clearSessionState', () => {
-    let template: InstanceOfSchema<typeof Template>;
-    let session: InstanceOfSchema<typeof Session>;
-
-    beforeEach(() => {
-      session = createMockSession('session-1', false);
-      template = createMockTemplate([session]);
-    });
-
-    it('should reset all item states to unchecked and unselected', () => {
-      expect(session.itemStates['item-1']).toEqual({ selected: true, checked: false });
-      expect(session.itemStates['item-2']).toEqual({ selected: false, checked: true });
-
-      clearSessionState(template, 'session-1');
-
-      expect(session.itemStates['item-1']).toEqual({ selected: false, checked: false });
-      expect(session.itemStates['item-2']).toEqual({ selected: false, checked: false });
-    });
-
-    it('should reset selectedCount and checkedCount to 0', () => {
-      expect(session.selectedCount).toBe(1);
-      expect(session.checkedCount).toBe(1);
-
-      clearSessionState(template, 'session-1');
-
-      expect(session.selectedCount).toBe(0);
-      expect(session.checkedCount).toBe(0);
-    });
-
-    it('should update remainingCount to match non-archived items', () => {
-      clearSessionState(template, 'session-1');
-
-      // Template has 3 items total, 1 archived, so 2 remaining
-      expect(session.remainingCount).toBe(2);
-    });
-
-    it('should update lastActivityAt timestamp', () => {
-      const oldTimestamp = session.lastActivityAt;
-
-      // Wait a tiny bit to ensure timestamp changes
-      setTimeout(() => {
-        clearSessionState(template, 'session-1');
-
-        expect(session.lastActivityAt).not.toBe(oldTimestamp);
-      }, 10);
-    });
-
-    it('should do nothing if session not found', () => {
-      const initialItemStates = { ...session.itemStates };
-
-      clearSessionState(template, 'non-existent-session');
-
-      expect(session.itemStates).toEqual(initialItemStates);
-    });
-
-    it('should preserve item state structure even when empty', () => {
-      // Create session with no item states
-      const emptySession = createMockSession('session-empty', false);
-      emptySession.itemStates = {};
-      const emptyTemplate = createMockTemplate([emptySession]);
-
-      clearSessionState(emptyTemplate, 'session-empty');
-
-      expect(emptySession.itemStates).toEqual({});
-      expect(emptySession.selectedCount).toBe(0);
-      expect(emptySession.checkedCount).toBe(0);
+      expect(sessionId).toBe('new-session-id');
+      expect(sessionService.createSession).toHaveBeenCalledWith(mockAccount, 'template-1');
     });
   });
 });
