@@ -382,7 +382,7 @@ function importSession(
     {
       itemStates,
       archived: exportedSession.archived ?? false,
-      viewMode: exportedSession.viewMode || 'hierarchy-in-zones',
+      viewMode: exportedSession.viewMode || 'zone-in-hierarchy',
       categoryExpanded: {},
       selectedCount,
       checkedCount,

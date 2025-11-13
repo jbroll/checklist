@@ -255,7 +255,7 @@ export function updateViewMode(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
-  viewMode: 'flat' | 'hierarchy-in-zones' | 'zone-in-hierarchy',
+  viewMode: 'flat' | 'zone-in-hierarchy',
 ): void {
   const session = getSession(account, templateId, sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
