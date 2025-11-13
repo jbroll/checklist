@@ -19,6 +19,8 @@ interface AvailableZoneRendererProps {
   onBatchSelectAll: (itemIds: string[]) => void;
   onBatchDeselectAll: (itemIds: string[]) => void;
   onBatchToggle: (itemIds: string[]) => void;
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export function AvailableZoneRenderer({
@@ -34,6 +36,8 @@ export function AvailableZoneRenderer({
   onBatchSelectAll,
   onBatchDeselectAll,
   onBatchToggle,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: AvailableZoneRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -83,6 +87,8 @@ export function AvailableZoneRenderer({
             zone={zone}
             onToggleSelected={onToggleSelected}
             onToggleChecked={onToggleChecked}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
           />
         );
       }
@@ -105,6 +111,8 @@ export function AvailableZoneRenderer({
             onBatchToggle={onBatchToggle}
             count={node.children.length}
             category={toCategoryNode(node)}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
           >
             {hasChildren && (
               <div className="flex flex-col pl-4">{renderItemTree(node.children, zone)}</div>
@@ -142,6 +150,8 @@ export function AvailableZoneRenderer({
       showHeading={showZoneHeadings}
       isTopLevelZone={true}
       category={topLevelCategory}
+      showDeleteIcon={showDeleteIcon}
+      onDeleteItem={onDeleteItem}
     >
       <div className="flex flex-col">{renderItemTree(itemTree, 'available')}</div>
     </SessionZone>

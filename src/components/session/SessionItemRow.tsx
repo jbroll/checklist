@@ -9,6 +9,8 @@ interface SessionItemRowProps {
   zone: 'available' | 'selected' | 'checked';
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -17,6 +19,8 @@ export const SessionItemRow = memo(function SessionItemRow({
   zone,
   onToggleSelected,
   onToggleChecked,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
 
@@ -94,16 +98,20 @@ export const SessionItemRow = memo(function SessionItemRow({
         </div>
       </div>
 
-      {/* Right button - Trash icon to deselect (visible in selected and checked zones) */}
-      {(zone === 'selected' || zone === 'checked') && (
+      {/* Right button - Trash icon (visible in available zone when showDeleteIcon, or in selected/checked zones) */}
+      {((showDeleteIcon && zone === 'available') || zone === 'selected' || zone === 'checked') && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleSelected(item.id);
+            if (showDeleteIcon && onDeleteItem) {
+              onDeleteItem(item.id);
+            } else {
+              onToggleSelected(item.id);
+            }
           }}
           className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
-          aria-label="Deselect item"
+          aria-label={showDeleteIcon ? 'Delete item' : 'Deselect item'}
         >
           <svg
             className="h-4 w-4"

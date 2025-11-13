@@ -1,9 +1,11 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useLayoutEffect, useRef, useState } from 'react';
+import { InlineItemForm } from '@/components/simplified/InlineItemForm';
 import { useAccount } from '@/lib/jazz';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { Account, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
+import * as templateService from '@/services/templateService';
 import { AvailableZoneRenderer } from './AvailableZoneRenderer';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { HierarchyInZonesRenderer } from './HierarchyInZonesRenderer';
@@ -16,15 +18,17 @@ interface SessionViewProps {
   template: InstanceOfSchema<typeof Template>;
   sessionId: string;
   onBack: () => void;
+  simplifiedUI?: boolean;
 }
 
-export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
+export function SessionView({ template, sessionId, onBack, simplifiedUI = false }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [zoneExpanded, setZoneExpanded] = useState({
     available: true,
     selected: true,
     checked: false,
   });
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
@@ -212,6 +216,37 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
   };
 
+  const handleClear = () => {
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.clearSessionState(me, template.$jazz.id, sessionId);
+  };
+
+  const handleAddItem = (name: string, type: 'item' | 'category') => {
+    if (!me) return;
+
+    // Create new template item at root level using service layer
+    if (type === 'item') {
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
+      templateService.createItem(me, template.$jazz.id, name, undefined, '1');
+    } else {
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
+      templateService.createCategory(me, template.$jazz.id, name, undefined);
+    }
+
+    // Update session counts to include the new item
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
+
+    // Keep form open for rapid entry
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    if (!me) return;
+    // Archive the template item (soft delete)
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    templateService.archiveItem(me, template.$jazz.id, itemId);
+  };
+
   const renderSelectedAndChecked = () => {
     if (!session) return null;
 
@@ -228,6 +263,8 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
           }
           onToggleSelected={handleToggleSelected}
           onToggleChecked={handleToggleChecked}
+          showDeleteIcon={simplifiedUI && showAddForm}
+          onDeleteItem={handleDeleteItem}
         />
       );
     }
@@ -250,6 +287,8 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
           onBatchSelectAll={handleBatchSelectAll}
           onBatchDeselectAll={handleBatchDeselectAll}
           onBatchToggle={handleBatchToggle}
+          showDeleteIcon={simplifiedUI && showAddForm}
+          onDeleteItem={handleDeleteItem}
         />
       );
     }
@@ -265,6 +304,8 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
           onToggleCategoryExpanded={handleToggleCategoryExpanded}
           onToggleSelected={handleToggleSelected}
           onToggleChecked={handleToggleChecked}
+          showDeleteIcon={simplifiedUI && showAddForm}
+          onDeleteItem={handleDeleteItem}
         />
       );
     }
@@ -288,7 +329,18 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
             onCycleViewMode={cycleViewMode}
             onFinishSession={handleFinishSession}
             onToggleArchived={handleToggleArchived}
+            simplifiedUI={simplifiedUI}
+            showAddForm={showAddForm}
+            onClear={handleClear}
+            onToggleAddForm={() => setShowAddForm(!showAddForm)}
           />
+
+          {/* Inline form for adding items (simplified UI only) */}
+          {simplifiedUI && showAddForm && (
+            <div className="px-4 py-4 border-b border-neutral-100">
+              <InlineItemForm onSubmit={handleAddItem} onClose={() => setShowAddForm(false)} />
+            </div>
+          )}
 
           <div>
             {renderSelectedAndChecked()}
@@ -308,6 +360,8 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
                 onBatchSelectAll={handleBatchSelectAll}
                 onBatchDeselectAll={handleBatchDeselectAll}
                 onBatchToggle={handleBatchToggle}
+                showDeleteIcon={simplifiedUI && showAddForm}
+                onDeleteItem={handleDeleteItem}
               />
             </div>
           </div>
