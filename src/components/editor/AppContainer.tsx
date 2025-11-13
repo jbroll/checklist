@@ -201,8 +201,8 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const accountAsAny = me as any;
   return (
-    <div className="fixed inset-0 bg-neutral-50 p-6 flex flex-col">
-      <main id="main-content" className="mx-auto max-w-4xl flex-1 flex flex-col overflow-hidden">
+    <div className="h-screen bg-neutral-50 p-6 flex flex-col">
+      <main id="main-content" className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
         <TreeView
           account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
