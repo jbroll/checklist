@@ -352,10 +352,10 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="min-h-screen bg-neutral-50 p-6">
-        <div className="mx-auto max-w-4xl">
+      <div className="fixed inset-0 bg-neutral-50 p-6 flex flex-col">
+        <div className="mx-auto max-w-4xl flex-1 flex flex-col overflow-hidden">
           {/* Items Tree */}
-          <div className="rounded-lg border border-neutral-200 bg-white">
+          <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 overflow-hidden">
             {/* Root-level drop zone with header */}
             <RootDropZone
               isDragging={!!activeItem}
@@ -410,8 +410,10 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
                 <p className="mt-1 text-sm">Click "Add Item" to get started.</p>
               </div>
             ) : (
-              <div className="divide-y divide-neutral-100">
-                {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
+              <div className="flex-1 overflow-y-auto">
+                <div className="divide-y divide-neutral-100">
+                  {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
+                </div>
               </div>
             )}
           </div>

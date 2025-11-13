@@ -36,6 +36,7 @@ export function SessionView({
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<{ scrollTop: number; availableTop: number } | null>(null);
 
   // Find session first (before any early returns)
@@ -63,7 +64,7 @@ export function SessionView({
 
   // Restore scroll position after DOM updates
   useLayoutEffect(() => {
-    if (scrollPositionRef.current && availableZoneRef.current) {
+    if (scrollPositionRef.current && availableZoneRef.current && scrollContainerRef.current) {
       const { scrollTop, availableTop } = scrollPositionRef.current;
 
       // Measure immediately after render
@@ -78,13 +79,13 @@ export function SessionView({
         'Diff:',
         heightDiff,
       );
-      console.log('[Restore] Current scrollTop:', window.scrollY, 'Saved:', scrollTop);
+      console.log('[Restore] Current scrollTop:', scrollContainerRef.current.scrollTop, 'Saved:', scrollTop);
 
       if (heightDiff !== 0) {
         // Adjust scroll to compensate for height change
         const newScrollTop = scrollTop + heightDiff;
         console.log('[Restore] Setting scroll to:', newScrollTop);
-        window.scrollTo(0, newScrollTop);
+        scrollContainerRef.current.scrollTop = newScrollTop;
       }
 
       scrollPositionRef.current = null;
@@ -122,14 +123,14 @@ export function SessionView({
 
   const handleToggleSelected = (itemId: string) => {
     // Capture scroll state before DOM changes
-    if (availableZoneRef.current) {
+    if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
-        scrollTop: window.scrollY,
+        scrollTop: scrollContainerRef.current.scrollTop,
         availableTop: availableZoneRef.current.getBoundingClientRect().top,
       };
       console.log(
         '[Capture] scrollTop:',
-        window.scrollY,
+        scrollContainerRef.current.scrollTop,
         'availableTop:',
         scrollPositionRef.current.availableTop,
       );
@@ -173,9 +174,9 @@ export function SessionView({
     console.log('[handleBatchSelectAll] Called with:', itemIds);
 
     // Capture scroll state before DOM changes
-    if (availableZoneRef.current) {
+    if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
-        scrollTop: window.scrollY,
+        scrollTop: scrollContainerRef.current.scrollTop,
         availableTop: availableZoneRef.current.getBoundingClientRect().top,
       };
     }
@@ -190,9 +191,9 @@ export function SessionView({
     console.log('[handleBatchDeselectAll] Called with:', itemIds);
 
     // Capture scroll state before DOM changes
-    if (availableZoneRef.current) {
+    if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
-        scrollTop: window.scrollY,
+        scrollTop: scrollContainerRef.current.scrollTop,
         availableTop: availableZoneRef.current.getBoundingClientRect().top,
       };
     }
@@ -207,9 +208,9 @@ export function SessionView({
     console.log('[handleBatchToggle] Called with:', itemIds);
 
     // Capture scroll state before DOM changes
-    if (availableZoneRef.current) {
+    if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
-        scrollTop: window.scrollY,
+        scrollTop: scrollContainerRef.current.scrollTop,
         availableTop: availableZoneRef.current.getBoundingClientRect().top,
       };
     }
@@ -294,9 +295,9 @@ export function SessionView({
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-lg border border-neutral-200 bg-white">
+    <div className="fixed inset-0 bg-neutral-50 p-6 flex flex-col">
+      <div className="mx-auto max-w-4xl flex-1 flex flex-col overflow-hidden">
+        <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 overflow-hidden">
           <SessionHeader
             template={template}
             session={session}
@@ -322,7 +323,7 @@ export function SessionView({
             </div>
           )}
 
-          <div>
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
             {renderSelectedAndChecked()}
             <div ref={availableZoneRef}>
               <AvailableZoneRenderer

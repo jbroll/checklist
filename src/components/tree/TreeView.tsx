@@ -436,7 +436,7 @@ export function TreeView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="rounded-lg border border-neutral-200 bg-white">
+      <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 overflow-hidden">
         {/* Root-level drop zone with header */}
         <TreeViewHeader
           isDragging={!!activeEntryId}
@@ -471,27 +471,29 @@ export function TreeView({
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100 p-2">
-            {directoryTree.map((node, index) => (
-              <div key={node.entry.id}>
-                {/* Reorder zone before first item */}
-                {index === 0 && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="divide-y divide-neutral-100 p-2">
+              {directoryTree.map((node, index) => (
+                <div key={node.entry.id}>
+                  {/* Reorder zone before first item */}
+                  {index === 0 && (
+                    <ReorderDropZone
+                      id={`reorder-before-${node.entry.id}`}
+                      beforeItemId={node.entry.id}
+                      isDragging={!!activeEntryId}
+                    />
+                  )}
+                  {renderNode(node)}
+                  {/* Reorder zone after each item */}
                   <ReorderDropZone
-                    id={`reorder-before-${node.entry.id}`}
-                    beforeItemId={node.entry.id}
+                    id={`reorder-after-${node.entry.id}`}
+                    afterItemId={node.entry.id}
+                    beforeItemId={directoryTree[index + 1]?.entry.id}
                     isDragging={!!activeEntryId}
                   />
-                )}
-                {renderNode(node)}
-                {/* Reorder zone after each item */}
-                <ReorderDropZone
-                  id={`reorder-after-${node.entry.id}`}
-                  afterItemId={node.entry.id}
-                  beforeItemId={directoryTree[index + 1]?.entry.id}
-                  isDragging={!!activeEntryId}
-                />
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
