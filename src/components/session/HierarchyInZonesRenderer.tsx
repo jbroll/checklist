@@ -61,6 +61,19 @@ export function HierarchyInZonesRenderer({
         category.children.length === 0 &&
         category.items[0].path === category.path;
 
+      // Debug logging
+      if (category.items.length === 1 && category.children.length === 0) {
+        console.log('[HierarchyInZones] Potential root item:', {
+          categoryName: category.name,
+          categoryPath: category.path,
+          itemName: category.items[0].name,
+          itemPath: category.items[0].path,
+          itemType: category.items[0].type,
+          isRootItem,
+          pathsMatch: category.items[0].path === category.path,
+        });
+      }
+
       // If it's a root item, render it directly without category wrapper
       if (isRootItem) {
         return (
