@@ -97,6 +97,56 @@ export function ZoneInHierarchyRenderer({
       const hasDirectItems = catSelected.length > 0 || catChecked.length > 0;
       const hasChildren = category.children.length > 0;
 
+      // Detect if this is a pseudo-category for a root-level item
+      // (created by buildCategoryTree for items with no parent category)
+      const isRootItem =
+        category.items.length === 1 &&
+        category.children.length === 0 &&
+        category.items[0].path === category.path;
+
+      // If it's a root item, render zones directly without category wrapper
+      if (isRootItem) {
+        return (
+          <div key={category.path}>
+            {catSelected.length > 0 && (
+              <SessionZone
+                title="Selected"
+                icon={ListChecks}
+                zone="selected"
+                items={catSelected}
+                itemStates={session.itemStates || {}}
+                expanded={categoryExpanded[`${category.path}-selected`] ?? true}
+                onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-selected`)}
+                onToggleSelected={onToggleSelected}
+                onToggleChecked={onToggleChecked}
+                count={catSelected.length}
+                showHeading={showZoneHeadings}
+                showDeleteIcon={showDeleteIcon}
+                onDeleteItem={onDeleteItem}
+              />
+            )}
+            {catChecked.length > 0 && (
+              <SessionZone
+                title="Checked"
+                icon={CheckCircle2}
+                zone="checked"
+                items={catChecked}
+                itemStates={session.itemStates || {}}
+                expanded={categoryExpanded[`${category.path}-checked`] ?? true}
+                onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-checked`)}
+                onToggleSelected={onToggleSelected}
+                onToggleChecked={onToggleChecked}
+                count={catChecked.length}
+                showHeading={showZoneHeadings}
+                showDeleteIcon={showDeleteIcon}
+                onDeleteItem={onDeleteItem}
+              />
+            )}
+          </div>
+        );
+      }
+
+      // Otherwise, render as a regular category with zones inside
       return (
         <SessionZone
           key={category.path}
