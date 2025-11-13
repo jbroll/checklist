@@ -333,7 +333,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
         />
         {/* Render children if category is expanded */}
         {item.type === 'category' && item.expanded && children.length > 0 && (
-          <div className="divide-y divide-neutral-100">
+          <div>
             {children.map((child, childIndex) =>
               renderItemNode(child, depth + 1, children, childIndex),
             )}
