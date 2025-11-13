@@ -494,3 +494,33 @@ export function toggleCategoryExpanded(
   const currentState = getCategoryExpanded(account, templateId, sessionId, categoryKey);
   setCategoryExpanded(account, templateId, sessionId, categoryKey, !currentState);
 }
+
+/**
+ * Clear all item states in a session (reset all selected/checked flags)
+ */
+export function clearSessionState(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  // Reset all item states
+  const newItemStates: Record<string, { selected: boolean; checked: boolean }> = {};
+
+  // Keep the structure but reset flags
+  for (const itemId of Object.keys(session.itemStates || {})) {
+    newItemStates[itemId] = {
+      selected: false,
+      checked: false,
+    };
+  }
+
+  session.$jazz.set('itemStates', newItemStates);
+
+  // Update counts
+  updateSessionCounts(account, templateId, sessionId);
+
+  session.$jazz.set('lastActivityAt', new Date());
+}

@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Account, Session, Template } from '@/schemas';
 import { SimplifiedSessionView } from './SimplifiedSessionView';
+import * as sessionService from '@/services/sessionService';
 import * as simplifiedSessionService from '@/services/simplified/simplifiedSessionService';
 import * as templateService from '@/services/templateService';
 
 // Mock the services
+vi.mock('@/services/sessionService');
 vi.mock('@/services/simplified/simplifiedSessionService');
 vi.mock('@/services/templateService');
 
@@ -206,8 +208,9 @@ describe('SimplifiedSessionView', () => {
     const clearButton = screen.getByRole('button', { name: /clear/i });
     fireEvent.click(clearButton);
 
-    expect(simplifiedSessionService.clearSessionState).toHaveBeenCalledWith(
-      mockTemplate,
+    expect(sessionService.clearSessionState).toHaveBeenCalledWith(
+      mockAccount,
+      'template-1',
       'session-1',
     );
   });
@@ -263,15 +266,20 @@ describe('SimplifiedSessionView', () => {
     // Submit form
     fireEvent.submit(input.closest('form')!);
 
-    // Template should have new item added
-    expect(mockTemplate.$jazz.set).toHaveBeenCalledWith(
-      'items',
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'Cheese',
-          type: 'item',
-        }),
-      ]),
+    // Should call templateService.createItem
+    expect(templateService.createItem).toHaveBeenCalledWith(
+      mockAccount,
+      'template-1',
+      'Cheese',
+      undefined,
+      '1',
+    );
+
+    // Should update session counts
+    expect(sessionService.updateSessionCounts).toHaveBeenCalledWith(
+      mockAccount,
+      'template-1',
+      'session-1',
     );
   });
 
@@ -287,20 +295,20 @@ describe('SimplifiedSessionView', () => {
     // Click checkbox
     fireEvent.click(milkCheckbox);
 
-    // Session should be updated with checked state
-    expect(mockSession.$jazz.set).toHaveBeenCalledWith(
-      'itemStates',
-      expect.objectContaining({
-        'item-1': expect.objectContaining({
-          checked: true,
-        }),
-      }),
+    // Should call sessionService.toggleItemChecked
+    expect(sessionService.toggleItemChecked).toHaveBeenCalledWith(
+      mockAccount,
+      'template-1',
+      'session-1',
+      'item-1',
     );
 
-    // Counts should be updated
-    expect(mockSession.$jazz.set).toHaveBeenCalledWith('checkedCount', expect.any(Number));
-    expect(mockSession.$jazz.set).toHaveBeenCalledWith('remainingCount', expect.any(Number));
-    expect(mockSession.$jazz.set).toHaveBeenCalledWith('lastActivityAt', expect.any(Date));
+    // Should call sessionService.updateSessionCounts
+    expect(sessionService.updateSessionCounts).toHaveBeenCalledWith(
+      mockAccount,
+      'template-1',
+      'session-1',
+    );
   });
 
   it('should call archiveItem when deleting an item', () => {
