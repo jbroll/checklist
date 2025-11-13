@@ -24,10 +24,11 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TreeViewHeaderProps {
-  isDragging: boolean;
+  isDragging?: boolean;
   canCreateFolderOrList: boolean;
   canEditOrUse: boolean;
-  showArchived: boolean;
+  showArchived?: boolean;
+  hideArchivedToggle?: boolean;
   onHeaderClick: () => void;
   onEditTemplate: () => void;
   onUseTemplate: () => void;
@@ -35,21 +36,24 @@ interface TreeViewHeaderProps {
   onAddTemplate: () => void;
   onExport: () => void;
   onImport: () => void;
-  onToggleShowArchived: () => void;
+  onToggleShowArchived?: () => void;
   onSignOut?: () => void;
-  onSwitchToSimplified?: () => void;
+  onSwitchView?: () => void;
+  switchViewLabel?: string;
 }
 
 /**
  * Root-level header and drop zone for the main tree view.
  * Acts as a droppable target for moving folders to root level.
  * Styled to integrate with the tree structure.
+ * Can be reused in simplified view by setting isDragging to undefined.
  */
 export function TreeViewHeader({
-  isDragging,
+  isDragging = false,
   canCreateFolderOrList,
   canEditOrUse,
-  showArchived,
+  showArchived = false,
+  hideArchivedToggle = false,
   onHeaderClick,
   onEditTemplate,
   onUseTemplate,
@@ -59,19 +63,24 @@ export function TreeViewHeader({
   onImport,
   onToggleShowArchived,
   onSignOut,
-  onSwitchToSimplified,
+  onSwitchView,
+  switchViewLabel = 'Simplified View',
 }: TreeViewHeaderProps) {
-  // Droppable setup for root-level drops
+  // Droppable setup for root-level drops (always called for hooks rules)
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: 'drop-__ROOT_DROP_ZONE__',
     data: { path: '__ROOT_DROP_ZONE__' },
   });
 
+  // Only use drag-and-drop functionality when enabled
+  const effectiveSetDropRef = isDragging !== undefined ? setDropRef : undefined;
+  const effectiveIsOver = isDragging !== undefined ? isOver : false;
+
   return (
     <header
-      ref={setDropRef}
+      ref={effectiveSetDropRef}
       className={`px-4 py-4 border-b transition-all ${
-        isDragging && isOver
+        isDragging && effectiveIsOver
           ? 'bg-green-50 border-green-500 border-2 border-dashed'
           : isDragging
             ? 'bg-neutral-50 border-neutral-200 border-2 border-dashed'
@@ -169,11 +178,11 @@ export function TreeViewHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {onSwitchToSimplified && (
+                {onSwitchView && (
                   <>
-                    <DropdownMenuItem onClick={onSwitchToSimplified}>
+                    <DropdownMenuItem onClick={onSwitchView}>
                       <LayoutGrid className="mr-2 h-4 w-4" />
-                      Simplified View
+                      {switchViewLabel}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
@@ -186,14 +195,18 @@ export function TreeViewHeader({
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={showArchived}
-                  onCheckedChange={onToggleShowArchived}
-                >
-                  <Archive className="mr-2 h-4 w-4" />
-                  Show Archived
-                </DropdownMenuCheckboxItem>
+                {!hideArchivedToggle && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={showArchived}
+                      onCheckedChange={onToggleShowArchived}
+                    >
+                      <Archive className="mr-2 h-4 w-4" />
+                      Show Archived
+                    </DropdownMenuCheckboxItem>
+                  </>
+                )}
                 {onSignOut && (
                   <>
                     <DropdownMenuSeparator />
