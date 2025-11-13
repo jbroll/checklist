@@ -1,11 +1,11 @@
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
 import type { Account, Session, Template } from '@/schemas';
-import { SimplifiedSessionView } from './SimplifiedSessionView';
 import * as sessionService from '@/services/sessionService';
 import * as simplifiedSessionService from '@/services/simplified/simplifiedSessionService';
 import * as templateService from '@/services/templateService';
+import { SimplifiedSessionView } from './SimplifiedSessionView';
 
 // Mock the services
 vi.mock('@/services/sessionService');
@@ -325,11 +325,7 @@ describe('SimplifiedSessionView', () => {
     fireEvent.click(deleteButton);
 
     // Should call templateService.archiveItem
-    expect(templateService.archiveItem).toHaveBeenCalledWith(
-      mockAccount,
-      'template-1',
-      'item-1',
-    );
+    expect(templateService.archiveItem).toHaveBeenCalledWith(mockAccount, 'template-1', 'item-1');
   });
 
   it('should show empty state when no items exist', () => {
@@ -340,11 +336,7 @@ describe('SimplifiedSessionView', () => {
     vi.mocked(simplifiedSessionService.getOrCreateCurrentSession).mockReturnValue('session-empty');
 
     render(
-      <SimplifiedSessionView
-        account={mockAccount}
-        template={emptyTemplate}
-        onBack={mockOnBack}
-      />,
+      <SimplifiedSessionView account={mockAccount} template={emptyTemplate} onBack={mockOnBack} />,
     );
 
     // Should show empty state message
