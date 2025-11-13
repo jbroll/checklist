@@ -223,8 +223,24 @@ export function TreeView({
       const directory = account.root?.directory || [];
       const afterItemId = overData.afterItemId as string | undefined;
       const beforeItemId = overData.beforeItemId as string | undefined;
+      const targetParentPath = overData.parentPath as string | undefined;
 
-      // Find the target index
+      // Get the dragged entry to check its current parent
+      const draggedEntry = directory.find((e) => e.id === draggedEntryId);
+      if (!draggedEntry) return;
+
+      const draggedPathParts = draggedEntry.path.split(PATH_SEPARATOR);
+      const currentParentPath = draggedPathParts.length > 1
+        ? draggedPathParts.slice(0, -1).join(PATH_SEPARATOR)
+        : undefined;
+
+      // Only allow reordering within the same parent
+      if (currentParentPath !== targetParentPath) {
+        // Different parent - this should be handled by the hierarchy change logic below
+        return;
+      }
+
+      // Find the target index in the flat array
       let newIndex: number;
       if (afterItemId) {
         const afterIndex = directory.findIndex((e) => e.id === afterItemId);
@@ -232,7 +248,14 @@ export function TreeView({
       } else if (beforeItemId) {
         newIndex = directory.findIndex((e) => e.id === beforeItemId);
       } else {
-        newIndex = 0; // Insert at beginning
+        // Insert at beginning of siblings with same parent
+        // Find first sibling with same parent
+        const firstSiblingIndex = directory.findIndex((e) => {
+          const eParts = e.path.split(PATH_SEPARATOR);
+          const eParentPath = eParts.length > 1 ? eParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
+          return eParentPath === targetParentPath;
+        });
+        newIndex = firstSiblingIndex >= 0 ? firstSiblingIndex : 0;
       }
 
       try {
@@ -354,8 +377,35 @@ export function TreeView({
           <>
             {/* Render sessions for template-refs */}
             {sessionChildren}
-            {/* Render child entries recursively */}
-            {children.map((childNode) => renderNode(childNode))}
+            {/* Render child entries recursively with reorder zones */}
+            {children.map((childNode, childIndex) => {
+              // Get parent path from the child's path
+              const pathParts = childNode.entry.path.split(PATH_SEPARATOR);
+              const parentPath = pathParts.length > 1 ? pathParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
+
+              return (
+                <div key={childNode.entry.id}>
+                  {/* Reorder zone before first child */}
+                  {childIndex === 0 && (
+                    <ReorderDropZone
+                      id={`reorder-before-${childNode.entry.id}`}
+                      beforeItemId={childNode.entry.id}
+                      parentPath={parentPath}
+                      isDragging={!!activeEntryId}
+                    />
+                  )}
+                  {renderNode(childNode)}
+                  {/* Reorder zone after each child */}
+                  <ReorderDropZone
+                    id={`reorder-after-${childNode.entry.id}`}
+                    afterItemId={childNode.entry.id}
+                    beforeItemId={children[childIndex + 1]?.entry.id}
+                    parentPath={parentPath}
+                    isDragging={!!activeEntryId}
+                  />
+                </div>
+              );
+            })}
           </>
         )}
       </FolderNodeView>
