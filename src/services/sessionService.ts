@@ -45,6 +45,10 @@ export function createSession(
   );
 
   // Add session to template
+  // Initialize sessions list if it doesn't exist (for older templates)
+  if (!template.sessions) {
+    template.$jazz.set('sessions', []);
+  }
   template.sessions.$jazz.push(newSession);
   template.$jazz.set('updatedAt', new Date());
 
