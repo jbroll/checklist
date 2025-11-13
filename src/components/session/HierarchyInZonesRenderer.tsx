@@ -54,6 +54,30 @@ export function HierarchyInZonesRenderer({
       const catKey = `${keyPrefix}-${category.path}`;
       const hasChildren = category.children.length > 0;
 
+      // Detect if this is a pseudo-category for a root-level item
+      // (created by buildCategoryTree for items with no parent category)
+      const isRootItem =
+        category.items.length === 1 &&
+        category.children.length === 0 &&
+        category.items[0].path === category.path;
+
+      // If it's a root item, render it directly without category wrapper
+      if (isRootItem) {
+        return (
+          <SessionItemRow
+            key={category.items[0].id}
+            item={category.items[0]}
+            state={session.itemStates?.[category.items[0].id] || null}
+            zone={zone}
+            onToggleSelected={onToggleSelected}
+            onToggleChecked={onToggleChecked}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
+          />
+        );
+      }
+
+      // Otherwise, render as a category with items and children
       return (
         <div key={category.path} className="flex flex-col">
           <SessionZone
