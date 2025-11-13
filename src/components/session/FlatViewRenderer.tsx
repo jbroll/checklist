@@ -15,6 +15,8 @@ interface FlatViewRendererProps {
   onToggleZoneExpanded: (zone: 'selected' | 'checked') => void;
   onToggleSelected: (itemId: string) => void;
   onToggleChecked: (itemId: string) => void;
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export function FlatViewRenderer({
@@ -26,6 +28,8 @@ export function FlatViewRenderer({
   onToggleZoneExpanded,
   onToggleSelected,
   onToggleChecked,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -43,6 +47,8 @@ export function FlatViewRenderer({
         onToggleChecked={onToggleChecked}
         count={selectedItems.length}
         showHeading={showZoneHeadings}
+        showDeleteIcon={showDeleteIcon}
+        onDeleteItem={onDeleteItem}
       />
       <SessionZone
         title="Checked"
@@ -56,6 +62,8 @@ export function FlatViewRenderer({
         onToggleChecked={onToggleChecked}
         count={checkedItems.length}
         showHeading={showZoneHeadings}
+        showDeleteIcon={showDeleteIcon}
+        onDeleteItem={onDeleteItem}
       />
     </>
   );

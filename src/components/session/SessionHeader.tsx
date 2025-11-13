@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Archive, Download, MoreVertical } from 'lucide-react';
+import { Archive, Download, MoreVertical, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -24,6 +24,10 @@ interface SessionHeaderProps {
   onCycleViewMode: () => void;
   onFinishSession: () => void;
   onToggleArchived: () => void;
+  simplifiedUI?: boolean;
+  showAddForm?: boolean;
+  onClear?: () => void;
+  onToggleAddForm?: () => void;
 }
 
 export function SessionHeader({
@@ -37,6 +41,10 @@ export function SessionHeader({
   onCycleViewMode,
   onFinishSession,
   onToggleArchived,
+  simplifiedUI = false,
+  showAddForm = false,
+  onClear,
+  onToggleAddForm,
 }: SessionHeaderProps) {
   const [showExportDialog, setShowExportDialog] = useState(false);
 
@@ -53,6 +61,17 @@ export function SessionHeader({
           </span>
         </h1>
         <div className="flex items-center gap-2">
+          {/* Simplified UI: Clear button */}
+          {simplifiedUI && onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              Clear
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onCycleViewMode}
@@ -62,6 +81,24 @@ export function SessionHeader({
           >
             <ViewModeIcon className="h-4 w-4" />
           </button>
+
+          {/* Simplified UI: Add button */}
+          {simplifiedUI && onToggleAddForm && (
+            <button
+              type="button"
+              onClick={onToggleAddForm}
+              className={`rounded-lg border p-2 transition-colors ${
+                showAddForm
+                  ? 'border-green-500 bg-green-50 text-green-600'
+                  : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50'
+              }`}
+              title="Add item or category"
+              aria-label="Add item or category"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onFinishSession}
@@ -69,31 +106,35 @@ export function SessionHeader({
           >
             Done
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
-                aria-label="More options"
-              >
-                <MoreVertical className="h-4 w-4 text-neutral-600" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={session?.archived || false}
-                onCheckedChange={onToggleArchived}
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archived
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          {/* Classic UI: More menu */}
+          {!simplifiedUI && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="h-4 w-4 text-neutral-600" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={session?.archived || false}
+                  onCheckedChange={onToggleArchived}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archived
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

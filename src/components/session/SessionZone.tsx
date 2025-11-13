@@ -25,6 +25,8 @@ interface SessionZoneProps {
   showHeading?: boolean; // Controls whether to show the zone heading
   isTopLevelZone?: boolean; // Controls whether this is a top-level zone (for styling)
   category?: CategoryNode | null; // Category node for batch operations
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export function SessionZone({
@@ -45,6 +47,8 @@ export function SessionZone({
   showHeading = true,
   isTopLevelZone = false,
   category,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: SessionZoneProps) {
   // Determine background class based on zone type - only for top-level available zone
   const bgClass = zone === 'available' && isTopLevelZone ? 'bg-blue-50 rounded-md' : '';
@@ -70,6 +74,8 @@ export function SessionZone({
           zone={zone}
           onToggleSelected={onToggleSelected}
           onToggleChecked={onToggleChecked}
+          showDeleteIcon={showDeleteIcon}
+          onDeleteItem={onDeleteItem}
         />
       ))}
     </div>

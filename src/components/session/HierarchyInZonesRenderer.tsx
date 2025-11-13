@@ -22,6 +22,8 @@ interface HierarchyInZonesRendererProps {
   onBatchSelectAll?: (itemIds: string[]) => void;
   onBatchDeselectAll?: (itemIds: string[]) => void;
   onBatchToggle?: (itemIds: string[]) => void;
+  showDeleteIcon?: boolean;
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export function HierarchyInZonesRenderer({
@@ -38,6 +40,8 @@ export function HierarchyInZonesRenderer({
   onBatchSelectAll,
   onBatchDeselectAll,
   onBatchToggle,
+  showDeleteIcon = false,
+  onDeleteItem,
 }: HierarchyInZonesRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -66,6 +70,8 @@ export function HierarchyInZonesRenderer({
             onBatchToggle={onBatchToggle}
             count={category.items.length}
             category={category}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
           >
             <div className="pl-4 flex flex-col">
               {/* Render items first */}
@@ -77,6 +83,8 @@ export function HierarchyInZonesRenderer({
                   zone={zone}
                   onToggleSelected={onToggleSelected}
                   onToggleChecked={onToggleChecked}
+                  showDeleteIcon={showDeleteIcon}
+                  onDeleteItem={onDeleteItem}
                 />
               ))}
               {/* Then render child categories */}
@@ -119,6 +127,8 @@ export function HierarchyInZonesRenderer({
             onToggleChecked={onToggleChecked}
             count={zone.items.length}
             showHeading={showZoneHeadings}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
           >
             {hasCategories && (
               <div className="flex flex-col">

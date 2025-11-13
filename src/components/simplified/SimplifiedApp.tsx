@@ -4,12 +4,13 @@ import type { ViewMode } from '@/components/AuthGate';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
+import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree/TreeView';
 import type { Account } from '@/schemas';
 import * as directoryService from '@/services/directoryService';
+import * as simplifiedSessionService from '@/services/simplified/simplifiedSessionService';
 import * as templateService from '@/services/templateService';
 import { PATH_SEPARATOR } from '@/utils/pathUtils';
-import { SimplifiedSessionView } from './SimplifiedSessionView';
 
 interface SimplifiedAppProps {
   account: InstanceOfSchema<typeof Account>;
@@ -77,11 +78,16 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
     const template = templateService.getTemplate(account, selectedTemplateId);
 
     if (template) {
+      // Get or create current session for simplified mode
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account as any, template);
+
       return (
-        <SimplifiedSessionView
-          account={account}
+        <SessionView
           template={template}
+          sessionId={sessionId}
           onBack={() => setSelectedTemplateId(null)}
+          simplifiedUI={true}
         />
       );
     }
