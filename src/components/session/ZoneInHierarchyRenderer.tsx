@@ -2,7 +2,6 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
-import { SessionItemRow } from './SessionItemRow';
 import { SessionZone } from './SessionZone';
 
 interface ZoneInHierarchyRendererProps {
@@ -40,8 +39,15 @@ export function ZoneInHierarchyRenderer({
   const categorizedItemIds = new Set<string>();
   const collectItemIds = (categories: CategoryNode[]) => {
     for (const cat of categories) {
-      for (const item of cat.items) {
-        categorizedItemIds.add(item.id);
+      // Check if this is a pseudo-category for a root item
+      const isRootItem =
+        cat.items.length === 1 && cat.children.length === 0 && cat.items[0].path === cat.path;
+
+      // Don't mark root items as categorized - they should appear in uncategorized section
+      if (!isRootItem) {
+        for (const item of cat.items) {
+          categorizedItemIds.add(item.id);
+        }
       }
       collectItemIds(cat.children);
     }
@@ -105,24 +111,9 @@ export function ZoneInHierarchyRenderer({
         category.children.length === 0 &&
         category.items[0].path === category.path;
 
-      // If it's a root item, render it directly without any wrapper
+      // If it's a root item, skip it here - it will be rendered in the uncategorized section
       if (isRootItem) {
-        const item = category.items[0];
-        const state = session.itemStates?.[item.id];
-        const zone = state?.checked ? 'checked' : state?.selected ? 'selected' : 'available';
-
-        return (
-          <SessionItemRow
-            key={item.id}
-            item={item}
-            state={state || null}
-            zone={zone}
-            onToggleSelected={onToggleSelected}
-            onToggleChecked={onToggleChecked}
-            showDeleteIcon={showDeleteIcon}
-            onDeleteItem={onDeleteItem}
-          />
-        );
+        return null;
       }
 
       // Otherwise, render as a regular category with zones inside
