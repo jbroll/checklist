@@ -403,7 +403,8 @@ export function TreeView({
           onImport={onImport || (() => {})}
           onToggleShowArchived={() => setShowArchived(!showArchived)}
           onSignOut={onSignOut}
-          onSwitchToSimplified={onSwitchToSimplified}
+          onSwitchView={onSwitchToSimplified}
+          switchViewLabel="Simplified View"
         />
 
         {directoryTree.length === 0 ? (

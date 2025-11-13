@@ -74,7 +74,13 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
   // If view mode is simplified, render SimplifiedApp instead of classic UI
   if (viewMode === 'simplified') {
     // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-    return <SimplifiedApp account={me as any} onViewModeChange={onViewModeChange} />;
+    return (
+      <SimplifiedApp
+        account={me as any}
+        onViewModeChange={onViewModeChange}
+        onSignOut={onSignOut}
+      />
+    );
   }
 
   // Otherwise render classic UI below
