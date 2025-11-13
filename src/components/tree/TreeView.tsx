@@ -48,6 +48,7 @@ interface TreeViewProps {
   onImport?: () => void;
   onSignOut?: () => void;
   onSwitchToSimplified?: () => void;
+  switchViewLabel?: string;
   // Session display control
   sessionsEnabled?: boolean; // When false, hides sessions and changes button behavior
 }
@@ -128,6 +129,7 @@ export function TreeView({
   onImport,
   onSignOut,
   onSwitchToSimplified,
+  switchViewLabel,
   sessionsEnabled = true,
 }: TreeViewProps) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
@@ -407,7 +409,7 @@ export function TreeView({
           onToggleShowArchived={() => setShowArchived(!showArchived)}
           onSignOut={onSignOut}
           onSwitchView={onSwitchToSimplified}
-          switchViewLabel="Simplified View"
+          switchViewLabel={switchViewLabel}
         />
 
         {directoryTree.length === 0 ? (

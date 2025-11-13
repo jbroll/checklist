@@ -155,6 +155,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSwitchToSimplified={() => onViewModeChange('classic')}
+          switchViewLabel="Classic View"
           sessionsEnabled={false}
         />
 
