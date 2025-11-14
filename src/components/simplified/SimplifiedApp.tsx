@@ -36,8 +36,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
   const importParentPath = useMemo(() => {
     if (!selectedEntryId) return undefined;
 
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-    const entries = directoryService.getAllDirectoryEntries(account as any);
+    const entries = directoryService.getAllDirectoryEntries(account);
     const selectedEntry = entries.find((e) => e.id === selectedEntryId);
 
     // Only use folder paths (not template-refs)
@@ -96,17 +95,10 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-  const accountAsAny = account as any;
-
   const handleTemplateSelect = (templateId: string) => {
     const template = templateService.getTemplate(account, templateId);
     if (template) {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(
-        account as any,
-        template,
-      );
+      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account, template);
       // Set all state together to avoid intermediate renders
       setSelectedTemplateId(templateId);
       setCurrentSessionId(sessionId);
@@ -116,7 +108,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
   const handleEntrySelect = (entryId: string) => {
     // Don't set selectedEntryId when navigating to a template in simplified mode
     // This prevents the Edit/Use buttons from appearing before SessionView renders
-    const entries = directoryService.getAllDirectoryEntries(account as any);
+    const entries = directoryService.getAllDirectoryEntries(account);
     const entry = entries.find((e) => e.id === entryId);
 
     // Only set selectedEntryId for folders (not template-refs)
@@ -148,7 +140,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
     <div className="h-screen bg-neutral-50 p-6 flex flex-col">
       <main id="main-content" className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
         <TreeView
-          account={accountAsAny}
+          account={account}
           selectedTemplateId={selectedTemplateId}
           selectedEntryId={selectedEntryId}
           onTemplateSelect={handleTemplateSelect}
@@ -185,13 +177,13 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
         <ExportDialog
           open={showExportDialog}
           onOpenChange={setShowExportDialog}
-          account={accountAsAny}
+          account={account}
         />
 
         <ImportDialog
           open={showImportDialog}
           onOpenChange={setShowImportDialog}
-          account={accountAsAny}
+          account={account}
           parentPath={importParentPath}
         />
       </main>

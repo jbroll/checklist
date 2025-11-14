@@ -8,7 +8,7 @@ import { getOrCreateCurrentSession } from './simplifiedSessionService';
 vi.mock('@/services/sessionService');
 
 // Mock Session.create
-const mockSessionCreate = (init: any, options: any) => {
+const _mockSessionCreate = (init: any, options: any) => {
   const session: any = {
     ...init,
   };
