@@ -1,4 +1,4 @@
-import { Folder, Trash2 } from 'lucide-react';
+import { ArrowDown, Folder, Trash2 } from 'lucide-react';
 import type { TemplateItem } from '@/schemas';
 
 interface SimplifiedSessionItemRowProps {
@@ -55,14 +55,15 @@ export function SimplifiedSessionItemRow({
 
   return (
     <div
-      className={`flex items-center gap-3 py-2 transition-colors group ${
+      className={`flex items-center gap-3 py-2 px-3 transition-all group ${
         isSelected
-          ? 'bg-green-50 border-l-4 border-l-green-600'
-          : 'hover:bg-neutral-50 border-l-4 border-l-transparent'
+          ? 'bg-green-100 ring-2 ring-green-500 ring-inset'
+          : onSelect
+            ? 'hover:bg-neutral-50'
+            : ''
       } ${onSelect ? 'cursor-pointer' : ''}`}
       style={{
-        paddingLeft: `${level * 1.5 + (isSelected ? 0.5 : 0.75)}rem`,
-        paddingRight: '0.75rem',
+        paddingLeft: `${level * 1.5 + 0.75}rem`,
       }}
       {...(onSelect && {
         onClick: handleRowClick,
@@ -71,6 +72,13 @@ export function SimplifiedSessionItemRow({
         tabIndex: 0,
       })}
     >
+      {/* Selection indicator - shown when row is selected */}
+      {isSelected && (
+        <div className="shrink-0">
+          <ArrowDown className="h-4 w-4 text-green-600 font-bold" />
+        </div>
+      )}
+
       {/* Checkbox */}
       <input
         type="checkbox"
@@ -86,7 +94,7 @@ export function SimplifiedSessionItemRow({
       <span
         className={`flex-1 ${checked ? 'line-through text-neutral-400' : 'text-neutral-900'} ${
           isCategory ? 'font-medium' : ''
-        }`}
+        } ${isSelected ? 'font-semibold text-green-800' : ''}`}
       >
         {item.name}
       </span>
