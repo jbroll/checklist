@@ -27,6 +27,9 @@ interface SessionZoneProps {
   category?: CategoryNode | null; // Category node for batch operations
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
+  categoryItem?: TemplateItem; // The actual category item for selection
+  isSelected?: boolean; // Category selection state
+  onSelectItem?: (itemId: string | null) => void; // Category selection handler
 }
 
 export function SessionZone({
@@ -49,7 +52,11 @@ export function SessionZone({
   category,
   showDeleteIcon = false,
   onDeleteItem,
+  categoryItem,
+  isSelected = false,
+  onSelectItem,
 }: SessionZoneProps) {
+  console.log('[SessionZone] Category:', title, 'isSelected:', isSelected, 'hasOnSelectItem:', !!onSelectItem);
   // Determine background class based on zone type - only for top-level available zone
   const bgClass = zone === 'available' && isTopLevelZone ? 'bg-blue-50 rounded-md' : '';
   // Remove padding - let parent control all padding
@@ -178,6 +185,23 @@ export function SessionZone({
     );
   };
 
+  const handleCategoryClick = (e: React.MouseEvent) => {
+    // Don't trigger selection if clicking on buttons or expand toggle
+    if (
+      (e.target as HTMLElement).closest('button') ||
+      (e.target as HTMLElement).closest('[data-expand-toggle]')
+    ) {
+      console.log('[SessionZone] Click ignored (button or toggle)');
+      return;
+    }
+
+    if (onSelectItem && categoryItem) {
+      const newValue = isSelected ? null : categoryItem.id;
+      console.log('[SessionZone] Calling onSelectItem with:', newValue);
+      onSelectItem(newValue);
+    }
+  };
+
   // Normal mode with collapsible header
   return (
     <div className={`${bgClass} ${paddingClass}`}>
@@ -188,9 +212,18 @@ export function SessionZone({
         onToggleExpand={onToggleExpand}
         hasChildren={items.length > 0 || !!children}
       >
-        <div className="flex items-center gap-2 w-full">
+        <div
+          className={`flex items-center gap-2 w-full ${
+            isSelected
+              ? 'bg-green-100 ring-2 ring-green-500 ring-inset rounded'
+              : ''
+          } ${onSelectItem ? 'cursor-pointer' : ''}`}
+          onClick={onSelectItem ? handleCategoryClick : undefined}
+        >
           {Icon && <Icon className="h-4 w-4" />}
-          <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>
+          <span className={`flex-1 text-sm font-semibold text-left ${
+            isSelected ? 'text-green-800' : 'text-neutral-900'
+          }`}>{title}</span>
           {count !== undefined && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
               {count}

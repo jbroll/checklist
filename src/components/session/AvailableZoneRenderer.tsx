@@ -120,6 +120,9 @@ export function AvailableZoneRenderer({
             category={toCategoryNode(node)}
             showDeleteIcon={showDeleteIcon}
             onDeleteItem={onDeleteItem}
+            categoryItem={item}
+            isSelected={selectedItemId === item.id}
+            onSelectItem={onSelectItem}
           >
             {hasChildren && (
               <div className="flex flex-col pl-4">{renderItemTree(node.children, zone)}</div>
