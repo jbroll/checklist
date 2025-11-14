@@ -24,6 +24,7 @@ type ViewMode = 'zone' | 'flat';
 export function SimplifiedSessionView({ account, template, onBack }: SimplifiedSessionViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('zone');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Get or create current session
   const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account, template);
@@ -57,15 +58,38 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
   };
 
   const handleAddItem = (name: string, type: 'item' | 'category') => {
-    // Create new template item at root level using service layer
+    // Calculate insertion point based on selected item
+    const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
+      template,
+      selectedItemId,
+    );
+
+    // Create new template item at calculated position using service layer
+    let newItemId: string;
     if (type === 'item') {
-      templateService.createItem(account, template.$jazz.id, name, undefined, '1');
+      newItemId = templateService.createItem(
+        account,
+        template.$jazz.id,
+        name,
+        parentPath,
+        '1',
+        sortOrder,
+      );
     } else {
-      templateService.createCategory(account, template.$jazz.id, name, undefined);
+      newItemId = templateService.createCategory(
+        account,
+        template.$jazz.id,
+        name,
+        parentPath,
+        sortOrder,
+      );
     }
 
     // Update session counts to include the new item
     sessionService.updateSessionCounts(account, template.$jazz.id, sessionId);
+
+    // Set the newly created item as selected for consecutive insertion
+    setSelectedItemId(newItemId);
 
     // Keep form open for rapid entry
   };
@@ -99,16 +123,20 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
                 template={template}
                 session={session}
                 showTrash={showAddForm}
+                selectedItemId={selectedItemId}
                 onCheckToggle={handleCheckToggle}
                 onDelete={handleDelete}
+                onSelectItem={setSelectedItemId}
               />
             ) : (
               <SimplifiedFlatView
                 template={template}
                 session={session}
                 showTrash={showAddForm}
+                selectedItemId={selectedItemId}
                 onCheckToggle={handleCheckToggle}
                 onDelete={handleDelete}
+                onSelectItem={setSelectedItemId}
               />
             )}
           </div>

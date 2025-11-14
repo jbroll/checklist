@@ -6,8 +6,10 @@ interface SimplifiedZoneViewProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
   showTrash: boolean;
+  selectedItemId: string | null;
   onCheckToggle: (itemId: string) => void;
   onDelete: (itemId: string) => void;
+  onSelectItem: (itemId: string | null) => void;
 }
 
 /**
@@ -18,8 +20,10 @@ export function SimplifiedZoneView({
   template,
   session,
   showTrash,
+  selectedItemId,
   onCheckToggle,
   onDelete,
+  onSelectItem,
 }: SimplifiedZoneViewProps) {
   // Get all non-archived items
   const items = template.items?.filter((item) => !item.archived) || [];
@@ -43,7 +47,12 @@ export function SimplifiedZoneView({
     }
   }
 
-  const renderZone = (title: string, items: TemplateItem[], showTrashForZone: boolean) => {
+  const renderZone = (
+    title: string,
+    items: TemplateItem[],
+    showTrashForZone: boolean,
+    enableSelection: boolean,
+  ) => {
     if (items.length === 0) {
       return null;
     }
@@ -57,6 +66,7 @@ export function SimplifiedZoneView({
           {items.map((item) => {
             const state = session.itemStates?.[item.id];
             const checked = state?.checked || false;
+            const isSelected = enableSelection && selectedItemId === item.id;
 
             return (
               <SimplifiedSessionItemRow
@@ -64,8 +74,10 @@ export function SimplifiedZoneView({
                 item={item}
                 checked={checked}
                 showTrash={showTrashForZone}
+                isSelected={isSelected}
                 onCheckToggle={onCheckToggle}
                 onDelete={onDelete}
+                onSelect={enableSelection ? onSelectItem : undefined}
               />
             );
           })}
@@ -76,14 +88,14 @@ export function SimplifiedZoneView({
 
   return (
     <div>
-      {/* Available Zone - show trash when form is open */}
-      {renderZone('Available', availableItems, showTrash)}
+      {/* Available Zone - show trash when form is open, enable selection */}
+      {renderZone('Available', availableItems, showTrash, showTrash)}
 
       {/* Selected Zone */}
-      {renderZone('Selected', selectedItems, false)}
+      {renderZone('Selected', selectedItems, false, false)}
 
       {/* Checked Zone */}
-      {renderZone('Checked', checkedItems, false)}
+      {renderZone('Checked', checkedItems, false, false)}
 
       {/* Empty state */}
       {items.length === 0 && (

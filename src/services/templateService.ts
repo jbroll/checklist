@@ -79,6 +79,7 @@ export function createCategory(
   templateId: string,
   name: string,
   parentPath?: string,
+  sortOrder?: number,
 ): string {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -98,7 +99,7 @@ export function createCategory(
     type: 'category',
     path,
     expanded: true, // Categories start expanded
-    sortOrder: template.items.length,
+    sortOrder: sortOrder !== undefined ? sortOrder : template.items.length,
     archived: false,
     defaultQuantity: '',
     createdAt: new Date(),
@@ -119,6 +120,7 @@ export function createItem(
   name: string,
   parentPath?: string,
   defaultQuantity?: string,
+  sortOrder?: number,
 ): string {
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
@@ -138,7 +140,7 @@ export function createItem(
     type: 'item',
     path,
     expanded: false, // Items don't expand
-    sortOrder: template.items.length,
+    sortOrder: sortOrder !== undefined ? sortOrder : template.items.length,
     archived: false,
     defaultQuantity: defaultQuantity || '',
     createdAt: new Date(),
@@ -408,4 +410,86 @@ export function reorderItem(
 
   template.$jazz.set('items', updatedItems);
   template.$jazz.set('updatedAt', new Date());
+}
+
+// ============================================================================
+// Insertion Helper Functions
+// ============================================================================
+
+/**
+ * Calculate insertion parameters based on a selected item
+ * Returns parentPath and sortOrder for inserting a new item
+ */
+export function calculateInsertionPoint(
+  template: InstanceOfSchema<typeof Template>,
+  selectedItemId: string | null,
+): { parentPath: string | undefined; sortOrder: number } {
+  const items = template.items?.filter((item) => !item.archived) || [];
+
+  // If nothing selected, insert at top of root
+  if (!selectedItemId) {
+    const rootItems = items.filter((item) => {
+      const parentPath = getParentPath(item.path);
+      return parentPath === undefined;
+    });
+
+    if (rootItems.length === 0) {
+      return { parentPath: undefined, sortOrder: 0 };
+    }
+
+    const minSortOrder = Math.min(...rootItems.map((item) => item.sortOrder));
+    return { parentPath: undefined, sortOrder: minSortOrder - 1 };
+  }
+
+  // Find the selected item
+  const selectedItem = items.find((item) => item.id === selectedItemId);
+  if (!selectedItem) {
+    // Fall back to root if selected item not found
+    return { parentPath: undefined, sortOrder: 0 };
+  }
+
+  // If selected item is a category, insert at top of that category
+  if (selectedItem.type === 'category') {
+    const categoryPath = selectedItem.path;
+    const childrenInCategory = items.filter((item) => {
+      const parentPath = getParentPath(item.path);
+      return parentPath === categoryPath;
+    });
+
+    if (childrenInCategory.length === 0) {
+      return { parentPath: categoryPath, sortOrder: 0 };
+    }
+
+    const minSortOrder = Math.min(...childrenInCategory.map((item) => item.sortOrder));
+    return { parentPath: categoryPath, sortOrder: minSortOrder - 1 };
+  }
+
+  // If selected item is a regular item, insert after it in the same parent
+  const parentPath = getParentPath(selectedItem.path);
+  const siblings = items.filter((item) => {
+    const itemParentPath = getParentPath(item.path);
+    return itemParentPath === parentPath;
+  });
+
+  // Sort siblings by sortOrder
+  siblings.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Find the position of the selected item
+  const selectedIndex = siblings.findIndex((item) => item.id === selectedItemId);
+  if (selectedIndex === -1) {
+    // Fall back to end of siblings
+    const maxSortOrder = Math.max(...siblings.map((item) => item.sortOrder));
+    return { parentPath, sortOrder: maxSortOrder + 1 };
+  }
+
+  // Calculate sortOrder to insert after selected item
+  if (selectedIndex === siblings.length - 1) {
+    // Selected item is last, insert after it
+    return { parentPath, sortOrder: selectedItem.sortOrder + 1 };
+  }
+
+  // Insert between selected item and next item
+  const nextItem = siblings[selectedIndex + 1];
+  const sortOrder = (selectedItem.sortOrder + nextItem.sortOrder) / 2;
+  return { parentPath, sortOrder };
 }
