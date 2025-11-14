@@ -11,6 +11,8 @@ interface SessionItemRowProps {
   onToggleChecked: (itemId: string) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
+  isSelected?: boolean; // For insertion point selection
+  onSelectItem?: (itemId: string | null) => void; // For insertion point selection
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -21,8 +23,12 @@ export const SessionItemRow = memo(function SessionItemRow({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
+  isSelected: isInsertionPointSelected = false,
+  onSelectItem,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
+
+  console.log('[SessionItemRow]', item.name, 'isInsertionPointSelected:', isInsertionPointSelected, 'hasOnSelectItem:', !!onSelectItem);
 
   if (!me) return null;
 
@@ -51,12 +57,37 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Only animate items in selected/checked zones (not available)
   const shouldAnimate = zone === 'selected' || zone === 'checked';
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't trigger selection if clicking on checkbox or delete button
+    if (
+      (e.target as HTMLElement).closest('button')
+    ) {
+      console.log('[SessionItemRow] Click ignored (button)');
+      return;
+    }
+
+    if (onSelectItem) {
+      const newValue = isInsertionPointSelected ? null : item.id;
+      console.log('[SessionItemRow] Calling onSelectItem with:', newValue);
+      onSelectItem(newValue);
+    }
+  };
+
   return (
     <motion.div
       layout={shouldAnimate}
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="flex items-center gap-3 rounded px-1 py-0.5 hover:bg-neutral-100"
+      className={`flex items-center gap-3 rounded px-1 py-0.5 ${
+        isInsertionPointSelected
+          ? 'bg-green-100 ring-2 ring-green-500 ring-inset'
+          : 'hover:bg-neutral-100'
+      } ${onSelectItem ? 'cursor-pointer' : ''}`}
+      {...(onSelectItem && {
+        onClick: handleRowClick,
+        role: 'button',
+        tabIndex: 0,
+      })}
     >
       {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
       <button

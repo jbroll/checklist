@@ -21,6 +21,8 @@ interface AvailableZoneRendererProps {
   onBatchToggle: (itemIds: string[]) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
+  selectedItemId?: string | null;
+  onSelectItem?: (itemId: string | null) => void;
 }
 
 export function AvailableZoneRenderer({
@@ -38,7 +40,10 @@ export function AvailableZoneRenderer({
   onBatchToggle,
   showDeleteIcon = false,
   onDeleteItem,
+  selectedItemId = null,
+  onSelectItem,
 }: AvailableZoneRendererProps) {
+  console.log('[AvailableZoneRenderer] selectedItemId:', selectedItemId, 'hasOnSelectItem:', !!onSelectItem);
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
   // Build tree from ALL template items, not just availableItems
@@ -89,6 +94,8 @@ export function AvailableZoneRenderer({
             onToggleChecked={onToggleChecked}
             showDeleteIcon={showDeleteIcon}
             onDeleteItem={onDeleteItem}
+            isSelected={selectedItemId === item.id}
+            onSelectItem={onSelectItem}
           />
         );
       }
