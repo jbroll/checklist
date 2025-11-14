@@ -36,7 +36,14 @@ export function SessionView({
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Debug logging
-  console.log('[SessionView] Simplified mode:', simplifiedUI, 'showAddForm:', showAddForm, 'selectedItemId:', selectedItemId);
+  console.log(
+    '[SessionView] Simplified mode:',
+    simplifiedUI,
+    'showAddForm:',
+    showAddForm,
+    'selectedItemId:',
+    selectedItemId,
+  );
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
@@ -83,7 +90,12 @@ export function SessionView({
         'Diff:',
         heightDiff,
       );
-      console.log('[Restore] Current scrollTop:', scrollContainerRef.current.scrollTop, 'Saved:', scrollTop);
+      console.log(
+        '[Restore] Current scrollTop:',
+        scrollContainerRef.current.scrollTop,
+        'Saved:',
+        scrollTop,
+      );
 
       if (heightDiff !== 0) {
         // Adjust scroll to compensate for height change
@@ -247,10 +259,23 @@ export function SessionView({
     let newItemId: string;
     if (type === 'item') {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      newItemId = templateService.createItem(me, template.$jazz.id, name, parentPath, '', sortOrder);
+      newItemId = templateService.createItem(
+        me,
+        template.$jazz.id,
+        name,
+        parentPath,
+        '',
+        sortOrder,
+      );
     } else {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      newItemId = templateService.createCategory(me, template.$jazz.id, name, parentPath, sortOrder);
+      newItemId = templateService.createCategory(
+        me,
+        template.$jazz.id,
+        name,
+        parentPath,
+        sortOrder,
+      );
     }
 
     console.log('[SessionView] Created item:', newItemId);

@@ -56,7 +56,14 @@ export function SessionZone({
   isSelected = false,
   onSelectItem,
 }: SessionZoneProps) {
-  console.log('[SessionZone] Category:', title, 'isSelected:', isSelected, 'hasOnSelectItem:', !!onSelectItem);
+  console.log(
+    '[SessionZone] Category:',
+    title,
+    'isSelected:',
+    isSelected,
+    'hasOnSelectItem:',
+    !!onSelectItem,
+  );
   // Determine background class based on zone type - only for top-level available zone
   const bgClass = zone === 'available' && isTopLevelZone ? 'bg-blue-50 rounded-md' : '';
   // Remove padding - let parent control all padding
@@ -214,11 +221,7 @@ export function SessionZone({
       >
         <div
           className={`flex items-center gap-2 w-full rounded ${
-            isSelected
-              ? 'bg-neutral-200'
-              : onSelectItem
-                ? 'hover:bg-neutral-100'
-                : ''
+            isSelected ? 'bg-neutral-200' : onSelectItem ? 'hover:bg-neutral-100' : ''
           } ${onSelectItem ? 'cursor-pointer' : ''}`}
           onClick={onSelectItem ? handleCategoryClick : undefined}
         >
