@@ -52,18 +52,18 @@ export function DraggableCategory({
 
   return (
     <div className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''}`}>
-      {/* Drag handle */}
+      {/* Drag handle icon - visible indicator */}
+      <div className="text-neutral-400 hover:text-neutral-600 shrink-0 mt-2">
+        <GripVertical className="h-4 w-4" />
+      </div>
+
+      {/* Draggable wrapper for SessionZone */}
       <div
         ref={setDragRef}
         {...dragAttributes}
         {...dragListeners}
-        className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 shrink-0 mt-2"
+        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing"
       >
-        <GripVertical className="h-4 w-4" />
-      </div>
-
-      {/* SessionZone */}
-      <div className="flex-1 min-w-0">
         <SessionZone
           title={item.name}
           zone="available"
