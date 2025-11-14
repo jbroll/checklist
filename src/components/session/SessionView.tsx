@@ -247,7 +247,7 @@ export function SessionView({
     let newItemId: string;
     if (type === 'item') {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      newItemId = templateService.createItem(me, template.$jazz.id, name, parentPath, '1', sortOrder);
+      newItemId = templateService.createItem(me, template.$jazz.id, name, parentPath, '', sortOrder);
     } else {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
       newItemId = templateService.createCategory(me, template.$jazz.id, name, parentPath, sortOrder);
