@@ -57,46 +57,49 @@ export function DraggableCategory({
   });
 
   return (
-    <div
-      ref={setDropRef}
-      className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''} ${
-        isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
-      }`}
-    >
+    <div className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''}`}>
       {/* Drag handle icon - visible indicator */}
       <div className="text-neutral-400 hover:text-neutral-600 shrink-0 mt-2">
         <GripVertical className="h-4 w-4" />
       </div>
 
-      {/* Draggable wrapper for SessionZone */}
-      <div
-        ref={setDragRef}
-        {...dragAttributes}
-        {...dragListeners}
-        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing"
-      >
-        <SessionZone
-          title={item.name}
-          zone="available"
-          items={[]}
-          itemStates={itemStates}
-          expanded={categoryExpanded[`available-${item.path}`] ?? true}
-          onToggleExpand={() => onToggleCategoryExpanded(`available-${item.path}`)}
-          onToggleSelected={onToggleSelected}
-          onToggleChecked={onToggleChecked}
-          onBatchSelectAll={onBatchSelectAll}
-          onBatchDeselectAll={onBatchDeselectAll}
-          onBatchToggle={onBatchToggle}
-          count={categoryNode.children.length}
-          category={categoryNode}
-          showDeleteIcon={showDeleteIcon}
-          onDeleteItem={onDeleteItem}
-          categoryItem={item}
-          isSelected={selectedItemId === item.id}
-          onSelectItem={onSelectItem}
+      <div className="flex-1 min-w-0">
+        {/* Category header - draggable and droppable (header only, not children) */}
+        <div
+          ref={(node) => {
+            setDragRef(node);
+            setDropRef(node);
+          }}
+          {...dragAttributes}
+          {...dragListeners}
+          className={`cursor-grab active:cursor-grabbing ${
+            isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
+          }`}
         >
-          {children}
-        </SessionZone>
+          <SessionZone
+            title={item.name}
+            zone="available"
+            items={[]}
+            itemStates={itemStates}
+            expanded={categoryExpanded[`available-${item.path}`] ?? true}
+            onToggleExpand={() => onToggleCategoryExpanded(`available-${item.path}`)}
+            onToggleSelected={onToggleSelected}
+            onToggleChecked={onToggleChecked}
+            onBatchSelectAll={onBatchSelectAll}
+            onBatchDeselectAll={onBatchDeselectAll}
+            onBatchToggle={onBatchToggle}
+            count={categoryNode.children.length}
+            category={categoryNode}
+            showDeleteIcon={showDeleteIcon}
+            onDeleteItem={onDeleteItem}
+            categoryItem={item}
+            isSelected={selectedItemId === item.id}
+            onSelectItem={onSelectItem}
+          />
+        </div>
+
+        {/* Category children - rendered outside drop zone, respecting expand state */}
+        {(categoryExpanded[`available-${item.path}`] ?? true) && children}
       </div>
     </div>
   );
