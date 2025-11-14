@@ -25,6 +25,12 @@ export function SimplifiedZoneView({
   onDelete,
   onSelectItem,
 }: SimplifiedZoneViewProps) {
+  console.log('[SimplifiedZoneView] Props:', {
+    showTrash,
+    selectedItemId,
+    hasOnSelectItem: !!onSelectItem,
+  });
+
   // Get all non-archived items
   const items = template.items?.filter((item) => !item.archived) || [];
 
@@ -53,6 +59,13 @@ export function SimplifiedZoneView({
     showTrashForZone: boolean,
     enableSelection: boolean,
   ) => {
+    console.log('[SimplifiedZoneView] renderZone:', {
+      title,
+      itemCount: items.length,
+      showTrashForZone,
+      enableSelection,
+    });
+
     if (items.length === 0) {
       return null;
     }
@@ -67,6 +80,14 @@ export function SimplifiedZoneView({
             const state = session.itemStates?.[item.id];
             const checked = state?.checked || false;
             const isSelected = enableSelection && selectedItemId === item.id;
+
+            console.log('[SimplifiedZoneView] Rendering row:', {
+              itemName: item.name,
+              isSelected,
+              enableSelection,
+              selectedItemId,
+              itemId: item.id,
+            });
 
             return (
               <SimplifiedSessionItemRow
