@@ -28,18 +28,37 @@ export function SimplifiedSessionItemRow({
 }: SimplifiedSessionItemRowProps) {
   const isCategory = item.type === 'category';
 
+  // Debug logging
+  console.log('[SimplifiedSessionItemRow]', {
+    itemName: item.name,
+    itemId: item.id,
+    isSelected,
+    hasOnSelect: !!onSelect,
+  });
+
   const handleRowClick = (e: React.MouseEvent) => {
+    console.log('[SimplifiedSessionItemRow] Row clicked:', {
+      itemName: item.name,
+      itemId: item.id,
+      hasOnSelect: !!onSelect,
+    });
+
     // Don't trigger selection if clicking on checkbox or trash button
     if (
       (e.target as HTMLElement).closest('input[type="checkbox"]') ||
       (e.target as HTMLElement).closest('button')
     ) {
+      console.log('[SimplifiedSessionItemRow] Click ignored (checkbox or button)');
       return;
     }
 
     if (onSelect) {
+      const newValue = isSelected ? null : item.id;
+      console.log('[SimplifiedSessionItemRow] Calling onSelect with:', newValue);
       // Toggle selection: if already selected, deselect; otherwise select
-      onSelect(isSelected ? null : item.id);
+      onSelect(newValue);
+    } else {
+      console.log('[SimplifiedSessionItemRow] onSelect is not defined');
     }
   };
 

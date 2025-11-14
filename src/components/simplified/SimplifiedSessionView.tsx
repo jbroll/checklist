@@ -26,6 +26,13 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
+  // Debug logging for selection
+  console.log('[SimplifiedSessionView] State:', {
+    showAddForm,
+    selectedItemId,
+    viewMode,
+  });
+
   // Get or create current session
   const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account, template);
   const session = template.sessions?.find((s) => s?.$jazz.id === sessionId);
@@ -58,11 +65,19 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
   };
 
   const handleAddItem = (name: string, type: 'item' | 'category') => {
+    console.log('[SimplifiedSessionView] handleAddItem called:', {
+      name,
+      type,
+      currentSelectedItemId: selectedItemId,
+    });
+
     // Calculate insertion point based on selected item
     const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
       template,
       selectedItemId,
     );
+
+    console.log('[SimplifiedSessionView] Insertion point:', { parentPath, sortOrder });
 
     // Create new template item at calculated position using service layer
     let newItemId: string;
@@ -85,10 +100,13 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
       );
     }
 
+    console.log('[SimplifiedSessionView] Created new item:', newItemId);
+
     // Update session counts to include the new item
     sessionService.updateSessionCounts(account, template.$jazz.id, sessionId);
 
     // Set the newly created item as selected for consecutive insertion
+    console.log('[SimplifiedSessionView] Setting new item as selected:', newItemId);
     setSelectedItemId(newItemId);
 
     // Keep form open for rapid entry
