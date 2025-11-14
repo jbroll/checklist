@@ -33,6 +33,10 @@ export function SessionView({
     checked: false,
   });
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // Debug logging
+  console.log('[SessionView] Simplified mode:', simplifiedUI, 'showAddForm:', showAddForm, 'selectedItemId:', selectedItemId);
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
@@ -229,18 +233,35 @@ export function SessionView({
   const handleAddItem = (name: string, type: 'item' | 'category') => {
     if (!me) return;
 
-    // Create new template item at root level using service layer
+    console.log('[SessionView] handleAddItem:', { name, type, selectedItemId });
+
+    // Calculate insertion point based on selected item (for simplified mode)
+    const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
+      template,
+      selectedItemId,
+    );
+
+    console.log('[SessionView] Insertion point:', { parentPath, sortOrder });
+
+    // Create new template item at calculated position using service layer
+    let newItemId: string;
     if (type === 'item') {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      templateService.createItem(me, template.$jazz.id, name, undefined, '1');
+      newItemId = templateService.createItem(me, template.$jazz.id, name, parentPath, '1', sortOrder);
     } else {
       // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      templateService.createCategory(me, template.$jazz.id, name, undefined);
+      newItemId = templateService.createCategory(me, template.$jazz.id, name, parentPath, sortOrder);
     }
+
+    console.log('[SessionView] Created item:', newItemId);
 
     // Update session counts to include the new item
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
+
+    // Set newly created item as selected for consecutive insertion
+    setSelectedItemId(newItemId);
+    console.log('[SessionView] Set selected item to:', newItemId);
 
     // Keep form open for rapid entry
   };
@@ -343,6 +364,8 @@ export function SessionView({
                 onBatchToggle={handleBatchToggle}
                 showDeleteIcon={simplifiedUI && showAddForm}
                 onDeleteItem={handleDeleteItem}
+                selectedItemId={simplifiedUI && showAddForm ? selectedItemId : null}
+                onSelectItem={simplifiedUI && showAddForm ? setSelectedItemId : undefined}
               />
             </div>
           </div>
