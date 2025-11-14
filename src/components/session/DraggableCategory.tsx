@@ -1,4 +1,4 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { GripVertical } from 'lucide-react';
 import type { ItemState, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -50,8 +50,19 @@ export function DraggableCategory({
     data: { item },
   });
 
+  // Droppable setup - categories can accept drops
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `drop-${item.id}`,
+    data: { isCategory: true, path: item.path, item },
+  });
+
   return (
-    <div className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''}`}>
+    <div
+      ref={setDropRef}
+      className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''} ${
+        isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
+      }`}
+    >
       {/* Drag handle icon - visible indicator */}
       <div className="text-neutral-400 hover:text-neutral-600 shrink-0 mt-2">
         <GripVertical className="h-4 w-4" />
