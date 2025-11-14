@@ -211,7 +211,17 @@ export function AvailableZoneRenderer({
         return;
       }
 
-      // Move item to end of category (no specific sortOrder, will be appended)
+      // Insert at the start of the category
+      // Get items in target category and find first item's sortOrder
+      const categoryItems = activeItems.filter(
+        (item) => getParentPath(item.path) === newParentPath,
+      );
+      categoryItems.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Calculate sortOrder to insert before first item (at start of category)
+      const firstItemSortOrder = categoryItems.length > 0 ? categoryItems[0].sortOrder : undefined;
+      const newSortOrder = calculateMidpointSortOrder(undefined, firstItemSortOrder);
+
       try {
         templateService.moveItem(
           // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
@@ -219,7 +229,7 @@ export function AvailableZoneRenderer({
           template.$jazz.id,
           draggedItem.id,
           newParentPath,
-          undefined, // Let service assign a sortOrder
+          newSortOrder,
         );
       } catch {
         // Silently ignore errors
