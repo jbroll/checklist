@@ -209,6 +209,18 @@ export function SessionZone({
     }
   };
 
+  const handleCategoryKeyDown = (e: React.KeyboardEvent) => {
+    // Support Enter and Space keys
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (onSelectItem && categoryItem) {
+        const newValue = isSelected ? null : categoryItem.id;
+        console.log('[SessionZone] Keyboard selection with:', newValue);
+        onSelectItem(newValue);
+      }
+    }
+  };
+
   // Normal mode with collapsible header
   return (
     <div className={`${bgClass} ${paddingClass}`}>
@@ -223,7 +235,12 @@ export function SessionZone({
           className={`flex items-center gap-2 w-full rounded ${
             isSelected ? 'bg-neutral-200' : onSelectItem ? 'hover:bg-neutral-100' : ''
           } ${onSelectItem ? 'cursor-pointer' : ''}`}
-          onClick={onSelectItem ? handleCategoryClick : undefined}
+          {...(onSelectItem && {
+            onClick: handleCategoryClick,
+            onKeyDown: handleCategoryKeyDown,
+            role: 'button' as const,
+            tabIndex: 0,
+          })}
         >
           {Icon && <Icon className="h-4 w-4" />}
           <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>

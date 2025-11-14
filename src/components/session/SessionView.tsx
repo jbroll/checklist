@@ -256,11 +256,12 @@ export function SessionView({
     console.log('[SessionView] Insertion point:', { parentPath, sortOrder });
 
     // Create new template item at calculated position using service layer
+    // Type assertion needed because Jazz account.root can be null during migration, but is guaranteed here
     let newItemId: string;
     if (type === 'item') {
-      // @ts-expect-error Jazz TypeScript inference issue with Account root type
       newItemId = templateService.createItem(
-        me,
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x Account.root nullable during migration
+        me as any,
         template.$jazz.id,
         name,
         parentPath,
@@ -268,9 +269,9 @@ export function SessionView({
         sortOrder,
       );
     } else {
-      // @ts-expect-error Jazz TypeScript inference issue with Account root type
       newItemId = templateService.createCategory(
-        me,
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x Account.root nullable during migration
+        me as any,
         template.$jazz.id,
         name,
         parentPath,

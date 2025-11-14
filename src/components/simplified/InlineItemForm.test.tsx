@@ -69,7 +69,8 @@ describe('InlineItemForm', () => {
     fireEvent.change(input, { target: { value: 'Cheese' } });
 
     // Submit form
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Cheese', 'item');
   });
@@ -87,7 +88,8 @@ describe('InlineItemForm', () => {
     fireEvent.change(input, { target: { value: 'Dairy' } });
 
     // Submit form
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Dairy', 'category');
   });
@@ -102,7 +104,8 @@ describe('InlineItemForm', () => {
     expect(input.value).toBe('Cheese');
 
     // Submit form
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     // Input should be cleared
     expect(input.value).toBe('');
@@ -115,7 +118,8 @@ describe('InlineItemForm', () => {
 
     // Enter and submit
     fireEvent.change(input, { target: { value: 'Cheese' } });
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     // Input should still have focus
     await waitFor(() => {
@@ -129,7 +133,8 @@ describe('InlineItemForm', () => {
     const input = screen.getByPlaceholderText(/enter item or category name/i);
 
     // Submit with empty input
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
@@ -141,7 +146,8 @@ describe('InlineItemForm', () => {
 
     // Enter only whitespace
     fireEvent.change(input, { target: { value: '   ' } });
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
@@ -153,7 +159,8 @@ describe('InlineItemForm', () => {
 
     // Enter name with leading/trailing whitespace
     fireEvent.change(input, { target: { value: '  Cheese  ' } });
-    fireEvent.submit(input.closest('form')!);
+    const form = input.closest('form');
+    if (form) fireEvent.submit(form);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Cheese', 'item');
   });
@@ -209,13 +216,15 @@ describe('InlineItemForm', () => {
 
     // First submission
     fireEvent.change(input, { target: { value: 'Item 1' } });
-    fireEvent.submit(input.closest('form')!);
+    const form1 = input.closest('form');
+    if (form1) fireEvent.submit(form1);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Item 1', 'item');
 
     // Second submission
     fireEvent.change(input, { target: { value: 'Item 2' } });
-    fireEvent.submit(input.closest('form')!);
+    const form2 = input.closest('form');
+    if (form2) fireEvent.submit(form2);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Item 2', 'item');
     expect(mockOnSubmit).toHaveBeenCalledTimes(2);
@@ -232,7 +241,8 @@ describe('InlineItemForm', () => {
 
     // First submission
     fireEvent.change(input, { target: { value: 'Category 1' } });
-    fireEvent.submit(input.closest('form')!);
+    const form1 = input.closest('form');
+    if (form1) fireEvent.submit(form1);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Category 1', 'category');
 
@@ -241,7 +251,8 @@ describe('InlineItemForm', () => {
 
     // Second submission
     fireEvent.change(input, { target: { value: 'Category 2' } });
-    fireEvent.submit(input.closest('form')!);
+    const form2 = input.closest('form');
+    if (form2) fireEvent.submit(form2);
 
     expect(mockOnSubmit).toHaveBeenCalledWith('Category 2', 'category');
   });
