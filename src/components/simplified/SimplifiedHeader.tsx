@@ -38,6 +38,11 @@ export function SimplifiedHeader({
           <div>
             <h1 className="text-3xl font-bold text-neutral-900">{templateName}</h1>
             <p className="text-sm text-neutral-500">Session: {sessionDate}</p>
+            {showAddForm && (
+              <p className="text-xs font-semibold text-green-600 mt-1">
+                ✓ Click any item to choose insertion point
+              </p>
+            )}
           </div>
         </div>
 
