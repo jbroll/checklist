@@ -116,7 +116,7 @@ export function SimplifiedSessionView({ account, template, onBack }: SimplifiedS
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
+    <div className={`min-h-screen p-6 ${showAddForm ? 'bg-green-50' : 'bg-neutral-50'}`}>
       <main id="main-content" className="mx-auto max-w-4xl">
         <div className="rounded-lg border border-neutral-200 bg-white">
           <SimplifiedHeader
