@@ -55,8 +55,15 @@ export function SimplifiedSessionItemRow({
 
   return (
     <div
-      className={`flex items-center gap-3 py-2 px-3 transition-colors group ${isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-neutral-50'} ${onSelect ? 'cursor-pointer' : ''}`}
-      style={{ paddingLeft: `${level * 1.5 + 0.75}rem` }}
+      className={`flex items-center gap-3 py-2 transition-colors group ${
+        isSelected
+          ? 'bg-green-50 border-l-4 border-l-green-600'
+          : 'hover:bg-neutral-50 border-l-4 border-l-transparent'
+      } ${onSelect ? 'cursor-pointer' : ''}`}
+      style={{
+        paddingLeft: `${level * 1.5 + (isSelected ? 0.5 : 0.75)}rem`,
+        paddingRight: '0.75rem',
+      }}
       {...(onSelect && {
         onClick: handleRowClick,
         onKeyDown: handleKeyDown,
