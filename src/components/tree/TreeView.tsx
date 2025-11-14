@@ -230,9 +230,10 @@ export function TreeView({
       if (!draggedEntry) return;
 
       const draggedPathParts = draggedEntry.path.split(PATH_SEPARATOR);
-      const currentParentPath = draggedPathParts.length > 1
-        ? draggedPathParts.slice(0, -1).join(PATH_SEPARATOR)
-        : undefined;
+      const currentParentPath =
+        draggedPathParts.length > 1
+          ? draggedPathParts.slice(0, -1).join(PATH_SEPARATOR)
+          : undefined;
 
       // Only allow reordering within the same parent
       if (currentParentPath !== targetParentPath) {
@@ -252,7 +253,8 @@ export function TreeView({
         // Find first sibling with same parent
         const firstSiblingIndex = directory.findIndex((e) => {
           const eParts = e.path.split(PATH_SEPARATOR);
-          const eParentPath = eParts.length > 1 ? eParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
+          const eParentPath =
+            eParts.length > 1 ? eParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
           return eParentPath === targetParentPath;
         });
         newIndex = firstSiblingIndex >= 0 ? firstSiblingIndex : 0;
@@ -381,7 +383,8 @@ export function TreeView({
             {children.map((childNode, childIndex) => {
               // Get parent path from the child's path
               const pathParts = childNode.entry.path.split(PATH_SEPARATOR);
-              const parentPath = pathParts.length > 1 ? pathParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
+              const parentPath =
+                pathParts.length > 1 ? pathParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
 
               return (
                 <div key={childNode.entry.id}>
