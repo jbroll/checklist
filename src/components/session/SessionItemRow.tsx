@@ -28,7 +28,14 @@ export const SessionItemRow = memo(function SessionItemRow({
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
 
-  console.log('[SessionItemRow]', item.name, 'isInsertionPointSelected:', isInsertionPointSelected, 'hasOnSelectItem:', !!onSelectItem);
+  console.log(
+    '[SessionItemRow]',
+    item.name,
+    'isInsertionPointSelected:',
+    isInsertionPointSelected,
+    'hasOnSelectItem:',
+    !!onSelectItem,
+  );
 
   if (!me) return null;
 
@@ -59,9 +66,7 @@ export const SessionItemRow = memo(function SessionItemRow({
 
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger selection if clicking on checkbox or delete button
-    if (
-      (e.target as HTMLElement).closest('button')
-    ) {
+    if ((e.target as HTMLElement).closest('button')) {
       console.log('[SessionItemRow] Click ignored (button)');
       return;
     }
@@ -79,9 +84,7 @@ export const SessionItemRow = memo(function SessionItemRow({
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 ${
-        isInsertionPointSelected
-          ? 'bg-neutral-200'
-          : 'hover:bg-neutral-100'
+        isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
       } ${onSelectItem ? 'cursor-pointer' : ''}`}
       {...(onSelectItem && {
         onClick: handleRowClick,
