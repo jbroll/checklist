@@ -18,6 +18,7 @@ import { buildItemTree, type ItemTreeNode } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 import type { CategoryNode } from './categoryTreeBuilder';
+import { DraggableCategory } from './DraggableCategory';
 import { SessionItemRow } from './SessionItemRow';
 import { SessionZone } from './SessionZone';
 
@@ -155,8 +156,8 @@ export function AvailableZoneRenderer({
       if (targetParentPath !== currentParentPath) {
         // Move and reorder in a single operation
         try {
-          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
           templateService.moveItem(
+            // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
             me as any,
             template.$jazz.id,
             draggedItem.id,
@@ -169,8 +170,13 @@ export function AvailableZoneRenderer({
       } else {
         // Just reordering within the same parent
         try {
-          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-          templateService.reorderItem(me as any, template.$jazz.id, draggedItem.id, newSortOrder);
+          templateService.reorderItem(
+            // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+            me as any,
+            template.$jazz.id,
+            draggedItem.id,
+            newSortOrder,
+          );
         } catch {
           // Silently ignore errors
         }
@@ -218,38 +224,30 @@ export function AvailableZoneRenderer({
                 />
               )}
 
-              {/* Categories - render as SessionZone with children */}
+              {/* Categories - render as DraggableCategory with children */}
               {item.type === 'category' && (
-                <div className="flex flex-col">
-                  <div className="flex items-center">
-                    <SessionZone
-                      title={item.name}
-                      zone={zone}
-                      items={[]}
-                      itemStates={session?.itemStates || {}}
-                      expanded={categoryExpanded[`available-${item.path}`] ?? true}
-                      onToggleExpand={() => onToggleCategoryExpanded(`available-${item.path}`)}
-                      onToggleSelected={onToggleSelected}
-                      onToggleChecked={onToggleChecked}
-                      onBatchSelectAll={onBatchSelectAll}
-                      onBatchDeselectAll={onBatchDeselectAll}
-                      onBatchToggle={onBatchToggle}
-                      count={node.children.length}
-                      category={toCategoryNode(node)}
-                      showDeleteIcon={showDeleteIcon}
-                      onDeleteItem={onDeleteItem}
-                      categoryItem={item}
-                      isSelected={selectedItemId === item.id}
-                      onSelectItem={onSelectItem}
-                    >
-                      {hasChildren && (
-                        <div className="flex flex-col pl-4">
-                          {renderItemTree(node.children, zone, item.path)}
-                        </div>
-                      )}
-                    </SessionZone>
-                  </div>
-                </div>
+                <DraggableCategory
+                  item={item}
+                  categoryNode={toCategoryNode(node)}
+                  categoryExpanded={categoryExpanded}
+                  onToggleCategoryExpanded={onToggleCategoryExpanded}
+                  onToggleSelected={onToggleSelected}
+                  onToggleChecked={onToggleChecked}
+                  onBatchSelectAll={onBatchSelectAll}
+                  onBatchDeselectAll={onBatchDeselectAll}
+                  onBatchToggle={onBatchToggle}
+                  showDeleteIcon={showDeleteIcon}
+                  onDeleteItem={onDeleteItem}
+                  selectedItemId={selectedItemId}
+                  onSelectItem={onSelectItem}
+                  itemStates={session?.itemStates || {}}
+                >
+                  {hasChildren && (
+                    <div className="flex flex-col pl-4">
+                      {renderItemTree(node.children, zone, item.path)}
+                    </div>
+                  )}
+                </DraggableCategory>
               )}
 
               {/* Drop zone after last item */}
