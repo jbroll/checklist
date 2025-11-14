@@ -133,7 +133,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
 
   const handleUseTemplate = () => {
     if (!selectedTemplateId) return;
-    // Navigation to SimplifiedSessionView happens automatically when selectedTemplateId is set
+    // Navigation to SessionView happens automatically when selectedTemplateId is set
     // Template is already selected, so this just confirms the action
   };
 

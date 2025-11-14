@@ -80,7 +80,7 @@ export const SessionItemRow = memo(function SessionItemRow({
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 ${
         isInsertionPointSelected
-          ? 'bg-green-100 ring-2 ring-green-500 ring-inset'
+          ? 'bg-neutral-200'
           : 'hover:bg-neutral-100'
       } ${onSelectItem ? 'cursor-pointer' : ''}`}
       {...(onSelectItem && {

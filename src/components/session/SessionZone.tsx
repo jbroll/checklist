@@ -213,17 +213,17 @@ export function SessionZone({
         hasChildren={items.length > 0 || !!children}
       >
         <div
-          className={`flex items-center gap-2 w-full ${
+          className={`flex items-center gap-2 w-full rounded ${
             isSelected
-              ? 'bg-green-100 ring-2 ring-green-500 ring-inset rounded'
-              : ''
+              ? 'bg-neutral-200'
+              : onSelectItem
+                ? 'hover:bg-neutral-100'
+                : ''
           } ${onSelectItem ? 'cursor-pointer' : ''}`}
           onClick={onSelectItem ? handleCategoryClick : undefined}
         >
           {Icon && <Icon className="h-4 w-4" />}
-          <span className={`flex-1 text-sm font-semibold text-left ${
-            isSelected ? 'text-green-800' : 'text-neutral-900'
-          }`}>{title}</span>
+          <span className="flex-1 text-sm font-semibold text-neutral-900 text-left">{title}</span>
           {count !== undefined && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
               {count}
