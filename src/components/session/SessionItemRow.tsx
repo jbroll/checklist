@@ -1,4 +1,6 @@
+import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
+import { GripVertical } from 'lucide-react';
 import { memo } from 'react';
 import { useAccount } from '@/lib/jazz';
 import type { Account, ItemState, TemplateItem } from '@/schemas';
@@ -13,6 +15,7 @@ interface SessionItemRowProps {
   onDeleteItem?: (itemId: string) => void;
   isSelected?: boolean; // For insertion point selection
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
+  enableDrag?: boolean; // Enable drag and drop in available zone
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -25,8 +28,21 @@ export const SessionItemRow = memo(function SessionItemRow({
   onDeleteItem,
   isSelected: isInsertionPointSelected = false,
   onSelectItem,
+  enableDrag = false,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
+
+  // Draggable setup - only in available zone when enabled
+  const {
+    attributes: dragAttributes,
+    listeners: dragListeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: item.id,
+    data: { item },
+    disabled: !enableDrag,
+  });
 
   console.log(
     '[SessionItemRow]',
@@ -85,13 +101,25 @@ export const SessionItemRow = memo(function SessionItemRow({
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 ${
         isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
-      } ${onSelectItem ? 'cursor-pointer' : ''}`}
+      } ${onSelectItem ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50' : ''}`}
       {...(onSelectItem && {
         onClick: handleRowClick,
         role: 'button',
         tabIndex: 0,
       })}
     >
+      {/* Drag handle - Only visible when drag is enabled */}
+      {enableDrag && (
+        <div
+          ref={setDragRef}
+          {...dragAttributes}
+          {...dragListeners}
+          className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 shrink-0"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+      )}
+
       {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
       <button
         type="button"
