@@ -128,6 +128,18 @@ export function AvailableZoneRenderer({
       const currentParentPath = getParentPath(draggedItem.path);
       const targetParentPath = overData.parentPath as string | undefined;
 
+      // Prevent moving a category into itself or its descendants
+      if (draggedItem.type === 'category') {
+        // Check if target is inside the dragged category
+        if (targetParentPath?.startsWith(draggedItem.path)) {
+          return;
+        }
+        // Check if target IS the dragged category
+        if (targetParentPath === draggedItem.path) {
+          return;
+        }
+      }
+
       // Get siblings at the target level
       const siblings = activeItems.filter((item) => getParentPath(item.path) === targetParentPath);
       siblings.sort((a, b) => a.sortOrder - b.sortOrder);
