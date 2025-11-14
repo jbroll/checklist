@@ -129,6 +129,12 @@ describe('SimplifiedSessionView', () => {
 
     // Mock getOrCreateCurrentSession to return our session ID
     vi.mocked(simplifiedSessionService.getOrCreateCurrentSession).mockReturnValue('session-1');
+
+    // Mock calculateInsertionPoint to return default insertion at root
+    vi.mocked(templateService.calculateInsertionPoint).mockReturnValue({
+      parentPath: undefined,
+      sortOrder: 0,
+    });
   });
 
   it('should render session header with template name', () => {
@@ -273,6 +279,7 @@ describe('SimplifiedSessionView', () => {
       'Cheese',
       undefined,
       '1',
+      0,
     );
 
     // Should update session counts

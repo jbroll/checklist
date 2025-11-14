@@ -6,8 +6,10 @@ interface SimplifiedFlatViewProps {
   template: InstanceOfSchema<typeof Template>;
   session: InstanceOfSchema<typeof Session>;
   showTrash: boolean;
+  selectedItemId: string | null;
   onCheckToggle: (itemId: string) => void;
   onDelete: (itemId: string) => void;
+  onSelectItem: (itemId: string | null) => void;
 }
 
 /**
@@ -18,8 +20,10 @@ export function SimplifiedFlatView({
   template,
   session,
   showTrash,
+  selectedItemId,
   onCheckToggle,
   onDelete,
+  onSelectItem,
 }: SimplifiedFlatViewProps) {
   // Get all non-archived items in their original order
   const items = template.items?.filter((item) => !item.archived) || [];
@@ -43,6 +47,7 @@ export function SimplifiedFlatView({
       {sortedItems.map((item) => {
         const state = session.itemStates?.[item.id];
         const checked = state?.checked || false;
+        const isSelected = showTrash && selectedItemId === item.id;
 
         // Calculate nesting level from path (count separators)
         // biome-ignore lint/suspicious/noControlCharactersInRegex: \x01 is the path separator used in schemas
@@ -54,8 +59,10 @@ export function SimplifiedFlatView({
             item={item}
             checked={checked}
             showTrash={showTrash}
+            isSelected={isSelected}
             onCheckToggle={onCheckToggle}
             onDelete={onDelete}
+            onSelect={showTrash ? onSelectItem : undefined}
             level={level}
           />
         );
