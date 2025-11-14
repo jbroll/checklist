@@ -181,6 +181,37 @@ export function AvailableZoneRenderer({
           // Silently ignore errors
         }
       }
+      return;
+    }
+
+    // Handle drops on categories (move item into category)
+    if (overData?.isCategory) {
+      const newParentPath = overData.path as string;
+      const currentParentPath = getParentPath(draggedItem.path);
+
+      // Don't move if already in this category
+      if (newParentPath === currentParentPath) {
+        return;
+      }
+
+      // Prevent moving a category into itself or its descendants
+      if (draggedItem.type === 'category' && newParentPath?.startsWith(draggedItem.path)) {
+        return;
+      }
+
+      // Move item to end of category (no specific sortOrder, will be appended)
+      try {
+        templateService.moveItem(
+          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+          me as any,
+          template.$jazz.id,
+          draggedItem.id,
+          newParentPath,
+          undefined, // Let service assign a sortOrder
+        );
+      } catch {
+        // Silently ignore errors
+      }
     }
   };
 
