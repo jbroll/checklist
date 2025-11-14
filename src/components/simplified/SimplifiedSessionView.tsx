@@ -9,6 +9,9 @@ import { SimplifiedFlatView } from './SimplifiedFlatView';
 import { SimplifiedHeader } from './SimplifiedHeader';
 import { SimplifiedZoneView } from './SimplifiedZoneView';
 
+// Module loaded - this should show immediately
+console.log('🚀 SimplifiedSessionView module loaded - selection tracking is active!');
+
 interface SimplifiedSessionViewProps {
   account: InstanceOfSchema<typeof Account>;
   template: InstanceOfSchema<typeof Template>;
