@@ -5,8 +5,10 @@ interface SimplifiedSessionItemRowProps {
   item: TemplateItem;
   checked: boolean;
   showTrash: boolean;
+  isSelected?: boolean;
   onCheckToggle: (itemId: string) => void;
   onDelete: (itemId: string) => void;
+  onSelect?: (itemId: string | null) => void;
   level?: number;
 }
 
@@ -18,16 +20,49 @@ export function SimplifiedSessionItemRow({
   item,
   checked,
   showTrash,
+  isSelected = false,
   onCheckToggle,
   onDelete,
+  onSelect,
   level = 0,
 }: SimplifiedSessionItemRowProps) {
   const isCategory = item.type === 'category';
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't trigger selection if clicking on checkbox or trash button
+    if (
+      (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+      (e.target as HTMLElement).closest('button')
+    ) {
+      return;
+    }
+
+    if (onSelect) {
+      // Toggle selection: if already selected, deselect; otherwise select
+      onSelect(isSelected ? null : item.id);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle Enter and Space keys for accessibility
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (onSelect) {
+        onSelect(isSelected ? null : item.id);
+      }
+    }
+  };
+
   return (
     <div
-      className="flex items-center gap-3 py-2 px-3 hover:bg-neutral-50 transition-colors group"
+      className={`flex items-center gap-3 py-2 px-3 transition-colors group ${isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-neutral-50'} ${onSelect ? 'cursor-pointer' : ''}`}
       style={{ paddingLeft: `${level * 1.5 + 0.75}rem` }}
+      {...(onSelect && {
+        onClick: handleRowClick,
+        onKeyDown: handleKeyDown,
+        role: 'button',
+        tabIndex: 0,
+      })}
     >
       {/* Checkbox */}
       <input
