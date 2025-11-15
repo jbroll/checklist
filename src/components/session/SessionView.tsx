@@ -392,6 +392,7 @@ export function SessionView({
                 onDeleteItem={handleDeleteItem}
                 selectedItemId={simplifiedUI && showAddForm ? selectedItemId : null}
                 onSelectItem={simplifiedUI && showAddForm ? setSelectedItemId : undefined}
+                simplifiedUI={simplifiedUI && showAddForm}
               />
             </div>
           </div>

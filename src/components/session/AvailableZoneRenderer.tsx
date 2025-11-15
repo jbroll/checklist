@@ -39,6 +39,7 @@ interface AvailableZoneRendererProps {
   onDeleteItem?: (itemId: string) => void;
   selectedItemId?: string | null;
   onSelectItem?: (itemId: string | null) => void;
+  simplifiedUI?: boolean;
 }
 
 export function AvailableZoneRenderer({
@@ -58,6 +59,7 @@ export function AvailableZoneRenderer({
   onDeleteItem,
   selectedItemId = null,
   onSelectItem,
+  simplifiedUI = false,
 }: AvailableZoneRendererProps) {
   const { me } = useAccount<typeof Account>();
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
@@ -274,6 +276,8 @@ export function AvailableZoneRenderer({
                   isSelected={selectedItemId === item.id}
                   onSelectItem={onSelectItem}
                   enableDrag={true}
+                  template={template}
+                  simplifiedUI={simplifiedUI}
                 />
               )}
 
@@ -294,6 +298,8 @@ export function AvailableZoneRenderer({
                   selectedItemId={selectedItemId}
                   onSelectItem={onSelectItem}
                   itemStates={session?.itemStates || {}}
+                  template={template}
+                  simplifiedUI={simplifiedUI}
                 >
                   {hasChildren && (
                     <div className="flex flex-col pl-4">
@@ -355,6 +361,8 @@ export function AvailableZoneRenderer({
         category={topLevelCategory}
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
+        template={template}
+        simplifiedUI={simplifiedUI}
       >
         {renderItemTree(itemTree, 'available')}
       </SessionZone>
