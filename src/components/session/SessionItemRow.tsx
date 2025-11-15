@@ -1,9 +1,10 @@
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import { GripVertical } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
-import type { Account, ItemState, TemplateItem } from '@/schemas';
+import type { Account, ItemState, Template, TemplateItem } from '@/schemas';
+import * as templateService from '@/services/templateService';
 
 interface SessionItemRowProps {
   item: TemplateItem;
@@ -16,6 +17,8 @@ interface SessionItemRowProps {
   isSelected?: boolean; // For insertion point selection
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
   enableDrag?: boolean; // Enable drag and drop in available zone
+  template?: Template; // Template for inline editing
+  simplifiedUI?: boolean; // Enable inline editing only in simplified UI
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -29,8 +32,13 @@ export const SessionItemRow = memo(function SessionItemRow({
   isSelected: isInsertionPointSelected = false,
   onSelectItem,
   enableDrag = false,
+  template,
+  simplifiedUI = false,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Draggable setup - only in available zone when enabled
   const {
@@ -64,6 +72,64 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Determine which state the left checkbox controls based on zone
   const leftCheckboxControlsChecked = zone === 'selected' || zone === 'checked';
   const leftCheckboxChecked = leftCheckboxControlsChecked ? isChecked : isSelected;
+
+  // Inline editing handlers
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    // Only enable in simplified UI mode and when template is available
+    if (!simplifiedUI || !template) return;
+
+    // Don't trigger if clicking on buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+
+    setEditValue(item.name);
+    setIsEditing(true);
+    // Focus will be handled by useEffect
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const handleSaveEdit = () => {
+    if (!me || !template) return;
+
+    const trimmedValue = editValue.trim();
+
+    // Validate non-empty
+    if (!trimmedValue) {
+      // Cancel edit if empty
+      setIsEditing(false);
+      return;
+    }
+
+    // Only save if changed
+    if (trimmedValue !== item.name) {
+      try {
+        // @ts-expect-error Jazz TypeScript inference issue with Account root type
+        templateService.renameItem(me, template.$jazz.id, item.id, trimmedValue);
+      } catch (error) {
+        console.error('[SessionItemRow] Failed to rename item:', error);
+        // Could show error toast here
+      }
+    }
+
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditValue('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit();
+    }
+  };
 
   // Compute checkbox styles based on state
   const getCheckboxClassName = () => {
@@ -151,15 +217,27 @@ export const SessionItemRow = memo(function SessionItemRow({
         </button>
 
         {/* Item name */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
-              {item.name}
-            </span>
-            {item.defaultQuantity && (
-              <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
-            )}
-          </div>
+        <div className="flex-1" onDoubleClick={handleDoubleClick}>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSaveEdit}
+              className="w-full px-2 py-1 text-neutral-900 border-2 border-blue-400 rounded bg-blue-50 focus:outline-none focus:border-blue-500"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
+                {item.name}
+              </span>
+              {item.defaultQuantity && (
+                <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right button - Trash icon (visible in available zone when showDeleteIcon, or in selected/checked zones) */}

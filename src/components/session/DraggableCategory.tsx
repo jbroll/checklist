@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { GripVertical } from 'lucide-react';
-import type { ItemState, TemplateItem } from '@/schemas';
+import type { ItemState, Template, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
@@ -20,6 +20,8 @@ interface DraggableCategoryProps {
   onSelectItem?: (itemId: string | null) => void;
   itemStates: Record<string, ItemState>;
   children?: React.ReactNode;
+  template?: Template;
+  simplifiedUI?: boolean;
 }
 
 export function DraggableCategory({
@@ -38,6 +40,8 @@ export function DraggableCategory({
   onSelectItem,
   itemStates,
   children,
+  template,
+  simplifiedUI = false,
 }: DraggableCategoryProps) {
   // Draggable setup for categories
   const {
@@ -95,6 +99,8 @@ export function DraggableCategory({
             categoryItem={item}
             isSelected={selectedItemId === item.id}
             onSelectItem={onSelectItem}
+            template={template}
+            simplifiedUI={simplifiedUI}
           />
         </div>
 
