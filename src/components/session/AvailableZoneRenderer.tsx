@@ -65,11 +65,12 @@ export function AvailableZoneRenderer({
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
-  // Configure sensors for drag detection
+  // Configure sensors for drag detection with long press (1 second)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
+        delay: 1000, // 1 second long press to activate drag
+        tolerance: 5, // Allow 5px of movement during hold (for shaky fingers)
       },
     }),
   );

@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { GripVertical } from 'lucide-react';
+import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
 import type { FolderNode, ItemState, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
@@ -61,26 +61,24 @@ export function DraggableCategory({
     data: { isCategory: true, path: item.path, item },
   });
 
-  return (
-    <div className={`flex items-start gap-1 ${isDragging ? 'opacity-50' : ''}`}>
-      {/* Drag handle icon - visible indicator */}
-      <div className="text-neutral-400 hover:text-neutral-600 shrink-0 mt-2">
-        <GripVertical className="h-4 w-4" />
-      </div>
+  // Long press visual feedback
+  const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
 
-      <div className="flex-1 min-w-0">
-        {/* Category header - draggable and droppable (header only, not children) */}
-        <div
-          ref={(node) => {
-            setDragRef(node);
-            setDropRef(node);
-          }}
-          {...dragAttributes}
-          {...dragListeners}
-          className={`cursor-grab active:cursor-grabbing ${
-            isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
-          }`}
-        >
+  return (
+    <div className="flex-1 min-w-0">
+      {/* Category header - draggable and droppable (header only, not children) */}
+      <div
+        ref={(node) => {
+          setDragRef(node);
+          setDropRef(node);
+        }}
+        {...dragAttributes}
+        {...dragListeners}
+        {...longPressHandlers}
+        className={`transition-all duration-200 ${isDragging ? 'opacity-50' : ''} ${
+          isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
+        } ${isHolding ? 'scale-[1.01] shadow-lg bg-blue-50 ring-2 ring-blue-300 rounded' : ''}`}
+      >
           <SessionZone
             title={item.name}
             zone="available"
@@ -103,11 +101,10 @@ export function DraggableCategory({
             template={template}
             simplifiedUI={simplifiedUI}
           />
-        </div>
-
-        {/* Category children - rendered outside drop zone, respecting expand state */}
-        {(categoryExpanded[`available-${item.path}`] ?? true) && children}
       </div>
+
+      {/* Category children - rendered outside drop zone, respecting expand state */}
+      {(categoryExpanded[`available-${item.path}`] ?? true) && children}
     </div>
   );
 }

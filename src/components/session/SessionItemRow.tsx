@@ -1,10 +1,10 @@
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { GripVertical } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
+import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
 import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 
@@ -53,6 +53,9 @@ export const SessionItemRow = memo(function SessionItemRow({
     data: { item },
     disabled: !enableDrag,
   });
+
+  // Long press visual feedback
+  const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
 
   // Inline editing handlers with double-tap support for mobile
   const doubleTapHandlers = useDoubleTap({
@@ -165,32 +168,24 @@ export const SessionItemRow = memo(function SessionItemRow({
 
   return (
     <motion.div
+      ref={enableDrag ? setDragRef : undefined}
+      {...(enableDrag ? dragAttributes : {})}
+      {...(enableDrag ? dragListeners : {})}
+      {...(enableDrag ? longPressHandlers : {})}
       layout={shouldAnimate}
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className={`flex items-center gap-3 rounded px-1 py-0.5 ${
+      className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
         isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
-      } ${onSelectItem ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50' : ''}`}
+      } ${onSelectItem ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50' : ''} ${
+        isHolding && enableDrag ? 'scale-[1.02] shadow-lg bg-blue-50 ring-2 ring-blue-300' : ''
+      }`}
       {...(onSelectItem && {
         onClick: handleRowClick,
         role: 'button',
         tabIndex: 0,
       })}
     >
-      {/* Drag handle icon - visible indicator */}
-      {enableDrag && (
-        <div className="text-neutral-400 hover:text-neutral-600 shrink-0">
-          <GripVertical className="h-4 w-4" />
-        </div>
-      )}
-
-      {/* Draggable wrapper for entire row content */}
-      <div
-        ref={enableDrag ? setDragRef : undefined}
-        {...(enableDrag ? dragAttributes : {})}
-        {...(enableDrag ? dragListeners : {})}
-        className={`flex items-center gap-3 flex-1 ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
-      >
         {/* Left checkbox - Controls selected (available) or checked (selected/checked) */}
         <button
           type="button"
@@ -277,7 +272,6 @@ export const SessionItemRow = memo(function SessionItemRow({
             </svg>
           </button>
         )}
-      </div>
     </motion.div>
   );
 });
