@@ -2,7 +2,7 @@ import { co } from 'jazz-tools';
 import {
   FolderNode,
   type ItemState,
-  Session,
+  type SessionData,
   setAccountReference,
   Template,
   type TemplateItem,
@@ -48,4 +48,4 @@ export const Account = co
 setAccountReference(Account);
 
 // Re-export tree schemas and types for easy importing
-export { FolderNode, Template, Session, type TemplateItem, type ItemState };
+export { FolderNode, Template, type SessionData, type TemplateItem, type ItemState };

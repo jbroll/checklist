@@ -39,42 +39,22 @@ export type ItemState = {
 };
 
 /**
- * Session - Single CoValue tracking state for a shopping/list session
- * Sessions are owned by templates and have no back-reference.
+ * SessionData - Plain JSON object (not a CoValue)
+ * Tracks state for a shopping/list session.
  * Display name is generated from createdAt timestamp.
  */
-export const Session = co.map({
-  // Item states as plain JSON record (itemId → state)
-  itemStates: z.record(
-    z.string(),
-    z.object({
-      selected: z.boolean(),
-      checked: z.boolean(),
-      selectedAt: z.optional(z.date()),
-      checkedAt: z.optional(z.date()),
-    }),
-  ),
-
-  archived: z.boolean(), // Soft delete flag
-
-  // UI state - which categories are expanded (by path or ID)
-  categoryExpanded: z.record(z.string(), z.boolean()),
-
-  // UI state - view mode preference
-  viewMode: z.enum(['zone-in-hierarchy', 'flat']),
-
-  // Cached counts for UI performance
-  selectedCount: z.number(),
-  checkedCount: z.number(),
-  remainingCount: z.number(),
-
-  // Ownership and timestamps
-  get owner() {
-    return Account;
-  },
-  createdAt: z.date(),
-  lastActivityAt: z.date(),
-});
+export type SessionData = {
+  id: string; // Unique ID for the session
+  itemStates: Record<string, ItemState>; // itemId → state
+  archived: boolean; // Soft delete flag
+  categoryExpanded: Record<string, boolean>; // UI state - which categories are expanded
+  viewMode: 'zone-in-hierarchy' | 'flat'; // UI state - view mode preference
+  selectedCount: number; // Cached counts for UI performance
+  checkedCount: number;
+  remainingCount: number;
+  createdAt: Date;
+  lastActivityAt: Date;
+};
 
 /**
  * FolderNode - Hierarchical folder/template CoValue
@@ -123,7 +103,30 @@ export const FolderNode: any = co.map({
       }),
     ),
   ),
-  sessions: co.optional(co.list(Session)),
+  sessions: z.optional(
+    z.array(
+      z.object({
+        id: z.string(),
+        itemStates: z.record(
+          z.string(),
+          z.object({
+            selected: z.boolean(),
+            checked: z.boolean(),
+            selectedAt: z.optional(z.date()),
+            checkedAt: z.optional(z.date()),
+          }),
+        ),
+        archived: z.boolean(),
+        categoryExpanded: z.record(z.string(), z.boolean()),
+        viewMode: z.enum(['zone-in-hierarchy', 'flat']),
+        selectedCount: z.number(),
+        checkedCount: z.number(),
+        remainingCount: z.number(),
+        createdAt: z.date(),
+        lastActivityAt: z.date(),
+      }),
+    ),
+  ),
   showZoneHeadings: z.optional(z.boolean()),
 
   // Parent back-reference for breadcrumbs and path computation
@@ -161,8 +164,29 @@ export const Template = co.map({
     }),
   ),
 
-  // Sessions as CoList
-  sessions: co.list(Session),
+  // Sessions as plain JSON array (not CoValues)
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      itemStates: z.record(
+        z.string(),
+        z.object({
+          selected: z.boolean(),
+          checked: z.boolean(),
+          selectedAt: z.optional(z.date()),
+          checkedAt: z.optional(z.date()),
+        }),
+      ),
+      archived: z.boolean(),
+      categoryExpanded: z.record(z.string(), z.boolean()),
+      viewMode: z.enum(['zone-in-hierarchy', 'flat']),
+      selectedCount: z.number(),
+      checkedCount: z.number(),
+      remainingCount: z.number(),
+      createdAt: z.date(),
+      lastActivityAt: z.date(),
+    }),
+  ),
   currentSessionId: z.optional(z.string()), // Active session ID if any
 
   // Template-specific settings
