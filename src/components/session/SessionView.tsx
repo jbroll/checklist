@@ -51,7 +51,7 @@ export function SessionView({
   const scrollPositionRef = useRef<{ scrollTop: number; availableTop: number } | null>(null);
 
   // Find session first (before any early returns)
-  const session = template.sessions?.find((s) => s?.$jazz.id === sessionId);
+  const session = template.sessions?.find((s) => s?.id === sessionId);
 
   // Check if there are multiple sessions on the same day
   const showTime = hasMultipleSessionsOnSameDay(session || null, template.sessions || []);

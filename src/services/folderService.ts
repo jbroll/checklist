@@ -7,7 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { co } from 'jazz-tools';
-import { type Account, FolderNode, Session } from '../schemas';
+import { type Account, FolderNode } from '../schemas';
 
 /**
  * Helper to determine if a FolderNode is a template folder
@@ -38,15 +38,13 @@ export function createFolder(
 
   if (isTemplate) {
     // Create template folder
-    const sessions = co.list(Session).create([], { owner: account });
-
     const folder = FolderNode.create(
       {
         name,
         expanded: false,
         archived: false,
         items: [],
-        sessions,
+        sessions: [], // Plain JavaScript array
         showZoneHeadings: false,
         parent: parent || undefined,
         owner: account,
