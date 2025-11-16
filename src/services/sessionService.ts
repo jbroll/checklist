@@ -6,10 +6,41 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account } from '../schemas';
-import { Session } from '../schemas/tree';
-import { findEntityById } from './entityFinder';
+import type { Account, SessionData } from '../schemas';
+import { generateId } from '../lib/utils';
 import { getTemplate } from './templateService';
+
+/**
+ * Helper to update a session in the template's sessions array
+ * Since sessions are plain objects, we need to replace the entire array to trigger Jazz update
+ */
+function updateSession(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  updates: Partial<SessionData>,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
+
+  const sessionIndex = template.sessions.findIndex((s) => s.id === sessionId);
+  if (sessionIndex === -1) {
+    throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+  }
+
+  // Create new session object with updates
+  const updatedSession: SessionData = {
+    ...template.sessions[sessionIndex],
+    ...updates,
+  };
+
+  // Create new sessions array with updated session
+  const updatedSessions = [...template.sessions];
+  updatedSessions[sessionIndex] = updatedSession;
+
+  // Update template to trigger Jazz sync
+  template.$jazz.set('sessions', updatedSessions);
+}
 
 /**
  * Create a new list session for a template
@@ -27,32 +58,32 @@ export function createSession(
   const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
   const remainingCount = activeItems.length;
 
-  // Create new list session
-  const newSession = Session.create(
-    {
-      itemStates: {},
-      archived: false,
-      categoryExpanded: {},
-      viewMode: 'zone-in-hierarchy', // Default view mode
-      selectedCount: 0,
-      checkedCount: 0,
-      remainingCount,
-      owner: account,
-      createdAt: now,
-      lastActivityAt: now,
-    },
-    { owner: account },
-  );
+  // Create new list session as plain JavaScript object
+  const newSession: SessionData = {
+    id: generateId(),
+    itemStates: {},
+    archived: false,
+    categoryExpanded: {},
+    viewMode: 'zone-in-hierarchy', // Default view mode
+    selectedCount: 0,
+    checkedCount: 0,
+    remainingCount,
+    createdAt: now,
+    lastActivityAt: now,
+  };
 
   // Add session to template
   // Initialize sessions list if it doesn't exist (for older templates)
   if (!template.sessions) {
     template.$jazz.set('sessions', []);
   }
-  template.sessions.$jazz.push(newSession);
+
+  // Create new array with added session to trigger Jazz update
+  const updatedSessions = [...template.sessions, newSession];
+  template.$jazz.set('sessions', updatedSessions);
   template.$jazz.set('updatedAt', new Date());
 
-  return newSession.$jazz.id;
+  return newSession.id;
 }
 
 /**
@@ -62,9 +93,10 @@ export function getSession(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
-): InstanceOfSchema<typeof Session> | null {
+): SessionData | null {
   const template = getTemplate(account, templateId);
-  return findEntityById(template?.sessions, sessionId);
+  if (!template?.sessions) return null;
+  return template.sessions.find((s) => s.id === sessionId) || null;
 }
 
 /**
@@ -73,11 +105,11 @@ export function getSession(
 export function getSessions(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-): Array<InstanceOfSchema<typeof Session>> {
+): SessionData[] {
   const template = getTemplate(account, templateId);
   if (!template?.sessions) return [];
 
-  return template.sessions.filter((s) => s != null) as Array<InstanceOfSchema<typeof Session>>;
+  return template.sessions.filter((s) => s != null);
 }
 
 /**
@@ -112,19 +144,21 @@ export function setItemSelected(
   const itemStates = session.itemStates || {};
   const currentState = itemStates[itemId];
 
+  let newItemStates: Record<string, any>;
+
   if (!currentState && selected) {
     // Create new plain object state
-    session.$jazz.set('itemStates', {
+    newItemStates = {
       ...itemStates,
       [itemId]: {
         selected: true,
         checked: false,
         selectedAt: new Date(),
       },
-    });
+    };
   } else if (currentState) {
     // Update selected state
-    session.$jazz.set('itemStates', {
+    newItemStates = {
       ...itemStates,
       [itemId]: {
         ...currentState,
@@ -133,11 +167,16 @@ export function setItemSelected(
         checked: selected ? currentState.checked : false,
         checkedAt: selected ? currentState.checkedAt : undefined,
       },
-    });
+    };
+  } else {
+    return; // No change needed
   }
 
-  // Update session activity
-  session.$jazz.set('lastActivityAt', new Date());
+  // Update session with new item states and activity timestamp
+  updateSession(account, templateId, sessionId, {
+    itemStates: newItemStates,
+    lastActivityAt: new Date(),
+  });
 }
 
 /**
@@ -186,16 +225,19 @@ export function setItemChecked(
   const currentState = itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
-  session.$jazz.set('itemStates', {
+  const newItemStates = {
     ...itemStates,
     [itemId]: {
       ...currentState,
       checked,
       checkedAt: checked ? new Date() : undefined,
     },
-  });
+  };
 
-  session.$jazz.set('lastActivityAt', new Date());
+  updateSession(account, templateId, sessionId, {
+    itemStates: newItemStates,
+    lastActivityAt: new Date(),
+  });
 }
 
 /**
@@ -243,9 +285,11 @@ export function updateSessionCounts(
     }
   });
 
-  session.$jazz.set('selectedCount', selectedCount);
-  session.$jazz.set('checkedCount', checkedCount);
-  session.$jazz.set('remainingCount', remainingCount);
+  updateSession(account, templateId, sessionId, {
+    selectedCount,
+    checkedCount,
+    remainingCount,
+  });
 }
 
 /**
@@ -257,11 +301,10 @@ export function updateViewMode(
   sessionId: string,
   viewMode: 'flat' | 'zone-in-hierarchy',
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  session.$jazz.set('viewMode', viewMode);
-  session.$jazz.set('lastActivityAt', new Date());
+  updateSession(account, templateId, sessionId, {
+    viewMode,
+    lastActivityAt: new Date(),
+  });
 }
 
 /**
@@ -301,8 +344,10 @@ export function batchSelectItems(
     }
   });
 
-  session.$jazz.set('itemStates', updatedStates);
-  session.$jazz.set('lastActivityAt', now);
+  updateSession(account, templateId, sessionId, {
+    itemStates: updatedStates,
+    lastActivityAt: now,
+  });
 }
 
 /**
@@ -386,8 +431,10 @@ export function invertItemSelection(
     }
   });
 
-  session.$jazz.set('itemStates', updatedStates);
-  session.$jazz.set('lastActivityAt', now);
+  updateSession(account, templateId, sessionId, {
+    itemStates: updatedStates,
+    lastActivityAt: now,
+  });
 
   // Log after
   const newSession = getSession(account, templateId, sessionId);
@@ -406,11 +453,10 @@ export function archiveSession(
   templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  session.$jazz.set('archived', true);
-  session.$jazz.set('lastActivityAt', new Date());
+  updateSession(account, templateId, sessionId, {
+    archived: true,
+    lastActivityAt: new Date(),
+  });
 }
 
 /**
@@ -421,11 +467,10 @@ export function unarchiveSession(
   templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  session.$jazz.set('archived', false);
-  session.$jazz.set('lastActivityAt', new Date());
+  updateSession(account, templateId, sessionId, {
+    archived: false,
+    lastActivityAt: new Date(),
+  });
 }
 
 /**
@@ -439,13 +484,14 @@ export function deleteSession(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
 
-  const sessionIndex = template.sessions.findIndex((s) => s?.$jazz.id === sessionId);
+  const sessionIndex = template.sessions.findIndex((s) => s.id === sessionId);
   if (sessionIndex === -1) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
-  // Hard delete by removing from sessions array
-  template.sessions.$jazz.splice(sessionIndex, 1);
+  // Hard delete by creating new array without the session
+  const updatedSessions = template.sessions.filter((s) => s.id !== sessionId);
+  template.$jazz.set('sessions', updatedSessions);
   template.$jazz.set('updatedAt', new Date());
 }
 
@@ -480,9 +526,11 @@ export function setCategoryExpanded(
 
   const categoryExpanded = session.categoryExpanded || {};
 
-  session.$jazz.set('categoryExpanded', {
-    ...categoryExpanded,
-    [categoryKey]: expanded,
+  updateSession(account, templateId, sessionId, {
+    categoryExpanded: {
+      ...categoryExpanded,
+      [categoryKey]: expanded,
+    },
   });
 }
 
@@ -521,10 +569,11 @@ export function clearSessionState(
     };
   }
 
-  session.$jazz.set('itemStates', newItemStates);
+  updateSession(account, templateId, sessionId, {
+    itemStates: newItemStates,
+    lastActivityAt: new Date(),
+  });
 
   // Update counts
   updateSessionCounts(account, templateId, sessionId);
-
-  session.$jazz.set('lastActivityAt', new Date());
 }
