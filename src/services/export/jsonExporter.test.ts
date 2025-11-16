@@ -49,8 +49,9 @@ const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: 
             lastActivityAt: date,
           },
         ],
-        currentSessionId: 'session-1',
         showZoneHeadings: false,
+        archived: false,
+        expanded: true,
         createdAt: date,
         updatedAt: date,
       }
@@ -58,23 +59,7 @@ const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: 
 
   return {
     root: {
-      templates: withTemplates && mockTemplate ? [mockTemplate] : [],
-      directory:
-        withTemplates && mockTemplate
-          ? [
-              {
-                id: 'dir-1',
-                name: 'Test Template',
-                type: 'template-ref' as const,
-                path: '/test-template',
-                expanded: false,
-                archived: false,
-                templateId: 'template-1',
-                createdAt: date,
-                updatedAt: date,
-              },
-            ]
-          : [],
+      folders: withTemplates && mockTemplate ? [mockTemplate] : [],
     },
   };
 };
@@ -240,7 +225,7 @@ describe('jsonExporter', () => {
     it('should skip archived items', () => {
       const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
       // Add archived item
-      account.root.templates[0].items.push({
+      account.root.folders[0].items.push({
         id: 'item-2',
         name: 'Archived Item',
         type: 'item' as const,
@@ -276,7 +261,7 @@ describe('jsonExporter', () => {
   describe('exportTemplate', () => {
     it('should export a single template with Date objects', () => {
       const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
-      const template = account.root.templates[0];
+      const template = account.root.folders[0];
 
       const result = exportTemplate(template as any, '/test-template');
 
@@ -287,7 +272,7 @@ describe('jsonExporter', () => {
 
     it('should export a single template with date strings', () => {
       const account = createMockAccount({ withTemplates: true, datesAsStrings: true });
-      const template = account.root.templates[0];
+      const template = account.root.folders[0];
 
       const result = exportTemplate(template as any, '/test-template');
 
@@ -296,13 +281,14 @@ describe('jsonExporter', () => {
       expect(result.folders[0].updatedAt).toBe('2024-11-01T00:00:00.000Z');
     });
 
-    it('should include currentSessionId if present', () => {
+    it('should not include currentSessionId (removed from FolderNode)', () => {
       const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
-      const template = account.root.templates[0];
+      const template = account.root.folders[0];
 
       const result = exportTemplate(template as any, '/test-template');
 
-      expect(result.folders[0].currentSessionId).toBe('session-1');
+      // currentSessionId is not part of FolderNode schema, so it should not be exported
+      expect(result.folders[0].currentSessionId).toBeUndefined();
     });
 
     it('should handle template without items or sessions', () => {
@@ -311,8 +297,9 @@ describe('jsonExporter', () => {
         name: 'Empty Template',
         items: [],
         sessions: [],
-        currentSessionId: '',
         showZoneHeadings: false,
+        archived: false,
+        expanded: true,
         createdAt: new Date('2024-11-01T00:00:00.000Z'),
         updatedAt: new Date('2024-11-01T00:00:00.000Z'),
       };
@@ -330,7 +317,7 @@ describe('jsonExporter', () => {
       const date = new Date('2024-11-01T00:00:00.000Z');
       const account = {
         root: {
-          templates: [
+          folders: [
             {
               $jazz: { id: 'template-1' },
               name: 'Groceries',
@@ -381,21 +368,9 @@ describe('jsonExporter', () => {
                 },
               ],
               sessions: [],
-              currentSessionId: '',
               showZoneHeadings: false,
-              createdAt: date,
-              updatedAt: date,
-            },
-          ],
-          directory: [
-            {
-              id: 'dir-1',
-              name: 'Groceries',
-              type: 'template-ref' as const,
-              path: '/groceries',
-              expanded: false,
               archived: false,
-              templateId: 'template-1',
+              expanded: true,
               createdAt: date,
               updatedAt: date,
             },
@@ -444,7 +419,7 @@ describe('jsonExporter', () => {
       const date = new Date('2024-11-01T00:00:00.000Z');
       const account = {
         root: {
-          templates: [
+          folders: [
             {
               $jazz: { id: 'template-1' },
               name: 'Shopping List',
@@ -498,21 +473,9 @@ describe('jsonExporter', () => {
                   lastActivityAt: date,
                 },
               ],
-              currentSessionId: 'session-1',
               showZoneHeadings: false,
-              createdAt: date,
-              updatedAt: date,
-            },
-          ],
-          directory: [
-            {
-              id: 'dir-1',
-              name: 'Shopping List',
-              type: 'template-ref' as const,
-              path: '/shopping',
-              expanded: false,
               archived: false,
-              templateId: 'template-1',
+              expanded: true,
               createdAt: date,
               updatedAt: date,
             },
@@ -555,7 +518,7 @@ describe('jsonExporter', () => {
       const date = new Date('2024-11-01T00:00:00.000Z');
       const account = {
         root: {
-          templates: [
+          folders: [
             {
               $jazz: { id: 'template-1' },
               name: 'Deep Structure',
@@ -606,21 +569,9 @@ describe('jsonExporter', () => {
                 },
               ],
               sessions: [],
-              currentSessionId: '',
               showZoneHeadings: false,
-              createdAt: date,
-              updatedAt: date,
-            },
-          ],
-          directory: [
-            {
-              id: 'dir-1',
-              name: 'Deep Structure',
-              type: 'template-ref' as const,
-              path: '/deep',
-              expanded: false,
               archived: false,
-              templateId: 'template-1',
+              expanded: true,
               createdAt: date,
               updatedAt: date,
             },
