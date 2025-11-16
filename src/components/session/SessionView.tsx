@@ -334,6 +334,7 @@ export function SessionView({
           onToggleChecked={handleToggleChecked}
           showDeleteIcon={simplifiedUI && showAddForm}
           onDeleteItem={handleDeleteItem}
+          simplifiedUI={simplifiedUI}
         />
       );
     }

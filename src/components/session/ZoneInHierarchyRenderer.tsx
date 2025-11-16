@@ -15,6 +15,7 @@ interface ZoneInHierarchyRendererProps {
   onToggleChecked: (itemId: string) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
+  simplifiedUI?: boolean;
 }
 
 export function ZoneInHierarchyRenderer({
@@ -28,6 +29,7 @@ export function ZoneInHierarchyRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
+  simplifiedUI = false,
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -116,6 +118,11 @@ export function ZoneInHierarchyRenderer({
         return null;
       }
 
+      // Find the actual category TemplateItem for delete functionality
+      const categoryTemplateItem = template.items.find(
+        (item) => item.type === 'category' && item.path === category.path,
+      );
+
       // Otherwise, render as a regular category with zones inside
       return (
         <SessionZone
@@ -129,6 +136,11 @@ export function ZoneInHierarchyRenderer({
           onToggleSelected={onToggleSelected}
           onToggleChecked={onToggleChecked}
           count={totalItems}
+          showDeleteIcon={showDeleteIcon}
+          onDeleteItem={onDeleteItem}
+          categoryItem={categoryTemplateItem}
+          template={template}
+          simplifiedUI={simplifiedUI}
         >
           <div className="flex flex-col pl-4">
             {/* Show zones for items at this level */}
