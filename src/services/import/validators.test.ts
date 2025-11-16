@@ -3,27 +3,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { DirectoryEntry } from '../../schemas';
 import type { ExportedData } from '../export/types';
 import { validateJsonData } from './validators';
 
-// Mock Account with directory structure for testing
-const createMockAccount = (existingPaths: string[] = []) => {
-  const directory: DirectoryEntry[] = existingPaths.map((path) => ({
-    id: `mock-${path}`,
-    name: path.replace('/', ''),
-    type: 'template-ref' as const,
-    path,
-    expanded: false,
-    archived: false,
-    templateId: `template-${path}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }));
-
+// Mock Account for testing (minimal structure)
+const createMockAccount = (_existingNames: string[] = []) => {
+  // Note: The validator doesn't actually use the account structure for validation,
+  // it just validates the imported data structure itself
   return {
     root: {
-      directory,
+      folders: [],
     },
   } as any;
 };

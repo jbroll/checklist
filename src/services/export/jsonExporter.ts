@@ -9,8 +9,8 @@ import type { CoList, InstanceOfSchema } from 'jazz-tools';
 import { generateSessionName } from '../../lib/utils';
 import type { Account, FolderNode, Session } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
-import * as folderService from '../folderService';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
+import * as folderService from '../folderService';
 import type {
   ExportedData,
   ExportedFolder,

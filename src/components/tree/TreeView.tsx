@@ -108,7 +108,9 @@ export function TreeView({
   const selectedFolder = useMemo(() => {
     if (!selectedFolderId || !account.root?.folders) return null;
 
-    const findFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+    const findFolder = (
+      folders: typeof account.root.folders,
+    ): InstanceOfSchema<typeof FolderNode> | null => {
       for (const f of folders) {
         if (!f) continue;
         if (f.$jazz.id === selectedFolderId) return f;
@@ -159,8 +161,11 @@ export function TreeView({
     folderService.deleteFolder(account, folder);
   };
 
-  const handleToggleArchiveSession = (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
-    const session = templateFolder.sessions?.find(s => s?.$jazz.id === sessionId);
+  const handleToggleArchiveSession = (
+    templateFolder: InstanceOfSchema<typeof FolderNode>,
+    sessionId: string,
+  ) => {
+    const session = templateFolder.sessions?.find((s) => s?.$jazz.id === sessionId);
     if (session) {
       if (session.archived) {
         sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
@@ -170,7 +175,10 @@ export function TreeView({
     }
   };
 
-  const handleDeleteSession = (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
+  const handleDeleteSession = (
+    templateFolder: InstanceOfSchema<typeof FolderNode>,
+    sessionId: string,
+  ) => {
     sessionService.deleteSession(account, templateFolder.$jazz.id, sessionId);
   };
 
@@ -197,7 +205,9 @@ export function TreeView({
     const overData = over.data.current;
 
     // Find dragged folder
-    const findFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+    const findFolder = (
+      folders: typeof account.root.folders,
+    ): InstanceOfSchema<typeof FolderNode> | null => {
       for (const f of folders) {
         if (!f) continue;
         if (f.$jazz.id === draggedFolderId) return f;
@@ -254,7 +264,9 @@ export function TreeView({
       newParent = null; // Move to root level
     } else if (overData?.isFolder && overData?.folderId) {
       // Find the target folder
-      const findTargetFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+      const findTargetFolder = (
+        folders: typeof account.root.folders,
+      ): InstanceOfSchema<typeof FolderNode> | null => {
         for (const f of folders) {
           if (!f) continue;
           if (f.$jazz.id === overData.folderId) return f;
@@ -395,9 +407,7 @@ export function TreeView({
   // Show New Folder/List buttons when:
   // - Not in archived view AND
   // - (nothing is selected OR a non-archived folder is selected)
-  const canCreateFolderOrList =
-    !showArchived &&
-    (!selectedFolderId || !selectedFolder?.archived);
+  const canCreateFolderOrList = !showArchived && (!selectedFolderId || !selectedFolder?.archived);
 
   return (
     <DndContext

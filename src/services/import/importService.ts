@@ -6,8 +6,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
-import * as folderService from '../folderService';
 import { readFileAsText } from '../../utils/fileUpload';
+import * as folderService from '../folderService';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
 import { importJson } from './jsonImporter';

@@ -2,7 +2,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { ShoppingCart } from 'lucide-react';
 import type { ViewMode } from '@/components/AuthGate';
 import { TreeViewHeader } from '@/components/tree/TreeViewHeader';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account } from '@/schemas';
 import * as folderService from '@/services/folderService';
 
 interface SimplifiedTemplateSelectorProps {

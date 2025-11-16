@@ -11,8 +11,7 @@ import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
-// NOTE: testHelpers disabled during folder migration - needs rewrite for FolderNode
-// import { exposeServicesToWindow } from '@/services/testHelpers';
+import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
@@ -21,9 +20,8 @@ export function TestPage() {
   // Expose services to window for E2E tests
   useEffect(() => {
     if (me) {
-      // NOTE: testHelpers disabled during folder migration - needs rewrite for FolderNode
-      // exposeServicesToWindow(() => me);
-      console.log('[TestPage] Test mode active (services not exposed - testHelpers needs rewrite)');
+      exposeServicesToWindow(() => me);
+      console.log('[TestPage] Test mode active - services exposed to window.testExports');
 
       // Add visual indicator that we're in test mode
       document.body.style.border = '5px solid orange';
