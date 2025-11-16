@@ -1,3 +1,4 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
 import { ExportDialog } from '@/components/export/ExportDialog';
@@ -8,7 +9,6 @@ import { SimplifiedApp } from '@/components/simplified/SimplifiedApp';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
 import type { Account, FolderNode } from '@/schemas';
-import type { InstanceOfSchema } from 'jazz-tools';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';

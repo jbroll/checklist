@@ -10,8 +10,8 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../lib/utils';
 import type { Account, FolderNode, TemplateItem } from '../schemas';
-import * as folderService from './folderService';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
+import * as folderService from './folderService';
 
 // ============================================================================
 // Template Operations
