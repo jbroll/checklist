@@ -1,13 +1,13 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, Session, Template, TemplateItem } from '../schemas';
+import type { Account, FolderNode, Session, TemplateItem } from '../schemas';
 import { batchSelectItems, invertItemSelection, toggleSelectAllItems } from './sessionService';
 
 // Mock Jazz CoValues
 const createMockAccount = (): InstanceOfSchema<typeof Account> => {
   return {
     root: {
-      templates: [],
+      folders: [],
     },
   } as any;
 };
@@ -37,7 +37,7 @@ const createMockSession = (): InstanceOfSchema<typeof Session> => {
 
 const createMockTemplate = (
   session: InstanceOfSchema<typeof Session>,
-): InstanceOfSchema<typeof Template> => {
+): InstanceOfSchema<typeof FolderNode> => {
   const item1 = {
     id: 'item-1',
     name: 'Item 1',
@@ -73,13 +73,11 @@ const createMockTemplate = (
       },
     },
     name: 'Test Template',
-    type: 'template-folder',
-    path: 'test',
     items: [item1, item2, item3],
     sessions: [session],
+    showZoneHeadings: false,
     archived: false,
     expanded: true,
-    currentSessionId: 'session-1',
     createdAt: new Date(),
     updatedAt: new Date(),
   } as any;
@@ -88,13 +86,13 @@ const createMockTemplate = (
 describe('Batch Selection Functions', () => {
   let account: InstanceOfSchema<typeof Account>;
   let session: InstanceOfSchema<typeof Session>;
-  let template: InstanceOfSchema<typeof Template>;
+  let template: InstanceOfSchema<typeof FolderNode>;
 
   beforeEach(() => {
     account = createMockAccount();
     session = createMockSession();
     template = createMockTemplate(session);
-    account.root.templates = [template];
+    account.root.folders = [template];
   });
 
   describe('batchSelectItems', () => {
