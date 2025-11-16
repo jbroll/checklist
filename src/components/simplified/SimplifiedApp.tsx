@@ -6,11 +6,9 @@ import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree/TreeView';
-import type { Account } from '@/schemas';
-import * as directoryService from '@/services/directoryService';
+import type { Account, FolderNode } from '@/schemas';
+import * as folderService from '@/services/folderService';
 import * as simplifiedSessionService from '@/services/simplified/simplifiedSessionService';
-import * as templateService from '@/services/templateService';
-import { PATH_SEPARATOR } from '@/utils/pathUtils';
 
 interface SimplifiedAppProps {
   account: InstanceOfSchema<typeof Account>;
@@ -25,102 +23,121 @@ interface SimplifiedAppProps {
  */
 export function SimplifiedApp({ account, onViewModeChange, onSignOut }: SimplifiedAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  // Compute parent path for import based on selected folder
-  const importParentPath = useMemo(() => {
-    if (!selectedEntryId) return undefined;
+  // Find selected folder for import
+  const selectedFolder = useMemo(() => {
+    if (!account?.root?.folders || !selectedFolderId) return null;
 
-    const entries = directoryService.getAllDirectoryEntries(account);
-    const selectedEntry = entries.find((e) => e.id === selectedEntryId);
+    const findFolder = (
+      folders: InstanceOfSchema<typeof FolderNode>[],
+    ): InstanceOfSchema<typeof FolderNode> | null => {
+      for (const f of folders) {
+        if (!f) continue;
+        if (f.$jazz.id === selectedFolderId) return f;
+        if (f.children) {
+          const found = findFolder(f.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
 
-    // Only use folder paths (not template-refs)
-    if (selectedEntry?.type === 'folder') {
-      return selectedEntry.path;
-    }
+    return findFolder(account.root.folders);
+  }, [selectedFolderId, account?.root?.folders]);
 
-    return undefined;
-  }, [selectedEntryId, account]);
+  // Compute parent folder for import based on selected folder
+  const importParentFolder = useMemo(() => {
+    if (!selectedFolder) return undefined;
+    // Only use organizational folders as import parents
+    return folderService.isOrganizationalFolder(selectedFolder) ? selectedFolder : undefined;
+  }, [selectedFolder]);
 
   // No useEffect needed - session is created directly in handleTemplateSelect
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!account.root) return;
 
-    // Determine parent path based on selected entry
-    let parentPath: string | undefined;
-    if (selectedEntryId) {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-      const entries = directoryService.getAllDirectoryEntries(account as any);
-      const selectedEntry = entries.find((e) => e.id === selectedEntryId);
-      if (selectedEntry) {
-        if (selectedEntry.type === 'folder') {
-          // If selected entry is a folder, create inside it
-          parentPath = selectedEntry.path;
-        } else {
-          // If selected entry is a template-ref, create at the same level (sibling)
-          const pathParts = selectedEntry.path.split(PATH_SEPARATOR);
-          parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR) || undefined;
-        }
+    // Determine parent folder based on selection
+    let parent: InstanceOfSchema<typeof FolderNode> | null = null;
+    if (selectedFolder) {
+      if (folderService.isOrganizationalFolder(selectedFolder)) {
+        // If selected folder is organizational, create inside it
+        parent = selectedFolder;
+      } else if (folderService.isTemplateFolder(selectedFolder)) {
+        // If selected folder is a template, create at the same level (sibling)
+        parent = selectedFolder.parent || null;
       }
     }
 
-    // Create directory entry (folder or template-ref)
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-    directoryService.createDirectoryEntry(account as any, name, isTemplate, parentPath);
+    // Create folder (organizational or template)
+    folderService.createFolder(account, name, isTemplate, parent);
   };
 
   // If a template is selected, show session view
-  if (selectedTemplateId && currentSessionId) {
-    const template = templateService.getTemplate(account, selectedTemplateId);
-
-    if (template) {
-      return (
-        <SessionView
-          template={template}
-          sessionId={currentSessionId}
-          onBack={() => {
-            setSelectedTemplateId(null);
-            setSelectedEntryId(null);
-            setCurrentSessionId(null);
-          }}
-          simplifiedUI={true}
-        />
-      );
-    }
+  if (selectedTemplateId && currentSessionId && selectedFolder) {
+    return (
+      <SessionView
+        template={selectedFolder}
+        sessionId={currentSessionId}
+        onBack={() => {
+          setSelectedTemplateId(null);
+          setSelectedFolderId(null);
+          setCurrentSessionId(null);
+        }}
+        simplifiedUI={true}
+      />
+    );
   }
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = templateService.getTemplate(account, templateId);
+    // Find the template folder
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+    const templates = folderService.getAllTemplateFolders(account as any);
+    const template = templates.find((t) => t?.$jazz.id === templateId);
+
     if (template) {
       const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account, template);
       // Set all state together to avoid intermediate renders
       setSelectedTemplateId(templateId);
+      setSelectedFolderId(templateId);
       setCurrentSessionId(sessionId);
     }
   };
 
-  const handleEntrySelect = (entryId: string) => {
-    // Don't set selectedEntryId when navigating to a template in simplified mode
-    // This prevents the Edit/Use buttons from appearing before SessionView renders
-    const entries = directoryService.getAllDirectoryEntries(account);
-    const entry = entries.find((e) => e.id === entryId);
+  const handleFolderSelect = (folderId: string) => {
+    // Find the folder
+    const findFolder = (
+      folders: InstanceOfSchema<typeof FolderNode>[],
+    ): InstanceOfSchema<typeof FolderNode> | null => {
+      for (const f of folders) {
+        if (!f) continue;
+        if (f.$jazz.id === folderId) return f;
+        if (f.children) {
+          const found = findFolder(f.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
 
-    // Only set selectedEntryId for folders (not template-refs)
-    if (entry?.type === 'folder') {
-      setSelectedEntryId(entryId);
+    const folder = account.root?.folders ? findFolder(account.root.folders) : null;
+
+    // Only set selectedFolderId for folders (not templates in simplified mode)
+    if (folder && folderService.isOrganizationalFolder(folder)) {
+      setSelectedFolderId(folderId);
     }
   };
 
   const handleHeaderClick = () => {
     // Clicking on BubbleList header deselects everything
     setSelectedTemplateId(null);
-    setSelectedEntryId(null);
+    setSelectedFolderId(null);
   };
 
   const handleUseTemplate = () => {
@@ -142,9 +159,9 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
         <TreeView
           account={account}
           selectedTemplateId={selectedTemplateId}
-          selectedEntryId={selectedEntryId}
+          selectedFolderId={selectedFolderId}
           onTemplateSelect={handleTemplateSelect}
-          onEntrySelect={handleEntrySelect}
+          onFolderSelect={handleFolderSelect}
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
           onHeaderClick={handleHeaderClick}
@@ -184,7 +201,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           open={showImportDialog}
           onOpenChange={setShowImportDialog}
           account={account}
-          parentPath={importParentPath}
+          parentFolder={importParentFolder}
         />
       </main>
     </div>

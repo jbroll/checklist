@@ -1,7 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
-import type { Account, Template } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
   importAsNewTemplate,
@@ -29,8 +29,8 @@ interface DialogConfig {
 
 interface UseImportDialogProps {
   account: InstanceOfSchema<typeof Account>;
-  folder?: InstanceOfSchema<typeof Template>;
-  parentPath?: string;
+  folder?: InstanceOfSchema<typeof FolderNode>;
+  parentFolder?: InstanceOfSchema<typeof FolderNode>;
   onImportComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }
@@ -38,7 +38,7 @@ interface UseImportDialogProps {
 export function useImportDialog({
   account,
   folder: template,
-  parentPath,
+  parentFolder,
   onImportComplete,
   onOpenChange,
 }: UseImportDialogProps) {
@@ -115,7 +115,7 @@ export function useImportDialog({
       // Top-level import
       if (detectedType === 'json') {
         // Full account import (with optional parent folder)
-        result = await importFromFile(file, account, 'json', parentPath);
+        result = await importFromFile(file, account, 'json', parentFolder);
       } else {
         // Create new template at root
         if (!templateName.trim()) {
@@ -126,7 +126,7 @@ export function useImportDialog({
           account,
           templateName.trim(),
           detectedType,
-          parentPath,
+          parentFolder,
         );
       }
 

@@ -5,7 +5,7 @@ import { GripVertical } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-import type { Account, ItemState, Template, TemplateItem } from '@/schemas';
+import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 
 interface SessionItemRowProps {
@@ -19,7 +19,7 @@ interface SessionItemRowProps {
   isSelected?: boolean; // For insertion point selection
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
   enableDrag?: boolean; // Enable drag and drop in available zone
-  template?: InstanceOfSchema<typeof Template>; // Template for inline editing
+  template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
   simplifiedUI?: boolean; // Enable inline editing only in simplified UI
 }
 

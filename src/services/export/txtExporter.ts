@@ -8,7 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Template } from '../../schemas';
+import type { FolderNode } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 
@@ -24,10 +24,10 @@ interface TreeNode {
  * - If categories exist: exports hierarchical indented format
  * - If no categories: exports flat format (one item per line)
  *
- * @param template - Template to export items from
+ * @param template - FolderNode to export items from
  * @returns Plain text string
  */
-export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Template>): string {
+export function exportTemplateItemsToText(template: InstanceOfSchema<typeof FolderNode>): string {
   if (!template.items || template.items.length === 0) {
     return '';
   }
@@ -149,12 +149,12 @@ function treeToIndentedText(nodes: TreeNode[], indent = 0): string {
  * ✓ Item Name (purchased)
  *   Item Name (not purchased)
  *
- * @param template - Template containing the session
+ * @param template - FolderNode containing the session
  * @param sessionId - ID of the session to export
  * @returns Plain text string with checkmarks
  */
 export function exportSessionToText(
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   sessionId: string,
 ): string | null {
   if (!template.sessions) {

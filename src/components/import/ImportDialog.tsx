@@ -3,7 +3,7 @@ import { ItemImportResult } from '@/components/import/ItemImportResult';
 import { JsonImportResult } from '@/components/import/JsonImportResult';
 import { useImportDialog } from '@/components/import/useImportDialog';
 import { FileUploadDialog } from '@/components/ui/file-upload-dialog';
-import type { Account, Template } from '@/schemas';
+import type { Account, FolderNode } from '@/schemas';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
@@ -13,9 +13,9 @@ interface ImportDialogProps {
   onOpenChange: (open: boolean) => void;
   account: InstanceOfSchema<typeof Account>;
   /** Optional folder for folder-level import (import items into existing template) */
-  folder?: InstanceOfSchema<typeof Template>;
-  /** Optional parent path for creating new templates in a specific folder */
-  parentPath?: string;
+  folder?: InstanceOfSchema<typeof FolderNode>;
+  /** Optional parent folder for creating new templates in a specific location */
+  parentFolder?: InstanceOfSchema<typeof FolderNode>;
   onImportComplete?: () => void;
 }
 
@@ -26,14 +26,14 @@ export function ImportDialog({
   onOpenChange,
   account,
   folder: template,
-  parentPath,
+  parentFolder,
   onImportComplete,
 }: ImportDialogProps) {
   const { resetState, handleUpload, getDialogConfig, renderFormFields, canUpload } =
     useImportDialog({
       account,
       folder: template,
-      parentPath,
+      parentFolder,
       onImportComplete,
       onOpenChange,
     });

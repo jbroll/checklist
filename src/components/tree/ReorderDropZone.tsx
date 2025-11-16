@@ -5,7 +5,8 @@ interface ReorderDropZoneProps {
   id: string;
   beforeItemId?: string; // ID of the item this zone is before
   afterItemId?: string; // ID of the item this zone is after
-  parentPath?: string; // Parent path for context
+  parentId?: string; // Parent folder ID for context (folder reordering)
+  parentPath?: string; // Parent path for context (template item reordering)
   isDragging: boolean;
 }
 
@@ -20,6 +21,7 @@ export function ReorderDropZone({
   id,
   beforeItemId,
   afterItemId,
+  parentId,
   parentPath,
   isDragging,
 }: ReorderDropZoneProps) {
@@ -29,6 +31,7 @@ export function ReorderDropZone({
       type: 'reorder-zone',
       beforeItemId,
       afterItemId,
+      parentId,
       parentPath,
     },
   });

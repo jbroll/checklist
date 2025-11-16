@@ -6,8 +6,9 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { co } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
-import { type Account, type DirectoryEntry, Session, Template } from '../../schemas';
+import { type Account, FolderNode, Session } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
 import { createChildPath } from '../../utils/pathUtils';
 import type {
@@ -16,22 +17,21 @@ import type {
   ExportedSession,
   ExportedTemplateItem,
 } from '../export/types';
-import { resolvePathConflict } from './conflictResolver';
 import type { ImportResult } from './types';
-import { findDirectoryEntryByPath, validateJsonData } from './validators';
+import { validateJsonData } from './validators';
 
 /**
  * Import JSON data into user's account
  *
  * @param jsonString - JSON string to import
  * @param account - User's Account
- * @param parentPath - Optional parent folder path (if not provided, imports to root)
+ * @param parentFolder - Optional parent folder (if not provided, imports to root)
  * @returns Import result with success/failure info
  */
 export async function importJson(
   jsonString: string,
   account: InstanceOfSchema<typeof Account>,
-  parentPath?: string,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
   // Parse JSON
   let data: unknown;
@@ -59,7 +59,7 @@ export async function importJson(
 
   // Import folders
   const exportData = data as ExportedData;
-  const result = await importFolders(exportData, account, parentPath);
+  const result = await importFolders(exportData, account, parentFolder);
 
   return {
     ...result,
@@ -72,13 +72,13 @@ export async function importJson(
  *
  * @param data - Validated export data
  * @param account - User's Account
- * @param parentPath - Optional parent folder path
+ * @param parentFolder - Optional parent folder
  * @returns Import result
  */
 async function importFolders(
   data: ExportedData,
   account: InstanceOfSchema<typeof Account>,
-  parentPath?: string,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -101,31 +101,27 @@ async function importFolders(
   // Import each folder
   for (const exportedFolder of data.folders) {
     try {
-      const { template, directoryEntry, stats } = await importFolder(
-        exportedFolder,
-        account,
-        parentPath,
-      );
+      const { folder, stats } = await importFolder(exportedFolder, account, parentFolder);
 
-      // Add template to root
-      account.root.templates.$jazz.push(template);
-
-      // Add directory entry to root
-      const updatedDirectory = [...account.root.directory, directoryEntry];
-      account.root.$jazz.set('directory', updatedDirectory);
+      // Add folder to hierarchy
+      if (parentFolder && parentFolder.children) {
+        parentFolder.children.$jazz.push(folder);
+      } else if (account.root.folders) {
+        account.root.folders.$jazz.push(folder);
+      }
 
       // Track stats
       foldersCreated++;
       itemsAdded += stats.itemsAdded;
       sessionsCreated += stats.sessionsCreated;
 
-      if (template.$jazz?.id) {
-        folderIds.push(template.$jazz.id);
+      if (folder.$jazz?.id) {
+        folderIds.push(folder.$jazz.id);
       }
 
-      if (stats.pathConflict) {
+      if (stats.nameConflict) {
         warnings.push(
-          `Template "${exportedFolder.name}" imported as "${template.name}" due to path conflict`,
+          `Template "${exportedFolder.name}" imported as "${folder.name}" due to name conflict`,
         );
       }
     } catch (error) {
@@ -155,37 +151,36 @@ async function importFolders(
  *
  * @param exportedFolder - Exported folder data
  * @param account - User's account
- * @param parentPath - Optional parent folder path
- * @returns Created template, directory entry, and stats
+ * @param parentFolder - Optional parent folder
+ * @returns Created folder and stats
  */
 async function importFolder(
   exportedFolder: ExportedFolder,
   account: InstanceOfSchema<typeof Account>,
-  parentPath?: string,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<{
-  template: InstanceOfSchema<typeof Template>;
-  directoryEntry: DirectoryEntry;
-  stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
+  folder: InstanceOfSchema<typeof FolderNode>;
+  stats: { itemsAdded: number; sessionsCreated: number; nameConflict: boolean };
 }> {
-  // Generate path from name (normalize for path usage)
-  const normalizedName = exportedFolder.name.trim().replace(/\s+/g, '-');
-  const generatedPath = parentPath ? createChildPath(parentPath, normalizedName) : normalizedName;
-
-  // Check for path conflict in directory
-  const existingEntry = findDirectoryEntryByPath(generatedPath, account);
-  let finalPath = generatedPath;
+  // Check for name conflict in target parent's children
+  const siblings = parentFolder?.children || account.root?.folders || [];
   let finalName = exportedFolder.name;
-  let pathConflict = false;
+  let nameConflict = false;
 
-  if (existingEntry) {
-    const resolved = resolvePathConflict(generatedPath, exportedFolder.name, account);
-    finalPath = resolved.path;
-    finalName = resolved.name;
-    pathConflict = true;
+  // Check if name already exists in siblings
+  const existingFolder = Array.from(siblings).find((f) => f?.name === finalName);
+  if (existingFolder) {
+    // Append a number to make it unique
+    let counter = 1;
+    while (Array.from(siblings).some((f) => f?.name === `${exportedFolder.name} (${counter})`)) {
+      counter++;
+    }
+    finalName = `${exportedFolder.name} (${counter})`;
+    nameConflict = true;
   }
 
   // All templates support items and sessions
-  return importTemplateFolder(exportedFolder, finalPath, finalName, account, pathConflict);
+  return importTemplateFolder(exportedFolder, finalName, account, parentFolder, nameConflict);
 }
 
 /**
@@ -244,22 +239,21 @@ function flattenHierarchicalItems(
  * Import a template folder with items and sessions
  *
  * @param exportedFolder - Exported template folder data
- * @param path - Final path (after conflict resolution)
  * @param name - Final name (after conflict resolution)
  * @param account - User's account
- * @param pathConflict - Whether path was changed
- * @returns Created template, directory entry, and stats
+ * @param parentFolder - Optional parent folder
+ * @param nameConflict - Whether name was changed
+ * @returns Created folder and stats
  */
 async function importTemplateFolder(
   exportedFolder: ExportedFolder,
-  path: string,
   name: string,
   account: InstanceOfSchema<typeof Account>,
-  pathConflict: boolean,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
+  nameConflict = false,
 ): Promise<{
-  template: InstanceOfSchema<typeof Template>;
-  directoryEntry: DirectoryEntry;
-  stats: { itemsAdded: number; sessionsCreated: number; pathConflict: boolean };
+  folder: InstanceOfSchema<typeof FolderNode>;
+  stats: { itemsAdded: number; sessionsCreated: number; nameConflict: boolean };
 }> {
   // Import template items as plain objects
   const items: TemplateItem[] = [];
@@ -271,14 +265,38 @@ async function importTemplateFolder(
     items.push(...flattenedItems);
   }
 
-  // Create template (path and archived are now in DirectoryEntry, not Template)
-  const template = Template.create(
+  // Create sessions CoList
+  const sessionsList = co.list(Session).create([], { owner: account });
+
+  // Import sessions
+  if (exportedFolder.sessions) {
+    for (const exportedSession of exportedFolder.sessions) {
+      const session = importSession(exportedSession, items, account, idMap);
+      sessionsList.$jazz.push(session);
+    }
+  }
+
+  // Determine current session ID
+  let currentSessionId = '';
+  if (exportedFolder.currentSessionId && sessionsList.length > 0) {
+    // Use the first non-archived session
+    const activeSession = Array.from(sessionsList).find((s) => s && !s.archived);
+    if (activeSession?.$jazz?.id) {
+      currentSessionId = activeSession.$jazz.id;
+    }
+  }
+
+  // Create FolderNode for template
+  const folder = FolderNode.create(
     {
       name,
+      expanded: false,
+      archived: false,
       items,
-      sessions: [],
-      currentSessionId: undefined,
+      sessions: sessionsList,
+      currentSessionId,
       showZoneHeadings: false, // Hide zone headings by default
+      parent: parentFolder,
       owner: account,
       createdAt: new Date(exportedFolder.createdAt),
       updatedAt: new Date(exportedFolder.updatedAt),
@@ -286,53 +304,12 @@ async function importTemplateFolder(
     { owner: account },
   );
 
-  // Import sessions
-  const sessions: InstanceOfSchema<typeof Session>[] = [];
-
-  if (exportedFolder.sessions) {
-    for (const exportedSession of exportedFolder.sessions) {
-      const session = importSession(exportedSession, items, account, idMap);
-      sessions.push(session);
-    }
-  }
-
-  // Add sessions to template
-  if (template.sessions) {
-    for (const session of sessions) {
-      template.sessions.$jazz.push(session);
-    }
-  }
-
-  // Set current session if it was active
-  if (exportedFolder.currentSessionId && sessions.length > 0) {
-    // Use the first non-archived session
-    const activeSession = sessions.find((s) => !s.archived);
-    if (activeSession?.$jazz?.id) {
-      template.$jazz.set('currentSessionId', activeSession.$jazz.id);
-    }
-  }
-
-  // Create directory entry for this template
-  const now = new Date();
-  const directoryEntry: DirectoryEntry = {
-    id: generateId(),
-    name,
-    type: 'template-ref',
-    path,
-    expanded: false,
-    archived: false,
-    templateId: template.$jazz?.id,
-    createdAt: now,
-    updatedAt: now,
-  };
-
   return {
-    template,
-    directoryEntry,
+    folder,
     stats: {
       itemsAdded: items.length,
-      sessionsCreated: sessions.length,
-      pathConflict,
+      sessionsCreated: sessionsList.length,
+      nameConflict,
     },
   };
 }
