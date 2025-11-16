@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Archive, Download, MoreVertical, Plus } from 'lucide-react';
+import { Archive, Download, MoreVertical, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import {
@@ -87,7 +87,7 @@ export function SessionHeader({
             <button
               type="button"
               onClick={onToggleAddForm}
-              className={`rounded-lg border p-2 transition-colors ${
+              className={`rounded-lg border px-2 py-2 transition-colors ${
                 showAddForm
                   ? 'border-green-500 bg-green-50 text-green-600'
                   : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50'
@@ -95,7 +95,10 @@ export function SessionHeader({
               title="Add item or category"
               aria-label="Add item or category"
             >
-              <Plus className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                <Pencil className="h-4 w-4" />
+              </div>
             </button>
           )}
 
