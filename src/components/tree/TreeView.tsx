@@ -11,30 +11,27 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useMemo, useState } from 'react';
-import type { Account, DirectoryEntry, Template } from '@/schemas';
-import * as directoryService from '@/services/directoryService';
+import type { Account, FolderNode } from '@/schemas';
+import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
-import * as templateService from '@/services/templateService';
-import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
 import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
 
-// Tree structure built from directory entries
-interface DirectoryNode {
-  entry: DirectoryEntry;
-  template?: InstanceOfSchema<typeof Template>;
-  children: DirectoryNode[];
+// Tree structure for rendering
+interface TreeNode {
+  folder: InstanceOfSchema<typeof FolderNode>;
+  children: TreeNode[];
   level: number;
 }
 
 interface TreeViewProps {
   account: InstanceOfSchema<typeof Account>;
   selectedTemplateId?: string | null;
-  selectedEntryId?: string | null;
+  selectedFolderId?: string | null; // Changed from selectedEntryId
   onTemplateSelect?: (templateId: string) => void;
-  onEntrySelect?: (entryId: string) => void;
+  onFolderSelect?: (folderId: string) => void; // Changed from onEntrySelect
   onAddItem?: (parentTemplateId: string) => void;
   onUseTemplate?: (templateId: string) => void;
   onEditTemplate?: (templateId: string) => void;
@@ -50,74 +47,44 @@ interface TreeViewProps {
   onSwitchToSimplified?: () => void;
   switchViewLabel?: string;
   // Session display control
-  sessionsEnabled?: boolean; // When false, hides sessions and changes button behavior
-  hideArchivedToggle?: boolean; // When true, hides "Show Archived" option in header
+  sessionsEnabled?: boolean;
+  hideArchivedToggle?: boolean;
 }
 
 /**
- * Build hierarchical tree from flat directory entries
+ * Build hierarchical tree from FolderNode structure
  */
-function buildDirectoryTree(
-  account: InstanceOfSchema<typeof Account>,
+function buildFolderTree(
+  folders: InstanceOfSchema<typeof FolderNode>[],
   showArchived: boolean,
-): DirectoryNode[] {
-  const entries = directoryService.getAllDirectoryEntries(account, showArchived);
-  const nodeMap = new Map<string, DirectoryNode>();
-  const rootNodes: DirectoryNode[] = [];
+  level = 0,
+): TreeNode[] {
+  const nodes: TreeNode[] = [];
 
-  // Create nodes for all entries
-  for (const entry of entries) {
-    const template =
-      entry.type === 'template-ref' && entry.templateId
-        ? templateService.getTemplate(account, entry.templateId)
-        : undefined;
+  for (const folder of folders) {
+    if (!folder) continue;
+    if (!showArchived && folder.archived) continue;
 
-    const node: DirectoryNode = {
-      entry,
-      template: template || undefined,
-      children: [],
-      level: 0,
-    };
-    nodeMap.set(entry.id, node);
+    const children = folder.children
+      ? buildFolderTree(folder.children, showArchived, level + 1)
+      : [];
+
+    nodes.push({
+      folder,
+      children,
+      level,
+    });
   }
 
-  // Build tree structure using paths
-  for (const node of nodeMap.values()) {
-    const pathParts = node.entry.path.split(PATH_SEPARATOR);
-    if (pathParts.length === 1) {
-      // Root level
-      rootNodes.push(node);
-    } else {
-      // Find parent by path
-      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
-      const parentEntry = entries.find((e) => e.path === parentPath);
-      if (parentEntry) {
-        const parentNode = nodeMap.get(parentEntry.id);
-        if (parentNode) {
-          node.level = parentNode.level + 1;
-          parentNode.children.push(node);
-        } else {
-          // Parent not found, treat as root
-          rootNodes.push(node);
-        }
-      } else {
-        // Parent not found, treat as root
-        rootNodes.push(node);
-      }
-    }
-  }
-
-  // Children are already in correct order from directory array
-  // No need to sort - array position determines visual order
-  return rootNodes;
+  return nodes;
 }
 
 export function TreeView({
   account,
   selectedTemplateId,
-  selectedEntryId,
+  selectedFolderId,
   onTemplateSelect,
-  onEntrySelect,
+  onFolderSelect,
   onAddItem: _onAddItem,
   onUseTemplate,
   onEditTemplate,
@@ -134,71 +101,83 @@ export function TreeView({
   sessionsEnabled = true,
   hideArchivedToggle = false,
 }: TreeViewProps) {
-  const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  // Clear selection when selected entry becomes archived
-  useEffect(() => {
-    if (selectedEntryId) {
-      const entry = directoryService.getDirectoryEntry(account, selectedEntryId);
-      if (entry?.archived && !showArchived) {
-        // Entry was archived - clear the selection by triggering header click
-        onHeaderClick?.();
+  // Get selected folder by ID
+  const selectedFolder = useMemo(() => {
+    if (!selectedFolderId || !account.root?.folders) return null;
+
+    const findFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+      for (const f of folders) {
+        if (!f) continue;
+        if (f.$jazz.id === selectedFolderId) return f;
+        if (f.children) {
+          const found = findFolder(f.children);
+          if (found) return found;
+        }
       }
+      return null;
+    };
+
+    return findFolder(account.root.folders);
+  }, [selectedFolderId, account.root?.folders]);
+
+  // Clear selection when selected folder becomes archived
+  useEffect(() => {
+    if (selectedFolder?.archived && !showArchived) {
+      onHeaderClick?.();
     }
-  }, [selectedEntryId, account, showArchived, onHeaderClick]);
+  }, [selectedFolder, showArchived, onHeaderClick]);
 
   // Configure sensors for drag detection
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before activating drag
+        distance: 8,
       },
     }),
   );
 
-  const handleToggleEntryExpand = (entryId: string) => {
-    directoryService.toggleEntryExpanded(account, entryId);
+  const handleToggleFolderExpand = (folder: InstanceOfSchema<typeof FolderNode>) => {
+    folderService.toggleFolderExpanded(folder);
   };
 
-  const handleRenameEntry = (entryId: string, newName: string) => {
-    directoryService.renameDirectoryEntry(account, entryId, newName);
+  const handleRenameFolder = (folder: InstanceOfSchema<typeof FolderNode>, newName: string) => {
+    folderService.renameFolder(folder, newName);
   };
 
-  const handleToggleArchiveEntry = (entryId: string) => {
-    const entry = directoryService.getDirectoryEntry(account, entryId);
-    if (!entry) return;
-
-    if (entry.archived) {
-      directoryService.unarchiveDirectoryEntry(account, entryId);
+  const handleToggleArchiveFolder = (folder: InstanceOfSchema<typeof FolderNode>) => {
+    if (folder.archived) {
+      folderService.unarchiveFolder(folder);
     } else {
-      directoryService.archiveDirectoryEntry(account, entryId);
+      folderService.archiveFolder(folder);
     }
   };
 
-  const handleDeleteEntry = (entryId: string) => {
-    directoryService.deleteDirectoryEntry(account, entryId);
+  const handleDeleteFolder = (folder: InstanceOfSchema<typeof FolderNode>) => {
+    folderService.deleteFolder(account, folder);
   };
 
-  const handleToggleArchiveSession = (templateId: string, sessionId: string) => {
-    const session = sessionService.getSession(account, templateId, sessionId);
+  const handleToggleArchiveSession = (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
+    const session = templateFolder.sessions?.find(s => s?.$jazz.id === sessionId);
     if (session) {
       if (session.archived) {
-        sessionService.unarchiveSession(account, templateId, sessionId);
+        sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
       } else {
-        sessionService.archiveSession(account, templateId, sessionId);
+        sessionService.archiveSession(account, templateFolder.$jazz.id, sessionId);
       }
     }
   };
 
-  const handleDeleteSession = (templateId: string, sessionId: string) => {
-    sessionService.deleteSession(account, templateId, sessionId);
+  const handleDeleteSession = (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
+    sessionService.deleteSession(account, templateFolder.$jazz.id, sessionId);
   };
 
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
-    const entryId = event.active.data.current?.entryId as string;
-    setActiveEntryId(entryId);
+    const folderId = event.active.data.current?.folderId as string;
+    setActiveFolderId(folderId);
   };
 
   const handleDragOver = (_event: DragOverEvent) => {
@@ -208,113 +187,112 @@ export function TreeView({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    setActiveEntryId(null);
+    setActiveFolderId(null);
 
-    if (!over || !active.data.current) {
+    if (!over || !active.data.current || !account.root?.folders) {
       return;
     }
 
-    const draggedEntryId = active.data.current.entryId as string;
+    const draggedFolderId = active.data.current.folderId as string;
     const overData = over.data.current;
+
+    // Find dragged folder
+    const findFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+      for (const f of folders) {
+        if (!f) continue;
+        if (f.$jazz.id === draggedFolderId) return f;
+        if (f.children) {
+          const found = findFolder(f.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const draggedFolder = findFolder(account.root.folders);
+    if (!draggedFolder) return;
 
     // Check if dropped on a reorder zone
     if (overData?.type === 'reorder-zone') {
-      // Calculate the new position in the array
-      const directory = account.root?.directory || [];
       const afterItemId = overData.afterItemId as string | undefined;
       const beforeItemId = overData.beforeItemId as string | undefined;
-      const targetParentPath = overData.parentPath as string | undefined;
+      const targetParentId = overData.parentId as string | undefined;
 
-      // Get the dragged entry to check its current parent
-      const draggedEntry = directory.find((e) => e.id === draggedEntryId);
-      if (!draggedEntry) return;
-
-      const draggedPathParts = draggedEntry.path.split(PATH_SEPARATOR);
-      const currentParentPath =
-        draggedPathParts.length > 1
-          ? draggedPathParts.slice(0, -1).join(PATH_SEPARATOR)
-          : undefined;
+      // Get current parent ID
+      const currentParentId = draggedFolder.parent?.$jazz.id;
 
       // Only allow reordering within the same parent
-      if (currentParentPath !== targetParentPath) {
-        // Different parent - this should be handled by the hierarchy change logic below
+      if (currentParentId !== targetParentId) {
         return;
       }
 
-      // Find the target index in the flat array
+      // Find target index
+      const parentList = draggedFolder.parent?.children || account.root.folders;
       let newIndex: number;
+
       if (afterItemId) {
-        const afterIndex = directory.findIndex((e) => e.id === afterItemId);
+        const afterIndex = parentList.findIndex((f) => f?.$jazz.id === afterItemId);
         newIndex = afterIndex + 1;
       } else if (beforeItemId) {
-        newIndex = directory.findIndex((e) => e.id === beforeItemId);
+        newIndex = parentList.findIndex((f) => f?.$jazz.id === beforeItemId);
       } else {
-        // Insert at beginning of siblings with same parent
-        // Find first sibling with same parent
-        const firstSiblingIndex = directory.findIndex((e) => {
-          const eParts = e.path.split(PATH_SEPARATOR);
-          const eParentPath =
-            eParts.length > 1 ? eParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
-          return eParentPath === targetParentPath;
-        });
-        newIndex = firstSiblingIndex >= 0 ? firstSiblingIndex : 0;
+        newIndex = 0;
       }
 
       try {
-        directoryService.reorderDirectoryEntry(account, draggedEntryId, newIndex);
+        folderService.reorderFolder(account, draggedFolder, newIndex);
       } catch {
         // Silently ignore errors
       }
       return;
     }
 
-    // Otherwise, handle hierarchy changes (move into folders)
-    let newParentPath: string | undefined;
+    // Handle hierarchy changes (move into folders)
+    let newParent: InstanceOfSchema<typeof FolderNode> | null = null;
 
-    // IMPORTANT: Check virtual root zone FIRST
     if (overData?.path === '__ROOT_DROP_ZONE__') {
-      newParentPath = undefined; // Move to root level
-    } else if (overData?.isFolder) {
-      // Dropped on a folder - move inside it
-      newParentPath = overData.path as string;
-    } else if (overData?.entryId) {
-      // Dropped on another entry - move to same parent
-      const targetEntry = directoryService.getDirectoryEntry(account, overData.entryId as string);
-      if (targetEntry) {
-        const pathParts = targetEntry.path.split('/');
-        newParentPath = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : undefined;
-      }
-    } else {
-      // No valid drop target
-      return;
+      newParent = null; // Move to root level
+    } else if (overData?.isFolder && overData?.folderId) {
+      // Find the target folder
+      const findTargetFolder = (folders: typeof account.root.folders): InstanceOfSchema<typeof FolderNode> | null => {
+        for (const f of folders) {
+          if (!f) continue;
+          if (f.$jazz.id === overData.folderId) return f;
+          if (f.children) {
+            const found = findTargetFolder(f.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      newParent = findTargetFolder(account.root.folders);
     }
 
     try {
-      directoryService.moveDirectoryEntry(account, draggedEntryId, newParentPath);
+      folderService.moveFolder(account, draggedFolder, newParent);
     } catch {
-      // Silently ignore expected validation errors (moving into self, naming conflicts)
+      // Silently ignore expected validation errors
     }
   };
 
   const handleDragCancel = () => {
-    setActiveEntryId(null);
+    setActiveFolderId(null);
   };
 
-  // Build hierarchical tree structure from directory entries
-  const directoryTree = useMemo(
-    () => buildDirectoryTree(account, showArchived),
-    [account, showArchived],
+  // Build hierarchical tree structure
+  const folderTree = useMemo(
+    () => buildFolderTree(account.root?.folders || [], showArchived),
+    [account.root?.folders, showArchived],
   );
 
-  const renderNode = (node: DirectoryNode): React.ReactNode => {
-    const { entry, template, children } = node;
-    const isTemplateRef = entry.type === 'template-ref';
+  const renderNode = (node: TreeNode): React.ReactNode => {
+    const { folder, children } = node;
+    const isTemplate = folderService.isTemplateFolder(folder);
 
-    // For template-refs, show sessions only when sessionsEnabled is true
+    // For templates, show sessions only when sessionsEnabled is true
     let sessionChildren: React.ReactNode[] = [];
-    if (sessionsEnabled && isTemplateRef && template) {
-      const sessions = template.sessions || [];
-      // Show all sessions (both archived and active) when showArchived=true, only active sessions when false
+    if (sessionsEnabled && isTemplate && folder.sessions) {
+      const sessions = folder.sessions;
       const activeSessions = sessions
         .filter((s) => {
           if (!s) return false;
@@ -330,16 +308,17 @@ export function TreeView({
         <SessionRowView
           key={session.$jazz.id}
           session={session}
-          templateName={template.name}
+          templateName={folder.name}
           level={node.level + 1}
           onOpen={(sessionId) => {
-            // Expand the template and its ancestors so it's visible when returning from session
-            directoryService.expandPathAndAncestors(account, entry.path);
-            onOpenSession?.(template.$jazz.id, sessionId);
+            // Expand the template and its ancestors
+            folderService.expandAncestorFolders(folder);
+            folderService.setFolderExpanded(folder, true);
+            onOpenSession?.(folder.$jazz.id, sessionId);
           }}
-          onArchive={(sessionId) => handleToggleArchiveSession(template.$jazz.id, sessionId)}
-          onDelete={(sessionId) => handleDeleteSession(template.$jazz.id, sessionId)}
-          onExport={(sessionId) => onExportSession?.(template.$jazz.id, sessionId)}
+          onArchive={(sessionId) => handleToggleArchiveSession(folder, sessionId)}
+          onDelete={(sessionId) => handleDeleteSession(folder, sessionId)}
+          onExport={(sessionId) => onExportSession?.(folder.$jazz.id, sessionId)}
           allSessions={activeSessions}
         />
       ));
@@ -349,62 +328,54 @@ export function TreeView({
 
     return (
       <FolderNodeView
-        key={entry.id}
-        entry={entry}
-        template={template}
+        key={folder.$jazz.id}
+        folder={folder}
         level={node.level}
         hasChildren={hasChildren}
-        isSelected={selectedEntryId === entry.id}
+        isSelected={selectedFolderId === folder.$jazz.id}
         onSelect={() => {
-          onEntrySelect?.(entry.id);
-          // Also call onTemplateSelect for backward compatibility with template-refs
-          if (isTemplateRef && template) {
-            onTemplateSelect?.(template.$jazz.id);
+          onFolderSelect?.(folder.$jazz.id);
+          // Also call onTemplateSelect for templates
+          if (isTemplate) {
+            onTemplateSelect?.(folder.$jazz.id);
           }
         }}
-        onToggleExpand={() => handleToggleEntryExpand(entry.id)}
-        onRename={handleRenameEntry}
-        onArchive={handleToggleArchiveEntry}
-        onDelete={handleDeleteEntry}
-        onUseTemplate={
-          isTemplateRef && template ? () => onUseTemplate?.(template.$jazz.id) : undefined
-        }
-        onEditTemplate={
-          isTemplateRef && template ? () => onEditTemplate?.(template.$jazz.id) : undefined
-        }
+        onToggleExpand={() => handleToggleFolderExpand(folder)}
+        onRename={(newName) => handleRenameFolder(folder, newName)}
+        onArchive={() => handleToggleArchiveFolder(folder)}
+        onDelete={() => handleDeleteFolder(folder)}
+        onUseTemplate={isTemplate ? () => onUseTemplate?.(folder.$jazz.id) : undefined}
+        onEditTemplate={isTemplate ? () => onEditTemplate?.(folder.$jazz.id) : undefined}
         account={account}
       >
         {/* Render children only when expanded */}
-        {entry.expanded && (
+        {folder.expanded && (
           <>
-            {/* Render sessions for template-refs */}
+            {/* Render sessions for templates */}
             {sessionChildren}
-            {/* Render child entries recursively with reorder zones */}
+            {/* Render child folders recursively with reorder zones */}
             {children.map((childNode, childIndex) => {
-              // Get parent path from the child's path
-              const pathParts = childNode.entry.path.split(PATH_SEPARATOR);
-              const parentPath =
-                pathParts.length > 1 ? pathParts.slice(0, -1).join(PATH_SEPARATOR) : undefined;
+              const parentId = folder.$jazz.id;
 
               return (
-                <div key={childNode.entry.id}>
+                <div key={childNode.folder.$jazz.id}>
                   {/* Reorder zone before first child */}
                   {childIndex === 0 && (
                     <ReorderDropZone
-                      id={`reorder-before-${childNode.entry.id}`}
-                      beforeItemId={childNode.entry.id}
-                      parentPath={parentPath}
-                      isDragging={!!activeEntryId}
+                      id={`reorder-before-${childNode.folder.$jazz.id}`}
+                      beforeItemId={childNode.folder.$jazz.id}
+                      parentId={parentId}
+                      isDragging={!!activeFolderId}
                     />
                   )}
                   {renderNode(childNode)}
                   {/* Reorder zone after each child */}
                   <ReorderDropZone
-                    id={`reorder-after-${childNode.entry.id}`}
-                    afterItemId={childNode.entry.id}
-                    beforeItemId={children[childIndex + 1]?.entry.id}
-                    parentPath={parentPath}
-                    isDragging={!!activeEntryId}
+                    id={`reorder-after-${childNode.folder.$jazz.id}`}
+                    afterItemId={childNode.folder.$jazz.id}
+                    beforeItemId={children[childIndex + 1]?.folder.$jazz.id}
+                    parentId={parentId}
+                    isDragging={!!activeFolderId}
                   />
                 </div>
               );
@@ -416,19 +387,17 @@ export function TreeView({
   };
 
   // Determine button states based on selection
-  const selectedEntry = selectedEntryId
-    ? directoryService.getDirectoryEntry(account, selectedEntryId)
-    : null;
+  const isTemplate = selectedFolder ? folderService.isTemplateFolder(selectedFolder) : false;
 
   // Show Edit/Use buttons only when a non-archived template is selected
-  const canEditOrUse = selectedEntry?.type === 'template-ref' && !selectedEntry?.archived;
+  const canEditOrUse = isTemplate && !selectedFolder?.archived;
 
   // Show New Folder/List buttons when:
   // - Not in archived view AND
   // - (nothing is selected OR a non-archived folder is selected)
   const canCreateFolderOrList =
     !showArchived &&
-    (!selectedEntryId || (selectedEntry?.type === 'folder' && !selectedEntry?.archived));
+    (!selectedFolderId || !selectedFolder?.archived);
 
   return (
     <DndContext
@@ -442,7 +411,7 @@ export function TreeView({
       <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
         {/* Root-level drop zone with header */}
         <TreeViewHeader
-          isDragging={!!activeEntryId}
+          isDragging={!!activeFolderId}
           canCreateFolderOrList={canCreateFolderOrList}
           canEditOrUse={canEditOrUse}
           showArchived={showArchived}
@@ -468,7 +437,7 @@ export function TreeView({
           switchViewLabel={switchViewLabel}
         />
 
-        {directoryTree.length === 0 ? (
+        {folderTree.length === 0 ? (
           <div className="p-8 text-center text-neutral-500">
             <p>No lists yet.</p>
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
@@ -476,23 +445,23 @@ export function TreeView({
         ) : (
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="divide-y divide-neutral-100 p-2">
-              {directoryTree.map((node, index) => (
-                <div key={node.entry.id}>
+              {folderTree.map((node, index) => (
+                <div key={node.folder.$jazz.id}>
                   {/* Reorder zone before first item */}
                   {index === 0 && (
                     <ReorderDropZone
-                      id={`reorder-before-${node.entry.id}`}
-                      beforeItemId={node.entry.id}
-                      isDragging={!!activeEntryId}
+                      id={`reorder-before-${node.folder.$jazz.id}`}
+                      beforeItemId={node.folder.$jazz.id}
+                      isDragging={!!activeFolderId}
                     />
                   )}
                   {renderNode(node)}
                   {/* Reorder zone after each item */}
                   <ReorderDropZone
-                    id={`reorder-after-${node.entry.id}`}
-                    afterItemId={node.entry.id}
-                    beforeItemId={directoryTree[index + 1]?.entry.id}
-                    isDragging={!!activeEntryId}
+                    id={`reorder-after-${node.folder.$jazz.id}`}
+                    afterItemId={node.folder.$jazz.id}
+                    beforeItemId={folderTree[index + 1]?.folder.$jazz.id}
+                    isDragging={!!activeFolderId}
                   />
                 </div>
               ))}
@@ -503,12 +472,9 @@ export function TreeView({
 
       {/* Drag Overlay */}
       <DragOverlay>
-        {activeEntryId ? (
+        {activeFolderId && selectedFolder ? (
           <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
-            {(() => {
-              const entry = directoryService.getDirectoryEntry(account, activeEntryId);
-              return <span className="font-medium">{entry?.name || ''}</span>;
-            })()}
+            <span className="font-medium">{selectedFolder.name}</span>
           </div>
         ) : null}
       </DragOverlay>

@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Template } from '../../schemas';
+import type { FolderNode } from '../../schemas';
 
 /**
  * Safely convert a Date or date string to ISO string
@@ -36,10 +36,10 @@ function escapeCsvField(value: string): string {
  *
  * Format: name,defaultQuantity,path
  *
- * @param template - Template to export items from
+ * @param template - FolderNode to export items from
  * @returns CSV string with header row
  */
-export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Template>): string {
+export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof FolderNode>): string {
   const lines: string[] = [];
 
   // Header row
@@ -76,12 +76,12 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Templ
  *
  * Format: name,path,selected,checked,selectedAt,checkedAt
  *
- * @param template - Template containing the session
+ * @param template - FolderNode containing the session
  * @param sessionId - ID of the session to export
  * @returns CSV string with header row, or null if session not found
  */
 export function exportSessionToCsv(
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   sessionId: string,
 ): string | null {
   if (!template.sessions) {

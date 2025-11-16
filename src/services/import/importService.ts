@@ -5,7 +5,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
+import * as folderService from '../folderService';
 import { readFileAsText } from '../../utils/fileUpload';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
@@ -60,14 +61,14 @@ function getValidExtensions(fileType: ImportFileType): string[] {
  * @param file - File object from input or drag-and-drop
  * @param account - User's Account
  * @param fileType - Expected file type (optional, auto-detected from extension)
- * @param parentPath - Optional parent folder path for JSON imports
+ * @param parentFolder - Optional parent folder for JSON imports
  * @returns Import result with success/failure info
  */
 export async function importFromFile(
   file: File,
   account: InstanceOfSchema<typeof Account>,
   fileType?: ImportFileType,
-  parentPath?: string,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
   // Determine file type
   const detectedType = fileType || detectFileType(file);
@@ -96,7 +97,7 @@ export async function importFromFile(
   // Import based on type
   switch (detectedType) {
     case 'json':
-      return await importJson(content, account, parentPath);
+      return await importJson(content, account, parentFolder);
 
     case 'txt':
       // TODO: Phase 2 - Template list import from TXT
@@ -115,13 +116,13 @@ export async function importFromFile(
  * Import template items from TXT file
  *
  * @param file - TXT file with one item per line
- * @param template - Template to import items into
+ * @param template - FolderNode to import items into
  * @param account - User's Account
  * @returns Import result with statistics
  */
 export async function importItemsFromTxtFile(
   file: File,
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<TxtImportResult> {
   // Validate file
@@ -147,13 +148,13 @@ export async function importItemsFromTxtFile(
  * Import template items from CSV file
  *
  * @param file - CSV file with header row
- * @param template - Template to import items into
+ * @param template - FolderNode to import items into
  * @param account - User's Account
  * @returns Import result with statistics
  */
 export async function importItemsFromCsvFile(
   file: File,
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<CsvImportResult> {
   // Validate file
@@ -179,14 +180,14 @@ export async function importItemsFromCsvFile(
  * Import session from CSV file
  *
  * @param file - CSV file with session data
- * @param template - Template to import session into
+ * @param template - FolderNode to import session into
  * @param account - User's Account
  * @param options - Import options (session name, add missing items)
  * @returns Import result with statistics
  */
 export async function importSessionFromCsvFile(
   file: File,
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
   options: SessionImportOptions = {},
 ): Promise<SessionImportResult> {
@@ -219,7 +220,7 @@ export async function importSessionFromCsvFile(
  * @param account - User's Account
  * @param templateName - Name for the new template folder
  * @param fileType - File type ('txt' or 'csv')
- * @param parentPath - Optional parent folder path (if not provided, creates at root)
+ * @param parentFolder - Optional parent folder (if not provided, creates at root)
  * @returns Import result with statistics
  */
 export async function importAsNewTemplate(
@@ -227,7 +228,7 @@ export async function importAsNewTemplate(
   account: InstanceOfSchema<typeof Account>,
   templateName: string,
   fileType: 'txt' | 'csv',
-  parentPath?: string,
+  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
   // Validate file
   try {
@@ -244,18 +245,11 @@ export async function importAsNewTemplate(
   // Read file content
   const content = await readFileAsText(file);
 
-  // Create new template using directoryService (at root or in specified folder)
-  const { createDirectoryEntry } = await import('../directoryService');
-  const { templateId } = createDirectoryEntry(account, templateName, true, parentPath);
+  // Create new template using folderService
+  const newTemplate = folderService.createFolder(account, templateName, true, parentFolder);
 
-  if (!templateId) {
-    return createErrorResult('Failed to create template');
-  }
-
-  // Get the created template
-  const newTemplate = account.root?.templates?.find((t) => t?.$jazz.id === templateId);
   if (!newTemplate) {
-    return createErrorResult('Failed to retrieve created template');
+    return createErrorResult('Failed to create template');
   }
 
   // Import items into the new template

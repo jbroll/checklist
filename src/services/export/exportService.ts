@@ -5,7 +5,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
+import * as folderService from '../folderService';
 import {
   exportSessionToCsv as exportSessionToCsvImpl,
   exportTemplateItemsToCsv as exportTemplateItemsToCsvImpl,
@@ -22,23 +23,14 @@ import type { ExportedData, ExportScope } from './types';
  *
  * @param account - User's Account
  * @param templateId - Jazz ID of the template
- * @returns Template or null if not found
+ * @returns FolderNode or null if not found
  */
 function findTemplateById(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-): InstanceOfSchema<typeof Template> | null {
-  if (!account.root?.templates) {
-    return null;
-  }
-
-  for (const template of account.root.templates) {
-    if (template && template.$jazz?.id === templateId) {
-      return template;
-    }
-  }
-
-  return null;
+): InstanceOfSchema<typeof FolderNode> | null {
+  const templates = folderService.getAllTemplateFolders(account, true);
+  return templates.find((t) => t?.$jazz?.id === templateId) || null;
 }
 
 /**
@@ -66,16 +58,7 @@ export function exportToJson(
     throw new Error(`Template not found: ${scope.folderId}`);
   }
 
-  // Find the directory entry for this template to get its path
-  const dirEntry = account.root?.directory?.find(
-    (entry) => entry.type === 'template-ref' && entry.templateId === scope.folderId,
-  );
-
-  if (!dirEntry) {
-    throw new Error(`Directory entry not found for template: ${scope.folderId}`);
-  }
-
-  return exportTemplate(template, dirEntry.path);
+  return exportTemplate(template);
 }
 
 /**

@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import type { ItemState } from '../../schemas/tree';
 import { Session } from '../../schemas/tree';
 import { parseCsv } from '../../utils/csvParser';
@@ -34,14 +34,14 @@ export interface SessionImportOptions {
  * Creates a new session with the imported state.
  *
  * @param csvContent - CSV content string
- * @param template - Template to import session into
+ * @param template - FolderNode to import session into
  * @param account - User's Account (for ownership)
  * @param options - Import options (session name, add missing items)
  * @returns Import result with statistics
  */
 export function importSessionFromCsv(
   csvContent: string,
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
   _options: SessionImportOptions = {},
 ): SessionImportResult {
