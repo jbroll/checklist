@@ -8,7 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, Template } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import { parseTextList } from '../../utils/csvParser';
 import { isIndentedFormat, parseIndentedList } from '../../utils/indentedListParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
@@ -33,13 +33,13 @@ export type TxtImportResult = BaseImportResult;
  * - Paths are generated from hierarchy
  *
  * @param textContent - Plain text content
- * @param template - Template to import items into
+ * @param template - FolderNode to import items into
  * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
 export function importItemsFromText(
   textContent: string,
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): TxtImportResult {
   // Detect format

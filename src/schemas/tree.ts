@@ -12,22 +12,6 @@ export function setAccountReference(account: any) {
 }
 
 /**
- * DirectoryEntry - Lightweight directory entry (like filesystem dentry)
- * Points to either a folder or a template "inode"
- */
-export type DirectoryEntry = {
-  id: string; // Unique entry ID
-  name: string;
-  type: 'folder' | 'template-ref';
-  path: string; // Hierarchical path
-  expanded: boolean;
-  archived: boolean;
-  templateId?: string; // For template-ref: ID of Template "inode"
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-/**
  * TemplateItem - Plain JSON object (not a CoValue)
  * Represents a hierarchical category or item node within a template.
  */
@@ -93,8 +77,68 @@ export const Session = co.map({
 });
 
 /**
- * Template - The actual template data (loaded on-demand like an inode)
- * Directory entries point to these by ID
+ * FolderNode - Hierarchical folder/template CoValue
+ *
+ * Represents both organizational folders and template folders.
+ * Uses optional fields instead of discriminated unions (Jazz limitation).
+ *
+ * For organizational folders:
+ *   - name, expanded, archived, createdAt, updatedAt are set
+ *   - children contains nested FolderNodes
+ *   - parent points to parent folder (if not root)
+ *
+ * For template folders:
+ *   - name, expanded, archived, createdAt, updatedAt are set
+ *   - items contains template items (plain JSON array)
+ *   - sessions contains shopping sessions
+ *   - showZoneHeadings controls UI display
+ *   - parent points to parent folder (if not root)
+ */
+export const FolderNode: any = co.map({
+  name: z.string(),
+  expanded: z.boolean(),
+  archived: z.boolean(),
+
+  // Optional fields - use as required for different types
+
+  // For organizational folders: nested child folders
+  get children() {
+    return co.optional(co.list(FolderNode));
+  },
+
+  // For template folders: template data
+  items: z.optional(z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(['category', 'item']),
+      path: z.string(),
+      expanded: z.boolean(),
+      sortOrder: z.number(),
+      archived: z.boolean(),
+      defaultQuantity: z.string(),
+      createdAt: z.date(),
+    }),
+  )),
+  sessions: co.optional(co.list(Session)),
+  showZoneHeadings: z.optional(z.boolean()),
+
+  // Parent back-reference for breadcrumbs and path computation
+  get parent() {
+    return co.optional(FolderNode);
+  },
+
+  // Ownership and timestamps
+  get owner() {
+    return Account;
+  },
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+/**
+ * Template - The actual template data (DEPRECATED - kept for migration)
+ * Use FolderNode with template fields instead
  */
 export const Template = co.map({
   name: z.string(),

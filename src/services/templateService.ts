@@ -1,15 +1,16 @@
 /**
  * Template Service
  *
- * Manages template "inodes" - the actual template data and their items.
- * Templates are loaded on-demand when needed (editing, using, exporting).
+ * Manages template folders and their items.
+ * Templates are now FolderNode CoValues in the hierarchical structure.
  * Handles hierarchical item structure using paths.
  * All Jazz database access for templates and items goes through this service.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../lib/utils';
-import type { Account, Template, TemplateItem } from '../schemas';
+import type { Account, FolderNode, TemplateItem } from '../schemas';
+import * as folderService from './folderService';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
 
 // ============================================================================
@@ -22,9 +23,9 @@ import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUti
 export function getTemplate(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-): InstanceOfSchema<typeof Template> | null {
-  if (!account.root?.templates) return null;
-  return account.root.templates.find((t) => t?.$jazz.id === templateId) || null;
+): InstanceOfSchema<typeof FolderNode> | null {
+  const templates = folderService.getAllTemplateFolders(account, true);
+  return templates.find((t) => t?.$jazz.id === templateId) || null;
 }
 
 /**
@@ -32,11 +33,8 @@ export function getTemplate(
  */
 export function getAllTemplates(
   account: InstanceOfSchema<typeof Account>,
-): Array<InstanceOfSchema<typeof Template>> {
-  if (!account.root?.templates) return [];
-  return account.root.templates.filter((t) => t != null) as Array<
-    InstanceOfSchema<typeof Template>
-  >;
+): Array<InstanceOfSchema<typeof FolderNode>> {
+  return folderService.getAllTemplateFolders(account, false);
 }
 
 /**
@@ -421,7 +419,7 @@ export function reorderItem(
  * Returns parentPath and sortOrder for inserting a new item
  */
 export function calculateInsertionPoint(
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   selectedItemId: string | null,
 ): { parentPath: string | undefined; sortOrder: number } {
   const items = template.items?.filter((item) => !item.archived) || [];

@@ -303,34 +303,19 @@ function isValidISODate(dateString: string): boolean {
 }
 
 /**
- * Check if a path already exists in the directory
+ * Check if a folder name already exists in the root folders
  *
- * @param path - Path to check
+ * @param name - Folder name to check
  * @param account - User's account
- * @returns true if path exists in directory
+ * @returns true if name exists in root folders
  */
-function directoryPathExists(path: string, account: InstanceOfSchema<typeof Account>): boolean {
-  if (!account.root?.directory) {
+function directoryPathExists(name: string, account: InstanceOfSchema<typeof Account>): boolean {
+  if (!account.root?.folders) {
     return false;
   }
 
-  return account.root.directory.some((entry) => entry.path === path && !entry.archived);
-}
-
-/**
- * Find a directory entry by path
- *
- * @param path - Path to search for
- * @param account - User's account
- * @returns Directory entry or null if not found
- */
-export function findDirectoryEntryByPath(
-  path: string,
-  account: InstanceOfSchema<typeof Account>,
-): import('../../schemas').DirectoryEntry | null {
-  if (!account.root?.directory) {
-    return null;
-  }
-
-  return account.root.directory.find((entry) => entry.path === path && !entry.archived) || null;
+  // Check if any root-level folder has this name (case-sensitive)
+  return Array.from(account.root.folders).some(
+    (folder) => folder && folder.name.trim() === name && !folder.archived,
+  );
 }

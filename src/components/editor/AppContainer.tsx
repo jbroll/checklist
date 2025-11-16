@@ -7,10 +7,10 @@ import { SessionView } from '@/components/session/SessionView';
 import { SimplifiedApp } from '@/components/simplified/SimplifiedApp';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
-import type { Account } from '@/schemas';
-import * as directoryService from '@/services/directoryService';
+import type { Account, FolderNode } from '@/schemas';
+import type { InstanceOfSchema } from 'jazz-tools';
+import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
-import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
 
@@ -34,8 +34,8 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
 
   // Selection state - tracks currently selected template
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  // Selection state - tracks currently selected directory entry (folder or template-ref)
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  // Selection state - tracks currently selected folder (organizational or template)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   // Navigation state for shopping session view
   const [activeSessionTemplateId, setActiveSessionTemplateId] = useState<string | null>(null);
@@ -44,21 +44,33 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
   // Navigation state for template editing view
   const [activeEditTemplateId, setActiveEditTemplateId] = useState<string | null>(null);
 
-  // Compute parent path for import based on selected folder (must be before early return)
-  const importParentPath = useMemo(() => {
-    if (!me || !selectedEntryId) return undefined;
+  // Find selected folder for import (must be before early return)
+  const selectedFolder = useMemo(() => {
+    if (!me?.root?.folders || !selectedFolderId) return null;
 
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-    const entries = directoryService.getAllDirectoryEntries(me as any);
-    const selectedEntry = entries.find((e) => e.id === selectedEntryId);
+    const findFolder = (
+      folders: InstanceOfSchema<typeof FolderNode>[],
+    ): InstanceOfSchema<typeof FolderNode> | null => {
+      for (const f of folders) {
+        if (!f) continue;
+        if (f.$jazz.id === selectedFolderId) return f;
+        if (f.children) {
+          const found = findFolder(f.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
 
-    // Only use folder paths (not template-refs)
-    if (selectedEntry?.type === 'folder') {
-      return selectedEntry.path;
-    }
+    return findFolder(me.root.folders);
+  }, [selectedFolderId, me?.root?.folders]);
 
-    return undefined;
-  }, [selectedEntryId, me]);
+  // Compute parent folder for import based on selected folder
+  const importParentFolder = useMemo(() => {
+    if (!selectedFolder) return undefined;
+    // Only use organizational folders as import parents
+    return folderService.isOrganizationalFolder(selectedFolder) ? selectedFolder : undefined;
+  }, [selectedFolder]);
 
   if (!me) {
     return (
@@ -84,54 +96,40 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
   }
 
   // Otherwise render classic UI below
-  const templates = me.root?.templates || [];
+  // Get all template folders from the hierarchy
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  const templates = folderService.getAllTemplateFolders(me as any);
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
-    // Determine parent path based on selected entry
-    let parentPath: string | undefined;
-    if (selectedEntryId) {
-      // Find the directory entry for the selected entry
-      // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-      const entries = directoryService.getAllDirectoryEntries(me);
-      const selectedEntry = entries.find((e) => e.id === selectedEntryId);
-      if (selectedEntry) {
-        if (selectedEntry.type === 'folder') {
-          // If selected entry is a folder, create inside it
-          parentPath = selectedEntry.path;
-        } else {
-          // If selected entry is a template-ref, create at the same level (sibling)
-          const pathParts = selectedEntry.path.split(PATH_SEPARATOR);
-          parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR) || undefined;
-        }
+    // Determine parent folder based on selection
+    let parent: InstanceOfSchema<typeof FolderNode> | null = null;
+    if (selectedFolder) {
+      if (folderService.isOrganizationalFolder(selectedFolder)) {
+        // If selected folder is organizational, create inside it
+        parent = selectedFolder;
+      } else if (folderService.isTemplateFolder(selectedFolder)) {
+        // If selected folder is a template, create at the same level (sibling)
+        parent = selectedFolder.parent || null;
       }
     }
 
-    // Create directory entry (folder or template-ref)
-    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-    directoryService.createDirectoryEntry(me, name, isTemplate, parentPath);
+    // Create folder (organizational or template)
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+    folderService.createFolder(me as any, name, isTemplate, parent);
   };
 
   const handleUseTemplate = () => {
-    if (!selectedTemplateId) return;
-
-    // Find the template's directory entry to get its path
-    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-    const entries = directoryService.getAllDirectoryEntries(me);
-    const templateEntry = entries.find(
-      (e) => e.type === 'template-ref' && e.templateId === selectedTemplateId,
-    );
+    if (!selectedTemplateId || !selectedFolder) return;
 
     // Expand the template and its ancestors so it's visible when returning
-    if (templateEntry) {
-      // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-      directoryService.expandPathAndAncestors(me, templateEntry.path);
-    }
+    folderService.expandAncestorFolders(selectedFolder);
+    folderService.setFolderExpanded(selectedFolder, true);
 
     // Create session using service
-    // @ts-expect-error Jazz v0.18.x TypeScript inference issue with Account root type
-    const sessionId = SessionService.createSession(me, selectedTemplateId);
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+    const sessionId = SessionService.createSession(me as any, selectedTemplateId);
 
     // Navigate to shopping session view
     setActiveSessionTemplateId(selectedTemplateId);
@@ -158,14 +156,14 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
     setSelectedTemplateId(templateId);
   };
 
-  const handleEntrySelect = (entryId: string) => {
-    setSelectedEntryId(entryId);
+  const handleFolderSelect = (folderId: string) => {
+    setSelectedFolderId(folderId);
   };
 
   const handleHeaderClick = () => {
     // Clicking on BubbleList header deselects everything
     setSelectedTemplateId(null);
-    setSelectedEntryId(null);
+    setSelectedFolderId(null);
   };
 
   const handleExportSession = (templateId: string, sessionId: string) => {
@@ -206,9 +204,9 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
         <TreeView
           account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
-          selectedEntryId={selectedEntryId}
+          selectedFolderId={selectedFolderId}
           onTemplateSelect={handleTemplateSelect}
-          onEntrySelect={handleEntrySelect}
+          onFolderSelect={handleFolderSelect}
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
           onOpenSession={(templateId, sessionId) => {
@@ -252,7 +250,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           open={showImportDialog}
           onOpenChange={setShowImportDialog}
           account={accountAsAny}
-          parentPath={importParentPath}
+          parentFolder={importParentFolder}
         />
 
         {/* Session Export Dialog */}

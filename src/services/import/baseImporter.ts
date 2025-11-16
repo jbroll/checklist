@@ -6,7 +6,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
-import type { Account, Template } from '../../schemas';
+import type { Account, FolderNode } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 
 export interface BaseImportResult {
@@ -28,10 +28,10 @@ export interface ItemToImport {
 /**
  * Get existing item paths from template (case-insensitive)
  *
- * @param template - Template to check
+ * @param template - FolderNode to check
  * @returns Set of existing paths (lowercase)
  */
-export function getExistingPaths(template: InstanceOfSchema<typeof Template>): Set<string> {
+export function getExistingPaths(template: InstanceOfSchema<typeof FolderNode>): Set<string> {
   const existingPaths = new Set<string>();
 
   if (template.items) {
@@ -48,10 +48,10 @@ export function getExistingPaths(template: InstanceOfSchema<typeof Template>): S
 /**
  * Calculate next available sort order for items in template
  *
- * @param template - Template to check
+ * @param template - FolderNode to check
  * @returns Next available sort order
  */
-export function calculateNextSortOrder(template: InstanceOfSchema<typeof Template>): number {
+export function calculateNextSortOrder(template: InstanceOfSchema<typeof FolderNode>): number {
   let nextSortOrder = 0;
 
   if (template.items) {
@@ -71,13 +71,13 @@ export function calculateNextSortOrder(template: InstanceOfSchema<typeof Templat
  * Handles duplicate detection, item creation, and error tracking.
  *
  * @param items - Items to import
- * @param template - Template to import into
+ * @param template - FolderNode to import into
  * @param account - User account (for ownership)
  * @returns Import result with statistics
  */
 export function importItems(
   items: ItemToImport[],
-  template: InstanceOfSchema<typeof Template>,
+  template: InstanceOfSchema<typeof FolderNode>,
   _account: InstanceOfSchema<typeof Account>,
 ): BaseImportResult {
   const result: BaseImportResult = {

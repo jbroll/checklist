@@ -11,7 +11,8 @@ import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
-import { exposeServicesToWindow } from '@/services/testHelpers';
+// NOTE: testHelpers disabled during folder migration - needs rewrite for FolderNode
+// import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
@@ -20,9 +21,9 @@ export function TestPage() {
   // Expose services to window for E2E tests
   useEffect(() => {
     if (me) {
-      // @ts-expect-error Jazz TypeScript inference issue with Account root type
-      exposeServicesToWindow(() => me);
-      console.log('[TestPage] Services exposed for testing');
+      // NOTE: testHelpers disabled during folder migration - needs rewrite for FolderNode
+      // exposeServicesToWindow(() => me);
+      console.log('[TestPage] Test mode active (services not exposed - testHelpers needs rewrite)');
 
       // Add visual indicator that we're in test mode
       document.body.style.border = '5px solid orange';

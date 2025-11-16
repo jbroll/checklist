@@ -1,13 +1,11 @@
 /**
  * Conflict resolution logic
  *
- * Handles path conflicts when importing folders.
+ * Handles name conflicts when importing folders and items.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account } from '../../schemas';
-// Account type imported via InstanceOfSchema from '../../schemas';
-import { findDirectoryEntryByPath } from './validators';
 
 /**
  * Generic helper to resolve naming conflicts by appending numbered suffixes
@@ -42,39 +40,21 @@ function resolveNameConflict(
 }
 
 /**
- * Resolve path conflict by generating a unique path
+ * Resolve path conflict (DEPRECATED - no longer used with FolderNode hierarchy)
  *
- * Strategy:
- * Append numbered suffix " (N)" to name and "-(N)" to path
- * where N is 1, 2, 3, etc. until a unique path is found
- *
- * Examples:
- * - "Wegmans" → "Wegmans (1)"
- * - "Wegmans (1)" exists → "Wegmans (2)"
- * - "Wegmans (2)" exists → "Wegmans (3)"
- *
+ * @deprecated Use name-based conflict resolution instead
  * @param originalPath - Original path that conflicts
  * @param originalName - Original name
- * @param account - User's account
- * @returns Resolved path and name
+ * @param _account - User's account (unused)
+ * @returns Original values (no-op)
  */
 export function resolvePathConflict(
   originalPath: string,
   originalName: string,
-  account: InstanceOfSchema<typeof Account>,
+  _account: InstanceOfSchema<typeof Account>,
 ): { path: string; name: string } {
-  const newPath = resolveNameConflict(
-    originalPath,
-    (candidate) => !!findDirectoryEntryByPath(candidate, account),
-    (base, counter) => `${base}-(${counter})`,
-  );
-
-  // Extract counter from resolved path
-  const match = newPath.match(/-\((\d+)\)$/);
-  const counter = match ? Number.parseInt(match[1], 10) : 1;
-  const newName = `${originalName} (${counter})`;
-
-  return { path: newPath, name: newName };
+  // No-op: path conflicts are handled by name conflicts in FolderNode hierarchy
+  return { path: originalPath, name: originalName };
 }
 
 /**
