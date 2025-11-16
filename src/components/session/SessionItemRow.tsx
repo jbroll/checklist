@@ -4,6 +4,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { GripVertical } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
+import { useDoubleTap } from '@/lib/useDoubleTap';
 import type { Account, ItemState, Template, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 
@@ -53,6 +54,24 @@ export const SessionItemRow = memo(function SessionItemRow({
     disabled: !enableDrag,
   });
 
+  // Inline editing handlers with double-tap support for mobile
+  const doubleTapHandlers = useDoubleTap({
+    onDoubleTap: (e) => {
+      // Only enable in simplified UI mode and when template is available
+      if (!simplifiedUI || !template) return;
+
+      // Don't trigger if clicking on buttons
+      if ((e.target as HTMLElement).closest('button')) return;
+
+      setEditValue(item.name);
+      setIsEditing(true);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 0);
+    },
+  });
+
   console.log(
     '[SessionItemRow]',
     item.name,
@@ -73,23 +92,6 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Determine which state the left checkbox controls based on zone
   const leftCheckboxControlsChecked = zone === 'selected' || zone === 'checked';
   const leftCheckboxChecked = leftCheckboxControlsChecked ? isChecked : isSelected;
-
-  // Inline editing handlers
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    // Only enable in simplified UI mode and when template is available
-    if (!simplifiedUI || !template) return;
-
-    // Don't trigger if clicking on buttons
-    if ((e.target as HTMLElement).closest('button')) return;
-
-    setEditValue(item.name);
-    setIsEditing(true);
-    // Focus will be handled by useEffect
-    setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 0);
-  };
 
   const handleSaveEdit = () => {
     if (!me || !template) return;
@@ -218,7 +220,7 @@ export const SessionItemRow = memo(function SessionItemRow({
         </button>
 
         {/* Item name */}
-        <div className="flex-1" onDoubleClick={handleDoubleClick}>
+        <div className="flex-1" {...doubleTapHandlers}>
           {isEditing ? (
             <input
               ref={inputRef}

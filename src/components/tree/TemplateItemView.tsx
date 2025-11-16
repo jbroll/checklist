@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { Archive, Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
+import { useDoubleTap } from '@/lib/useDoubleTap';
 import type { TemplateItem } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
@@ -34,6 +35,7 @@ export function TemplateItemView({
 }: TemplateItemViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { showConfirm } = useDialog();
 
   const isCategory = item.type === 'category';
@@ -59,7 +61,22 @@ export function TemplateItemView({
   const handleStartEdit = () => {
     setEditedName(item.name);
     setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
   };
+
+  // Double-tap handler for mobile-friendly inline editing
+  const doubleTapHandlers = useDoubleTap({
+    onDoubleTap: (e) => {
+      // Don't trigger if clicking on buttons or checkboxes
+      if ((e.target as HTMLElement).closest('button, input[type="checkbox"]')) {
+        return;
+      }
+      handleStartEdit();
+    },
+  });
 
   const handleSaveEdit = () => {
     if (editedName.trim() && editedName !== item.name && onRename) {
@@ -155,6 +172,7 @@ export function TemplateItemView({
               {/* Name (Editable) */}
               {isEditing ? (
                 <input
+                  ref={inputRef}
                   type="text"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
@@ -165,6 +183,7 @@ export function TemplateItemView({
                 />
               ) : (
                 <span
+                  {...doubleTapHandlers}
                   className={`flex-1 min-w-0 truncate text-left text-sm ${
                     isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-700'
                   }`}
