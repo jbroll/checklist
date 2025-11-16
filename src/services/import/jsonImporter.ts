@@ -104,7 +104,7 @@ async function importFolders(
       const { folder, stats } = await importFolder(exportedFolder, account, parentFolder);
 
       // Add folder to hierarchy
-      if (parentFolder && parentFolder.children) {
+      if (parentFolder?.children) {
         parentFolder.children.$jazz.push(folder);
       } else if (account.root.folders) {
         account.root.folders.$jazz.push(folder);

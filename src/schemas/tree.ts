@@ -94,6 +94,7 @@ export const Session = co.map({
  *   - showZoneHeadings controls UI display
  *   - parent points to parent folder (if not root)
  */
+// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x requires any for recursive types with forward references
 export const FolderNode: any = co.map({
   name: z.string(),
   expanded: z.boolean(),
@@ -107,19 +108,21 @@ export const FolderNode: any = co.map({
   },
 
   // For template folders: template data
-  items: z.optional(z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      type: z.enum(['category', 'item']),
-      path: z.string(),
-      expanded: z.boolean(),
-      sortOrder: z.number(),
-      archived: z.boolean(),
-      defaultQuantity: z.string(),
-      createdAt: z.date(),
-    }),
-  )),
+  items: z.optional(
+    z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        type: z.enum(['category', 'item']),
+        path: z.string(),
+        expanded: z.boolean(),
+        sortOrder: z.number(),
+        archived: z.boolean(),
+        defaultQuantity: z.string(),
+        createdAt: z.date(),
+      }),
+    ),
+  ),
   sessions: co.optional(co.list(Session)),
   showZoneHeadings: z.optional(z.boolean()),
 

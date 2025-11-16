@@ -149,14 +149,15 @@ test.describe('Simplified UI - Session View', () => {
     await page.evaluate(() => {
       const directoryService = (window as any).testExports.directoryService;
       const templateService = (window as any).testExports.templateService;
+      const folderService = (window as any).testExports.folderService;
       const me = (window as any).testExports.account;
 
       // Create template
       directoryService.createDirectoryEntry(me, 'Shopping List', true);
 
-      // Get the template
-      const templates = me.root.templates;
-      const template = templates[templates.length - 1];
+      // Get the template (get all templates and find the one we just created)
+      const templates = folderService.getAllTemplates();
+      const template = templates.find((t: any) => t.name === 'Shopping List');
 
       // Add items
       templateService.createItem(me, template.$jazz.id, 'Milk', 'item');
@@ -376,11 +377,12 @@ test.describe('Simplified UI - Data Synchronization', () => {
     await page.evaluate(() => {
       const directoryService = (window as any).testExports.directoryService;
       const templateService = (window as any).testExports.templateService;
+      const folderService = (window as any).testExports.folderService;
       const me = (window as any).testExports.account;
 
       directoryService.createDirectoryEntry(me, 'Delete Test', true);
-      const templates = me.root.templates;
-      const template = templates[templates.length - 1];
+      const templates = folderService.getAllTemplates();
+      const template = templates.find((t: any) => t.name === 'Delete Test');
 
       templateService.createItem(me, template.$jazz.id, 'Item to Delete', 'item');
     });

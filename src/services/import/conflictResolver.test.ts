@@ -3,147 +3,169 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DirectoryEntry } from '../../schemas';
-import { resolvePathConflict } from './conflictResolver';
-
-// Mock Account with directory structure for testing
-const createMockAccount = (existingPaths: string[]) => {
-  const directory: DirectoryEntry[] = existingPaths.map((path) => ({
-    id: `mock-${path}`,
-    name: path.replace('/', ''),
-    type: 'template-ref' as const,
-    path,
-    expanded: false,
-    archived: false,
-    templateId: `template-${path}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }));
-
-  return {
-    root: {
-      directory,
-    },
-  } as any;
-};
+import {
+  itemNameConflicts,
+  resolveItemNameConflict,
+  resolvePathConflict,
+} from './conflictResolver';
 
 describe('conflictResolver', () => {
-  describe('resolvePathConflict', () => {
+  describe('resolvePathConflict (deprecated)', () => {
     beforeEach(() => {
       vi.restoreAllMocks();
     });
 
-    it('should add "-(1)" suffix to path when original path exists', () => {
-      const account = createMockAccount(['/grocery-list']);
+    it('should return original path and name unchanged (no-op)', () => {
+      const account = {} as any;
       const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
 
-      expect(result.path).toBe('/grocery-list-(1)');
-      expect(result.name).toBe('Grocery List (1)');
+      expect(result.path).toBe('/grocery-list');
+      expect(result.name).toBe('Grocery List');
     });
 
-    it('should return "-(1)" suffix even when checking for no original conflict', () => {
-      // The function always appends -(1) first, then checks if that conflicts
-      const account = createMockAccount(['/other-list']);
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
+    it('should not modify any input values', () => {
+      const account = {} as any;
+      const originalPath = '/my-path';
+      const originalName = 'My Name';
 
-      expect(result.path).toBe('/grocery-list-(1)');
-      expect(result.name).toBe('Grocery List (1)');
+      const result = resolvePathConflict(originalPath, originalName, account);
+
+      expect(result.path).toBe(originalPath);
+      expect(result.name).toBe(originalName);
+    });
+  });
+
+  describe('itemNameConflicts', () => {
+    it('should return true for exact match', () => {
+      const existingNames = ['Apples', 'Bananas', 'Oranges'];
+      expect(itemNameConflicts('Apples', existingNames)).toBe(true);
     });
 
-    it('should increment number if "-(1)" path also exists', () => {
-      const account = createMockAccount(['/grocery-list', '/grocery-list-(1)']);
+    it('should return true for case-insensitive match', () => {
+      const existingNames = ['Apples', 'Bananas', 'Oranges'];
+      expect(itemNameConflicts('apples', existingNames)).toBe(true);
+      expect(itemNameConflicts('APPLES', existingNames)).toBe(true);
+      expect(itemNameConflicts('ApPlEs', existingNames)).toBe(true);
+    });
 
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
+    it('should return true for names with extra whitespace', () => {
+      const existingNames = ['Apples', 'Bananas'];
+      expect(itemNameConflicts(' Apples ', existingNames)).toBe(true);
+      expect(itemNameConflicts('  Bananas  ', existingNames)).toBe(true);
+    });
 
-      expect(result.path).toBe('/grocery-list-(2)');
-      expect(result.name).toBe('Grocery List (2)');
+    it('should return false for non-conflicting names', () => {
+      const existingNames = ['Apples', 'Bananas'];
+      expect(itemNameConflicts('Oranges', existingNames)).toBe(false);
+      expect(itemNameConflicts('Grapes', existingNames)).toBe(false);
+    });
+
+    it('should return false for empty existing names array', () => {
+      expect(itemNameConflicts('Apples', [])).toBe(false);
+    });
+
+    it('should handle names with special characters', () => {
+      const existingNames = ['Bread & Butter', 'Coffee (Dark)', 'Milk - 2%'];
+      expect(itemNameConflicts('Bread & Butter', existingNames)).toBe(true);
+      expect(itemNameConflicts('Coffee (Dark)', existingNames)).toBe(true);
+      expect(itemNameConflicts('Milk - 2%', existingNames)).toBe(true);
+    });
+  });
+
+  describe('resolveItemNameConflict', () => {
+    it('should return original name if no conflict exists', () => {
+      const existingNames = ['Apples', 'Bananas'];
+      const result = resolveItemNameConflict('Oranges', existingNames);
+      expect(result).toBe('Oranges');
+    });
+
+    it('should append (2) suffix for first conflict', () => {
+      const existingNames = ['Apples', 'Bananas'];
+      const result = resolveItemNameConflict('Apples', existingNames);
+      expect(result).toBe('Apples (2)');
+    });
+
+    it('should increment suffix number if (2) also exists', () => {
+      const existingNames = ['Apples', 'Apples (2)'];
+      const result = resolveItemNameConflict('Apples', existingNames);
+      expect(result).toBe('Apples (3)');
     });
 
     it('should handle multiple sequential conflicts', () => {
-      const account = createMockAccount([
-        '/grocery-list',
-        '/grocery-list-(1)',
-        '/grocery-list-(2)',
-        '/grocery-list-(3)',
-      ]);
-
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
-
-      expect(result.path).toBe('/grocery-list-(4)');
-      expect(result.name).toBe('Grocery List (4)');
+      const existingNames = ['Apples', 'Apples (2)', 'Apples (3)', 'Apples (4)'];
+      const result = resolveItemNameConflict('Apples', existingNames);
+      expect(result).toBe('Apples (5)');
     });
 
-    it('should handle paths with spaces', () => {
-      const account = createMockAccount(['/my grocery list']);
-      const result = resolvePathConflict('/my grocery list', 'My Grocery List', account);
-
-      expect(result.path).toBe('/my grocery list-(1)');
-      expect(result.name).toBe('My Grocery List (1)');
+    it('should handle gaps in numbered sequence', () => {
+      // Missing (3), should use it
+      const existingNames = ['Apples', 'Apples (2)', 'Apples (4)'];
+      const result = resolveItemNameConflict('Apples', existingNames);
+      expect(result).toBe('Apples (3)');
     });
 
-    it('should handle paths with special characters', () => {
-      const account = createMockAccount(['/list-#1']);
-      const result = resolvePathConflict('/list-#1', 'List #1', account);
-
-      expect(result.path).toBe('/list-#1-(1)');
-      expect(result.name).toBe('List #1 (1)');
+    it('should handle case-insensitive conflicts', () => {
+      const existingNames = ['Apples'];
+      const result = resolveItemNameConflict('apples', existingNames);
+      expect(result).toBe('apples (2)');
     });
 
-    it('should handle empty directory array', () => {
-      const account = { root: { directory: [] } } as any;
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
-
-      expect(result.path).toBe('/grocery-list-(1)');
-      expect(result.name).toBe('Grocery List (1)');
+    it('should preserve original capitalization in resolved name', () => {
+      const existingNames = ['Apples'];
+      const result = resolveItemNameConflict('APPLES', existingNames);
+      expect(result).toBe('APPLES (2)');
     });
 
-    it('should handle null/undefined directory gracefully', () => {
-      const account = { root: { directory: null } } as any;
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
-
-      expect(result.path).toBe('/grocery-list-(1)');
-      expect(result.name).toBe('Grocery List (1)');
+    it('should handle names with existing parentheses', () => {
+      const existingNames = ['Coffee (Dark)'];
+      const result = resolveItemNameConflict('Coffee (Dark)', existingNames);
+      expect(result).toBe('Coffee (Dark) (2)');
     });
 
-    it('should handle multiple different paths sequentially', () => {
-      const account = createMockAccount(['/list-1', '/list-2']);
-
-      const result1 = resolvePathConflict('/list-1', 'List 1', account);
-      expect(result1.path).toBe('/list-1-(1)');
-
-      // Simulate adding the resolved path
-      account.root.directory.push({
-        id: 'new-entry',
-        name: result1.name,
-        type: 'template-ref',
-        path: result1.path,
-        expanded: false,
-        archived: false,
-        templateId: 'template-new',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const result2 = resolvePathConflict('/list-2', 'List 2', account);
-      expect(result2.path).toBe('/list-2-(1)');
+    it('should handle names with numbers', () => {
+      const existingNames = ['Item 1'];
+      const result = resolveItemNameConflict('Item 1', existingNames);
+      expect(result).toBe('Item 1 (2)');
     });
 
-    it('should preserve case sensitivity in names', () => {
-      const account = createMockAccount(['/MyList']);
-      const result = resolvePathConflict('/MyList', 'MyList', account);
-
-      expect(result.name).toBe('MyList (1)');
-    });
-
-    it('should handle very long folder names', () => {
+    it('should handle very long names', () => {
       const longName = 'A'.repeat(100);
-      const longPath = `/${longName}`;
-      const account = createMockAccount([longPath]);
+      const existingNames = [longName];
+      const result = resolveItemNameConflict(longName, existingNames);
+      expect(result).toBe(`${longName} (2)`);
+    });
 
-      const result = resolvePathConflict(longPath, longName, account);
+    it('should handle empty string names', () => {
+      const existingNames = [''];
+      const result = resolveItemNameConflict('', existingNames);
+      expect(result).toBe(' (2)');
+    });
 
-      expect(result.path).toBe(`${longPath}-(1)`);
-      expect(result.name).toBe(`${longName} (1)`);
+    it('should handle special characters in names', () => {
+      const existingNames = ['Milk - 2%'];
+      const result = resolveItemNameConflict('Milk - 2%', existingNames);
+      expect(result).toBe('Milk - 2% (2)');
+    });
+
+    it('should handle unicode characters', () => {
+      const existingNames = ['Café ☕'];
+      const result = resolveItemNameConflict('Café ☕', existingNames);
+      expect(result).toBe('Café ☕ (2)');
+    });
+
+    it('should be consistent across multiple resolutions', () => {
+      let existingNames = ['Apples'];
+
+      const result1 = resolveItemNameConflict('Apples', existingNames);
+      expect(result1).toBe('Apples (2)');
+
+      existingNames = [...existingNames, result1];
+      const result2 = resolveItemNameConflict('Apples', existingNames);
+      expect(result2).toBe('Apples (3)');
+
+      existingNames = [...existingNames, result2];
+      const result3 = resolveItemNameConflict('Apples', existingNames);
+      expect(result3).toBe('Apples (4)');
     });
   });
 });

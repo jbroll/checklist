@@ -118,10 +118,7 @@ export function getChildFolders(
 /**
  * Rename a folder
  */
-export function renameFolder(
-  folder: InstanceOfSchema<typeof FolderNode>,
-  newName: string,
-): void {
+export function renameFolder(folder: InstanceOfSchema<typeof FolderNode>, newName: string): void {
   folder.$jazz.set('name', newName);
   folder.$jazz.set('updatedAt', new Date());
 }
@@ -159,7 +156,7 @@ export function unarchiveFolder(folder: InstanceOfSchema<typeof FolderNode>): vo
   // Recursively unarchive children (for organizational folders)
   if (folder.children) {
     for (const child of folder.children) {
-      if (child && child.archived) {
+      if (child?.archived) {
         unarchiveFolder(child);
       }
     }
