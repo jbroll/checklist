@@ -1,9 +1,10 @@
+import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
 import { ListChecks, ListMinus, ListX } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useAccount } from '@/lib/jazz';
 import { IndentedRow } from '@/components/tree/IndentedRow';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAccount } from '@/lib/jazz';
 import type { Account, ItemState, Template, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -33,7 +34,7 @@ interface SessionZoneProps {
   categoryItem?: TemplateItem; // The actual category item for selection
   isSelected?: boolean; // Category selection state
   onSelectItem?: (itemId: string | null) => void; // Category selection handler
-  template?: Template; // Template for inline editing
+  template?: InstanceOfSchema<typeof Template>; // Template for inline editing
   simplifiedUI?: boolean; // Enable inline editing only in simplified UI
 }
 

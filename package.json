@@ -12,6 +12,7 @@
     "build:production": "npm run build && npm run build:backend && npm run prepare:deploy",
     "prepare:deploy": "mkdir -p deploy-backend && cp -r backend/dist deploy-backend/ && cp backend/package.json backend/package-lock.json deploy-backend/ && cp backend/.env.example deploy-backend/.env.example 2>/dev/null || true",
     "preview": "vite preview",
+    "generate-icons": "node scripts/generate-icons.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
@@ -74,10 +75,12 @@
     "jsdom": "^27.1.0",
     "lint-staged": "^16.2.6",
     "postcss": "^8.4.49",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.15",
     "tsc-files": "^1.1.4",
     "typescript": "^5.6.3",
     "vite": "^6.0.1",
+    "vite-plugin-pwa": "^1.1.0",
     "vitest": "^4.0.6"
   }
 }

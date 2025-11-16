@@ -1,4 +1,5 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { GripVertical } from 'lucide-react';
 import type { ItemState, Template, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -20,7 +21,7 @@ interface DraggableCategoryProps {
   onSelectItem?: (itemId: string | null) => void;
   itemStates: Record<string, ItemState>;
   children?: React.ReactNode;
-  template?: Template;
+  template?: InstanceOfSchema<typeof Template>;
   simplifiedUI?: boolean;
 }
 

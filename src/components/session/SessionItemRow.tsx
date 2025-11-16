@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { GripVertical } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
@@ -17,7 +18,7 @@ interface SessionItemRowProps {
   isSelected?: boolean; // For insertion point selection
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
   enableDrag?: boolean; // Enable drag and drop in available zone
-  template?: Template; // Template for inline editing
+  template?: InstanceOfSchema<typeof Template>; // Template for inline editing
   simplifiedUI?: boolean; // Enable inline editing only in simplified UI
 }
 
