@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { IndentedRow } from '@/components/tree/IndentedRow';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccount } from '@/lib/jazz';
+import { useDoubleTap } from '@/lib/useDoubleTap';
 import type { Account, ItemState, Template, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -78,26 +79,28 @@ export function SessionZone({
     !!onSelectItem,
   );
 
-  // Inline editing handlers for category name
-  const handleDoubleClickCategory = (e: React.MouseEvent) => {
-    // Only enable for categories in simplified UI mode
-    if (!simplifiedUI || !template || !categoryItem) return;
+  // Inline editing handlers for category name with double-tap support for mobile
+  const doubleTapHandlers = useDoubleTap({
+    onDoubleTap: (e) => {
+      // Only enable for categories in simplified UI mode
+      if (!simplifiedUI || !template || !categoryItem) return;
 
-    // Don't trigger if clicking on buttons or expand toggle
-    if (
-      (e.target as HTMLElement).closest('button') ||
-      (e.target as HTMLElement).closest('[data-expand-toggle]')
-    ) {
-      return;
-    }
+      // Don't trigger if clicking on buttons or expand toggle
+      if (
+        (e.target as HTMLElement).closest('button') ||
+        (e.target as HTMLElement).closest('[data-expand-toggle]')
+      ) {
+        return;
+      }
 
-    setEditValue(title);
-    setIsEditing(true);
-    setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 0);
-  };
+      setEditValue(title);
+      setIsEditing(true);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 0);
+    },
+  });
 
   const handleSaveEdit = () => {
     if (!me || !template || !categoryItem) return;
@@ -333,7 +336,7 @@ export function SessionZone({
           ) : (
             <span
               className="flex-1 text-sm font-semibold text-neutral-900 text-left"
-              onDoubleClick={handleDoubleClickCategory}
+              {...doubleTapHandlers}
             >
               {title}
             </span>
