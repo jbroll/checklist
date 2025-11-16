@@ -1,6 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, Session, Template } from '../schemas';
+import type { Account, FolderNode, Session } from '../schemas';
 import {
   archiveSession,
   deleteSession,
@@ -12,7 +12,7 @@ import {
 const createMockAccount = (): InstanceOfSchema<typeof Account> => {
   return {
     root: {
-      templates: [],
+      folders: [],
     },
   } as any;
 };
@@ -45,16 +45,14 @@ const createMockSession = (
 
 const createMockTemplate = (
   sessions: InstanceOfSchema<typeof Session>[],
-): InstanceOfSchema<typeof Template> => {
+): InstanceOfSchema<typeof FolderNode> => {
   const template: any = {
     name: 'Test Template',
-    type: 'template-folder',
-    path: 'test',
     items: [],
     sessions,
+    showZoneHeadings: false,
     archived: false,
     expanded: true,
-    currentSessionId: sessions[0]?.$jazz.id || '',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -75,21 +73,21 @@ const createMockTemplate = (
     },
   };
 
-  return template as InstanceOfSchema<typeof Template>;
+  return template as InstanceOfSchema<typeof FolderNode>;
 };
 
 describe('Session Lifecycle Functions', () => {
   let account: InstanceOfSchema<typeof Account>;
   let session1: InstanceOfSchema<typeof Session>;
   let session2: InstanceOfSchema<typeof Session>;
-  let template: InstanceOfSchema<typeof Template>;
+  let template: InstanceOfSchema<typeof FolderNode>;
 
   beforeEach(() => {
     account = createMockAccount();
     session1 = createMockSession('session-1', false);
     session2 = createMockSession('session-2', true);
     template = createMockTemplate([session1, session2]);
-    account.root.templates = [template];
+    account.root.folders = [template];
   });
 
   describe('archiveSession', () => {
