@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode, Session, TemplateItem } from '../schemas';
+import type { Account, FolderNode, TemplateItem } from '../schemas';
+import type { SessionData } from '../schemas/tree';
 import { batchSelectItems, invertItemSelection, toggleSelectAllItems } from './sessionService';
 
 // Mock Jazz CoValues
@@ -12,8 +13,10 @@ const createMockAccount = (): InstanceOfSchema<typeof Account> => {
   } as any;
 };
 
-const createMockSession = (): InstanceOfSchema<typeof Session> => {
-  const session: any = {
+// Sessions are now plain JavaScript objects (SessionData), not CoValues
+const createMockSession = (): SessionData => {
+  return {
+    id: 'session-1',
     itemStates: {},
     archived: false,
     categoryExpanded: {},
@@ -24,20 +27,9 @@ const createMockSession = (): InstanceOfSchema<typeof Session> => {
     createdAt: new Date(),
     lastActivityAt: new Date(),
   };
-
-  session.$jazz = {
-    id: 'session-1',
-    set: (key: string, value: any) => {
-      session[key] = value;
-    },
-  };
-
-  return session as InstanceOfSchema<typeof Session>;
 };
 
-const createMockTemplate = (
-  session: InstanceOfSchema<typeof Session>,
-): InstanceOfSchema<typeof FolderNode> => {
+const createMockTemplate = (session: SessionData): InstanceOfSchema<typeof FolderNode> => {
   const item1 = {
     id: 'item-1',
     name: 'Item 1',
@@ -65,13 +57,7 @@ const createMockTemplate = (
     archived: false,
   } as InstanceOfSchema<typeof TemplateItem>;
 
-  return {
-    $jazz: {
-      id: 'template-1',
-      set: function (key: string, value: any) {
-        (this as any)[key] = value;
-      },
-    },
+  const template: any = {
     name: 'Test Template',
     items: [item1, item2, item3],
     sessions: [session],
@@ -80,12 +66,21 @@ const createMockTemplate = (
     expanded: true,
     createdAt: new Date(),
     updatedAt: new Date(),
-  } as any;
+  };
+
+  template.$jazz = {
+    id: 'template-1',
+    set: (key: string, value: any) => {
+      template[key] = value;
+    },
+  };
+
+  return template as InstanceOfSchema<typeof FolderNode>;
 };
 
 describe('Batch Selection Functions', () => {
   let account: InstanceOfSchema<typeof Account>;
-  let session: InstanceOfSchema<typeof Session>;
+  let session: SessionData;
   let template: InstanceOfSchema<typeof FolderNode>;
 
   beforeEach(() => {
@@ -101,18 +96,18 @@ describe('Batch Selection Functions', () => {
 
       batchSelectItems(account, 'template-1', 'session-1', itemIds, true);
 
-      expect(session.itemStates['item-1']).toBeDefined();
-      expect(session.itemStates['item-1'].selected).toBe(true);
-      expect(session.itemStates['item-1'].checked).toBe(false);
+      expect(template.sessions[0].itemStates['item-1']).toBeDefined();
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
 
-      expect(session.itemStates['item-2']).toBeDefined();
-      expect(session.itemStates['item-2'].selected).toBe(true);
-      expect(session.itemStates['item-2'].checked).toBe(false);
+      expect(template.sessions[0].itemStates['item-2']).toBeDefined();
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-2'].checked).toBe(false);
     });
 
     it('should deselect multiple items when selected=false', () => {
       // First select items
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
         'item-2': { selected: true, checked: false, selectedAt: new Date() },
       };
@@ -121,13 +116,13 @@ describe('Batch Selection Functions', () => {
 
       batchSelectItems(account, 'template-1', 'session-1', itemIds, false);
 
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-2'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
     });
 
     it('should not affect items not in the batch', () => {
       // Select item-3
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-3': { selected: true, checked: false, selectedAt: new Date() },
       };
 
@@ -136,10 +131,10 @@ describe('Batch Selection Functions', () => {
       batchSelectItems(account, 'template-1', 'session-1', itemIds, true);
 
       // item-3 should remain selected
-      expect(session.itemStates['item-3'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-3'].selected).toBe(true);
       // item-1 and item-2 should be selected
-      expect(session.itemStates['item-1'].selected).toBe(true);
-      expect(session.itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
     });
   });
 
@@ -149,13 +144,13 @@ describe('Batch Selection Functions', () => {
 
       toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
 
-      expect(session.itemStates['item-1'].selected).toBe(true);
-      expect(session.itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
     });
 
     it('should select all when some are selected', () => {
       // Select only item-1
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
       };
 
@@ -164,13 +159,13 @@ describe('Batch Selection Functions', () => {
       toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
 
       // Both should be selected
-      expect(session.itemStates['item-1'].selected).toBe(true);
-      expect(session.itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
     });
 
     it('should deselect all when all are selected', () => {
       // Select both items
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
         'item-2': { selected: true, checked: false, selectedAt: new Date() },
       };
@@ -180,8 +175,8 @@ describe('Batch Selection Functions', () => {
       toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
 
       // Both should be deselected
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-2'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
     });
 
     it('should handle empty item list', () => {
@@ -201,13 +196,13 @@ describe('Batch Selection Functions', () => {
       invertItemSelection(account, 'template-1', 'session-1', itemIds);
 
       // Both should now be selected
-      expect(session.itemStates['item-1'].selected).toBe(true);
-      expect(session.itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
     });
 
     it('should invert selection for selected items', () => {
       // Select both items
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
         'item-2': { selected: true, checked: false, selectedAt: new Date() },
       };
@@ -217,13 +212,13 @@ describe('Batch Selection Functions', () => {
       invertItemSelection(account, 'template-1', 'session-1', itemIds);
 
       // Both should now be deselected
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-2'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
     });
 
     it('should invert mixed selection states', () => {
       // Select only item-1
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
       };
 
@@ -232,14 +227,14 @@ describe('Batch Selection Functions', () => {
       invertItemSelection(account, 'template-1', 'session-1', itemIds);
 
       // item-1 should be deselected, item-2 and item-3 should be selected
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-2'].selected).toBe(true);
-      expect(session.itemStates['item-3'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-3'].selected).toBe(true);
     });
 
     it('should preserve checked state when inverting from selected to unselected', () => {
       // Select and check item-1
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: true, selectedAt: new Date(), checkedAt: new Date() },
       };
 
@@ -248,8 +243,8 @@ describe('Batch Selection Functions', () => {
       invertItemSelection(account, 'template-1', 'session-1', itemIds);
 
       // item-1 should be deselected, and checked should be cleared
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-1'].checked).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
     });
 
     it('should handle empty item list', () => {
@@ -263,7 +258,7 @@ describe('Batch Selection Functions', () => {
 
     it('should invert each item individually in mixed state', () => {
       // Complex scenario: some selected, some not
-      session.itemStates = {
+      template.sessions[0].itemStates = {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
         'item-2': { selected: false, checked: false, selectedAt: new Date() },
         'item-3': { selected: true, checked: false, selectedAt: new Date() },
@@ -274,9 +269,9 @@ describe('Batch Selection Functions', () => {
       invertItemSelection(account, 'template-1', 'session-1', itemIds);
 
       // Each should be inverted
-      expect(session.itemStates['item-1'].selected).toBe(false);
-      expect(session.itemStates['item-2'].selected).toBe(true);
-      expect(session.itemStates['item-3'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(template.sessions[0].itemStates['item-3'].selected).toBe(false);
     });
   });
 });

@@ -110,7 +110,9 @@ export function getChildFolders(
   showArchived = false,
 ): InstanceOfSchema<typeof FolderNode>[] {
   if (!folder.children) return [];
-  return folder.children.filter((f) => showArchived || !f.archived);
+  return folder.children.filter(
+    (f: InstanceOfSchema<typeof FolderNode> | null) => f && (showArchived || !f.archived),
+  );
 }
 
 /**
@@ -192,12 +194,16 @@ export function deleteFolder(
 
   // Remove from parent or root
   if (folder.parent?.children) {
-    const index = folder.parent.children.findIndex((f) => f?.$jazz.id === folder.$jazz.id);
+    const index = folder.parent.children.findIndex(
+      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+    );
     if (index !== -1) {
       folder.parent.children.$jazz.splice(index, 1);
     }
   } else {
-    const index = account.root.folders.findIndex((f) => f?.$jazz.id === folder.$jazz.id);
+    const index = account.root.folders.findIndex(
+      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+    );
     if (index !== -1) {
       account.root.folders.$jazz.splice(index, 1);
     }
@@ -258,12 +264,16 @@ export function moveFolder(
 
   // Remove from old parent
   if (folder.parent?.children) {
-    const index = folder.parent.children.findIndex((f) => f?.$jazz.id === folder.$jazz.id);
+    const index = folder.parent.children.findIndex(
+      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+    );
     if (index !== -1) {
       folder.parent.children.$jazz.splice(index, 1);
     }
   } else {
-    const index = account.root.folders.findIndex((f) => f?.$jazz.id === folder.$jazz.id);
+    const index = account.root.folders.findIndex(
+      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+    );
     if (index !== -1) {
       account.root.folders.$jazz.splice(index, 1);
     }
@@ -335,7 +345,9 @@ export function reorderFolder(
   if (!account.root) throw new Error('Account root not initialized');
 
   const parentList = folder.parent?.children || account.root.folders;
-  const oldIndex = parentList.findIndex((f) => f?.$jazz.id === folder.$jazz.id);
+  const oldIndex = parentList.findIndex(
+    (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+  );
 
   if (oldIndex === -1) {
     throw new Error('Folder not found in parent');
@@ -372,6 +384,6 @@ export function getAllTemplateFolders(
     }
   }
 
-  collectTemplates(account.root.folders);
+  collectTemplates(Array.from(account.root.folders));
   return templates;
 }

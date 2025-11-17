@@ -1,10 +1,10 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Session, Template, TemplateItem } from '@/schemas';
+import type { SessionData, Template, TemplateItem } from '@/schemas';
 import { SimplifiedSessionItemRow } from './SimplifiedSessionItemRow';
 
 interface SimplifiedZoneViewProps {
   template: InstanceOfSchema<typeof Template>;
-  session: InstanceOfSchema<typeof Session>;
+  session: SessionData;
   showTrash: boolean;
   selectedItemId: string | null;
   onCheckToggle: (itemId: string) => void;

@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
+import type { FolderNode, SessionData, TemplateItem } from '../../schemas';
 
 /**
  * Safely convert a Date or date string to ISO string
@@ -51,8 +51,8 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Folde
 
   // Get non-archived leaf items (not categories), sorted by sortOrder
   const items = template.items
-    .filter((item) => item && !item.archived && item.type === 'item')
-    .sort((a, b) => {
+    .filter((item: TemplateItem) => item && !item.archived && item.type === 'item')
+    .sort((a: TemplateItem, b: TemplateItem) => {
       if (!a || !b) return 0;
       return a.sortOrder - b.sortOrder;
     });
@@ -88,7 +88,9 @@ export function exportSessionToCsv(
     return null;
   }
 
-  const session = Array.from(template.sessions).find((s) => s?.$jazz.id === sessionId);
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+  const sessions: SessionData[] = Array.from(template.sessions as any);
+  const session: SessionData | undefined = sessions.find((s: SessionData) => s?.id === sessionId);
   if (!session) {
     return null;
   }
@@ -104,8 +106,8 @@ export function exportSessionToCsv(
 
   // Get all leaf items (not categories) from the template, sorted by sortOrder
   const items = template.items
-    .filter((item) => item && !item.archived && item.type === 'item')
-    .sort((a, b) => {
+    .filter((item: TemplateItem) => item && !item.archived && item.type === 'item')
+    .sort((a: TemplateItem, b: TemplateItem) => {
       if (!a || !b) return 0;
       return a.sortOrder - b.sortOrder;
     });

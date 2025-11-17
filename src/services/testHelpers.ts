@@ -8,7 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode, Session, TemplateItem } from '../schemas';
+import type { Account, FolderNode, SessionData, TemplateItem } from '../schemas';
 import * as ExportService from './export/exportService';
 import * as FolderService from './folderService';
 import { importJson } from './import/jsonImporter';
@@ -34,8 +34,8 @@ export function exposeServicesToWindow(
     return fn(account);
   };
 
-  // Expose services (using testExports for compatibility with E2E tests)
-  window.testExports = {
+  // Expose services
+  const services = {
     // Direct account access for legacy tests
     get account() {
       return getAccount();
@@ -87,6 +87,81 @@ export function exposeServicesToWindow(
           FolderService.moveFolder(acc, folder, newParent);
         }),
       exists: (folderId: string) => withAccount((acc) => findFolderById(acc, folderId) !== null),
+    },
+
+    // Legacy directory API for E2E test compatibility
+    directory: {
+      create: (name: string, isTemplate: boolean, parentPath?: string | null) =>
+        withAccount((acc) => {
+          // Convert path to parent folder
+          let parent: InstanceOfSchema<typeof FolderNode> | null = null;
+          if (parentPath) {
+            const segments = parentPath.split('/').filter((s) => s.length > 0);
+            parent = FolderService.findFolderByPath(acc, segments);
+            if (!parent) {
+              throw new Error(`Parent folder not found: ${parentPath}`);
+            }
+          }
+
+          const folder = FolderService.createFolder(acc, name, isTemplate, parent);
+          return {
+            entryId: folder.$jazz.id,
+            templateId: isTemplate ? folder.$jazz.id : undefined,
+            path: FolderService.getFolderDisplayPath(folder),
+          };
+        }),
+      get: (entryId: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          if (!folder) return null;
+          return {
+            id: folder.$jazz.id,
+            name: folder.name,
+            type: FolderService.isTemplateFolder(folder) ? 'template-ref' : 'folder',
+            archived: folder.archived || false,
+            path: FolderService.getFolderDisplayPath(folder),
+          };
+        }),
+      exists: (entryId: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          // Archived folders are considered non-existent
+          return folder !== null && !folder.archived;
+        }),
+      getAll: () =>
+        withAccount((acc) => {
+          const folders = FolderService.getRootFolders(acc);
+          return folders.map((f) => ({
+            id: f.$jazz.id,
+            name: f.name,
+            type: FolderService.isTemplateFolder(f) ? 'template-ref' : 'folder',
+            path: FolderService.getFolderDisplayPath(f),
+          }));
+        }),
+      rename: (entryId: string, newName: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          if (!folder) throw new Error(`Folder ${entryId} not found`);
+          FolderService.renameFolder(folder, newName);
+        }),
+      archive: (entryId: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          if (!folder) throw new Error(`Folder ${entryId} not found`);
+          FolderService.archiveFolder(folder);
+        }),
+      unarchive: (entryId: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          if (!folder) throw new Error(`Folder ${entryId} not found`);
+          FolderService.unarchiveFolder(folder);
+        }),
+      delete: (entryId: string) =>
+        withAccount((acc) => {
+          const folder = findFolderById(acc, entryId);
+          if (!folder) throw new Error(`Folder ${entryId} not found`);
+          FolderService.deleteFolder(acc, folder);
+        }),
     },
 
     // Legacy directoryService for backwards compatibility with E2E tests
@@ -220,7 +295,11 @@ export function exposeServicesToWindow(
     },
   };
 
-  console.log('[Test Helpers] Services exposed to window.testExports');
+  // Expose to both window properties
+  window.testExports = services;
+  window.__testServices = services;
+
+  console.log('[Test Helpers] Services exposed to window.testExports and window.__testServices');
 }
 
 /**
@@ -248,14 +327,34 @@ function findFolderById(
     return null;
   }
 
-  return searchFolders(account.root.folders);
+  return searchFolders(Array.from(account.root.folders));
 }
 
 // Type declaration for window
 declare global {
   interface Window {
-    testExports?: {
+    __testServices?: {
       account: InstanceOfSchema<typeof Account> | null;
+      directory: {
+        create: (
+          name: string,
+          isTemplate: boolean,
+          parentPath?: string | null,
+        ) => { entryId: string; templateId?: string; path: string };
+        get: (entryId: string) => {
+          id: string;
+          name: string;
+          type: string;
+          archived: boolean;
+          path: string;
+        } | null;
+        exists: (entryId: string) => boolean;
+        getAll: () => Array<{ id: string; name: string; type: string; path: string }>;
+        rename: (entryId: string, newName: string) => void;
+        archive: (entryId: string) => void;
+        unarchive: (entryId: string) => void;
+        delete: (entryId: string) => void;
+      };
       folderService: {
         create: (
           name: string,
@@ -316,8 +415,100 @@ declare global {
       };
       session: {
         create: (templateId: string) => string;
-        get: (templateId: string, sessionId: string) => InstanceOfSchema<typeof Session> | null;
-        getAll: (templateId: string) => Array<InstanceOfSchema<typeof Session>>;
+        get: (templateId: string, sessionId: string) => SessionData | null;
+        getAll: (templateId: string) => Array<SessionData>;
+        toggleItemSelected: (templateId: string, sessionId: string, itemId: string) => void;
+        toggleItemChecked: (templateId: string, sessionId: string, itemId: string) => void;
+        updateCounts: (templateId: string, sessionId: string) => void;
+      };
+      util: {
+        waitForSync: () => Promise<void>;
+      };
+    };
+    testExports?: {
+      account: InstanceOfSchema<typeof Account> | null;
+      directory: {
+        create: (
+          name: string,
+          isTemplate: boolean,
+          parentPath?: string | null,
+        ) => { entryId: string; templateId?: string; path: string };
+        get: (entryId: string) => {
+          id: string;
+          name: string;
+          type: string;
+          archived: boolean;
+          path: string;
+        } | null;
+        exists: (entryId: string) => boolean;
+        getAll: () => Array<{ id: string; name: string; type: string; path: string }>;
+        rename: (entryId: string, newName: string) => void;
+        archive: (entryId: string) => void;
+        unarchive: (entryId: string) => void;
+        delete: (entryId: string) => void;
+      };
+      folderService: {
+        create: (
+          name: string,
+          isTemplate: boolean,
+          parentFolderId?: string | null,
+        ) => { folderId: string; path: string };
+        get: (folderId: string) => InstanceOfSchema<typeof FolderNode> | null;
+        getAll: () => InstanceOfSchema<typeof FolderNode>[];
+        getAllTemplates: () => InstanceOfSchema<typeof FolderNode>[];
+        rename: (folderId: string, newName: string) => void;
+        archive: (folderId: string) => void;
+        unarchive: (folderId: string) => void;
+        delete: (folderId: string) => void;
+        move: (folderId: string, newParentId?: string | null) => void;
+        exists: (folderId: string) => boolean;
+      };
+      directoryService: {
+        createDirectoryEntry: (
+          account: InstanceOfSchema<typeof Account>,
+          name: string,
+          isTemplate: boolean,
+          parentPath?: string | null,
+        ) => { entryId: string; templateId?: string; path: string };
+      };
+      templateService: {
+        get: (templateId: string) => InstanceOfSchema<typeof FolderNode> | null;
+        getAll: () => Array<InstanceOfSchema<typeof FolderNode>>;
+        exists: (templateId: string) => boolean;
+        createItem: (
+          account: InstanceOfSchema<typeof Account>,
+          templateId: string,
+          name: string,
+          type: 'item' | 'category',
+          parentPath?: string,
+          defaultQuantity?: string,
+        ) => string;
+      };
+      item: {
+        createItem: (
+          templateId: string,
+          name: string,
+          parentPath?: string,
+          defaultQuantity?: string,
+        ) => string;
+        createCategory: (templateId: string, name: string, parentPath?: string) => string;
+        get: (templateId: string, itemId: string) => TemplateItem | null;
+        getAll: (templateId: string) => TemplateItem[];
+        rename: (templateId: string, itemId: string, newName: string) => void;
+        archive: (templateId: string, itemId: string) => void;
+        toggleCategoryExpanded: (templateId: string, itemId: string) => void;
+      };
+      export: {
+        toJson: () => string;
+      };
+      import: {
+        fromJson: (jsonData: string) => Promise<ImportResult>;
+        itemsFromTxt: (templateId: string, txtContent: string) => Promise<TxtImportResult>;
+      };
+      session: {
+        create: (templateId: string) => string;
+        get: (templateId: string, sessionId: string) => SessionData | null;
+        getAll: (templateId: string) => Array<SessionData>;
         toggleItemSelected: (templateId: string, sessionId: string, itemId: string) => void;
         toggleItemChecked: (templateId: string, sessionId: string, itemId: string) => void;
         updateCounts: (templateId: string, sessionId: string) => void;

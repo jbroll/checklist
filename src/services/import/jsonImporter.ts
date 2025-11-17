@@ -6,9 +6,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { co } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
-import { type Account, FolderNode, Session } from '../../schemas';
+import { type Account, FolderNode, type SessionData } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
 import { createChildPath } from '../../utils/pathUtils';
 import type {
@@ -168,11 +167,18 @@ async function importFolder(
   let nameConflict = false;
 
   // Check if name already exists in siblings
-  const existingFolder = Array.from(siblings).find((f) => f?.name === finalName);
+  const existingFolder = Array.from(siblings).find(
+    (f: InstanceOfSchema<typeof FolderNode> | null) => f?.name === finalName,
+  );
   if (existingFolder) {
     // Append a number to make it unique
     let counter = 1;
-    while (Array.from(siblings).some((f) => f?.name === `${exportedFolder.name} (${counter})`)) {
+    while (
+      Array.from(siblings).some(
+        (f: InstanceOfSchema<typeof FolderNode> | null) =>
+          f?.name === `${exportedFolder.name} (${counter})`,
+      )
+    ) {
       counter++;
     }
     finalName = `${exportedFolder.name} (${counter})`;
@@ -265,24 +271,14 @@ async function importTemplateFolder(
     items.push(...flattenedItems);
   }
 
-  // Create sessions CoList
-  const sessionsList = co.list(Session).create([], { owner: account });
+  // Create sessions array (plain objects, not CoList)
+  const sessionsList: SessionData[] = [];
 
   // Import sessions
   if (exportedFolder.sessions) {
     for (const exportedSession of exportedFolder.sessions) {
-      const session = importSession(exportedSession, items, account, idMap);
-      sessionsList.$jazz.push(session);
-    }
-  }
-
-  // Determine current session ID
-  let currentSessionId = '';
-  if (exportedFolder.currentSessionId && sessionsList.length > 0) {
-    // Use the first non-archived session
-    const activeSession = Array.from(sessionsList).find((s) => s && !s.archived);
-    if (activeSession?.$jazz?.id) {
-      currentSessionId = activeSession.$jazz.id;
+      const session = importSession(exportedSession, items, idMap);
+      sessionsList.push(session);
     }
   }
 
@@ -294,7 +290,6 @@ async function importTemplateFolder(
       archived: false,
       items,
       sessions: sessionsList,
-      currentSessionId,
       showZoneHeadings: false, // Hide zone headings by default
       parent: parentFolder,
       owner: account,
@@ -326,9 +321,8 @@ async function importTemplateFolder(
 function importSession(
   exportedSession: ExportedSession,
   items: TemplateItem[],
-  account: InstanceOfSchema<typeof Account>,
   idMap: Map<string, string>,
-): InstanceOfSchema<typeof Session> {
+): SessionData {
   // Reconstruct item states with new item IDs as plain objects
   const itemStates: Record<string, ItemState> = {};
 
@@ -354,22 +348,19 @@ function importSession(
   const checkedCount = Object.values(itemStates).filter((s) => s.checked).length;
   const remainingCount = items.length - checkedCount;
 
-  // Create session
-  const session = Session.create(
-    {
-      itemStates,
-      archived: exportedSession.archived ?? false,
-      viewMode: exportedSession.viewMode || 'zone-in-hierarchy',
-      categoryExpanded: {},
-      selectedCount,
-      checkedCount,
-      remainingCount,
-      owner: account,
-      createdAt: new Date(exportedSession.createdAt),
-      lastActivityAt: new Date(exportedSession.lastActivityAt),
-    },
-    { owner: account },
-  );
+  // Create session (plain object, not CoValue)
+  const session: SessionData = {
+    id: generateId(),
+    itemStates,
+    archived: exportedSession.archived ?? false,
+    viewMode: exportedSession.viewMode || 'zone-in-hierarchy',
+    categoryExpanded: {},
+    selectedCount,
+    checkedCount,
+    remainingCount,
+    createdAt: new Date(exportedSession.createdAt),
+    lastActivityAt: new Date(exportedSession.lastActivityAt),
+  };
 
   return session;
 }

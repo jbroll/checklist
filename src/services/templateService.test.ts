@@ -5,23 +5,24 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as templateService from './templateService';
 
-// Mock Template for testing
+// Mock Template (FolderNode with items) for testing
 const createMockTemplate = (id: string, name: string) => ({
   $jazz: { id },
   name,
-  items: [],
+  items: [], // Having items makes this a template folder
   sessions: [],
-  currentSessionId: undefined,
   showZoneHeadings: false,
+  archived: false,
+  expanded: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 });
 
-// Mock Account with templates
-const createMockAccount = (templates: any[] = []) =>
+// Mock Account with folders (templates are FolderNodes now)
+const createMockAccount = (folders: any[] = []) =>
   ({
     root: {
-      templates,
+      folders,
     },
   }) as any;
 

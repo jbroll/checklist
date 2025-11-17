@@ -1,4 +1,3 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { Archive, ArchiveX, Download, MoreVertical, ShoppingCart, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import {
@@ -10,18 +9,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { Session } from '@/schemas';
+import type { SessionData } from '@/schemas';
 import { IndentedRow } from './IndentedRow';
 
 interface SessionRowViewProps {
-  session: InstanceOfSchema<typeof Session>;
+  session: SessionData;
   templateName: string;
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
   onArchive?: (sessionId: string) => void;
   onExport?: (sessionId: string) => void;
-  allSessions: readonly (InstanceOfSchema<typeof Session> | null)[];
+  allSessions: readonly (SessionData | null)[];
 }
 
 export const SessionRowView = memo(function SessionRowView({
@@ -44,7 +43,7 @@ export const SessionRowView = memo(function SessionRowView({
     if (session.archived) {
       // Unarchive
       if (onArchive) {
-        onArchive(session.$jazz.id);
+        onArchive(session.id);
       }
     } else {
       // Archive
@@ -56,7 +55,7 @@ export const SessionRowView = memo(function SessionRowView({
           variant: 'danger',
         });
         if (confirmed) {
-          onArchive(session.$jazz.id);
+          onArchive(session.id);
         }
       }
     }
@@ -74,7 +73,7 @@ export const SessionRowView = memo(function SessionRowView({
           variant: 'danger',
         });
         if (confirmed) {
-          onArchive(session.$jazz.id);
+          onArchive(session.id);
         }
       }
     } else {
@@ -87,7 +86,7 @@ export const SessionRowView = memo(function SessionRowView({
           variant: 'danger',
         });
         if (confirmed) {
-          onDelete(session.$jazz.id);
+          onDelete(session.id);
         }
       }
     }
@@ -98,7 +97,7 @@ export const SessionRowView = memo(function SessionRowView({
       <div className="group flex flex-1 items-center gap-2 rounded hover:bg-neutral-50">
         <button
           type="button"
-          onClick={() => onOpen(session.$jazz.id)}
+          onClick={() => onOpen(session.id)}
           className="flex flex-1 items-center gap-2"
         >
           {/* Session icon */}
@@ -137,7 +136,7 @@ export const SessionRowView = memo(function SessionRowView({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             {onExport && (
-              <DropdownMenuItem onClick={() => onExport(session.$jazz.id)}>
+              <DropdownMenuItem onClick={() => onExport(session.id)}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </DropdownMenuItem>

@@ -23,11 +23,11 @@ const createMockTemplate = (id: string, items: TemplateItem[] = []) => ({
   updatedAt: new Date(),
 });
 
-// Mock Account with templates
-const createMockAccount = (templates: any[] = []) =>
+// Mock Account with folders (templates are now FolderNodes)
+const createMockAccount = (folders: any[] = []) =>
   ({
     root: {
-      templates,
+      folders,
     },
   }) as any;
 
