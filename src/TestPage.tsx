@@ -20,6 +20,7 @@ export function TestPage() {
   // Expose services to window for E2E tests
   useEffect(() => {
     if (me) {
+      // @ts-expect-error - Jazz v0.18.x Account.root nullable during migration
       exposeServicesToWindow(() => me);
       console.log('[TestPage] Test mode active - services exposed to window.testExports');
 

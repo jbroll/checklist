@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { InlineItemForm } from '@/components/simplified/InlineItemForm';
 import { useAccount } from '@/lib/jazz';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { Account, Template } from '@/schemas';
+import type { Account, SessionData, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
 import { AvailableZoneRenderer } from './AvailableZoneRenderer';
@@ -51,26 +51,33 @@ export function SessionView({
   const scrollPositionRef = useRef<{ scrollTop: number; availableTop: number } | null>(null);
 
   // Find session first (before any early returns)
-  const session = template.sessions?.find((s) => s?.id === sessionId);
+  const sessions: SessionData[] = template.sessions
+    ? Array.isArray(template.sessions)
+      ? template.sessions
+      : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+        Array.from(template.sessions as any)
+    : [];
+  const session = sessions.find((s: SessionData) => s?.id === sessionId);
 
   // Check if there are multiple sessions on the same day
-  const showTime = hasMultipleSessionsOnSameDay(session || null, template.sessions || []);
+  const showTime = hasMultipleSessionsOnSameDay(session || null, sessions);
 
   // Initialize category expanded state from session data
   const categoryExpanded: Record<string, boolean> = session?.categoryExpanded || {};
 
   // Use hooks for partitioning items
-  // @ts-expect-error Jazz TypeScript inference issue with Account root type
-  const { availableItems, selectedItems, checkedItems } = useSessionItems({ template, session });
+  const { availableItems, selectedItems, checkedItems } = useSessionItems({
+    template,
+    session: session || null,
+  });
 
   // Use hook for view mode management
   const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
     template,
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    session,
+    session: session || null,
     sessionId,
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    me,
+    // @ts-expect-error - Jazz v0.18.x Account.root nullable during migration, but is guaranteed non-null here after guard clause
+    me: me || null,
   });
 
   // Restore scroll position after DOM updates

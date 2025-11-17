@@ -79,28 +79,28 @@ export function DraggableCategory({
           isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
         } ${isHolding ? 'scale-[1.01] shadow-lg bg-blue-50 ring-2 ring-blue-300 rounded' : ''}`}
       >
-          <SessionZone
-            title={item.name}
-            zone="available"
-            items={[]}
-            itemStates={itemStates}
-            expanded={categoryExpanded[`available-${item.path}`] ?? true}
-            onToggleExpand={() => onToggleCategoryExpanded(`available-${item.path}`)}
-            onToggleSelected={onToggleSelected}
-            onToggleChecked={onToggleChecked}
-            onBatchSelectAll={onBatchSelectAll}
-            onBatchDeselectAll={onBatchDeselectAll}
-            onBatchToggle={onBatchToggle}
-            count={categoryNode.children.length}
-            category={categoryNode}
-            showDeleteIcon={showDeleteIcon}
-            onDeleteItem={onDeleteItem}
-            categoryItem={item}
-            isSelected={selectedItemId === item.id}
-            onSelectItem={onSelectItem}
-            template={template}
-            simplifiedUI={simplifiedUI}
-          />
+        <SessionZone
+          title={item.name}
+          zone="available"
+          items={[]}
+          itemStates={itemStates}
+          expanded={categoryExpanded[`available-${item.path}`] ?? true}
+          onToggleExpand={() => onToggleCategoryExpanded(`available-${item.path}`)}
+          onToggleSelected={onToggleSelected}
+          onToggleChecked={onToggleChecked}
+          onBatchSelectAll={onBatchSelectAll}
+          onBatchDeselectAll={onBatchDeselectAll}
+          onBatchToggle={onBatchToggle}
+          count={categoryNode.children.length}
+          category={categoryNode}
+          showDeleteIcon={showDeleteIcon}
+          onDeleteItem={onDeleteItem}
+          categoryItem={item}
+          isSelected={selectedItemId === item.id}
+          onSelectItem={onSelectItem}
+          template={template}
+          simplifiedUI={simplifiedUI}
+        />
       </div>
 
       {/* Category children - rendered outside drop zone, respecting expand state */}

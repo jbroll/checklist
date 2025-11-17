@@ -86,7 +86,7 @@ export function createCategory(
   const path = createChildPath(parentPath, name);
 
   // Check for duplicates at the same level
-  const existingItem = template.items.find((i) => i.path === path);
+  const existingItem = template.items.find((i: TemplateItem) => i.path === path);
   if (existingItem) {
     throw new Error(`Category already exists at path: ${path}`);
   }
@@ -127,7 +127,7 @@ export function createItem(
   const path = createChildPath(parentPath, name);
 
   // Check for duplicates at the same level
-  const existingItem = template.items.find((i) => i.path === path);
+  const existingItem = template.items.find((i: TemplateItem) => i.path === path);
   if (existingItem) {
     throw new Error(`Item already exists at path: ${path}`);
   }
@@ -161,7 +161,7 @@ export function getItem(
   const template = getTemplate(account, templateId);
   if (!template) return null;
 
-  return template.items.find((i) => i.id === itemId) || null;
+  return template.items.find((i: TemplateItem) => i.id === itemId) || null;
 }
 
 /**
@@ -174,7 +174,7 @@ export function getItems(
   const template = getTemplate(account, templateId);
   if (!template) return [];
 
-  return template.items.filter((i) => !i.archived);
+  return template.items.filter((i: TemplateItem) => !i.archived);
 }
 
 /**
@@ -187,7 +187,7 @@ export function getLeafItems(
   const template = getTemplate(account, templateId);
   if (!template) return [];
 
-  return template.items.filter((i) => !i.archived && i.type === 'item');
+  return template.items.filter((i: TemplateItem) => !i.archived && i.type === 'item');
 }
 
 /**
@@ -203,7 +203,7 @@ export function renameItem(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
   if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
 
   const item = template.items[itemIndex];
@@ -214,7 +214,7 @@ export function renameItem(
 
   // Check for duplicates
   if (oldPath !== newPath) {
-    const existingItem = template.items.find((i) => i.path === newPath);
+    const existingItem = template.items.find((i: TemplateItem) => i.path === newPath);
     if (existingItem) {
       throw new Error(`Item already exists at path: ${newPath}`);
     }
@@ -250,10 +250,10 @@ export function archiveItem(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const item = template.items.find((i) => i.id === itemId);
+  const item = template.items.find((i: TemplateItem) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template ${templateId}`);
 
-  let updatedItems = template.items.map((i) => {
+  let updatedItems = template.items.map((i: TemplateItem) => {
     if (i.id === itemId) {
       return { ...i, archived: true };
     }
@@ -262,7 +262,7 @@ export function archiveItem(
 
   // If this is a category, archive all descendants
   if (item.type === 'category') {
-    updatedItems = updatedItems.map((i) => {
+    updatedItems = updatedItems.map((i: TemplateItem) => {
       if (i.path.startsWith(`${item.path}${PATH_SEPARATOR}`)) {
         return { ...i, archived: true };
       }
@@ -289,7 +289,7 @@ export function moveItem(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
   if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
 
   const item = template.items[itemIndex];
@@ -302,7 +302,7 @@ export function moveItem(
 
   // Check for duplicates only if path is changing
   if (oldPath !== newPath) {
-    const existingItem = template.items.find((i) => i.path === newPath);
+    const existingItem = template.items.find((i: TemplateItem) => i.path === newPath);
     if (existingItem) {
       throw new Error(`Item already exists at path: ${newPath}`);
     }
@@ -337,7 +337,7 @@ export function getCategoryExpanded(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const item = template.items.find((i) => i.id === itemId);
+  const item = template.items.find((i: TemplateItem) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template ${templateId}`);
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
 
@@ -356,7 +356,7 @@ export function setCategoryExpanded(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
   if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
 
   const item = template.items[itemIndex];
@@ -397,7 +397,7 @@ export function reorderItem(
   const template = getTemplate(account, templateId);
   if (!template) throw new Error(`Template ${templateId} not found`);
 
-  const itemIndex = template.items.findIndex((i) => i.id === itemId);
+  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
   if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
 
   const updatedItems = [...template.items];
@@ -422,11 +422,11 @@ export function calculateInsertionPoint(
   template: InstanceOfSchema<typeof FolderNode>,
   selectedItemId: string | null,
 ): { parentPath: string | undefined; sortOrder: number } {
-  const items = template.items?.filter((item) => !item.archived) || [];
+  const items = template.items?.filter((item: TemplateItem) => !item.archived) || [];
 
   // If nothing selected, insert at top of root
   if (!selectedItemId) {
-    const rootItems = items.filter((item) => {
+    const rootItems = items.filter((item: TemplateItem) => {
       const parentPath = getParentPath(item.path);
       return parentPath === undefined;
     });
@@ -435,12 +435,12 @@ export function calculateInsertionPoint(
       return { parentPath: undefined, sortOrder: 0 };
     }
 
-    const minSortOrder = Math.min(...rootItems.map((item) => item.sortOrder));
+    const minSortOrder = Math.min(...rootItems.map((item: TemplateItem) => item.sortOrder));
     return { parentPath: undefined, sortOrder: minSortOrder - 1 };
   }
 
   // Find the selected item
-  const selectedItem = items.find((item) => item.id === selectedItemId);
+  const selectedItem = items.find((item: TemplateItem) => item.id === selectedItemId);
   if (!selectedItem) {
     // Fall back to root if selected item not found
     return { parentPath: undefined, sortOrder: 0 };
@@ -449,7 +449,7 @@ export function calculateInsertionPoint(
   // If selected item is a category, insert at top of that category
   if (selectedItem.type === 'category') {
     const categoryPath = selectedItem.path;
-    const childrenInCategory = items.filter((item) => {
+    const childrenInCategory = items.filter((item: TemplateItem) => {
       const parentPath = getParentPath(item.path);
       return parentPath === categoryPath;
     });
@@ -458,25 +458,27 @@ export function calculateInsertionPoint(
       return { parentPath: categoryPath, sortOrder: 0 };
     }
 
-    const minSortOrder = Math.min(...childrenInCategory.map((item) => item.sortOrder));
+    const minSortOrder = Math.min(
+      ...childrenInCategory.map((item: TemplateItem) => item.sortOrder),
+    );
     return { parentPath: categoryPath, sortOrder: minSortOrder - 1 };
   }
 
   // If selected item is a regular item, insert after it in the same parent
   const parentPath = getParentPath(selectedItem.path);
-  const siblings = items.filter((item) => {
+  const siblings = items.filter((item: TemplateItem) => {
     const itemParentPath = getParentPath(item.path);
     return itemParentPath === parentPath;
   });
 
   // Sort siblings by sortOrder
-  siblings.sort((a, b) => a.sortOrder - b.sortOrder);
+  siblings.sort((a: TemplateItem, b: TemplateItem) => a.sortOrder - b.sortOrder);
 
   // Find the position of the selected item
-  const selectedIndex = siblings.findIndex((item) => item.id === selectedItemId);
+  const selectedIndex = siblings.findIndex((item: TemplateItem) => item.id === selectedItemId);
   if (selectedIndex === -1) {
     // Fall back to end of siblings
-    const maxSortOrder = Math.max(...siblings.map((item) => item.sortOrder));
+    const maxSortOrder = Math.max(...siblings.map((item: TemplateItem) => item.sortOrder));
     return { parentPath, sortOrder: maxSortOrder + 1 };
   }
 

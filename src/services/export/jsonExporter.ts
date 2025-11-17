@@ -5,9 +5,9 @@
  * Version 2.0: Uses hierarchical structure and neutral terminology.
  */
 
-import type { CoList, InstanceOfSchema } from 'jazz-tools';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { generateSessionName } from '../../lib/utils';
-import type { Account, FolderNode, Session } from '../../schemas';
+import type { Account, FolderNode, SessionData } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import * as folderService from '../folderService';
@@ -90,10 +90,8 @@ function exportTemplateNode(template: InstanceOfSchema<typeof FolderNode>): Expo
   if (template.items && template.sessions) {
     baseFolder.items = exportTemplateItems(template.items);
     baseFolder.sessions = exportSessions(template.sessions);
-    // Only include currentSessionId if it's not empty
-    if (template.currentSessionId && template.currentSessionId !== '') {
-      baseFolder.currentSessionId = template.currentSessionId;
-    }
+    // NOTE: currentSessionId removed from schema - it's tracked locally per-device
+    // Left in export format for backwards compatibility with old exports
   }
 
   return baseFolder;
@@ -155,7 +153,7 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
  * @param sessions - CoList of Sessions
  * @returns Array of exported sessions
  */
-function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): ExportedSession[] {
+function exportSessions(sessions: SessionData[]): ExportedSession[] {
   const exportedSessions: ExportedSession[] = [];
 
   // Convert to array for easier manipulation
@@ -195,7 +193,7 @@ function exportSessions(sessions: CoList<InstanceOfSchema<typeof Session>>): Exp
     const sessionsWithDates = sessionArray.map((s) => ({
       ...s,
       createdAt: typeof s.createdAt === 'string' ? new Date(s.createdAt) : s.createdAt,
-    })) as unknown as readonly (InstanceOfSchema<typeof Session> | null)[];
+    })) as readonly (SessionData | null)[];
 
     const name = generateSessionName(createdAt, sessionsWithDates);
 

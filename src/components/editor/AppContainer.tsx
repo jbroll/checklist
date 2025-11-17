@@ -8,7 +8,7 @@ import { SessionView } from '@/components/session/SessionView';
 import { SimplifiedApp } from '@/components/simplified/SimplifiedApp';
 import { TreeView } from '@/components/tree';
 import { useAccount } from '@/lib/jazz';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { AddFolderDialog } from './AddFolderDialog';
@@ -62,7 +62,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
       return null;
     };
 
-    return findFolder(me.root.folders);
+    return findFolder(Array.from(me.root.folders));
   }, [selectedFolderId, me?.root?.folders]);
 
   // Compute parent folder for import based on selected folder
@@ -257,12 +257,18 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
         {sessionExportData &&
           (() => {
             const template = templates.find((t) => t?.$jazz.id === sessionExportData.templateId);
-            const session = template?.sessions?.find(
-              (s) => s?.$jazz.id === sessionExportData.sessionId,
+            const sessions = template?.sessions
+              ? Array.isArray(template.sessions)
+                ? template.sessions
+                : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+                  Array.from(template.sessions as any)
+              : [];
+            const session = sessions.find(
+              (s: SessionData) => s?.id === sessionExportData.sessionId,
             );
             if (template && session) {
               // Generate session name from createdAt
-              const sessionName = session.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+              const sessionName = new Date(session.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
               return (
                 <SessionExportDialog
                   open={showSessionExportDialog}

@@ -5,8 +5,9 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode } from '../schemas';
+import { co } from 'jazz-tools';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type Account, FolderNode } from '../schemas';
 import {
   archiveFolder,
   createFolder,
@@ -28,15 +29,59 @@ import {
   unarchiveFolder,
 } from './folderService';
 
+// Spy on FolderNode.create and co.list.create
+let folderIdCounter = 0;
+
+// Mock FolderNode.create before tests
+(FolderNode as any).create = vi.fn((data: any, options: any) => {
+  const id = `folder-${folderIdCounter++}`;
+  const folder: any = { ...data };
+
+  folder.$jazz = {
+    id,
+    set: (key: string, value: any) => {
+      folder[key] = value;
+    },
+  };
+
+  // For template folders, wrap sessions array with $jazz methods
+  if (data.sessions !== undefined) {
+    const sessions: any[] = [...(data.sessions || [])];
+    sessions.$jazz = {
+      push: (item: any) => sessions.push(item),
+      splice: (index: number, deleteCount: number, ...items: any[]) =>
+        sessions.splice(index, deleteCount, ...items),
+    };
+    folder.sessions = sessions;
+  }
+
+  // items are plain arrays
+  return folder;
+});
+
+// Mock co.list to return mock CoList
+(co as any).list = vi.fn((schema: any) => ({
+  create: vi.fn((data: any[], options: any) => {
+    const list: any[] = [...data];
+    list.$jazz = {
+      push: (item: any) => list.push(item),
+      splice: (index: number, deleteCount: number, ...items: any[]) =>
+        list.splice(index, deleteCount, ...items),
+    };
+    return list;
+  }),
+}));
+
 // Mock Jazz CoValues
 const createMockAccount = (): InstanceOfSchema<typeof Account> => {
   const folders: any[] = [];
   folders.$jazz = {
     push: (folder: any) => folders.push(folder),
-    splice: (index: number, deleteCount: number) => folders.splice(index, deleteCount),
+    splice: (index: number, deleteCount: number, ...items: any[]) =>
+      folders.splice(index, deleteCount, ...items),
   };
 
-  return {
+  const account: any = {
     root: {
       folders,
       $jazz: {
@@ -46,7 +91,12 @@ const createMockAccount = (): InstanceOfSchema<typeof Account> => {
     $jazz: {
       id: 'account-1',
     },
-  } as any;
+  };
+
+  // Mock the owner property to return the account
+  account._owner = account;
+
+  return account as InstanceOfSchema<typeof Account>;
 };
 
 const createMockFolder = (
@@ -69,7 +119,8 @@ const createMockFolder = (
     const sessions: any[] = [];
     sessions.$jazz = {
       push: (s: any) => sessions.push(s),
-      splice: (index: number, deleteCount: number) => sessions.splice(index, deleteCount),
+      splice: (index: number, deleteCount: number, ...items: any[]) =>
+        sessions.splice(index, deleteCount, ...items),
     };
     folder.sessions = sessions;
     folder.showZoneHeadings = false;
@@ -78,7 +129,8 @@ const createMockFolder = (
     const children: any[] = [];
     children.$jazz = {
       push: (c: any) => children.push(c),
-      splice: (index: number, deleteCount: number) => children.splice(index, deleteCount),
+      splice: (index: number, deleteCount: number, ...items: any[]) =>
+        children.splice(index, deleteCount, ...items),
     };
     folder.children = children;
   }

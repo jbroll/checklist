@@ -1,8 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
-import type { InstanceOfSchema } from 'jazz-tools';
 import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
-import type { Session } from '@/schemas';
+import type { SessionData } from '@/schemas';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,7 +30,7 @@ export function formatRelativeTime(date: Date): string {
     return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
   }
 
-  return date.toLocaleDateString();
+  return new Date(date).toLocaleDateString();
 }
 
 /**
@@ -43,17 +42,23 @@ export function formatRelativeTime(date: Date): string {
  * - Full date for older dates
  */
 export function formatSessionDate(date: Date, showTime = true): string {
+  // Ensure date is a Date object (Jazz may deserialize as string)
+  const sessionDate = new Date(date);
   const now = new Date();
 
   // Reset hours for day comparison
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const sessionDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const sessionDay = new Date(
+    sessionDate.getFullYear(),
+    sessionDate.getMonth(),
+    sessionDate.getDate(),
+  );
   const diffDays = Math.floor((today.getTime() - sessionDay.getTime()) / (1000 * 60 * 60 * 24));
 
   // Today
   if (diffDays === 0) {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+    const hours = sessionDate.getHours();
+    const minutes = sessionDate.getMinutes();
 
     // If time is midnight (00:00) or showTime is false, just show "today"
     if (!showTime || (hours === 0 && minutes === 0)) {
@@ -61,7 +66,7 @@ export function formatSessionDate(date: Date, showTime = true): string {
     }
 
     // Otherwise show "today @HH:MM"
-    const timeStr = date
+    const timeStr = sessionDate
       .toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
@@ -74,7 +79,7 @@ export function formatSessionDate(date: Date, showTime = true): string {
   // Yesterday
   if (diffDays === 1) {
     if (showTime) {
-      const timeStr = date
+      const timeStr = sessionDate
         .toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
@@ -88,10 +93,10 @@ export function formatSessionDate(date: Date, showTime = true): string {
 
   // Within last year - show MM/DD
   const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-  if (date > oneYearAgo) {
-    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+  if (sessionDate > oneYearAgo) {
+    const dateStr = `${sessionDate.getMonth() + 1}/${sessionDate.getDate()}`;
     if (showTime) {
-      const timeStr = date
+      const timeStr = sessionDate
         .toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
@@ -104,13 +109,13 @@ export function formatSessionDate(date: Date, showTime = true): string {
   }
 
   // Older than a year - show full date
-  const dateStr = date.toLocaleDateString('en-US', {
+  const dateStr = sessionDate.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
   });
   if (showTime) {
-    const timeStr = date
+    const timeStr = sessionDate
       .toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
@@ -132,7 +137,7 @@ export function formatSessionDate(date: Date, showTime = true): string {
  */
 export function generateSessionName(
   createdAt: Date,
-  allSessions?: readonly (InstanceOfSchema<typeof Session> | null)[],
+  allSessions?: readonly (SessionData | null)[],
 ): string {
   const dateStr = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -165,12 +170,13 @@ export function generateSessionName(
  * Used to determine whether to show time in session display
  */
 export function hasMultipleSessionsOnSameDay(
-  session: InstanceOfSchema<typeof Session> | null,
-  allSessions: readonly (InstanceOfSchema<typeof Session> | null)[],
+  session: SessionData | null,
+  allSessions: readonly (SessionData | null)[],
 ): boolean {
   if (!session || !allSessions) return false;
 
-  const sessionDate = session.createdAt;
+  // Ensure createdAt is a Date object (Jazz may deserialize as string)
+  const sessionDate = new Date(session.createdAt);
   const sessionDay = new Date(
     sessionDate.getFullYear(),
     sessionDate.getMonth(),
@@ -180,7 +186,7 @@ export function hasMultipleSessionsOnSameDay(
   // Count sessions on the same day
   const sessionsOnSameDay = allSessions.filter((s) => {
     if (!s) return false;
-    const sDate = s.createdAt;
+    const sDate = new Date(s.createdAt);
     const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
     return sDay.getTime() === sessionDay.getTime();
   });

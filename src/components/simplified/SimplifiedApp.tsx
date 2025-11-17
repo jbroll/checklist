@@ -8,7 +8,7 @@ import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree/TreeView';
 import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
-import * as simplifiedSessionService from '@/services/simplified/simplifiedSessionService';
+import * as sessionService from '@/services/sessionService';
 
 interface SimplifiedAppProps {
   account: InstanceOfSchema<typeof Account>;
@@ -48,7 +48,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
       return null;
     };
 
-    return findFolder(account.root.folders);
+    return findFolder(Array.from(account.root.folders));
   }, [selectedFolderId, account?.root?.folders]);
 
   // Compute parent folder for import based on selected folder
@@ -102,7 +102,24 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
     const template = templates.find((t) => t?.$jazz.id === templateId);
 
     if (template) {
-      const sessionId = simplifiedSessionService.getOrCreateCurrentSession(account, template);
+      // In simplified mode, always use the latest session (or create one)
+      const sessions = sessionService.getSessions(account, template.$jazz.id);
+      const activeSessions = sessions.filter((s) => !s.archived);
+
+      let sessionId: string;
+      if (activeSessions.length > 0) {
+        // Find latest session by createdAt
+        const latestSession = activeSessions.reduce((latest, current) => {
+          const latestTime = latest?.createdAt ? new Date(latest.createdAt).getTime() : 0;
+          const currentTime = current?.createdAt ? new Date(current.createdAt).getTime() : 0;
+          return currentTime > latestTime ? current : latest;
+        });
+        sessionId = latestSession.id;
+      } else {
+        // No session exists - create a new one
+        sessionId = sessionService.createSession(account, template.$jazz.id);
+      }
+
       // Set all state together to avoid intermediate renders
       setSelectedTemplateId(templateId);
       setSelectedFolderId(templateId);
@@ -126,7 +143,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
       return null;
     };
 
-    const folder = account.root?.folders ? findFolder(account.root.folders) : null;
+    const folder = account.root?.folders ? findFolder(Array.from(account.root.folders)) : null;
 
     // Only set selectedFolderId for folders (not templates in simplified mode)
     if (folder && folderService.isOrganizationalFolder(folder)) {

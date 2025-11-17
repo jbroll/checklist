@@ -1,12 +1,12 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
-import type { Session, Template, TemplateItem } from '@/schemas';
+import type { SessionData, Template, TemplateItem } from '@/schemas';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
 interface ZoneInHierarchyRendererProps {
   template: InstanceOfSchema<typeof Template>;
-  session: InstanceOfSchema<typeof Session>;
+  session: SessionData;
   selectedItems: TemplateItem[];
   checkedItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;

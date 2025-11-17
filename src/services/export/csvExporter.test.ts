@@ -50,8 +50,7 @@ const createMockTemplate = (options: { datesAsStrings?: boolean } = {}) => {
     ],
     sessions: [
       {
-        $jazz: { id: 'session-1' },
-        name: '[2024-11-01]',
+        id: 'session-1',
         archived: false,
         viewMode: 'flat' as const,
         itemStates: {

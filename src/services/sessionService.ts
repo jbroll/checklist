@@ -6,8 +6,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, SessionData } from '../schemas';
 import { generateId } from '../lib/utils';
+import type { Account, ItemState, SessionData, TemplateItem } from '../schemas';
 import { getTemplate } from './templateService';
 
 /**
@@ -23,14 +23,18 @@ function updateSession(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
 
-  const sessionIndex = template.sessions.findIndex((s) => s.id === sessionId);
+  const sessions = Array.isArray(template.sessions)
+    ? template.sessions
+    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+      Array.from(template.sessions as any);
+  const sessionIndex = sessions.findIndex((s: SessionData) => s.id === sessionId);
   if (sessionIndex === -1) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
   // Create new session object with updates
   const updatedSession: SessionData = {
-    ...template.sessions[sessionIndex],
+    ...sessions[sessionIndex],
     ...updates,
   };
 
@@ -55,7 +59,9 @@ export function createSession(
   const now = new Date();
 
   // Count non-archived leaf items only (exclude categories)
-  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
+  const activeItems = template.items.filter(
+    (item: TemplateItem) => !item.archived && item.type === 'item',
+  );
   const remainingCount = activeItems.length;
 
   // Create new list session as plain JavaScript object
@@ -96,7 +102,11 @@ export function getSession(
 ): SessionData | null {
   const template = getTemplate(account, templateId);
   if (!template?.sessions) return null;
-  return template.sessions.find((s) => s.id === sessionId) || null;
+  const sessions = Array.isArray(template.sessions)
+    ? template.sessions
+    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+      Array.from(template.sessions as any);
+  return sessions.find((s: SessionData) => s.id === sessionId) || null;
 }
 
 /**
@@ -109,7 +119,11 @@ export function getSessions(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) return [];
 
-  return template.sessions.filter((s) => s != null);
+  const sessions = Array.isArray(template.sessions)
+    ? template.sessions
+    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+      Array.from(template.sessions as any);
+  return sessions.filter((s: SessionData) => s != null);
 }
 
 /**
@@ -144,7 +158,7 @@ export function setItemSelected(
   const itemStates = session.itemStates || {};
   const currentState = itemStates[itemId];
 
-  let newItemStates: Record<string, any>;
+  let newItemStates: Record<string, ItemState>;
 
   if (!currentState && selected) {
     // Create new plain object state
@@ -268,13 +282,15 @@ export function updateSessionCounts(
   if (!template?.items) return;
 
   // Only count leaf items, not categories
-  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
+  const activeItems = template.items.filter(
+    (item: TemplateItem) => !item.archived && item.type === 'item',
+  );
 
   let selectedCount = 0;
   let checkedCount = 0;
   let remainingCount = 0;
 
-  activeItems.forEach((item) => {
+  activeItems.forEach((item: TemplateItem) => {
     const state = session.itemStates?.[item.id];
     if (!state || (!state.selected && !state.checked)) {
       remainingCount++;
@@ -484,13 +500,17 @@ export function deleteSession(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
 
-  const sessionIndex = template.sessions.findIndex((s) => s.id === sessionId);
+  const sessions = Array.isArray(template.sessions)
+    ? template.sessions
+    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+      Array.from(template.sessions as any);
+  const sessionIndex = sessions.findIndex((s: SessionData) => s.id === sessionId);
   if (sessionIndex === -1) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
   // Hard delete by creating new array without the session
-  const updatedSessions = template.sessions.filter((s) => s.id !== sessionId);
+  const updatedSessions = sessions.filter((s: SessionData) => s.id !== sessionId);
   template.$jazz.set('sessions', updatedSessions);
   template.$jazz.set('updatedAt', new Date());
 }

@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useMemo, useState } from 'react';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
 import { FolderNodeView } from './FolderNodeView';
@@ -165,7 +165,13 @@ export function TreeView({
     templateFolder: InstanceOfSchema<typeof FolderNode>,
     sessionId: string,
   ) => {
-    const session = templateFolder.sessions?.find((s) => s?.$jazz.id === sessionId);
+    const sessions = templateFolder.sessions
+      ? Array.isArray(templateFolder.sessions)
+        ? templateFolder.sessions
+        : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+          Array.from(templateFolder.sessions as any)
+      : [];
+    const session = sessions.find((s: SessionData) => s?.id === sessionId);
     if (session) {
       if (session.archived) {
         sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
@@ -241,10 +247,14 @@ export function TreeView({
       let newIndex: number;
 
       if (afterItemId) {
-        const afterIndex = parentList.findIndex((f) => f?.$jazz.id === afterItemId);
+        const afterIndex = parentList.findIndex(
+          (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === afterItemId,
+        );
         newIndex = afterIndex + 1;
       } else if (beforeItemId) {
-        newIndex = parentList.findIndex((f) => f?.$jazz.id === beforeItemId);
+        newIndex = parentList.findIndex(
+          (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === beforeItemId,
+        );
       } else {
         newIndex = 0;
       }
@@ -293,7 +303,7 @@ export function TreeView({
 
   // Build hierarchical tree structure
   const folderTree = useMemo(
-    () => buildFolderTree(account.root?.folders || [], showArchived),
+    () => buildFolderTree(Array.from(account.root?.folders || []), showArchived),
     [account.root?.folders, showArchived],
   );
 
@@ -304,21 +314,24 @@ export function TreeView({
     // For templates, show sessions only when sessionsEnabled is true
     let sessionChildren: React.ReactNode[] = [];
     if (sessionsEnabled && isTemplate && folder.sessions) {
-      const sessions = folder.sessions;
+      const sessions = Array.isArray(folder.sessions)
+        ? folder.sessions
+        : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+          Array.from(folder.sessions as any);
       const activeSessions = sessions
-        .filter((s) => {
-          if (!s) return false;
+        .filter((s: SessionData) => {
+          if (!s || !s.id) return false; // Filter out sessions without IDs
           return showArchived || !s.archived;
         })
-        .sort((a, b) => {
-          const dateA = a?.createdAt?.getTime() || 0;
-          const dateB = b?.createdAt?.getTime() || 0;
+        .sort((a: SessionData, b: SessionData) => {
+          const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
         });
 
-      sessionChildren = activeSessions.map((session) => (
+      sessionChildren = activeSessions.map((session: SessionData, index: number) => (
         <SessionRowView
-          key={session.$jazz.id}
+          key={session.id || `session-${index}`}
           session={session}
           templateName={folder.name}
           level={node.level + 1}

@@ -12,7 +12,7 @@ import { Package } from 'lucide-react';
 import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { useAccount } from '@/lib/jazz';
-import type { Account, Session, Template, TemplateItem } from '@/schemas';
+import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 import { buildItemTree, type ItemTreeNode } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -24,7 +24,7 @@ import { SessionZone } from './SessionZone';
 
 interface AvailableZoneRendererProps {
   template: InstanceOfSchema<typeof Template>;
-  session: InstanceOfSchema<typeof Session>;
+  session: SessionData;
   availableItems: TemplateItem[];
   categoryExpanded: Record<string, boolean>;
   zoneExpanded: boolean;

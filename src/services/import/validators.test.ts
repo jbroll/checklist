@@ -7,12 +7,17 @@ import type { ExportedData } from '../export/types';
 import { validateJsonData } from './validators';
 
 // Mock Account for testing (minimal structure)
-const createMockAccount = (_existingNames: string[] = []) => {
-  // Note: The validator doesn't actually use the account structure for validation,
-  // it just validates the imported data structure itself
+const createMockAccount = (existingNames: string[] = []) => {
+  // Create mock folders from existing names for duplicate detection
+  const folders = existingNames.map((name) => ({
+    name,
+    archived: false,
+    $jazz: { id: `folder-${name}` },
+  }));
+
   return {
     root: {
-      folders: [],
+      folders,
     },
   } as any;
 };

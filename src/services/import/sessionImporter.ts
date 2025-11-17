@@ -5,9 +5,9 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import { generateId } from '../../lib/utils';
+import type { Account, FolderNode, SessionData } from '../../schemas';
 import type { ItemState } from '../../schemas/tree';
-import { Session } from '../../schemas/tree';
 import { parseCsv } from '../../utils/csvParser';
 
 export interface SessionImportResult {
@@ -42,7 +42,7 @@ export interface SessionImportOptions {
 export function importSessionFromCsv(
   csvContent: string,
   template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
+  _account: InstanceOfSchema<typeof Account>,
   _options: SessionImportOptions = {},
 ): SessionImportResult {
   const result: SessionImportResult = {
@@ -171,30 +171,28 @@ export function importSessionFromCsv(
 
   // Create shopping session
   try {
-    const session = Session.create(
-      {
-        itemStates: itemStatesRecord,
-        archived: false,
-        viewMode: 'zone-in-hierarchy', // Default view mode
-        categoryExpanded: {},
-        selectedCount: totalInCart,
-        checkedCount: totalPurchased,
-        remainingCount,
-        owner: account,
-        createdAt: now,
-        lastActivityAt: now,
-      },
-      { owner: account },
-    );
+    const session: SessionData = {
+      id: generateId(),
+      itemStates: itemStatesRecord,
+      archived: false,
+      viewMode: 'zone-in-hierarchy', // Default view mode
+      categoryExpanded: {},
+      selectedCount: totalInCart,
+      checkedCount: totalPurchased,
+      remainingCount,
+      createdAt: now,
+      lastActivityAt: now,
+    };
 
     // Add session to template
-    template.sessions.$jazz.push(session);
+    const updatedSessions = [...(template.sessions || []), session];
+    template.$jazz.set('sessions', updatedSessions);
 
     // Update template timestamp
     template.$jazz.set('updatedAt', new Date());
 
     result.imported = true;
-    result.sessionId = session.$jazz.id;
+    result.sessionId = session.id;
   } catch (error) {
     result.errors.push(`Failed to create session: ${String(error)}`);
     return result;

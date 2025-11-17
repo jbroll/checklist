@@ -187,7 +187,9 @@ export const Template = co.map({
       lastActivityAt: z.date(),
     }),
   ),
-  currentSessionId: z.optional(z.string()), // Active session ID if any
+  // NOTE: currentSessionId intentionally NOT stored in Jazz to prevent cross-device conflicts
+  // Active session is tracked locally in component state (useState)
+  // This allows multiple devices to view different sessions simultaneously
 
   // Template-specific settings
   showZoneHeadings: z.boolean(),

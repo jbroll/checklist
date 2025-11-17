@@ -8,7 +8,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
+import type { FolderNode, SessionData } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 
@@ -34,14 +34,14 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
 
   // Get non-archived items, sorted by sortOrder
   const items = template.items
-    .filter((item) => item && !item.archived)
-    .sort((a, b) => {
+    .filter((item: TemplateItem) => item && !item.archived)
+    .sort((a: TemplateItem, b: TemplateItem) => {
       if (!a || !b) return 0;
       return a.sortOrder - b.sortOrder;
     });
 
   // Check if any categories exist
-  const hasCategories = items.some((item) => item?.type === 'category');
+  const hasCategories = items.some((item: TemplateItem) => item?.type === 'category');
 
   if (hasCategories) {
     // Export hierarchical format
@@ -49,7 +49,9 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
   }
 
   // Export flat format (original behavior)
-  const lines = items.map((item) => item?.name || '').filter((name) => name.length > 0);
+  const lines = items
+    .map((item: TemplateItem) => item?.name || '')
+    .filter((name: string) => name.length > 0);
   return lines.join('\n');
 }
 
@@ -161,7 +163,9 @@ export function exportSessionToText(
     return null;
   }
 
-  const session = Array.from(template.sessions).find((s) => s?.$jazz.id === sessionId);
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+  const sessions: SessionData[] = Array.from(template.sessions as any);
+  const session: SessionData | undefined = sessions.find((s: SessionData) => s?.id === sessionId);
   if (!session) {
     return null;
   }
@@ -171,8 +175,8 @@ export function exportSessionToText(
   // Get all items from the template
   if (template.items) {
     const items = template.items
-      .filter((item) => item && !item.archived)
-      .sort((a, b) => {
+      .filter((item: TemplateItem) => item && !item.archived)
+      .sort((a: TemplateItem, b: TemplateItem) => {
         if (!a || !b) return 0;
         return a.sortOrder - b.sortOrder;
       });
