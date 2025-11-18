@@ -50,12 +50,33 @@ export const SessionItemRow = memo(function SessionItemRow({
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const justEnteredEditMode = useRef(false);
+  const lastDragState = useRef<{ disabled: boolean; canDrag: boolean } | null>(null);
 
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
 
   // Draggable setup - only in available zone when enabled AND mode allows dragging
   const dragDisabled = !enableDrag || !canDragItem;
+
+  // Log drag configuration only when it changes
+  if (
+    enableDrag &&
+    (!lastDragState.current ||
+      lastDragState.current.disabled !== dragDisabled ||
+      lastDragState.current.canDrag !== canDragItem)
+  ) {
+    const timestamp = (performance.now() / 1000).toFixed(3);
+    console.log(
+      `[${timestamp}s] [SessionItemRow]`,
+      item.name,
+      '- canDragItem:',
+      canDragItem,
+      'dragDisabled:',
+      dragDisabled,
+    );
+    lastDragState.current = { disabled: dragDisabled, canDrag: canDragItem };
+  }
+
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
@@ -78,14 +99,19 @@ export const SessionItemRow = memo(function SessionItemRow({
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
-        console.log('[SessionItemRow] Cannot edit - canEditItem is false');
+        const timestamp = (performance.now() / 1000).toFixed(3);
+        console.log(`[${timestamp}s] [SessionItemRow] Cannot edit - canEditItem is false`);
         return;
       }
 
       // Don't trigger if clicking on buttons
       if ((e.target as HTMLElement).closest('button')) return;
 
-      console.log('[SessionItemRow] Double-tap detected, entering edit mode for:', item.name);
+      const timestamp = (performance.now() / 1000).toFixed(3);
+      console.log(
+        `[${timestamp}s] [SessionItemRow] Double-tap detected, entering edit mode for:`,
+        item.name,
+      );
       setEditValue(item.name);
       justEnteredEditMode.current = true;
       onEnterEditMode?.();
@@ -117,11 +143,13 @@ export const SessionItemRow = memo(function SessionItemRow({
 
     // Ignore blur events that happen immediately after entering edit mode
     if (justEnteredEditMode.current) {
-      console.log('[SessionItemRow] Ignoring premature blur');
+      const timestamp = (performance.now() / 1000).toFixed(3);
+      console.log(`[${timestamp}s] [SessionItemRow] Ignoring premature blur`);
       return;
     }
 
-    console.log('[SessionItemRow] Saving edit for:', item.name);
+    const timestamp = (performance.now() / 1000).toFixed(3);
+    console.log(`[${timestamp}s] [SessionItemRow] Saving edit for:`, item.name);
     const trimmedValue = editValue.trim();
 
     // Validate non-empty

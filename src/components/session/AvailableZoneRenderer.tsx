@@ -86,6 +86,12 @@ export function AvailableZoneRenderer({
         delay: 1000, // 1 second long press to activate drag
         tolerance: 5, // Allow 5px of movement during hold (for shaky fingers)
       },
+      onActivation: () => {
+        const timestamp = (performance.now() / 1000).toFixed(3);
+        console.log(
+          `[${timestamp}s] [AvailableZoneRenderer] PointerSensor activated - drag starting`,
+        );
+      },
     }),
   );
 
@@ -121,7 +127,8 @@ export function AvailableZoneRenderer({
 
   const handleDragStart = (event: DragStartEvent) => {
     const draggedItem = event.active.data.current?.item as TemplateItem;
-    console.log('[AvailableZoneRenderer] Drag started for:', draggedItem?.name);
+    const timestamp = (performance.now() / 1000).toFixed(3);
+    console.log(`[${timestamp}s] [AvailableZoneRenderer] Drag started for:`, draggedItem?.name);
     setActiveItem(draggedItem);
     // Enter drag mode to prevent other interactions
     onEnterDragMode(draggedItem.id);

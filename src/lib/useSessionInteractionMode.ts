@@ -1,5 +1,11 @@
 import { useCallback, useState } from 'react';
 
+// Helper to get timestamp in seconds with milliseconds
+const getTimestamp = () => {
+  const now = performance.now() / 1000;
+  return now.toFixed(3);
+};
+
 /**
  * Interaction modes for SessionView
  *
@@ -45,7 +51,7 @@ export function useSessionInteractionMode() {
   const enterAddMode = useCallback(() => {
     setInteractionMode((prev) => {
       if (prev.mode !== 'adding') {
-        console.log('[InteractionMode] State changed:', prev.mode, '→ ADDING');
+        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ ADDING');
       }
       return { mode: 'adding' };
     });
@@ -54,7 +60,13 @@ export function useSessionInteractionMode() {
   const enterEditMode = useCallback((itemId: string) => {
     setInteractionMode((prev) => {
       if (prev.mode !== 'editing' || (prev.mode === 'editing' && prev.itemId !== itemId)) {
-        console.log('[InteractionMode] State changed:', prev.mode, '→ EDITING (item:', itemId, ')');
+        console.log(
+          `[${getTimestamp()}s] [InteractionMode] State changed:`,
+          prev.mode,
+          '→ EDITING (item:',
+          itemId,
+          ')',
+        );
       }
       return { mode: 'editing', itemId };
     });
@@ -64,7 +76,7 @@ export function useSessionInteractionMode() {
     setInteractionMode((prev) => {
       if (prev.mode !== 'dragging' || (prev.mode === 'dragging' && prev.itemId !== itemId)) {
         console.log(
-          '[InteractionMode] State changed:',
+          `[${getTimestamp()}s] [InteractionMode] State changed:`,
           prev.mode,
           '→ DRAGGING (item:',
           itemId,
@@ -78,7 +90,7 @@ export function useSessionInteractionMode() {
   const exitToNormal = useCallback(() => {
     setInteractionMode((prev) => {
       if (prev.mode !== 'normal') {
-        console.log('[InteractionMode] State changed:', prev.mode, '→ NORMAL');
+        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ NORMAL');
       }
       return { mode: 'normal' };
     });
@@ -87,7 +99,7 @@ export function useSessionInteractionMode() {
   const exitToAdding = useCallback(() => {
     setInteractionMode((prev) => {
       if (prev.mode !== 'adding') {
-        console.log('[InteractionMode] State changed:', prev.mode, '→ ADDING');
+        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ ADDING');
       }
       return { mode: 'adding' };
     });
