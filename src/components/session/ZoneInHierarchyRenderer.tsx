@@ -1,7 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
-import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
@@ -16,12 +15,6 @@ interface ZoneInHierarchyRendererProps {
   onToggleChecked: (itemId: string) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
-  // Interaction mode props (for consistency, though these zones aren't draggable)
-  interactionMode: InteractionMode;
-  onEnterEditMode: (itemId: string) => void;
-  onExitEditMode: () => void;
-  canEdit: (itemId: string) => boolean;
-  canDrag: (itemId: string) => boolean;
 }
 
 export function ZoneInHierarchyRenderer({
@@ -35,7 +28,6 @@ export function ZoneInHierarchyRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
-  // Interaction mode props - accepted but not used in non-draggable zones
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -157,7 +149,6 @@ export function ZoneInHierarchyRenderer({
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
-                    template={template}
                   />
                 )}
                 {catChecked.length > 0 && (
@@ -175,7 +166,6 @@ export function ZoneInHierarchyRenderer({
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
-                    template={template}
                   />
                 )}
               </>
@@ -209,7 +199,6 @@ export function ZoneInHierarchyRenderer({
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
-              template={template}
             />
           )}
           {uncategorizedCheckedItems.length > 0 && (
@@ -227,7 +216,6 @@ export function ZoneInHierarchyRenderer({
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
-              template={template}
             />
           )}
         </>

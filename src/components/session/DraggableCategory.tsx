@@ -1,7 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
-import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import type { FolderNode, ItemState, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
@@ -24,12 +23,6 @@ interface DraggableCategoryProps {
   children?: React.ReactNode;
   template?: InstanceOfSchema<typeof FolderNode>;
   simplifiedUI?: boolean;
-  // Interaction mode props
-  interactionMode: InteractionMode;
-  onEnterEditMode: (itemId: string) => void;
-  onExitEditMode: () => void;
-  canEdit: (itemId: string) => boolean;
-  canDrag: (itemId: string) => boolean;
 }
 
 export function DraggableCategory({
@@ -50,13 +43,8 @@ export function DraggableCategory({
   children,
   template,
   simplifiedUI = false,
-  interactionMode,
-  onEnterEditMode,
-  onExitEditMode,
-  canEdit,
-  canDrag,
 }: DraggableCategoryProps) {
-  // Draggable setup for categories - respect canDrag permission
+  // Draggable setup for categories
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
@@ -65,7 +53,6 @@ export function DraggableCategory({
   } = useDraggable({
     id: item.id,
     data: { item },
-    disabled: !canDrag(item.id),
   });
 
   // Droppable setup - categories can accept drops
@@ -113,14 +100,6 @@ export function DraggableCategory({
             onSelectItem={onSelectItem}
             template={template}
             simplifiedUI={simplifiedUI}
-            // Interaction mode props
-            isEditingThisItem={
-              interactionMode.mode === 'editing' && interactionMode.itemId === item.id
-            }
-            canEditItem={canEdit(item.id)}
-            canDragItem={canDrag(item.id)}
-            onEnterEditMode={() => onEnterEditMode(item.id)}
-            onExitEditMode={onExitEditMode}
           />
       </div>
 
