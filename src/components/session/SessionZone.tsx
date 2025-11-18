@@ -6,6 +6,7 @@ import { IndentedRow } from '@/components/tree/IndentedRow';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
+import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -43,6 +44,12 @@ interface SessionZoneProps {
   canDragItem?: boolean; // Can drag items in this zone in current mode
   onEnterEditMode?: () => void; // Enter edit mode for this category
   onExitEditMode?: () => void; // Exit edit mode for this category
+  // Interaction mode props for child items (when rendering items directly)
+  interactionMode?: InteractionMode; // InteractionMode from parent
+  onEnterItemEditMode?: (itemId: string) => void; // Enter edit mode for an item
+  onExitItemEditMode?: () => void; // Exit edit mode for an item
+  canEditItemFn?: (itemId: string) => boolean; // Can edit a specific item
+  canDragItemFn?: (itemId: string) => boolean; // Can drag a specific item
 }
 
 export function SessionZone({
@@ -74,6 +81,11 @@ export function SessionZone({
   canEditItem = true,
   onEnterEditMode,
   onExitEditMode,
+  interactionMode,
+  onEnterItemEditMode,
+  onExitItemEditMode,
+  canEditItemFn,
+  canDragItemFn,
 }: SessionZoneProps) {
   const { me } = useAccount<typeof Account>();
   const [editValue, setEditValue] = useState('');
@@ -81,15 +93,6 @@ export function SessionZone({
 
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
-
-  console.log(
-    '[SessionZone] Category:',
-    title,
-    'isSelected:',
-    isSelected,
-    'hasOnSelectItem:',
-    !!onSelectItem,
-  );
 
   // Inline editing handlers for category name with double-tap support for mobile
   const doubleTapHandlers = useDoubleTap({
@@ -99,7 +102,6 @@ export function SessionZone({
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
-        console.log('[SessionZone] Edit prevented - not allowed in current mode');
         return;
       }
 
@@ -187,6 +189,16 @@ export function SessionZone({
           onDeleteItem={onDeleteItem}
           template={template}
           simplifiedUI={simplifiedUI}
+          // Interaction mode props for item editing
+          isEditingThisItem={
+            interactionMode &&
+            interactionMode.mode === 'editing' &&
+            interactionMode.itemId === item.id
+          }
+          canEditItem={canEditItemFn?.(item.id)}
+          canDragItem={canDragItemFn?.(item.id)}
+          onEnterEditMode={onEnterItemEditMode ? () => onEnterItemEditMode(item.id) : undefined}
+          onExitEditMode={onExitItemEditMode}
         />
       ))}
     </div>
@@ -210,7 +222,6 @@ export function SessionZone({
 
     const handleSelectAll = (e: React.MouseEvent) => {
       e.stopPropagation();
-      console.log('[SessionZone] Select All clicked', { allItemIds, selectionState });
       if (onBatchSelectAll && allItemIds.length > 0 && selectionState !== 'all') {
         onBatchSelectAll(allItemIds);
       }
@@ -218,7 +229,6 @@ export function SessionZone({
 
     const handleDeselectAll = (e: React.MouseEvent) => {
       e.stopPropagation();
-      console.log('[SessionZone] Deselect All clicked', { allItemIds, selectionState });
       if (onBatchDeselectAll && allItemIds.length > 0 && selectionState !== 'none') {
         onBatchDeselectAll(allItemIds);
       }
@@ -226,7 +236,6 @@ export function SessionZone({
 
     const handleToggle = (e: React.MouseEvent) => {
       e.stopPropagation();
-      console.log('[SessionZone] Toggle clicked', { allItemIds, selectionState });
       if (onBatchToggle && allItemIds.length > 0) {
         onBatchToggle(allItemIds);
       }
@@ -295,13 +304,11 @@ export function SessionZone({
       (e.target as HTMLElement).closest('button') ||
       (e.target as HTMLElement).closest('[data-expand-toggle]')
     ) {
-      console.log('[SessionZone] Click ignored (button or toggle)');
       return;
     }
 
     if (onSelectItem && categoryItem) {
       const newValue = isSelected ? null : categoryItem.id;
-      console.log('[SessionZone] Calling onSelectItem with:', newValue);
       onSelectItem(newValue);
     }
   };
@@ -312,7 +319,6 @@ export function SessionZone({
       e.preventDefault();
       if (onSelectItem && categoryItem) {
         const newValue = isSelected ? null : categoryItem.id;
-        console.log('[SessionZone] Keyboard selection with:', newValue);
         onSelectItem(newValue);
       }
     }

@@ -37,7 +37,11 @@ export function FlatViewRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
-  // Interaction mode props - accepted but not used in non-draggable zones
+  interactionMode,
+  onEnterEditMode,
+  onExitEditMode,
+  canEdit,
+  canDrag,
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -58,8 +62,12 @@ export function FlatViewRenderer({
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
         template={template}
-        // Note: Selected/checked zones don't support inline editing or dragging
-        // Items can only be moved back to available zone via checkboxes
+        // Interaction mode props for item editing
+        interactionMode={interactionMode}
+        onEnterItemEditMode={onEnterEditMode}
+        onExitItemEditMode={onExitEditMode}
+        canEditItemFn={canEdit}
+        canDragItemFn={canDrag}
       />
       <SessionZone
         title="Checked"
@@ -76,8 +84,12 @@ export function FlatViewRenderer({
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
         template={template}
-        // Note: Selected/checked zones don't support inline editing or dragging
-        // Items can only be moved back to available zone via checkboxes
+        // Interaction mode props for item editing
+        interactionMode={interactionMode}
+        onEnterItemEditMode={onEnterEditMode}
+        onExitItemEditMode={onExitEditMode}
+        canEditItemFn={canEdit}
+        canDragItemFn={canDrag}
       />
     </>
   );

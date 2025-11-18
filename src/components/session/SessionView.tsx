@@ -102,25 +102,9 @@ export function SessionView({
       const newAvailableTop = availableZoneRef.current.getBoundingClientRect().top;
       const heightDiff = newAvailableTop - availableTop;
 
-      console.log(
-        '[Restore] Old availableTop:',
-        availableTop,
-        'New:',
-        newAvailableTop,
-        'Diff:',
-        heightDiff,
-      );
-      console.log(
-        '[Restore] Current scrollTop:',
-        scrollContainerRef.current.scrollTop,
-        'Saved:',
-        scrollTop,
-      );
-
       if (heightDiff !== 0) {
         // Adjust scroll to compensate for height change
         const newScrollTop = scrollTop + heightDiff;
-        console.log('[Restore] Setting scroll to:', newScrollTop);
         scrollContainerRef.current.scrollTop = newScrollTop;
       }
 
@@ -164,12 +148,6 @@ export function SessionView({
         scrollTop: scrollContainerRef.current.scrollTop,
         availableTop: availableZoneRef.current.getBoundingClientRect().top,
       };
-      console.log(
-        '[Capture] scrollTop:',
-        scrollContainerRef.current.scrollTop,
-        'availableTop:',
-        scrollPositionRef.current.availableTop,
-      );
     }
 
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
@@ -207,8 +185,6 @@ export function SessionView({
   };
 
   const handleBatchSelectAll = (itemIds: string[]) => {
-    console.log('[handleBatchSelectAll] Called with:', itemIds);
-
     // Capture scroll state before DOM changes
     if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
@@ -224,8 +200,6 @@ export function SessionView({
   };
 
   const handleBatchDeselectAll = (itemIds: string[]) => {
-    console.log('[handleBatchDeselectAll] Called with:', itemIds);
-
     // Capture scroll state before DOM changes
     if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
@@ -241,8 +215,6 @@ export function SessionView({
   };
 
   const handleBatchToggle = (itemIds: string[]) => {
-    console.log('[handleBatchToggle] Called with:', itemIds);
-
     // Capture scroll state before DOM changes
     if (availableZoneRef.current && scrollContainerRef.current) {
       scrollPositionRef.current = {
@@ -265,15 +237,11 @@ export function SessionView({
   const handleAddItem = (name: string, type: 'item' | 'category') => {
     if (!me) return;
 
-    console.log('[SessionView] handleAddItem:', { name, type, selectedItemId });
-
     // Calculate insertion point based on selected item (for simplified mode)
     const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
       template,
       selectedItemId,
     );
-
-    console.log('[SessionView] Insertion point:', { parentPath, sortOrder });
 
     // Create new template item at calculated position using service layer
     // Type assertion needed because Jazz account.root can be null during migration, but is guaranteed here
@@ -299,15 +267,12 @@ export function SessionView({
       );
     }
 
-    console.log('[SessionView] Created item:', newItemId);
-
     // Update session counts to include the new item
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
 
     // Set newly created item as selected for consecutive insertion
     setSelectedItemId(newItemId);
-    console.log('[SessionView] Set selected item to:', newItemId);
 
     // Keep form open for rapid entry
   };
