@@ -1,10 +1,10 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo } from 'react';
-import type { SessionData, Template, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 
 interface UseSessionItemsParams {
   template: InstanceOfSchema<typeof Template> | null;
-  session: SessionData | null;
+  session: InstanceOfSchema<typeof Session> | null;
 }
 
 export function useSessionItems({ template, session }: UseSessionItemsParams) {

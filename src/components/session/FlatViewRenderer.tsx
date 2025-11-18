@@ -1,12 +1,12 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
-import type { SessionData, Template, TemplateItem } from '@/schemas';
+import type { Session, Template, TemplateItem } from '@/schemas';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import { SessionZone } from './SessionZone';
 
 interface FlatViewRendererProps {
   template: InstanceOfSchema<typeof Template>;
-  session: SessionData;
+  session: InstanceOfSchema<typeof Session>;
   selectedItems: TemplateItem[];
   checkedItems: TemplateItem[];
   zoneExpanded: {
