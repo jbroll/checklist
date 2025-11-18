@@ -47,7 +47,7 @@ export function SessionView({
     exitCurrentMode,
     canEdit,
     canDrag,
-  } = useSessionInteractionMode({ simplifiedUI });
+  } = useSessionInteractionMode();
 
   // Sync showAddForm with interaction mode
   useEffect(() => {

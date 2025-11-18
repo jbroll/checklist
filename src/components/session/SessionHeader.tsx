@@ -82,8 +82,8 @@ export function SessionHeader({
             <ViewModeIcon className="h-4 w-4" />
           </button>
 
-          {/* Simplified UI: Add button */}
-          {simplifiedUI && onToggleAddForm && (
+          {/* Add/Edit button - available in both Classic and Simplified UI */}
+          {onToggleAddForm && (
             <button
               type="button"
               onClick={onToggleAddForm}
@@ -92,8 +92,8 @@ export function SessionHeader({
                   ? 'border-green-500 bg-green-50 text-green-600'
                   : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50'
               }`}
-              title="Add item or category"
-              aria-label="Add item or category"
+              title="Toggle edit mode"
+              aria-label="Toggle edit mode"
             >
               <div className="flex items-center gap-1">
                 <Plus className="h-4 w-4" />

@@ -187,9 +187,9 @@ test.describe('Simplified UI - Session View', () => {
     await expect(page.getByRole('heading', { name: /shopping list/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /clear/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
-    // View cycle button and Add button are present but have aria-labels with "Cycle view" and "Add item or category"
+    // View cycle button and Add/Edit button are present but have aria-labels with "Cycle view" and "Toggle edit mode"
     await expect(page.getByRole('button', { name: /cycle view/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /add item or category/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /toggle edit mode/i })).toBeVisible();
   });
 
   test('should display items', async ({ page }) => {
