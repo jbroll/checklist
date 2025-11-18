@@ -37,7 +37,6 @@ interface SessionZoneProps {
   isSelected?: boolean; // Category selection state
   onSelectItem?: (itemId: string | null) => void; // Category selection handler
   template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
-  simplifiedUI?: boolean; // Enable inline editing only in simplified UI
   // Interaction mode props (centralized state management)
   isEditingThisItem?: boolean; // Is this specific category being edited
   canEditItem?: boolean; // Can edit this category in current mode
@@ -76,7 +75,6 @@ export function SessionZone({
   isSelected = false,
   onSelectItem,
   template,
-  simplifiedUI = false,
   isEditingThisItem = false,
   canEditItem = true,
   onEnterEditMode,
@@ -97,8 +95,8 @@ export function SessionZone({
   // Inline editing handlers for category name with double-tap support for mobile
   const doubleTapHandlers = useDoubleTap({
     onDoubleTap: (e) => {
-      // Only enable for categories in simplified UI mode
-      if (!simplifiedUI || !template || !categoryItem) return;
+      // Only enable for categories when template is available
+      if (!template || !categoryItem) return;
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
@@ -188,7 +186,6 @@ export function SessionZone({
           showDeleteIcon={showDeleteIcon}
           onDeleteItem={onDeleteItem}
           template={template}
-          simplifiedUI={simplifiedUI}
           // Interaction mode props for item editing
           isEditingThisItem={
             interactionMode &&
