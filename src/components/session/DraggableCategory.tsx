@@ -77,6 +77,9 @@ export function DraggableCategory({
   // Long press visual feedback
   const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
 
+  // Only show drag feedback when dragging is actually enabled
+  const canActuallyDrag = canDrag(item.id);
+
   return (
     <div className="flex-1 min-w-0">
       {/* Category header - draggable and droppable (header only, not children) */}
@@ -87,10 +90,10 @@ export function DraggableCategory({
         }}
         {...dragAttributes}
         {...dragListeners}
-        {...longPressHandlers}
+        {...(canActuallyDrag ? longPressHandlers : {})}
         className={`transition-all duration-200 ${isDragging ? 'opacity-50' : ''} ${
           isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
-        } ${isHolding ? 'scale-[1.01] shadow-lg bg-blue-50 ring-2 ring-blue-300 rounded' : ''}`}
+        } ${isHolding && canActuallyDrag ? 'scale-[1.01] shadow-lg bg-blue-50 ring-2 ring-blue-300 rounded' : ''}`}
       >
         <SessionZone
           title={item.name}
