@@ -72,6 +72,17 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Draggable setup - only in available zone when enabled AND mode allows dragging
   const dragDisabled = !enableDrag || !canDragItem;
 
+  const {
+    attributes: dragAttributes,
+    listeners: dragListeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: item.id,
+    data: { item },
+    disabled: dragDisabled,
+  });
+
   // Log drag configuration only when it changes
   if (
     enableDrag &&
@@ -87,20 +98,13 @@ export const SessionItemRow = memo(function SessionItemRow({
       canDragItem,
       'dragDisabled:',
       dragDisabled,
+      'canActuallyDrag:',
+      enableDrag && canDragItem,
+      'dragListeners:',
+      dragListeners,
     );
     lastDragState.current = { disabled: dragDisabled, canDrag: canDragItem };
   }
-
-  const {
-    attributes: dragAttributes,
-    listeners: dragListeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({
-    id: item.id,
-    data: { item },
-    disabled: dragDisabled,
-  });
 
   // Long press visual feedback
   const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
