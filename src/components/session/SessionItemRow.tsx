@@ -4,7 +4,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
+// import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
 import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 
@@ -106,8 +106,10 @@ export const SessionItemRow = memo(function SessionItemRow({
     lastDragState.current = { disabled: dragDisabled, canDrag: canDragItem };
   }
 
-  // Long press visual feedback
-  const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
+  // Long press visual feedback - DISABLED to avoid conflicting with drag sensor
+  // const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
+  const isHolding = false;
+  const longPressHandlers = {};
 
   // Inline editing handlers with double-tap support for mobile
   const doubleTapHandlers = useDoubleTap({
