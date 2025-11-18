@@ -408,10 +408,10 @@ export function AvailableZoneRenderer({
       </SessionZone>
 
       {/* Drag overlay - shows the dragged item following the cursor */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeItem ? (
-          <div className="rounded bg-white px-3 py-2 shadow-lg ring-2 ring-blue-400">
-            <span className="text-neutral-900">{activeItem.name}</span>
+          <div className="cursor-grabbing rounded bg-white px-4 py-3 shadow-2xl ring-2 ring-blue-500 opacity-90">
+            <span className="text-base font-medium text-neutral-900">{activeItem.name}</span>
           </div>
         ) : null}
       </DragOverlay>
