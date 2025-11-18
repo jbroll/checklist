@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
+// import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import type { FolderNode, ItemState, TemplateItem } from '@/schemas';
 import type { CategoryNode } from './categoryTreeBuilder';
@@ -72,8 +72,10 @@ export function DraggableCategory({
     data: { isCategory: true, path: item.path, item },
   });
 
-  // Long press visual feedback
-  const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
+  // Long press visual feedback - DISABLED to avoid conflicting with drag sensor
+  // const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
+  const isHolding = false;
+  const longPressHandlers = {};
 
   // Only show drag feedback when dragging is actually enabled
   const canActuallyDrag = canDrag(item.id);
