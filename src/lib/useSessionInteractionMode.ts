@@ -26,9 +26,8 @@ export type InteractionMode =
  * - DRAGGING to NORMAL/ADDING (drop item)
  * - ADDING to NORMAL (close add form)
  */
-export function useSessionInteractionMode(options?: { simplifiedUI?: boolean }) {
+export function useSessionInteractionMode() {
   const [interactionMode, setInteractionMode] = useState<InteractionMode>({ mode: 'normal' });
-  const simplifiedUI = options?.simplifiedUI ?? false;
 
   // Computed flags for easy consumption by child components
   const isEditing = interactionMode.mode === 'editing';
@@ -101,11 +100,9 @@ export function useSessionInteractionMode(options?: { simplifiedUI?: boolean }) 
 
   const canDrag = useCallback(
     (itemId: string) => {
-      // Classic UI: Can drag if NORMAL, ADDING, or already dragging this item
-      // Simplified UI: Can drag ONLY in ADDING mode or if already dragging this item
-      const result = simplifiedUI
-        ? isAdding || (isDragging && activeItemId === itemId)
-        : isNormal || isAdding || (isDragging && activeItemId === itemId);
+      // Dragging is allowed when in ADDING mode or already dragging this item
+      // Both Simplified and Classic UI work the same way for dragging
+      const result = isAdding || (isDragging && activeItemId === itemId);
       console.log(
         '[InteractionMode] canDrag?',
         itemId,
@@ -113,12 +110,11 @@ export function useSessionInteractionMode(options?: { simplifiedUI?: boolean }) 
         result,
         '(mode:',
         interactionMode.mode,
-        simplifiedUI ? '[Simplified UI]' : '[Classic UI]',
         ')',
       );
       return result;
     },
-    [simplifiedUI, isAdding, isNormal, isDragging, activeItemId, interactionMode],
+    [isAdding, isDragging, activeItemId, interactionMode],
   );
 
   const canSelectForInsertion = useCallback(() => {
