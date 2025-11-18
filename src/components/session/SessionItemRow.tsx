@@ -178,16 +178,16 @@ export const SessionItemRow = memo(function SessionItemRow({
 
   return (
     <motion.div
-      ref={enableDrag ? setDragRef : undefined}
-      {...(enableDrag ? dragAttributes : {})}
-      {...(enableDrag ? dragListeners : {})}
+      ref={canActuallyDrag ? setDragRef : undefined}
+      {...(canActuallyDrag ? dragAttributes : {})}
+      {...(canActuallyDrag ? dragListeners : {})}
       {...(canActuallyDrag ? longPressHandlers : {})}
       layout={shouldAnimate}
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
         isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
-      } ${onSelectItem ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50' : ''} ${
+      } ${onSelectItem ? 'cursor-pointer' : ''} ${canActuallyDrag && !isDragging ? 'cursor-grab' : ''} ${isDragging ? 'opacity-50 cursor-grabbing' : ''} ${
         isHolding && canActuallyDrag ? 'scale-[1.02] shadow-lg bg-blue-50 ring-2 ring-blue-300' : ''
       }`}
       {...(onSelectItem && {

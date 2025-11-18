@@ -88,10 +88,10 @@ export function DraggableCategory({
           setDragRef(node);
           setDropRef(node);
         }}
-        {...dragAttributes}
-        {...dragListeners}
+        {...(canActuallyDrag ? dragAttributes : {})}
+        {...(canActuallyDrag ? dragListeners : {})}
         {...(canActuallyDrag ? longPressHandlers : {})}
-        className={`transition-all duration-200 ${isDragging ? 'opacity-50' : ''} ${
+        className={`transition-all duration-200 ${canActuallyDrag && !isDragging ? 'cursor-grab' : ''} ${isDragging ? 'opacity-50 cursor-grabbing' : ''} ${
           isOver ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
         } ${isHolding && canActuallyDrag ? 'scale-[1.01] shadow-lg bg-blue-50 ring-2 ring-blue-300 rounded' : ''}`}
       >
