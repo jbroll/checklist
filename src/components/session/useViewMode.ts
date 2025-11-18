@@ -1,11 +1,11 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { FolderTree, List } from 'lucide-react';
-import type { Account, Session, Template } from '@/schemas';
+import type { Account, SessionData, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 
 interface UseViewModeParams {
   template: InstanceOfSchema<typeof Template>;
-  session: InstanceOfSchema<typeof Session> | null;
+  session: SessionData | null;
   sessionId: string;
   me: InstanceOfSchema<typeof Account> | null;
 }

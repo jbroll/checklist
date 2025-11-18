@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatSessionDate } from '@/lib/utils';
-import type { Account, Session, Template } from '@/schemas';
+import type { Account, SessionData, Template } from '@/schemas';
 
 interface SessionHeaderProps {
   template: InstanceOfSchema<typeof Template>;
-  session: InstanceOfSchema<typeof Session>;
+  session: SessionData;
   sessionId: string;
   me: InstanceOfSchema<typeof Account>;
   showTime: boolean;
