@@ -49,6 +49,3 @@ setAccountReference(Account);
 
 // Re-export tree schemas and types for easy importing
 export { FolderNode, Template, type SessionData, type TemplateItem, type ItemState };
-
-// Type alias for Session (same as SessionData, for backward compatibility)
-export type Session = SessionData;
