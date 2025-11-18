@@ -21,12 +21,6 @@ interface SessionItemRowProps {
   enableDrag?: boolean; // Enable drag and drop in available zone
   template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
   simplifiedUI?: boolean; // Enable inline editing only in simplified UI
-  // Interaction mode props (centralized state management)
-  isEditingThisItem?: boolean; // Is this specific item being edited
-  canEditItem?: boolean; // Can edit this item in current mode
-  canDragItem?: boolean; // Can drag this item in current mode
-  onEnterEditMode?: () => void; // Enter edit mode for this item
-  onExitEditMode?: () => void; // Exit edit mode for this item
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -42,20 +36,13 @@ export const SessionItemRow = memo(function SessionItemRow({
   enableDrag = false,
   template,
   simplifiedUI = false,
-  isEditingThisItem = false,
-  canEditItem = true,
-  canDragItem = true,
-  onEnterEditMode,
-  onExitEditMode,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
+  const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Use centralized editing state instead of local state
-  const isEditing = isEditingThisItem;
-
-  // Draggable setup - only in available zone when enabled AND mode allows dragging
+  // Draggable setup - only in available zone when enabled
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
@@ -64,7 +51,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   } = useDraggable({
     id: item.id,
     data: { item },
-    disabled: !enableDrag || !canDragItem,
+    disabled: !enableDrag,
   });
 
   // Long press visual feedback
@@ -76,17 +63,11 @@ export const SessionItemRow = memo(function SessionItemRow({
       // Only enable in simplified UI mode and when template is available
       if (!simplifiedUI || !template) return;
 
-      // Check if editing is allowed in current mode
-      if (!canEditItem) {
-        console.log('[SessionItemRow] Edit prevented - not allowed in current mode');
-        return;
-      }
-
       // Don't trigger if clicking on buttons
       if ((e.target as HTMLElement).closest('button')) return;
 
       setEditValue(item.name);
-      onEnterEditMode?.();
+      setIsEditing(true);
       setTimeout(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -123,7 +104,7 @@ export const SessionItemRow = memo(function SessionItemRow({
     // Validate non-empty
     if (!trimmedValue) {
       // Cancel edit if empty
-      onExitEditMode?.();
+      setIsEditing(false);
       return;
     }
 
@@ -138,11 +119,11 @@ export const SessionItemRow = memo(function SessionItemRow({
       }
     }
 
-    onExitEditMode?.();
+    setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
-    onExitEditMode?.();
+    setIsEditing(false);
     setEditValue('');
   };
 

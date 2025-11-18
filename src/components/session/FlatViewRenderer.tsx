@@ -1,7 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { Session, Template, TemplateItem } from '@/schemas';
-import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import { SessionZone } from './SessionZone';
 
 interface FlatViewRendererProps {
@@ -18,12 +17,6 @@ interface FlatViewRendererProps {
   onToggleChecked: (itemId: string) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
-  // Interaction mode props (for consistency, though these zones aren't draggable)
-  interactionMode: InteractionMode;
-  onEnterEditMode: (itemId: string) => void;
-  onExitEditMode: () => void;
-  canEdit: (itemId: string) => boolean;
-  canDrag: (itemId: string) => boolean;
 }
 
 export function FlatViewRenderer({
@@ -37,7 +30,6 @@ export function FlatViewRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
-  // Interaction mode props - accepted but not used in non-draggable zones
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -57,9 +49,6 @@ export function FlatViewRenderer({
         showHeading={showZoneHeadings}
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
-        template={template}
-        // Note: Selected/checked zones don't support inline editing or dragging
-        // Items can only be moved back to available zone via checkboxes
       />
       <SessionZone
         title="Checked"
@@ -75,9 +64,6 @@ export function FlatViewRenderer({
         showHeading={showZoneHeadings}
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
-        template={template}
-        // Note: Selected/checked zones don't support inline editing or dragging
-        // Items can only be moved back to available zone via checkboxes
       />
     </>
   );
