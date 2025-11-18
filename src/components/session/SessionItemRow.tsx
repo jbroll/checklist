@@ -173,19 +173,22 @@ export const SessionItemRow = memo(function SessionItemRow({
     }
   };
 
+  // Only show drag feedback when dragging is actually enabled
+  const canActuallyDrag = enableDrag && canDragItem;
+
   return (
     <motion.div
       ref={enableDrag ? setDragRef : undefined}
       {...(enableDrag ? dragAttributes : {})}
       {...(enableDrag ? dragListeners : {})}
-      {...(enableDrag ? longPressHandlers : {})}
+      {...(canActuallyDrag ? longPressHandlers : {})}
       layout={shouldAnimate}
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
         isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
       } ${onSelectItem ? 'cursor-pointer' : ''} ${isDragging ? 'opacity-50' : ''} ${
-        isHolding && enableDrag ? 'scale-[1.02] shadow-lg bg-blue-50 ring-2 ring-blue-300' : ''
+        isHolding && canActuallyDrag ? 'scale-[1.02] shadow-lg bg-blue-50 ring-2 ring-blue-300' : ''
       }`}
       {...(onSelectItem && {
         onClick: handleRowClick,
