@@ -50,13 +50,22 @@ export function SessionView({
   } = useSessionInteractionMode();
 
   // Sync showAddForm with interaction mode
+  // Only sync when not in EDITING or DRAGGING mode (those modes should be independent of showAddForm)
   useEffect(() => {
+    const isEditingOrDragging =
+      interactionMode.mode === 'editing' || interactionMode.mode === 'dragging';
+
+    if (isEditingOrDragging) {
+      // Don't interfere with editing or dragging - they manage their own state
+      return;
+    }
+
     if (showAddForm && !isAdding) {
       enterAddMode();
     } else if (!showAddForm && isAdding) {
       exitToNormal();
     }
-  }, [showAddForm, isAdding, enterAddMode, exitToNormal]);
+  }, [showAddForm, isAdding, enterAddMode, exitToNormal, interactionMode.mode]);
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
