@@ -1,7 +1,8 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { InlineItemForm } from '@/components/simplified/InlineItemForm';
 import { useAccount } from '@/lib/jazz';
+import { useSessionInteractionMode } from '@/lib/useSessionInteractionMode';
 import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
 import type { Account, SessionData, Template } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
@@ -35,15 +36,27 @@ export function SessionView({
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // Debug logging
-  console.log(
-    '[SessionView] Simplified mode:',
-    simplifiedUI,
-    'showAddForm:',
-    showAddForm,
-    'selectedItemId:',
-    selectedItemId,
-  );
+  // Centralized interaction mode manager
+  const {
+    interactionMode,
+    isAdding,
+    enterAddMode,
+    enterEditMode,
+    enterDragMode,
+    exitToNormal,
+    exitCurrentMode,
+    canEdit,
+    canDrag,
+  } = useSessionInteractionMode();
+
+  // Sync showAddForm with interaction mode
+  useEffect(() => {
+    if (showAddForm && !isAdding) {
+      enterAddMode();
+    } else if (!showAddForm && isAdding) {
+      exitToNormal();
+    }
+  }, [showAddForm, isAdding, enterAddMode, exitToNormal]);
 
   // Refs for scroll position preservation
   const availableZoneRef = useRef<HTMLDivElement>(null);
@@ -324,6 +337,12 @@ export function SessionView({
           onToggleChecked={handleToggleChecked}
           showDeleteIcon={simplifiedUI && showAddForm}
           onDeleteItem={handleDeleteItem}
+          // Interaction mode props
+          interactionMode={interactionMode}
+          onEnterEditMode={enterEditMode}
+          onExitEditMode={() => exitCurrentMode(isAdding)}
+          canEdit={canEdit}
+          canDrag={canDrag}
         />
       );
     }
@@ -341,6 +360,12 @@ export function SessionView({
           onToggleChecked={handleToggleChecked}
           showDeleteIcon={simplifiedUI && showAddForm}
           onDeleteItem={handleDeleteItem}
+          // Interaction mode props
+          interactionMode={interactionMode}
+          onEnterEditMode={enterEditMode}
+          onExitEditMode={() => exitCurrentMode(isAdding)}
+          canEdit={canEdit}
+          canDrag={canDrag}
         />
       );
     }
@@ -400,6 +425,14 @@ export function SessionView({
                 selectedItemId={simplifiedUI && showAddForm ? selectedItemId : null}
                 onSelectItem={simplifiedUI && showAddForm ? setSelectedItemId : undefined}
                 simplifiedUI={simplifiedUI && showAddForm}
+                // Interaction mode props
+                interactionMode={interactionMode}
+                onEnterEditMode={enterEditMode}
+                onExitEditMode={() => exitCurrentMode(isAdding)}
+                onEnterDragMode={enterDragMode}
+                onExitDragMode={() => exitCurrentMode(isAdding)}
+                canEdit={canEdit}
+                canDrag={canDrag}
               />
             </div>
           </div>

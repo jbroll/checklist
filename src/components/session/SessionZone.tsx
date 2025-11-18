@@ -37,6 +37,12 @@ interface SessionZoneProps {
   onSelectItem?: (itemId: string | null) => void; // Category selection handler
   template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
   simplifiedUI?: boolean; // Enable inline editing only in simplified UI
+  // Interaction mode props (centralized state management)
+  isEditingThisItem?: boolean; // Is this specific category being edited
+  canEditItem?: boolean; // Can edit this category in current mode
+  canDragItem?: boolean; // Can drag items in this zone in current mode
+  onEnterEditMode?: () => void; // Enter edit mode for this category
+  onExitEditMode?: () => void; // Exit edit mode for this category
 }
 
 export function SessionZone({
@@ -64,11 +70,17 @@ export function SessionZone({
   onSelectItem,
   template,
   simplifiedUI = false,
+  isEditingThisItem = false,
+  canEditItem = true,
+  onEnterEditMode,
+  onExitEditMode,
 }: SessionZoneProps) {
   const { me } = useAccount<typeof Account>();
-  const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Use centralized editing state instead of local state
+  const isEditing = isEditingThisItem;
 
   console.log(
     '[SessionZone] Category:',
@@ -85,6 +97,12 @@ export function SessionZone({
       // Only enable for categories in simplified UI mode
       if (!simplifiedUI || !template || !categoryItem) return;
 
+      // Check if editing is allowed in current mode
+      if (!canEditItem) {
+        console.log('[SessionZone] Edit prevented - not allowed in current mode');
+        return;
+      }
+
       // Don't trigger if clicking on buttons or expand toggle
       if (
         (e.target as HTMLElement).closest('button') ||
@@ -94,7 +112,7 @@ export function SessionZone({
       }
 
       setEditValue(title);
-      setIsEditing(true);
+      onEnterEditMode?.();
       setTimeout(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -109,7 +127,7 @@ export function SessionZone({
 
     // Validate non-empty
     if (!trimmedValue) {
-      setIsEditing(false);
+      onExitEditMode?.();
       return;
     }
 
@@ -123,11 +141,11 @@ export function SessionZone({
       }
     }
 
-    setIsEditing(false);
+    onExitEditMode?.();
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    onExitEditMode?.();
     setEditValue('');
   };
 
