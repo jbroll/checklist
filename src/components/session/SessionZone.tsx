@@ -195,9 +195,7 @@ export function SessionZone({
           canEditItem={canEditItemFn?.(item.id)}
           canDragItem={canDragItemFn?.(item.id)}
           isAnyItemBeingEditedOrDragged={
-            interactionMode
-              ? interactionMode.mode === 'editing' || interactionMode.mode === 'dragging'
-              : false
+            interactionMode ? interactionMode.mode !== 'normal' : false
           }
           onEnterEditMode={onEnterItemEditMode ? () => onEnterItemEditMode(item.id) : undefined}
           onExitEditMode={onExitItemEditMode}
