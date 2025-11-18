@@ -24,6 +24,7 @@ interface SessionItemRowProps {
   isEditingThisItem?: boolean; // Is this specific item being edited
   canEditItem?: boolean; // Can edit this item in current mode
   canDragItem?: boolean; // Can drag this item in current mode
+  isAnyItemBeingEditedOrDragged?: boolean; // Is any item being edited or dragged (disables checkboxes)
   onEnterEditMode?: () => void; // Enter edit mode for this item
   onExitEditMode?: () => void; // Exit edit mode for this item
 }
@@ -43,6 +44,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   isEditingThisItem = false,
   canEditItem = true,
   canDragItem = true,
+  isAnyItemBeingEditedOrDragged = false,
   onEnterEditMode,
   onExitEditMode,
 }: SessionItemRowProps) {
@@ -243,13 +245,15 @@ export const SessionItemRow = memo(function SessionItemRow({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          if (isAnyItemBeingEditedOrDragged) return; // Disable during edit/drag
           if (leftCheckboxControlsChecked) {
             onToggleChecked(item.id);
           } else {
             onToggleSelected(item.id);
           }
         }}
-        className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${getCheckboxClassName()}`}
+        disabled={isAnyItemBeingEditedOrDragged}
+        className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${getCheckboxClassName()} ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {leftCheckboxChecked && (
           <svg
@@ -296,13 +300,15 @@ export const SessionItemRow = memo(function SessionItemRow({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (isAnyItemBeingEditedOrDragged) return; // Disable during edit/drag
             if (showDeleteIcon && onDeleteItem) {
               onDeleteItem(item.id);
             } else {
               onToggleSelected(item.id);
             }
           }}
-          className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
+          disabled={isAnyItemBeingEditedOrDragged}
+          className={`flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600 ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label={showDeleteIcon ? 'Delete item' : 'Deselect item'}
         >
           <svg
