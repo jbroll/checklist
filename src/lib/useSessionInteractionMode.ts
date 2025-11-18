@@ -43,22 +43,27 @@ export function useSessionInteractionMode() {
 
   // Mode transition functions
   const enterAddMode = useCallback(() => {
+    console.log('[InteractionMode] Entering ADD mode');
     setInteractionMode({ mode: 'adding' });
   }, []);
 
   const enterEditMode = useCallback((itemId: string) => {
+    console.log('[InteractionMode] Entering EDIT mode for item:', itemId);
     setInteractionMode({ mode: 'editing', itemId });
   }, []);
 
   const enterDragMode = useCallback((itemId: string) => {
+    console.log('[InteractionMode] Entering DRAG mode for item:', itemId);
     setInteractionMode({ mode: 'dragging', itemId });
   }, []);
 
   const exitToNormal = useCallback(() => {
+    console.log('[InteractionMode] Exiting to NORMAL mode');
     setInteractionMode({ mode: 'normal' });
   }, []);
 
   const exitToAdding = useCallback(() => {
+    console.log('[InteractionMode] Exiting to ADDING mode');
     setInteractionMode({ mode: 'adding' });
   }, []);
 
@@ -78,21 +83,37 @@ export function useSessionInteractionMode() {
   const canEdit = useCallback(
     (itemId: string) => {
       // Can edit if: NORMAL, ADDING, or already editing this specific item
-      if (isNormal || isAdding) return true;
-      if (isEditing && activeItemId === itemId) return true;
-      return false;
+      const result = isNormal || isAdding || (isEditing && activeItemId === itemId);
+      console.log(
+        '[InteractionMode] canEdit?',
+        itemId,
+        '=',
+        result,
+        '(mode:',
+        interactionMode.mode,
+        ')',
+      );
+      return result;
     },
-    [isNormal, isAdding, isEditing, activeItemId],
+    [isNormal, isAdding, isEditing, activeItemId, interactionMode],
   );
 
   const canDrag = useCallback(
     (itemId: string) => {
-      // Can drag if: NORMAL, ADDING, or already dragging this specific item
-      if (isNormal || isAdding) return true;
-      if (isDragging && activeItemId === itemId) return true;
-      return false;
+      // Can drag if: ADDING mode, or already dragging this specific item
+      const result = isAdding || (isDragging && activeItemId === itemId);
+      console.log(
+        '[InteractionMode] canDrag?',
+        itemId,
+        '=',
+        result,
+        '(mode:',
+        interactionMode.mode,
+        ')',
+      );
+      return result;
     },
-    [isNormal, isAdding, isDragging, activeItemId],
+    [isAdding, isDragging, activeItemId, interactionMode],
   );
 
   const canSelectForInsertion = useCallback(() => {

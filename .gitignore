@@ -37,3 +37,4 @@ dist-ssr
 
 # Test reports
 playwright-report/
+dev-dist
