@@ -43,28 +43,54 @@ export function useSessionInteractionMode() {
 
   // Mode transition functions
   const enterAddMode = useCallback(() => {
-    console.log('[InteractionMode] Entering ADD mode');
-    setInteractionMode({ mode: 'adding' });
+    setInteractionMode((prev) => {
+      if (prev.mode !== 'adding') {
+        console.log('[InteractionMode] State changed:', prev.mode, '→ ADDING');
+      }
+      return { mode: 'adding' };
+    });
   }, []);
 
   const enterEditMode = useCallback((itemId: string) => {
-    console.log('[InteractionMode] Entering EDIT mode for item:', itemId);
-    setInteractionMode({ mode: 'editing', itemId });
+    setInteractionMode((prev) => {
+      if (prev.mode !== 'editing' || (prev.mode === 'editing' && prev.itemId !== itemId)) {
+        console.log('[InteractionMode] State changed:', prev.mode, '→ EDITING (item:', itemId, ')');
+      }
+      return { mode: 'editing', itemId };
+    });
   }, []);
 
   const enterDragMode = useCallback((itemId: string) => {
-    console.log('[InteractionMode] Entering DRAG mode for item:', itemId);
-    setInteractionMode({ mode: 'dragging', itemId });
+    setInteractionMode((prev) => {
+      if (prev.mode !== 'dragging' || (prev.mode === 'dragging' && prev.itemId !== itemId)) {
+        console.log(
+          '[InteractionMode] State changed:',
+          prev.mode,
+          '→ DRAGGING (item:',
+          itemId,
+          ')',
+        );
+      }
+      return { mode: 'dragging', itemId };
+    });
   }, []);
 
   const exitToNormal = useCallback(() => {
-    console.log('[InteractionMode] Exiting to NORMAL mode');
-    setInteractionMode({ mode: 'normal' });
+    setInteractionMode((prev) => {
+      if (prev.mode !== 'normal') {
+        console.log('[InteractionMode] State changed:', prev.mode, '→ NORMAL');
+      }
+      return { mode: 'normal' };
+    });
   }, []);
 
   const exitToAdding = useCallback(() => {
-    console.log('[InteractionMode] Exiting to ADDING mode');
-    setInteractionMode({ mode: 'adding' });
+    setInteractionMode((prev) => {
+      if (prev.mode !== 'adding') {
+        console.log('[InteractionMode] State changed:', prev.mode, '→ ADDING');
+      }
+      return { mode: 'adding' };
+    });
   }, []);
 
   // Helper: Exit edit/drag mode - returns to previous mode (ADDING or NORMAL)
@@ -83,38 +109,18 @@ export function useSessionInteractionMode() {
   const canEdit = useCallback(
     (itemId: string) => {
       // Can edit if: NORMAL, ADDING, or already editing this specific item
-      const result = isNormal || isAdding || (isEditing && activeItemId === itemId);
-      console.log(
-        '[InteractionMode] canEdit?',
-        itemId,
-        '=',
-        result,
-        '(mode:',
-        interactionMode.mode,
-        ')',
-      );
-      return result;
+      return isNormal || isAdding || (isEditing && activeItemId === itemId);
     },
-    [isNormal, isAdding, isEditing, activeItemId, interactionMode],
+    [isNormal, isAdding, isEditing, activeItemId],
   );
 
   const canDrag = useCallback(
     (itemId: string) => {
       // Dragging is allowed when in ADDING mode or already dragging this item
       // Both Simplified and Classic UI work the same way for dragging
-      const result = isAdding || (isDragging && activeItemId === itemId);
-      console.log(
-        '[InteractionMode] canDrag?',
-        itemId,
-        '=',
-        result,
-        '(mode:',
-        interactionMode.mode,
-        ')',
-      );
-      return result;
+      return isAdding || (isDragging && activeItemId === itemId);
     },
-    [isAdding, isDragging, activeItemId, interactionMode],
+    [isAdding, isDragging, activeItemId],
   );
 
   const canSelectForInsertion = useCallback(() => {
