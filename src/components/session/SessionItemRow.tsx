@@ -54,6 +54,18 @@ export const SessionItemRow = memo(function SessionItemRow({
   const justEnteredEditMode = useRef(false);
   const lastDragState = useRef<{ disabled: boolean; canDrag: boolean } | null>(null);
 
+  // Debug: Log checkbox state
+  if (isAnyItemBeingEditedOrDragged) {
+    const timestamp = (performance.now() / 1000).toFixed(3);
+    console.log(
+      `[${timestamp}s] [SessionItemRow]`,
+      item.name,
+      '- checkboxes DISABLED (isAnyItemBeingEditedOrDragged:',
+      isAnyItemBeingEditedOrDragged,
+      ')',
+    );
+  }
+
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
 
