@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Session, Template, TemplateItem } from '@/schemas';
+import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import * as templateService from '@/services/templateService';
 import { buildItemTree, type ItemTreeNode } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -40,6 +41,14 @@ interface AvailableZoneRendererProps {
   selectedItemId?: string | null;
   onSelectItem?: (itemId: string | null) => void;
   simplifiedUI?: boolean;
+  // Interaction mode props
+  interactionMode: InteractionMode;
+  onEnterEditMode: (itemId: string) => void;
+  onExitEditMode: () => void;
+  onEnterDragMode: (itemId: string) => void;
+  onExitDragMode: () => void;
+  canEdit: (itemId: string) => boolean;
+  canDrag: (itemId: string) => boolean;
 }
 
 export function AvailableZoneRenderer({
@@ -60,6 +69,13 @@ export function AvailableZoneRenderer({
   selectedItemId = null,
   onSelectItem,
   simplifiedUI = false,
+  interactionMode,
+  onEnterEditMode,
+  onExitEditMode,
+  onEnterDragMode,
+  onExitDragMode,
+  canEdit,
+  canDrag,
 }: AvailableZoneRendererProps) {
   const { me } = useAccount<typeof Account>();
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
@@ -108,11 +124,15 @@ export function AvailableZoneRenderer({
   const handleDragStart = (event: DragStartEvent) => {
     const draggedItem = event.active.data.current?.item as TemplateItem;
     setActiveItem(draggedItem);
+    // Enter drag mode to prevent other interactions
+    onEnterDragMode(draggedItem.id);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveItem(null);
+    // Exit drag mode when drag completes
+    onExitDragMode();
 
     if (!over || !active.data.current || !me) {
       return;
@@ -279,6 +299,14 @@ export function AvailableZoneRenderer({
                   enableDrag={true}
                   template={template}
                   simplifiedUI={simplifiedUI}
+                  // Interaction mode props
+                  isEditingThisItem={
+                    interactionMode.mode === 'editing' && interactionMode.itemId === item.id
+                  }
+                  canEditItem={canEdit(item.id)}
+                  canDragItem={canDrag(item.id)}
+                  onEnterEditMode={() => onEnterEditMode(item.id)}
+                  onExitEditMode={onExitEditMode}
                 />
               )}
 
@@ -301,6 +329,12 @@ export function AvailableZoneRenderer({
                   itemStates={session?.itemStates || {}}
                   template={template}
                   simplifiedUI={simplifiedUI}
+                  // Interaction mode props
+                  interactionMode={interactionMode}
+                  onEnterEditMode={onEnterEditMode}
+                  onExitEditMode={onExitEditMode}
+                  canEdit={canEdit}
+                  canDrag={canDrag}
                 >
                   {hasChildren && (
                     <div className="flex flex-col pl-4">
