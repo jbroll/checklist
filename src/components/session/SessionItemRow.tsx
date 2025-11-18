@@ -257,7 +257,17 @@ export const SessionItemRow = memo(function SessionItemRow({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          if (isAnyItemBeingEditedOrDragged) return; // Disable during edit/drag
+          const timestamp = (performance.now() / 1000).toFixed(3);
+          console.log(
+            `[${timestamp}s] [SessionItemRow] Left checkbox clicked on:`,
+            item.name,
+            '- isAnyItemBeingEditedOrDragged:',
+            isAnyItemBeingEditedOrDragged,
+          );
+          if (isAnyItemBeingEditedOrDragged) {
+            console.log(`[${timestamp}s] [SessionItemRow] BLOCKED - checkbox disabled`);
+            return; // Disable during edit/drag
+          }
           if (leftCheckboxControlsChecked) {
             onToggleChecked(item.id);
           } else {
@@ -312,7 +322,17 @@ export const SessionItemRow = memo(function SessionItemRow({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            if (isAnyItemBeingEditedOrDragged) return; // Disable during edit/drag
+            const timestamp = (performance.now() / 1000).toFixed(3);
+            console.log(
+              `[${timestamp}s] [SessionItemRow] Right button clicked on:`,
+              item.name,
+              '- isAnyItemBeingEditedOrDragged:',
+              isAnyItemBeingEditedOrDragged,
+            );
+            if (isAnyItemBeingEditedOrDragged) {
+              console.log(`[${timestamp}s] [SessionItemRow] BLOCKED - button disabled`);
+              return; // Disable during edit/drag
+            }
             if (showDeleteIcon && onDeleteItem) {
               onDeleteItem(item.id);
             } else {
