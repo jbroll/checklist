@@ -20,11 +20,14 @@ export function useLongPressIndicator(isDragging: boolean) {
   }, [isDragging]);
 
   const handlePointerDown = () => {
-    setIsHolding(true);
-    // Clear holding state after 1 second (when drag activates)
+    // Don't show holding feedback immediately - wait 200ms to differentiate from click/double-click
     timeoutRef.current = window.setTimeout(() => {
-      setIsHolding(false);
-    }, 1000);
+      setIsHolding(true);
+      // Clear holding state after 800ms more (total 1 second when drag activates)
+      timeoutRef.current = window.setTimeout(() => {
+        setIsHolding(false);
+      }, 800);
+    }, 200);
   };
 
   const handlePointerUp = () => {
