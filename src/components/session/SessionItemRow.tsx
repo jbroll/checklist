@@ -78,7 +78,6 @@ export const SessionItemRow = memo(function SessionItemRow({
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
-        console.log('[SessionItemRow] Edit prevented - not allowed in current mode');
         return;
       }
 
@@ -93,15 +92,6 @@ export const SessionItemRow = memo(function SessionItemRow({
       }, 0);
     },
   });
-
-  console.log(
-    '[SessionItemRow]',
-    item.name,
-    'isInsertionPointSelected:',
-    isInsertionPointSelected,
-    'hasOnSelectItem:',
-    !!onSelectItem,
-  );
 
   if (!me) return null;
 
@@ -174,13 +164,11 @@ export const SessionItemRow = memo(function SessionItemRow({
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger selection if clicking on checkbox or delete button
     if ((e.target as HTMLElement).closest('button')) {
-      console.log('[SessionItemRow] Click ignored (button)');
       return;
     }
 
     if (onSelectItem) {
       const newValue = isInsertionPointSelected ? null : item.id;
-      console.log('[SessionItemRow] Calling onSelectItem with:', newValue);
       onSelectItem(newValue);
     }
   };

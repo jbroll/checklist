@@ -35,7 +35,11 @@ export function ZoneInHierarchyRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
-  // Interaction mode props - accepted but not used in non-draggable zones
+  interactionMode,
+  onEnterEditMode,
+  onExitEditMode,
+  canEdit,
+  canDrag,
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -137,6 +141,11 @@ export function ZoneInHierarchyRenderer({
           onToggleSelected={onToggleSelected}
           onToggleChecked={onToggleChecked}
           count={totalItems}
+          interactionMode={interactionMode}
+          onEnterItemEditMode={onEnterEditMode}
+          onExitItemEditMode={onExitEditMode}
+          canEditItemFn={canEdit}
+          canDragItemFn={canDrag}
         >
           <div className="flex flex-col pl-4">
             {/* Show zones for items at this level */}
@@ -157,6 +166,11 @@ export function ZoneInHierarchyRenderer({
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
+                    interactionMode={interactionMode}
+                    onEnterItemEditMode={onEnterEditMode}
+                    onExitItemEditMode={onExitEditMode}
+                    canEditItemFn={canEdit}
+                    canDragItemFn={canDrag}
                   />
                 )}
                 {catChecked.length > 0 && (
@@ -174,6 +188,11 @@ export function ZoneInHierarchyRenderer({
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
+                    interactionMode={interactionMode}
+                    onEnterItemEditMode={onEnterEditMode}
+                    onExitItemEditMode={onExitEditMode}
+                    canEditItemFn={canEdit}
+                    canDragItemFn={canDrag}
                   />
                 )}
               </>
@@ -207,6 +226,11 @@ export function ZoneInHierarchyRenderer({
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
+              interactionMode={interactionMode}
+              onEnterItemEditMode={onEnterEditMode}
+              onExitItemEditMode={onExitEditMode}
+              canEditItemFn={canEdit}
+              canDragItemFn={canDrag}
             />
           )}
           {uncategorizedCheckedItems.length > 0 && (
@@ -224,6 +248,11 @@ export function ZoneInHierarchyRenderer({
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
+              interactionMode={interactionMode}
+              onEnterItemEditMode={onEnterEditMode}
+              onExitItemEditMode={onExitEditMode}
+              canEditItemFn={canEdit}
+              canDragItemFn={canDrag}
             />
           )}
         </>
