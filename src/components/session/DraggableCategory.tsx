@@ -113,7 +113,7 @@ export function DraggableCategory({
           isSelected={selectedItemId === item.id}
           onSelectItem={onSelectItem}
           template={template}
-          // Interaction mode props
+          // Interaction mode props for category itself
           isEditingThisItem={
             interactionMode.mode === 'editing' && interactionMode.itemId === item.id
           }
@@ -121,6 +121,12 @@ export function DraggableCategory({
           canDragItem={canDrag(item.id)}
           onEnterEditMode={() => onEnterEditMode(item.id)}
           onExitEditMode={onExitEditMode}
+          // Interaction mode props for child items (passed through to SessionItemRow)
+          interactionMode={interactionMode}
+          onEnterItemEditMode={onEnterEditMode}
+          onExitItemEditMode={onExitEditMode}
+          canEditItemFn={canEdit}
+          canDragItemFn={canDrag}
         />
       </div>
 
