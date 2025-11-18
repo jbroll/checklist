@@ -2,6 +2,7 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  DragOverlay,
   type DragStartEvent,
   PointerSensor,
   useSensor,
@@ -405,6 +406,15 @@ export function AvailableZoneRenderer({
       >
         {renderItemTree(itemTree, 'available')}
       </SessionZone>
+
+      {/* Drag overlay - shows the dragged item following the cursor */}
+      <DragOverlay>
+        {activeItem ? (
+          <div className="rounded bg-white px-3 py-2 shadow-lg ring-2 ring-blue-400">
+            <span className="text-neutral-900">{activeItem.name}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
