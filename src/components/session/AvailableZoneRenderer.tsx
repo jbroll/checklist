@@ -310,6 +310,9 @@ export function AvailableZoneRenderer({
                   }
                   canEditItem={canEdit(item.id)}
                   canDragItem={canDrag(item.id)}
+                  isAnyItemBeingEditedOrDragged={
+                    interactionMode.mode === 'editing' || interactionMode.mode === 'dragging'
+                  }
                   onEnterEditMode={() => onEnterEditMode(item.id)}
                   onExitEditMode={onExitEditMode}
                 />
