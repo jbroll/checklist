@@ -20,7 +20,6 @@ interface SessionItemRowProps {
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
   enableDrag?: boolean; // Enable drag and drop in available zone
   template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
-  simplifiedUI?: boolean; // Enable inline editing only in simplified UI
   // Interaction mode props (centralized state management)
   isEditingThisItem?: boolean; // Is this specific item being edited
   canEditItem?: boolean; // Can edit this item in current mode
@@ -41,7 +40,6 @@ export const SessionItemRow = memo(function SessionItemRow({
   onSelectItem,
   enableDrag = false,
   template,
-  simplifiedUI = false,
   isEditingThisItem = false,
   canEditItem = true,
   canDragItem = true,
@@ -51,11 +49,13 @@ export const SessionItemRow = memo(function SessionItemRow({
   const { me } = useAccount<typeof Account>();
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const justEnteredEditMode = useRef(false);
 
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
 
   // Draggable setup - only in available zone when enabled AND mode allows dragging
+  const dragDisabled = !enableDrag || !canDragItem;
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
@@ -64,7 +64,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   } = useDraggable({
     id: item.id,
     data: { item },
-    disabled: !enableDrag || !canDragItem,
+    disabled: dragDisabled,
   });
 
   // Long press visual feedback
@@ -73,22 +73,29 @@ export const SessionItemRow = memo(function SessionItemRow({
   // Inline editing handlers with double-tap support for mobile
   const doubleTapHandlers = useDoubleTap({
     onDoubleTap: (e) => {
-      // Only enable in simplified UI mode and when template is available
-      if (!simplifiedUI || !template) return;
+      // Only enable when template is available
+      if (!template) return;
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
+        console.log('[SessionItemRow] Cannot edit - canEditItem is false');
         return;
       }
 
       // Don't trigger if clicking on buttons
       if ((e.target as HTMLElement).closest('button')) return;
 
+      console.log('[SessionItemRow] Double-tap detected, entering edit mode for:', item.name);
       setEditValue(item.name);
+      justEnteredEditMode.current = true;
       onEnterEditMode?.();
       setTimeout(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
+        // Clear the flag after a brief delay to allow focus to settle
+        setTimeout(() => {
+          justEnteredEditMode.current = false;
+        }, 100);
       }, 0);
     },
   });
@@ -108,6 +115,13 @@ export const SessionItemRow = memo(function SessionItemRow({
   const handleSaveEdit = () => {
     if (!me || !template) return;
 
+    // Ignore blur events that happen immediately after entering edit mode
+    if (justEnteredEditMode.current) {
+      console.log('[SessionItemRow] Ignoring premature blur');
+      return;
+    }
+
+    console.log('[SessionItemRow] Saving edit for:', item.name);
     const trimmedValue = editValue.trim();
 
     // Validate non-empty

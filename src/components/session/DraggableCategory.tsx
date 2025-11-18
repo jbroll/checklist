@@ -23,7 +23,6 @@ interface DraggableCategoryProps {
   itemStates: Record<string, ItemState>;
   children?: React.ReactNode;
   template?: InstanceOfSchema<typeof FolderNode>;
-  simplifiedUI?: boolean;
   // Interaction mode props
   interactionMode: InteractionMode;
   onEnterEditMode: (itemId: string) => void;
@@ -49,7 +48,6 @@ export function DraggableCategory({
   itemStates,
   children,
   template,
-  simplifiedUI = false,
   interactionMode,
   onEnterEditMode,
   onExitEditMode,
@@ -115,7 +113,6 @@ export function DraggableCategory({
           isSelected={selectedItemId === item.id}
           onSelectItem={onSelectItem}
           template={template}
-          simplifiedUI={simplifiedUI}
           // Interaction mode props
           isEditingThisItem={
             interactionMode.mode === 'editing' && interactionMode.itemId === item.id

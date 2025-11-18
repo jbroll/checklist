@@ -389,7 +389,6 @@ export function SessionView({
                 onDeleteItem={handleDeleteItem}
                 selectedItemId={simplifiedUI && showAddForm ? selectedItemId : null}
                 onSelectItem={simplifiedUI && showAddForm ? setSelectedItemId : undefined}
-                simplifiedUI={simplifiedUI && showAddForm}
                 // Interaction mode props
                 interactionMode={interactionMode}
                 onEnterEditMode={enterEditMode}

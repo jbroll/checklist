@@ -40,7 +40,6 @@ interface AvailableZoneRendererProps {
   onDeleteItem?: (itemId: string) => void;
   selectedItemId?: string | null;
   onSelectItem?: (itemId: string | null) => void;
-  simplifiedUI?: boolean;
   // Interaction mode props
   interactionMode: InteractionMode;
   onEnterEditMode: (itemId: string) => void;
@@ -68,7 +67,6 @@ export function AvailableZoneRenderer({
   onDeleteItem,
   selectedItemId = null,
   onSelectItem,
-  simplifiedUI = false,
   interactionMode,
   onEnterEditMode,
   onExitEditMode,
@@ -123,6 +121,7 @@ export function AvailableZoneRenderer({
 
   const handleDragStart = (event: DragStartEvent) => {
     const draggedItem = event.active.data.current?.item as TemplateItem;
+    console.log('[AvailableZoneRenderer] Drag started for:', draggedItem?.name);
     setActiveItem(draggedItem);
     // Enter drag mode to prevent other interactions
     onEnterDragMode(draggedItem.id);
@@ -298,7 +297,6 @@ export function AvailableZoneRenderer({
                   onSelectItem={onSelectItem}
                   enableDrag={true}
                   template={template}
-                  simplifiedUI={simplifiedUI}
                   // Interaction mode props
                   isEditingThisItem={
                     interactionMode.mode === 'editing' && interactionMode.itemId === item.id
@@ -328,7 +326,6 @@ export function AvailableZoneRenderer({
                   onSelectItem={onSelectItem}
                   itemStates={session?.itemStates || {}}
                   template={template}
-                  simplifiedUI={simplifiedUI}
                   // Interaction mode props
                   interactionMode={interactionMode}
                   onEnterEditMode={onEnterEditMode}
@@ -397,7 +394,6 @@ export function AvailableZoneRenderer({
         showDeleteIcon={showDeleteIcon}
         onDeleteItem={onDeleteItem}
         template={template}
-        simplifiedUI={simplifiedUI}
       >
         {renderItemTree(itemTree, 'available')}
       </SessionZone>
