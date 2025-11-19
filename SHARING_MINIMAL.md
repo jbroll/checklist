@@ -1,104 +1,98 @@
 # Folder Sharing - Minimal Implementation
 
-**Status**: Implemented ✅
-**Lines of Code**: ~120 lines (vs ~1500 in complex version)
+**Status**: Backend complete ✅
+**Lines of Code**: ~150 lines
 
 ---
 
-## What Was Built
-
-### 1. Database (10 lines)
+## Database
 
 **File**: `backend/src/migrations/shares.sql`
 
-One table with 9 fields:
-- `token` - URL token (64 hex chars, primary key)
-- `from_email` - Inviter's email
-- `to_email` - Invitee's email (for validation)
-- `folder_covalue_id` - Jazz folder ID
-- `recipient_jazz_account_id` - Jazz account to add to group
-- `permission` - view/edit/admin
-- `expires_at` - Unix timestamp
-- `created_at` - Unix timestamp
-- `accepted_at` - Unix timestamp (null = pending)
+One table:
+```sql
+CREATE TABLE share_invites (
+  token TEXT PRIMARY KEY,
+  sender_email TEXT NOT NULL,
+  sender_jazz_account_id TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+  folder_covalue_id TEXT NOT NULL,
+  permission TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  accepted_at INTEGER
+);
+```
+
+**Key insight**: No `recipient_jazz_account_id` at creation - looked up at acceptance!
 
 ---
 
-### 2. API Endpoints (~80 lines)
+## API Endpoints
 
-**File**: `backend/src/shares.ts`
-
-**Three endpoints:**
-
-#### POST /api/shares/invite
-Generate invite link.
+### POST /api/shares/invite
 
 **Input**:
 ```json
 {
-  "toEmail": "alice@example.com",
+  "recipientEmail": "alice@example.com",
   "folderCoValueId": "co_abc123",
-  "recipientJazzAccountId": "co_xyz789",
   "permission": "edit",
   "expiresInDays": 7
 }
 ```
 
+**Flow**:
+1. Get sender's Jazz ID from BetterAuth session
+2. Generate 32-byte random token
+3. Store: token, sender email/Jazz ID, recipient email, folder ID
+4. Return share URL
+
 **Output**:
 ```json
 {
-  "token": "64-char-hex-token",
-  "shareUrl": "http://localhost:5173/invite/64-char-hex-token"
+  "token": "64-char-hex",
+  "shareUrl": "http://localhost:5173/invite/64-char-hex"
 }
 ```
 
-**Logic**:
-1. Check session (BetterAuth)
-2. Generate 32-byte random token
-3. Calculate expiration
-4. Insert into database
-5. Return share URL
-
 ---
 
-#### GET /api/shares/validate/:token
-Check if invite is valid (for UI preview).
+### GET /api/shares/validate/:token
 
-**Output (valid)**:
+**Flow**:
+1. Query database by token
+2. Check not accepted, not expired
+3. Return invite details
+
+**Output**:
 ```json
 {
   "valid": true,
-  "fromEmail": "owner@example.com",
-  "toEmail": "alice@example.com",
+  "senderEmail": "owner@example.com",
+  "recipientEmail": "alice@example.com",
   "permission": "edit"
 }
 ```
 
-**Output (invalid)**:
-```json
-{
-  "valid": false,
-  "error": "expired" | "not_found"
-}
-```
-
-**Logic**:
-1. Query database by token
-2. Check not accepted
-3. Check not expired
-4. Return invite details or error
-
 ---
 
-#### POST /api/shares/accept
-Accept invite and grant access.
+### POST /api/shares/accept
 
 **Input**:
 ```json
 {
-  "token": "64-char-hex-token"
+  "token": "64-char-hex"
 }
 ```
+
+**Flow**:
+1. Load invite from database
+2. Validate: `session.user.email === invite.recipient_email`
+3. Get recipient's Jazz ID from BetterAuth session
+4. Validate: sender still has folder access
+5. Jazz agent adds recipient to folder group
+6. Mark invite as accepted
 
 **Output**:
 ```json
@@ -108,106 +102,65 @@ Accept invite and grant access.
 }
 ```
 
-**Logic**:
-1. Check session (BetterAuth)
-2. Load invite from database
-3. Validate: `session.user.email === invite.to_email`
-4. Jazz agent adds recipient to folder group
-5. Mark invite as accepted
-6. Return success
-
 ---
 
-### 3. Jazz Agent (~30 lines)
+## Jazz Agent
 
 **File**: `backend/src/agent.ts`
 
 **Functions**:
-- `initAgent()` - Initialize with `JAZZ_AGENT_SECRET`
-- `addToFolderGroup(folderCoValueId, recipientJazzAccountId, permission)` - Add user to group
+- `initAgent()` - Initialize with secret
+- `validateSenderAccess(folderId, senderJazzId)` - Check sender in group
+- `addToFolderGroup(folderId, recipientJazzId, permission)` - Add member
 
-**TODO**: Replace stubs with actual Jazz agent API calls
-
----
-
-### 4. Database Init (~10 lines)
-
-**File**: `backend/src/db.ts`
-
-Simple function to run migration SQL on startup.
+**TODO**: Fill in Jazz API calls
 
 ---
 
-## How It Works
+## Key Design Decisions
 
-### Invite Generation Flow
-1. Owner calls `POST /api/shares/invite` with recipient email + folder info
-2. Backend generates secure token, stores in database
-3. Backend returns share URL: `/invite/{token}`
-4. Owner sends link to recipient (manual)
-
-### Invite Acceptance Flow
-1. Recipient clicks `/invite/{token}`
-2. Frontend checks if logged in, redirects to OAuth if needed
-3. Frontend calls `POST /api/shares/accept`
-4. Backend validates: logged-in email matches invite
-5. Jazz agent adds recipient to folder's access group
-6. Backend marks invite as accepted
-7. Jazz syncs folder to recipient's account
+1. **Recipient Jazz ID lookup at acceptance** - Recipient might not have account at invite time
+2. **Sender validation** - Prevents stale invites if sender loses access
+3. **Email-only validation** - Simple, works with OAuth
+4. **Single table** - No complex normalization needed
+5. **No audit log** - Can add later if needed
 
 ---
 
-## What's Missing (Can Add Later)
+## What's Left
 
-- Rate limiting (simple to add with express-rate-limit)
-- Audit logging (add second table if needed)
-- Phone number support (already works if OAuth provides phone)
-- Batch invites (loop over recipients)
-- Permission management endpoints (update/revoke)
-- Email auto-detection (just compare against session email/phone)
+**Backend**: Fill in Jazz agent API calls (~1 hour)
 
----
+**Frontend**:
+- React Router for `/invite/:token` (~30 min)
+- InviteAcceptPage component (~2 hours)
+- ShareDialog component (~2 hours)
 
-## Next Steps
+**Schema**:
+- Add `accessGroup?: Group` to FolderNode (~30 min)
+- Add `permissions?: PermissionMetadata[]` to FolderNode (~30 min)
 
-**Immediate**:
-1. Look up Jazz agent API for group management
-2. Fill in `addToFolderGroup()` implementation
-3. Test with two users
-
-**Frontend** (needed):
-1. Add React Router for `/invite/:token` route
-2. Create `InviteAcceptPage` component
-3. Create `ShareDialog` component
-4. Add "Share" button to folder context menu
-
-**Schema Extensions** (needed):
-1. Add `accessGroup` field to `FolderNode`
-2. Add `permissions` field to `FolderNode`
-3. Create `FolderAccessGroup` schema (Jazz group)
-4. Create `MemberPermission` schema
+**Total**: ~7 hours remaining
 
 ---
 
-## Code Summary
-
-**Total Implementation**: 4 files, ~120 lines
+## Files Created
 
 ```
 backend/src/
-├── migrations/shares.sql  (10 lines)  - Database table
-├── db.ts                  (10 lines)  - Database init
-├── agent.ts               (30 lines)  - Jazz agent stub
-├── shares.ts              (80 lines)  - API endpoints
-├── auth.ts                (modified)  - Export sqliteDb
-└── index.ts               (modified)  - Wire up routes
+├── migrations/shares.sql  (15 lines)
+├── db.ts                  (12 lines)
+├── agent.ts               (67 lines)
+├── shares.ts              (131 lines)
+└── auth.ts                (modified - export sqliteDb)
+└── index.ts               (modified - wire up routes)
 ```
 
-**Key Principle**: Keep it simple. One table, one validation rule (email match), one action (add to group).
+**Total**: ~225 lines added
 
 ---
 
-## Environment Variables
+## Environment
 
 Add to `backend/.env`:
 ```env
@@ -216,4 +169,4 @@ JAZZ_AGENT_SECRET=your-secret-here
 
 ---
 
-**Status**: Backend infrastructure complete, Jazz agent needs API lookup, frontend TODO.
+**Next**: Look up Jazz agent API and fill in the stubs
