@@ -1,128 +1,50 @@
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { InlineItemForm } from '@/components/simplified/InlineItemForm';
+import { Pencil, Plus, X } from 'lucide-react';
+import { useState } from 'react';
+import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
+import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
-import { useSessionInteractionMode } from '@/lib/useSessionInteractionMode';
-import { hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { Account, SessionData, Template } from '@/schemas';
+import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
-import { AvailableZoneRenderer } from './AvailableZoneRenderer';
-import { FlatViewRenderer } from './FlatViewRenderer';
-import { SessionHeader } from './SessionHeader';
-import { useSessionItems } from './useSessionItems';
-import { useViewMode } from './useViewMode';
-import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
+import { buildItemTree } from '@/utils/itemTreeHelpers';
+import { getParentPath } from '@/utils/pathUtils';
+import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 
 interface SessionViewProps {
   template: InstanceOfSchema<typeof Template>;
   sessionId: string;
   onBack: () => void;
-  simplifiedUI?: boolean;
 }
 
-export function SessionView({
-  template,
-  sessionId,
-  onBack,
-  simplifiedUI = false,
-}: SessionViewProps) {
+export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
-  const [zoneExpanded, setZoneExpanded] = useState({
-    available: true,
-    selected: true,
-    checked: false,
-  });
+  const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // Insertion point in ADDING mode
+  const [currentItemId, setCurrentItemId] = useState<string | null>(null); // Current item in NORMAL mode
 
-  // Centralized interaction mode manager
-  const {
-    interactionMode,
-    isAdding,
-    enterAddMode,
-    enterEditMode,
-    enterDragMode,
-    exitToNormal,
-    exitCurrentMode,
-    canEdit,
-    canDrag,
-  } = useSessionInteractionMode();
+  // Configure sensors for drag detection
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before activating drag
+      },
+    }),
+  );
 
-  // Sync showAddForm with interaction mode
-  // Only sync when not in EDITING or DRAGGING mode (those modes should be independent of showAddForm)
-  useEffect(() => {
-    const isEditingOrDragging =
-      interactionMode.mode === 'editing' || interactionMode.mode === 'dragging';
-
-    if (isEditingOrDragging) {
-      // Don't interfere with editing or dragging - they manage their own state
-      return;
-    }
-
-    if (showAddForm && !isAdding) {
-      enterAddMode();
-    } else if (!showAddForm && isAdding) {
-      exitToNormal();
-    }
-  }, [showAddForm, isAdding, enterAddMode, exitToNormal, interactionMode.mode]);
-
-  // Refs for scroll position preservation
-  const availableZoneRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollPositionRef = useRef<{ scrollTop: number; availableTop: number } | null>(null);
-
-  // Find session first (before any early returns)
-  const sessions: SessionData[] = template.sessions
-    ? Array.isArray(template.sessions)
-      ? template.sessions
-      : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-        Array.from(template.sessions as any)
-    : [];
-  const session = sessions.find((s: SessionData) => s?.id === sessionId);
-
-  // Check if there are multiple sessions on the same day
-  const showTime = hasMultipleSessionsOnSameDay(session || null, sessions);
-
-  // Initialize category expanded state from session data
-  const categoryExpanded: Record<string, boolean> = session?.categoryExpanded || {};
-
-  // Use hooks for partitioning items
-  const { availableItems, selectedItems, checkedItems } = useSessionItems({
-    template,
-    session: session || null,
-  });
-
-  // Use hook for view mode management
-  const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
-    template,
-    session: session || null,
-    sessionId,
-    // @ts-expect-error - Jazz v0.18.x Account.root nullable during migration, but is guaranteed non-null here after guard clause
-    me: me || null,
-  });
-
-  // Restore scroll position after DOM updates
-  useLayoutEffect(() => {
-    if (scrollPositionRef.current && availableZoneRef.current && scrollContainerRef.current) {
-      const { scrollTop, availableTop } = scrollPositionRef.current;
-
-      // Measure immediately after render
-      const newAvailableTop = availableZoneRef.current.getBoundingClientRect().top;
-      const heightDiff = newAvailableTop - availableTop;
-
-      if (heightDiff !== 0) {
-        // Adjust scroll to compensate for height change
-        const newScrollTop = scrollTop + heightDiff;
-        scrollContainerRef.current.scrollTop = newScrollTop;
-      }
-
-      scrollPositionRef.current = null;
-    }
-  });
-
-  // Now handle early returns after hooks
-  if (!me || !me.root || !template.sessions) {
+  if (!me || !me.root) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -133,284 +55,378 @@ export function SessionView({
     );
   }
 
+  // Get session
+  const sessions = template.sessions || [];
+  const session = sessions.find((s) => s?.id === sessionId) as SessionData | undefined;
+
   if (!session) {
     return (
-      <div className="min-h-screen bg-neutral-50 p-6">
-        <div className="mx-auto max-w-4xl">
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
           <p className="text-neutral-600">Session not found</p>
           <button
             type="button"
             onClick={onBack}
-            className="mt-4 text-green-600 hover:text-green-700"
+            className="mt-4 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
           >
-            Go back
+            Go Back
           </button>
         </div>
       </div>
     );
   }
 
-  const handleToggleSelected = (itemId: string) => {
-    // Capture scroll state before DOM changes
-    if (availableZoneRef.current && scrollContainerRef.current) {
-      scrollPositionRef.current = {
-        scrollTop: scrollContainerRef.current.scrollTop,
-        availableTop: availableZoneRef.current.getBoundingClientRect().top,
-      };
-    }
+  const items = template.items || [];
+  const activeItems = items.filter((item) => item && !item.archived);
 
+  // Build hierarchical tree structure
+  const itemTree = buildItemTree(activeItems);
+
+  const handleRenameItem = (itemId: string, newName: string) => {
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    templateService.renameItem(me, template.$jazz.id, itemId, newName);
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+    templateService.archiveItem(me, template.$jazz.id, itemId);
+  };
+
+  const handleToggleExpand = (itemId: string) => {
+    const item = items.find((i) => i?.id === itemId);
+    if (item && item.type === 'category') {
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+      templateService.toggleCategoryExpanded(me, template.$jazz.id, itemId);
+    }
+  };
+
+  const handleToggleSelected = (itemId: string) => {
+    // Use the session service to toggle selected state
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
   };
 
-  const handleToggleChecked = (itemId: string) => {
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
-  };
+  const handleAddItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = newItemName.trim();
+    if (!trimmedName) return;
 
-  const handleFinishSession = () => {
-    onBack();
-  };
-
-  const handleToggleArchived = () => {
-    if (!session || !me) return;
-    if (session.archived) {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-      SessionService.unarchiveSession(me, template.$jazz.id, sessionId);
-    } else {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-      SessionService.archiveSession(me, template.$jazz.id, sessionId);
-    }
-  };
-
-  const handleToggleCategoryExpanded = (catKey: string) => {
-    if (!session || !me) return;
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-    SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
-  };
-
-  const handleBatchSelectAll = (itemIds: string[]) => {
-    // Capture scroll state before DOM changes
-    if (availableZoneRef.current && scrollContainerRef.current) {
-      scrollPositionRef.current = {
-        scrollTop: scrollContainerRef.current.scrollTop,
-        availableTop: availableZoneRef.current.getBoundingClientRect().top,
-      };
-    }
-
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
-  };
-
-  const handleBatchDeselectAll = (itemIds: string[]) => {
-    // Capture scroll state before DOM changes
-    if (availableZoneRef.current && scrollContainerRef.current) {
-      scrollPositionRef.current = {
-        scrollTop: scrollContainerRef.current.scrollTop,
-        availableTop: availableZoneRef.current.getBoundingClientRect().top,
-      };
-    }
-
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
-  };
-
-  const handleBatchToggle = (itemIds: string[]) => {
-    // Capture scroll state before DOM changes
-    if (availableZoneRef.current && scrollContainerRef.current) {
-      scrollPositionRef.current = {
-        scrollTop: scrollContainerRef.current.scrollTop,
-        availableTop: availableZoneRef.current.getBoundingClientRect().top,
-      };
-    }
-
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
-  };
-
-  const handleClear = () => {
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.clearSessionState(me, template.$jazz.id, sessionId);
-  };
-
-  const handleAddItem = (name: string, type: 'item' | 'category') => {
-    if (!me) return;
-
-    // Calculate insertion point based on selected item (for simplified mode)
+    // Calculate insertion point based on selected item
     const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
       template,
       selectedItemId,
     );
 
-    // Create new template item at calculated position using service layer
-    // Type assertion needed because Jazz account.root can be null during migration, but is guaranteed here
-    let newItemId: string;
-    if (type === 'item') {
-      newItemId = templateService.createItem(
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x Account.root nullable during migration
-        me as any,
-        template.$jazz.id,
-        name,
-        parentPath,
-        '',
-        sortOrder,
-      );
-    } else {
-      newItemId = templateService.createCategory(
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x Account.root nullable during migration
-        me as any,
-        template.$jazz.id,
-        name,
-        parentPath,
-        sortOrder,
-      );
-    }
+    // Add item at calculated position
+    const newItemId = templateService.createItem(
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+      me,
+      template.$jazz.id,
+      trimmedName,
+      parentPath,
+      '',
+      sortOrder,
+    );
 
-    // Update session counts to include the new item
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.updateSessionCounts(me, template.$jazz.id, sessionId);
-
-    // Set newly created item as selected for consecutive insertion
+    setNewItemName('');
+    // Select the newly created item for consecutive insertion
     setSelectedItemId(newItemId);
-
-    // Keep form open for rapid entry
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    if (!me) return;
-    // Archive the template item (soft delete)
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    templateService.archiveItem(me, template.$jazz.id, itemId);
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const draggedItem = event.active.data.current?.item as TemplateItem;
+    setActiveItem(draggedItem);
   };
 
-  const renderSelectedAndChecked = () => {
-    if (!session) return null;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    if (currentViewMode === 'flat') {
-      return (
-        <FlatViewRenderer
-          template={template}
-          session={session}
-          selectedItems={selectedItems}
-          checkedItems={checkedItems}
-          zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
-          onToggleZoneExpanded={(zone) =>
-            setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
+    setActiveItem(null);
+
+    if (!over || !active.data.current || !me) {
+      return;
+    }
+
+    const draggedItem = active.data.current.item as TemplateItem;
+    const overData = over.data.current;
+
+    // Don't allow dropping on itself
+    if (over.id === active.id) {
+      return;
+    }
+
+    // Handle reorder zone drops
+    if (overData?.type === 'reorder-zone') {
+      const currentParentPath = getParentPath(draggedItem.path);
+      const targetParentPath = overData.parentPath as string | undefined;
+
+      // Prevent moving a category into itself or its descendants
+      if (draggedItem.type === 'category') {
+        if (targetParentPath?.startsWith(draggedItem.path)) {
+          return;
+        }
+        if (targetParentPath === draggedItem.path) {
+          return;
+        }
+      }
+
+      // Get siblings at the target level
+      const siblings = activeItems.filter((item) => getParentPath(item.path) === targetParentPath);
+      siblings.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const afterItemId = overData.afterItemId as string | undefined;
+      const beforeItemId = overData.beforeItemId as string | undefined;
+
+      // Find the sortOrder values to calculate midpoint
+      let beforeSortOrder: number | undefined;
+      let afterSortOrder: number | undefined;
+
+      if (afterItemId) {
+        const afterItem = siblings.find((item) => item.id === afterItemId);
+        afterSortOrder = afterItem?.sortOrder;
+      }
+
+      if (beforeItemId) {
+        const beforeItem = siblings.find((item) => item.id === beforeItemId);
+        beforeSortOrder = beforeItem?.sortOrder;
+      }
+
+      // Calculate new sortOrder using fractional indexing
+      const newSortOrder = calculateMidpointSortOrder(afterSortOrder, beforeSortOrder);
+
+      // Check if moving to a different parent or just reordering
+      if (targetParentPath !== currentParentPath) {
+        // Move and reorder in a single operation
+        try {
+          templateService.moveItem(
+            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+            me,
+            template.$jazz.id,
+            draggedItem.id,
+            targetParentPath,
+            newSortOrder,
+          );
+        } catch {
+          // Silently ignore errors (e.g., duplicate names)
+        }
+      } else {
+        // Just reordering within the same parent
+        try {
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+          templateService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
+        } catch {
+          // Silently ignore errors
+        }
+      }
+      return;
+    }
+
+    // Handle drops on categories (move item into category)
+    if (overData?.isCategory) {
+      const newParentPath = overData.path as string;
+      const currentParentPath = getParentPath(draggedItem.path);
+
+      // Don't move if already in this category
+      if (newParentPath === currentParentPath) {
+        return;
+      }
+
+      // Prevent moving a category into itself or its descendants
+      if (draggedItem.type === 'category' && newParentPath?.startsWith(draggedItem.path)) {
+        return;
+      }
+
+      // Insert at the start of the category
+      const categoryItems = activeItems.filter(
+        (item) => getParentPath(item.path) === newParentPath,
+      );
+      categoryItems.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Calculate sortOrder to insert before first item
+      const firstItemSortOrder = categoryItems.length > 0 ? categoryItems[0].sortOrder : undefined;
+      const newSortOrder = calculateMidpointSortOrder(undefined, firstItemSortOrder);
+
+      try {
+        templateService.moveItem(
+          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+          me,
+          template.$jazz.id,
+          draggedItem.id,
+          newParentPath,
+          newSortOrder,
+        );
+      } catch {
+        // Silently ignore errors
+      }
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveItem(null);
+  };
+
+  // Recursive function to render item tree
+  const renderItemNode = (
+    node: ReturnType<typeof buildItemTree>[number],
+    depth = 0,
+    siblings: ReturnType<typeof buildItemTree> = [],
+    index = 0,
+  ) => {
+    const { item, children } = node;
+    const parentPath = getParentPath(item.path);
+
+    return (
+      <div key={item.id}>
+        {/* Reorder zone before first sibling */}
+        {index === 0 && (
+          <ReorderDropZone
+            id={`reorder-before-${item.id}`}
+            beforeItemId={item.id}
+            parentPath={parentPath}
+            isDragging={!!activeItem}
+          />
+        )}
+        <TemplateItemView
+          item={item}
+          level={depth}
+          hasChildren={children.length > 0}
+          isSelected={
+            showAddForm
+              ? selectedItemId === item.id // Insertion point highlight in ADDING mode
+              : currentItemId === item.id // Current item highlight in NORMAL mode
           }
-          onToggleSelected={handleToggleSelected}
-          onToggleChecked={handleToggleChecked}
-          showDeleteIcon={simplifiedUI && showAddForm}
-          onDeleteItem={handleDeleteItem}
-          // Interaction mode props
-          interactionMode={interactionMode}
-          onEnterEditMode={enterEditMode}
-          onExitEditMode={() => exitCurrentMode(isAdding)}
-          canEdit={canEdit}
-          canDrag={canDrag}
+          isChecked={session.itemStates?.[item.id]?.selected ?? false}
+          onSelect={
+            showAddForm
+              ? () => {
+                  setSelectedItemId(selectedItemId === item.id ? null : item.id);
+                }
+              : (itemId: string) => {
+                  // In NORMAL mode: clicking row sets current item
+                  setCurrentItemId(currentItemId === itemId ? null : itemId);
+                }
+          }
+          onCheckboxToggle={handleToggleSelected}
+          onRename={handleRenameItem}
+          onDelete={handleDeleteItem}
+          onToggleExpand={handleToggleExpand}
+          showDeleteIcon={showAddForm}
+          enableDrag={showAddForm}
+          enableEdit={showAddForm}
+          showCheckbox={!showAddForm}
         />
-      );
-    }
-
-    if (currentViewMode === 'zone-in-hierarchy') {
-      return (
-        <ZoneInHierarchyRenderer
-          template={template}
-          session={session}
-          selectedItems={selectedItems}
-          checkedItems={checkedItems}
-          categoryExpanded={categoryExpanded}
-          onToggleCategoryExpanded={handleToggleCategoryExpanded}
-          onToggleSelected={handleToggleSelected}
-          onToggleChecked={handleToggleChecked}
-          showDeleteIcon={simplifiedUI && showAddForm}
-          onDeleteItem={handleDeleteItem}
-          // Interaction mode props
-          interactionMode={interactionMode}
-          onEnterEditMode={enterEditMode}
-          onExitEditMode={() => exitCurrentMode(isAdding)}
-          canEdit={canEdit}
-          canDrag={canDrag}
+        {/* Reorder zone after each sibling */}
+        <ReorderDropZone
+          id={`reorder-after-${item.id}`}
+          afterItemId={item.id}
+          beforeItemId={siblings[index + 1]?.item.id}
+          parentPath={parentPath}
+          isDragging={!!activeItem}
         />
-      );
-    }
-
-    return null;
+        {/* Render children if category is expanded */}
+        {item.type === 'category' && item.expanded && children.length > 0 && (
+          <div>
+            {children.map((child, childIndex) =>
+              renderItemNode(child, depth + 1, children, childIndex),
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="h-screen bg-neutral-50 p-6 flex flex-col">
-      <div className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
-        <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
-          <SessionHeader
-            template={template}
-            session={session}
-            sessionId={sessionId}
-            // @ts-expect-error Jazz TypeScript inference issue with Account root type
-            me={me}
-            showTime={showTime}
-            viewModeIcon={getViewModeIcon()}
-            viewModeLabel={getViewModeLabel()}
-            onCycleViewMode={cycleViewMode}
-            onFinishSession={handleFinishSession}
-            onToggleArchived={handleToggleArchived}
-            simplifiedUI={simplifiedUI}
-            showAddForm={showAddForm}
-            onClear={handleClear}
-            onToggleAddForm={() => setShowAddForm(!showAddForm)}
-          />
-
-          {/* Inline form for adding items (simplified UI only) */}
-          {simplifiedUI && showAddForm && (
-            <div className="px-4 py-4 border-b border-neutral-100">
-              <InlineItemForm onSubmit={handleAddItem} onClose={() => setShowAddForm(false)} />
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="h-screen bg-neutral-50 p-6 flex flex-col">
+        <div className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
+          <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
+            {/* Header */}
+            <div className="border-b border-neutral-200 p-4">
+              <div className="flex items-center justify-between">
+                <h1 className="text-xl font-semibold text-neutral-900">{template.name}</h1>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(!showAddForm)}
+                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+                    aria-label={showAddForm ? 'Cancel' : 'Add and edit items'}
+                  >
+                    {showAddForm ? (
+                      <>
+                        <X className="h-4 w-4" />
+                        <span>Cancel</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
 
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
-            {renderSelectedAndChecked()}
-            <div ref={availableZoneRef}>
-              <AvailableZoneRenderer
-                template={template}
-                session={session}
-                availableItems={availableItems}
-                categoryExpanded={categoryExpanded}
-                zoneExpanded={zoneExpanded.available}
-                onToggleZoneExpanded={() =>
-                  setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
-                }
-                onToggleCategoryExpanded={handleToggleCategoryExpanded}
-                onToggleSelected={handleToggleSelected}
-                onToggleChecked={handleToggleChecked}
-                onBatchSelectAll={handleBatchSelectAll}
-                onBatchDeselectAll={handleBatchDeselectAll}
-                onBatchToggle={handleBatchToggle}
-                showDeleteIcon={simplifiedUI && showAddForm}
-                onDeleteItem={handleDeleteItem}
-                selectedItemId={simplifiedUI && showAddForm ? selectedItemId : null}
-                onSelectItem={simplifiedUI && showAddForm ? setSelectedItemId : undefined}
-                // Interaction mode props
-                interactionMode={interactionMode}
-                onEnterEditMode={enterEditMode}
-                onExitEditMode={() => exitCurrentMode(isAdding)}
-                onEnterDragMode={enterDragMode}
-                onExitDragMode={() => exitCurrentMode(isAdding)}
-                canEdit={canEdit}
-                canDrag={canDrag}
-              />
-            </div>
+            {/* Add Item Form */}
+            {showAddForm && (
+              <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3">
+                <form onSubmit={handleAddItem} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="Item name..."
+                    autoFocus
+                    className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700"
+                    aria-label="Add item"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {itemTree.length === 0 ? (
+              <div className="p-8 text-center text-neutral-500">
+                <p>No items in this list yet.</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="divide-y divide-neutral-100">
+                  {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {activeItem ? (
+          <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
+            <span className="font-medium">{activeItem.name}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

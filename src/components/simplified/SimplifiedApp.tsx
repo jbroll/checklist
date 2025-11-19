@@ -90,7 +90,6 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           setSelectedFolderId(null);
           setCurrentSessionId(null);
         }}
-        simplifiedUI={true}
       />
     );
   }
