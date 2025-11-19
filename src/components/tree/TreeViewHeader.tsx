@@ -64,7 +64,7 @@ export function TreeViewHeader({
   onToggleShowArchived,
   onSignOut,
   onSwitchView,
-  switchViewLabel = 'Simplified View',
+  switchViewLabel = 'Basic View',
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops (always called for hooks rules)
   const { setNodeRef: setDropRef, isOver } = useDroppable({

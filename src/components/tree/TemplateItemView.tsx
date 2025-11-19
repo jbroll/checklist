@@ -146,10 +146,6 @@ export function TemplateItemView({
     }
   };
 
-  const handleCheckboxClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
   const handleRowClick = (e: React.MouseEvent) => {
     // Only trigger selection on row click if we have onSelect but NOT showing checkbox
     // (i.e., insertion point selection mode)
@@ -189,13 +185,32 @@ export function TemplateItemView({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Selection Checkbox - only show for items (not categories) */}
           {showCheckbox && !isCategory && (
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={handleCheckboxChange}
-              onClick={handleCheckboxClick}
-              className="h-4 w-4 shrink-0 rounded border-neutral-300 text-green-600 focus:ring-green-500 cursor-pointer"
-            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCheckboxChange();
+              }}
+              className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors shrink-0 ${
+                isChecked
+                  ? 'border-blue-500 bg-blue-500 text-white'
+                  : 'border-neutral-300 hover:border-blue-400'
+              }`}
+            >
+              {isChecked && (
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  aria-label="Selected"
+                  role="img"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
           )}
 
           <div
@@ -222,13 +237,13 @@ export function TemplateItemView({
                   onKeyDown={handleKeyDown}
                   onBlur={handleSaveEdit}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                  className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                 />
               ) : (
                 <span
                   {...doubleTapHandlers}
-                  className={`flex-1 min-w-0 truncate text-left text-sm ${
-                    isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-700'
+                  className={`flex-1 min-w-0 truncate text-left ${
+                    isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-900'
                   }`}
                 >
                   {item.name}
@@ -262,8 +277,8 @@ export function TemplateItemView({
             </button>
           )}
 
-          {/* Actions Menu */}
-          {!isEditing && !showDeleteIcon && (
+          {/* Actions Menu - only show when not in session normal mode (showCheckbox) */}
+          {!isEditing && !showDeleteIcon && !showCheckbox && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button

@@ -148,6 +148,10 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
     setActiveSessionId(null);
   };
 
+  const handleSwitchSession = (newSessionId: string) => {
+    setActiveSessionId(newSessionId);
+  };
+
   const handleBackFromEdit = () => {
     setActiveEditTemplateId(null);
   };
@@ -190,6 +194,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           template={sessionTemplate as any}
           sessionId={activeSessionId}
           onBack={handleBackToTemplates}
+          onSwitchSession={handleSwitchSession}
         />
       );
     }
@@ -221,7 +226,7 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
-          switchViewLabel="Simplified View"
+          switchViewLabel="Basic View"
           sessionsEnabled={true}
         />
 
