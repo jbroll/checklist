@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
-import { addToFolderGroup } from './agent.js';
+import { addToFolderGroup, validateSenderAccess } from './agent.js';
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
@@ -10,17 +10,32 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
-    const { toEmail, folderCoValueId, recipientJazzAccountId, permission, expiresInDays } = req.body;
+    const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
+
+    // Get sender's Jazz account ID from BetterAuth database
+    // TODO: Verify correct field name from BetterAuth Jazz plugin (might be jazzAccountId or jazzId)
+    const senderJazzAccountId = (session.user as any).jazzAccountId;
+    if (!senderJazzAccountId) {
+      return res.status(400).json({ error: 'no_jazz_account', message: 'User has no Jazz account' });
+    }
 
     const token = randomBytes(32).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + (expiresInDays * 24 * 60 * 60);
 
     db.prepare(`
-      INSERT INTO share_invites (token, from_email, to_email, folder_covalue_id,
-        recipient_jazz_account_id, permission, expires_at, created_at)
+      INSERT INTO share_invites (token, sender_email, sender_jazz_account_id,
+        recipient_email, folder_covalue_id, permission, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(token, session.user.email, toEmail, folderCoValueId,
-      recipientJazzAccountId, permission, expiresAt, Math.floor(Date.now() / 1000));
+    `).run(
+      token,
+      session.user.email,
+      senderJazzAccountId,
+      recipientEmail,
+      folderCoValueId,
+      permission,
+      expiresAt,
+      Math.floor(Date.now() / 1000)
+    );
 
     res.json({ token, shareUrl: `${process.env.FRONTEND_URL}/invite/${token}` });
   });
@@ -38,8 +53,8 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     res.json({
       valid: true,
-      fromEmail: invite.from_email,
-      toEmail: invite.to_email,
+      senderEmail: invite.sender_email,
+      recipientEmail: invite.recipient_email,
       permission: invite.permission,
     });
   });
@@ -61,16 +76,47 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     if (invite.expires_at < now) return res.status(400).json({ error: 'expired' });
 
     // Validate: logged-in email matches invite
-    if (session.user.email !== invite.to_email) {
+    if (session.user.email !== invite.recipient_email) {
       return res.status(403).json({
         error: 'email_mismatch',
-        message: `This invite is for ${invite.to_email}`
+        message: `This invite is for ${invite.recipient_email}`
       });
     }
 
-    // Add to Jazz group
+    // Get recipient's Jazz account ID from BetterAuth
+    const recipientJazzAccountId = (session.user as any).jazzAccountId;
+    if (!recipientJazzAccountId) {
+      return res.status(400).json({
+        error: 'no_jazz_account',
+        message: 'You do not have a Jazz account. Please try logging out and back in.'
+      });
+    }
+
+    // Validate: sender still has access to folder
     try {
-      await addToFolderGroup(invite.folder_covalue_id, invite.recipient_jazz_account_id, invite.permission);
+      const senderHasAccess = await validateSenderAccess(
+        invite.folder_covalue_id,
+        invite.sender_jazz_account_id
+      );
+
+      if (!senderHasAccess) {
+        return res.status(403).json({
+          error: 'sender_no_access',
+          message: 'The person who shared this folder no longer has access to it'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to validate sender access:', error);
+      return res.status(500).json({ error: 'validation_failed' });
+    }
+
+    // Add recipient to Jazz group
+    try {
+      await addToFolderGroup(
+        invite.folder_covalue_id,
+        recipientJazzAccountId,
+        invite.permission
+      );
 
       // Mark as accepted
       db.prepare(`UPDATE share_invites SET accepted_at = ? WHERE token = ?`)
