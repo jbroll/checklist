@@ -120,10 +120,10 @@ export function useSessionInteractionMode() {
   // Permission checks - can this interaction happen in current mode?
   const canEdit = useCallback(
     (itemId: string) => {
-      // Can edit if: NORMAL, ADDING, or already editing this specific item
-      return isNormal || isAdding || (isEditing && activeItemId === itemId);
+      // Can edit if: ADDING mode or already editing this specific item
+      return isAdding || (isEditing && activeItemId === itemId);
     },
-    [isNormal, isAdding, isEditing, activeItemId],
+    [isAdding, isEditing, activeItemId],
   );
 
   const canDrag = useCallback(

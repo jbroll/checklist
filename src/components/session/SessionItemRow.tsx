@@ -52,19 +52,6 @@ export const SessionItemRow = memo(function SessionItemRow({
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const justEnteredEditMode = useRef(false);
-  const lastDragState = useRef<{ disabled: boolean; canDrag: boolean } | null>(null);
-
-  // Debug: Log checkbox state
-  if (isAnyItemBeingEditedOrDragged) {
-    const timestamp = (performance.now() / 1000).toFixed(3);
-    console.log(
-      `[${timestamp}s] [SessionItemRow]`,
-      item.name,
-      '- checkboxes DISABLED (isAnyItemBeingEditedOrDragged:',
-      isAnyItemBeingEditedOrDragged,
-      ')',
-    );
-  }
 
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
@@ -82,29 +69,6 @@ export const SessionItemRow = memo(function SessionItemRow({
     data: { item },
     disabled: dragDisabled,
   });
-
-  // Log drag configuration only when it changes
-  if (
-    enableDrag &&
-    (!lastDragState.current ||
-      lastDragState.current.disabled !== dragDisabled ||
-      lastDragState.current.canDrag !== canDragItem)
-  ) {
-    const timestamp = (performance.now() / 1000).toFixed(3);
-    console.log(
-      `[${timestamp}s] [SessionItemRow]`,
-      item.name,
-      '- canDragItem:',
-      canDragItem,
-      'dragDisabled:',
-      dragDisabled,
-      'canActuallyDrag:',
-      enableDrag && canDragItem,
-      'dragListeners:',
-      dragListeners,
-    );
-    lastDragState.current = { disabled: dragDisabled, canDrag: canDragItem };
-  }
 
   // Long press visual feedback - DISABLED to avoid conflicting with drag sensor
   // const { isHolding, longPressHandlers } = useLongPressIndicator(isDragging);
@@ -221,7 +185,8 @@ export const SessionItemRow = memo(function SessionItemRow({
   };
 
   // Only animate items in selected/checked zones (not available)
-  const shouldAnimate = zone === 'selected' || zone === 'checked';
+  // Disable animation during drag to prevent interference with dnd-kit
+  const shouldAnimate = (zone === 'selected' || zone === 'checked') && !isDragging;
 
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger selection if clicking on checkbox or delete button
@@ -263,15 +228,7 @@ export const SessionItemRow = memo(function SessionItemRow({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          const timestamp = (performance.now() / 1000).toFixed(3);
-          console.log(
-            `[${timestamp}s] [SessionItemRow] Left checkbox clicked on:`,
-            item.name,
-            '- isAnyItemBeingEditedOrDragged:',
-            isAnyItemBeingEditedOrDragged,
-          );
           if (isAnyItemBeingEditedOrDragged) {
-            console.log(`[${timestamp}s] [SessionItemRow] BLOCKED - checkbox disabled`);
             return; // Disable during edit/drag
           }
           if (leftCheckboxControlsChecked) {

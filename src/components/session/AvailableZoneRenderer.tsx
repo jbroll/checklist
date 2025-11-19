@@ -1,24 +1,9 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  DragOverlay,
-  type DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
-import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
-import { useAccount } from '@/lib/jazz';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
-import * as templateService from '@/services/templateService';
+import type { SessionData, Template, TemplateItem } from '@/schemas';
 import { buildItemTree, type ItemTreeNode } from '@/utils/itemTreeHelpers';
-import { getParentPath } from '@/utils/pathUtils';
-import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { DraggableCategory } from './DraggableCategory';
 import { SessionItemRow } from './SessionItemRow';
@@ -41,12 +26,11 @@ interface AvailableZoneRendererProps {
   onDeleteItem?: (itemId: string) => void;
   selectedItemId?: string | null;
   onSelectItem?: (itemId: string | null) => void;
+  activeItem: TemplateItem | null;
   // Interaction mode props
   interactionMode: InteractionMode;
   onEnterEditMode: (itemId: string) => void;
   onExitEditMode: () => void;
-  onEnterDragMode: (itemId: string) => void;
-  onExitDragMode: () => void;
   canEdit: (itemId: string) => boolean;
   canDrag: (itemId: string) => boolean;
 }
@@ -68,33 +52,17 @@ export function AvailableZoneRenderer({
   onDeleteItem,
   selectedItemId = null,
   onSelectItem,
+  activeItem,
   interactionMode,
   onEnterEditMode,
   onExitEditMode,
-  onEnterDragMode,
-  onExitDragMode,
   canEdit,
   canDrag,
 }: AvailableZoneRendererProps) {
-  const { me } = useAccount<typeof Account>();
-  const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
-  // Configure sensors for drag detection with long press (1 second)
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        delay: 1000, // 1 second long press to activate drag
-        tolerance: 5, // Allow 5px of movement during hold (for shaky fingers)
-      },
-      onActivation: () => {
-        const timestamp = (performance.now() / 1000).toFixed(3);
-        console.log(
-          `[${timestamp}s] [AvailableZoneRenderer] PointerSensor activated - drag starting`,
-        );
-      },
-    }),
-  );
+  // Debug: Track renders
+  console.log('[AvailableZoneRenderer] RENDER - activeItem:', activeItem?.name || 'NULL');
 
   // Build tree from ALL template items
   const allItems = template.items || [];
@@ -124,147 +92,6 @@ export function AvailableZoneRenderer({
       depth: 0,
       sortOrder: node.item.sortOrder,
     };
-  };
-
-  const handleDragStart = (event: DragStartEvent) => {
-    const draggedItem = event.active.data.current?.item as TemplateItem;
-    const timestamp = (performance.now() / 1000).toFixed(3);
-    console.log(`[${timestamp}s] [AvailableZoneRenderer] Drag started for:`, draggedItem?.name);
-    setActiveItem(draggedItem);
-    // Enter drag mode to prevent other interactions
-    onEnterDragMode(draggedItem.id);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveItem(null);
-    // Exit drag mode when drag completes
-    onExitDragMode();
-
-    if (!over || !active.data.current || !me) {
-      return;
-    }
-
-    const draggedItem = active.data.current.item as TemplateItem;
-    const overData = over.data.current;
-
-    // Don't allow dropping on itself
-    if (over.id === active.id) {
-      return;
-    }
-
-    // Handle reorder zone drops
-    if (overData?.type === 'reorder-zone') {
-      const currentParentPath = getParentPath(draggedItem.path);
-      const targetParentPath = overData.parentPath as string | undefined;
-
-      // Prevent moving a category into itself or its descendants
-      if (draggedItem.type === 'category') {
-        // Check if target is inside the dragged category
-        if (targetParentPath?.startsWith(draggedItem.path)) {
-          return;
-        }
-        // Check if target IS the dragged category
-        if (targetParentPath === draggedItem.path) {
-          return;
-        }
-      }
-
-      // Get siblings at the target level
-      const siblings = activeItems.filter((item) => getParentPath(item.path) === targetParentPath);
-      siblings.sort((a, b) => a.sortOrder - b.sortOrder);
-
-      const afterItemId = overData.afterItemId as string | undefined;
-      const beforeItemId = overData.beforeItemId as string | undefined;
-
-      // Find the sortOrder values to calculate midpoint
-      let beforeSortOrder: number | undefined;
-      let afterSortOrder: number | undefined;
-
-      if (afterItemId) {
-        const afterItem = siblings.find((item) => item.id === afterItemId);
-        afterSortOrder = afterItem?.sortOrder;
-      }
-
-      if (beforeItemId) {
-        const beforeItem = siblings.find((item) => item.id === beforeItemId);
-        beforeSortOrder = beforeItem?.sortOrder;
-      }
-
-      // Calculate new sortOrder using fractional indexing
-      const newSortOrder = calculateMidpointSortOrder(afterSortOrder, beforeSortOrder);
-
-      // Check if moving to a different parent or just reordering
-      if (targetParentPath !== currentParentPath) {
-        // Move and reorder in a single operation
-        try {
-          templateService.moveItem(
-            // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-            me as any,
-            template.$jazz.id,
-            draggedItem.id,
-            targetParentPath,
-            newSortOrder,
-          );
-        } catch {
-          // Silently ignore errors (e.g., duplicate names)
-        }
-      } else {
-        // Just reordering within the same parent
-        try {
-          templateService.reorderItem(
-            // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-            me as any,
-            template.$jazz.id,
-            draggedItem.id,
-            newSortOrder,
-          );
-        } catch {
-          // Silently ignore errors
-        }
-      }
-      return;
-    }
-
-    // Handle drops on categories (move item into category)
-    if (overData?.isCategory) {
-      const newParentPath = overData.path as string;
-      const currentParentPath = getParentPath(draggedItem.path);
-
-      // Don't move if already in this category
-      if (newParentPath === currentParentPath) {
-        return;
-      }
-
-      // Prevent moving a category into itself or its descendants
-      if (draggedItem.type === 'category' && newParentPath?.startsWith(draggedItem.path)) {
-        return;
-      }
-
-      // Insert at the start of the category
-      // Get items in target category and find first item's sortOrder
-      const categoryItems = activeItems.filter(
-        (item) => getParentPath(item.path) === newParentPath,
-      );
-      categoryItems.sort((a, b) => a.sortOrder - b.sortOrder);
-
-      // Calculate sortOrder to insert before first item (at start of category)
-      const firstItemSortOrder = categoryItems.length > 0 ? categoryItems[0].sortOrder : undefined;
-      const newSortOrder = calculateMidpointSortOrder(undefined, firstItemSortOrder);
-
-      try {
-        templateService.moveItem(
-          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-          me as any,
-          template.$jazz.id,
-          draggedItem.id,
-          newParentPath,
-          newSortOrder,
-        );
-      } catch {
-        // Silently ignore errors
-      }
-    }
   };
 
   const renderItemTree = (
@@ -377,44 +204,28 @@ export function AvailableZoneRenderer({
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+    <SessionZone
+      title="List"
+      icon={Package}
+      zone="available"
+      items={[]}
+      itemStates={session.itemStates || {}}
+      expanded={zoneExpanded}
+      onToggleExpand={onToggleZoneExpanded}
+      onToggleSelected={onToggleSelected}
+      onToggleChecked={onToggleChecked}
+      onBatchSelectAll={onBatchSelectAll}
+      onBatchDeselectAll={onBatchDeselectAll}
+      onBatchToggle={onBatchToggle}
+      count={availableItems.length}
+      showHeading={showZoneHeadings}
+      isTopLevelZone={true}
+      category={topLevelCategory}
+      showDeleteIcon={showDeleteIcon}
+      onDeleteItem={onDeleteItem}
+      template={template}
     >
-      <SessionZone
-        title="List"
-        icon={Package}
-        zone="available"
-        items={[]}
-        itemStates={session.itemStates || {}}
-        expanded={zoneExpanded}
-        onToggleExpand={onToggleZoneExpanded}
-        onToggleSelected={onToggleSelected}
-        onToggleChecked={onToggleChecked}
-        onBatchSelectAll={onBatchSelectAll}
-        onBatchDeselectAll={onBatchDeselectAll}
-        onBatchToggle={onBatchToggle}
-        count={availableItems.length}
-        showHeading={showZoneHeadings}
-        isTopLevelZone={true}
-        category={topLevelCategory}
-        showDeleteIcon={showDeleteIcon}
-        onDeleteItem={onDeleteItem}
-        template={template}
-      >
-        {renderItemTree(itemTree, 'available')}
-      </SessionZone>
-
-      {/* Drag overlay - shows the dragged item following the cursor */}
-      <DragOverlay dropAnimation={null}>
-        {activeItem ? (
-          <div className="cursor-grabbing rounded bg-white px-4 py-3 shadow-2xl ring-2 ring-blue-500 opacity-90">
-            <span className="text-base font-medium text-neutral-900">{activeItem.name}</span>
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+      {renderItemTree(itemTree, 'available')}
+    </SessionZone>
   );
 }

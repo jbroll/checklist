@@ -44,11 +44,15 @@ export function ReorderDropZone({
   return (
     <div
       ref={setNodeRef}
-      className={cn('relative h-1 -my-0.5 transition-all', isOver && 'h-2 bg-green-100')}
+      className={cn(
+        'relative transition-all',
+        'h-1',
+        isOver && 'h-3 bg-green-200 border-y-2 border-green-500',
+      )}
     >
       {/* Visual indicator on hover */}
       {isOver && (
-        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 bg-green-500 rounded-full" />
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-1 bg-green-500 rounded-full" />
       )}
     </div>
   );

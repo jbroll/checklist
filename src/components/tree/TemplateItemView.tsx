@@ -16,11 +16,17 @@ interface TemplateItemViewProps {
   item: TemplateItem;
   level: number;
   hasChildren?: boolean;
-  isSelected?: boolean;
+  isSelected?: boolean; // Row highlight (grey background)
+  isChecked?: boolean; // Checkbox state (for SessionView normal mode)
   onSelect?: (itemId: string) => void;
   onRename?: (itemId: string, newName: string) => void;
   onDelete?: (itemId: string) => void;
   onToggleExpand?: (itemId: string) => void;
+  showDeleteIcon?: boolean; // Show trash icon inline (for SessionView adding mode)
+  enableDrag?: boolean; // Enable drag and drop (default: true)
+  enableEdit?: boolean; // Enable double-click to edit (default: true)
+  showCheckbox?: boolean; // Show checkbox for selection (SessionView normal mode)
+  onCheckboxToggle?: (itemId: string) => void; // Separate handler for checkbox (SessionView selected state)
 }
 
 export function TemplateItemView({
@@ -28,10 +34,16 @@ export function TemplateItemView({
   level,
   hasChildren = false,
   isSelected = false,
+  isChecked = false,
   onSelect,
   onRename,
   onDelete,
   onToggleExpand,
+  showDeleteIcon = false,
+  enableDrag = true,
+  enableEdit = true,
+  showCheckbox = false,
+  onCheckboxToggle,
 }: TemplateItemViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
@@ -49,6 +61,7 @@ export function TemplateItemView({
   } = useDraggable({
     id: item.id,
     data: { item },
+    disabled: !enableDrag,
   });
 
   // Droppable setup - only categories can accept drops
@@ -70,6 +83,9 @@ export function TemplateItemView({
   // Double-tap handler for mobile-friendly inline editing
   const doubleTapHandlers = useDoubleTap({
     onDoubleTap: (e) => {
+      // Only allow if editing is enabled
+      if (!enableEdit) return;
+
       // Don't trigger if clicking on buttons or checkboxes
       if ((e.target as HTMLElement).closest('button, input[type="checkbox"]')) {
         return;
@@ -120,8 +136,13 @@ export function TemplateItemView({
   };
 
   const handleCheckboxChange = () => {
-    if (onSelect && !isEditing) {
-      onSelect(item.id);
+    if (!isEditing) {
+      // Use separate checkbox handler if provided, otherwise fall back to onSelect
+      if (onCheckboxToggle) {
+        onCheckboxToggle(item.id);
+      } else if (onSelect) {
+        onSelect(item.id);
+      }
     }
   };
 
@@ -129,12 +150,25 @@ export function TemplateItemView({
     e.stopPropagation();
   };
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Only trigger selection on row click if we have onSelect but NOT showing checkbox
+    // (i.e., insertion point selection mode)
+    if (onSelect && !showCheckbox) {
+      // Don't trigger if clicking on buttons or interactive elements
+      if ((e.target as HTMLElement).closest('button, input')) {
+        return;
+      }
+      onSelect(item.id);
+    }
+  };
+
   return (
     <div
       ref={setDropRef}
+      onClick={handleRowClick}
       className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
         isOver && isCategory ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
-      }`}
+      } ${onSelect && !showCheckbox ? 'cursor-pointer' : ''}`}
     >
       <IndentedRow
         level={level}
@@ -144,11 +178,11 @@ export function TemplateItemView({
         className="group"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Selection Checkbox */}
-          {onSelect && (
+          {/* Selection Checkbox - only show for items (not categories) */}
+          {showCheckbox && !isCategory && (
             <input
               type="checkbox"
-              checked={isSelected}
+              checked={isChecked}
               onChange={handleCheckboxChange}
               onClick={handleCheckboxClick}
               className="h-4 w-4 shrink-0 rounded border-neutral-300 text-green-600 focus:ring-green-500 cursor-pointer"
@@ -156,14 +190,14 @@ export function TemplateItemView({
           )}
 
           <div
-            ref={setDragRef}
-            {...dragAttributes}
-            {...dragListeners}
-            className="cursor-grab active:cursor-grabbing flex-1 min-w-0"
+            ref={enableDrag ? setDragRef : undefined}
+            {...(enableDrag ? dragAttributes : {})}
+            {...(enableDrag ? dragListeners : {})}
+            className={`flex-1 min-w-0 ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
           >
             <div
               className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
-                isSelected ? 'bg-green-50' : ''
+                isSelected ? 'bg-neutral-200' : ''
               }`}
             >
               {/* Icon */}
@@ -204,8 +238,23 @@ export function TemplateItemView({
           {/* Archived indicator */}
           {item.archived && !isEditing && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}
 
+          {/* Delete Icon (SessionView adding mode) */}
+          {showDeleteIcon && !isEditing && onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              className="shrink-0 rounded p-1 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              aria-label="Delete item"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Actions Menu */}
-          {!isEditing && (
+          {!isEditing && !showDeleteIcon && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
