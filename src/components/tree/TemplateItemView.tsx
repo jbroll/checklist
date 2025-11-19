@@ -163,9 +163,18 @@ export function TemplateItemView({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: This div is conditionally interactive for drag-and-drop and item selection
     <div
       ref={setDropRef}
       onClick={handleRowClick}
+      onKeyDown={(e) => {
+        if (onSelect && !showCheckbox && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleRowClick(e as unknown as React.MouseEvent);
+        }
+      }}
+      role={onSelect && !showCheckbox ? 'button' : undefined}
+      tabIndex={onSelect && !showCheckbox ? 0 : undefined}
       className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
         isOver && isCategory ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
       } ${onSelect && !showCheckbox ? 'cursor-pointer' : ''}`}
