@@ -91,7 +91,7 @@ CREATE TABLE share_invites (
 2. Validate: `session.user.email === invite.recipient_email`
 3. Get recipient's Jazz ID from BetterAuth session
 4. Validate: sender still has folder access
-5. Jazz agent adds recipient to folder group
+5. Jazz agent adds recipient to folder's built-in `_group`
 6. Mark invite as accepted
 
 **Output**:
@@ -113,6 +113,8 @@ CREATE TABLE share_invites (
 - `validateSenderAccess(folderId, senderJazzId)` - Check sender in group
 - `addToFolderGroup(folderId, recipientJazzId, permission)` - Add member
 
+**Key**: Uses Jazz's built-in groups on CoValues - no schema changes needed!
+
 **TODO**: Fill in Jazz API calls
 
 ---
@@ -123,7 +125,7 @@ CREATE TABLE share_invites (
 2. **Sender validation** - Prevents stale invites if sender loses access
 3. **Email-only validation** - Simple, works with OAuth
 4. **Single table** - No complex normalization needed
-5. **No audit log** - Can add later if needed
+5. **Use Jazz built-in groups** - No schema extensions needed!
 
 ---
 
@@ -136,11 +138,7 @@ CREATE TABLE share_invites (
 - InviteAcceptPage component (~2 hours)
 - ShareDialog component (~2 hours)
 
-**Schema**:
-- Add `accessGroup?: Group` to FolderNode (~30 min)
-- Add `permissions?: PermissionMetadata[]` to FolderNode (~30 min)
-
-**Total**: ~7 hours remaining
+**Total**: ~6 hours remaining
 
 ---
 
@@ -150,13 +148,13 @@ CREATE TABLE share_invites (
 backend/src/
 ├── migrations/shares.sql  (15 lines)
 ├── db.ts                  (12 lines)
-├── agent.ts               (67 lines)
+├── agent.ts               (51 lines)
 ├── shares.ts              (131 lines)
 └── auth.ts                (modified - export sqliteDb)
 └── index.ts               (modified - wire up routes)
 ```
 
-**Total**: ~225 lines added
+**Total**: ~210 lines added
 
 ---
 

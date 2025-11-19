@@ -8,7 +8,7 @@
 ## Architecture
 
 **Backend**: Express + BetterAuth + SQLite + Jazz Agent
-**Frontend**: React + Jazz CoValues
+**Frontend**: React + Jazz CoValues (with built-in groups)
 
 ---
 
@@ -26,7 +26,7 @@
 2. Backend validates: recipient email matches session
 3. Backend validates: sender still has folder access
 4. Backend looks up recipient's Jazz account ID from BetterAuth
-5. Jazz agent adds recipient to folder's access group
+5. Jazz agent adds recipient to folder's built-in group
 6. Jazz syncs folder to recipient's account
 
 ---
@@ -56,7 +56,7 @@
 - Input: { token }
 - Validates: email match, sender access, not expired
 - Looks up: recipient Jazz ID from BetterAuth
-- Grants: adds to folder group via Jazz agent
+- Grants: adds to folder's built-in group via Jazz agent
 - Output: { success, folderId }
 
 ---
@@ -70,11 +70,14 @@
 
 ---
 
-## Jazz Schema
+## Jazz Integration
 
-Extend `FolderNode` with:
-- `accessGroup?: Group` - Jazz group for access control
-- `permissions?: PermissionMetadata[]` - App-level permission tracking
+**No schema changes needed!** Jazz CoValues already have built-in groups.
+
+The Jazz agent simply:
+1. Loads the folder CoValue
+2. Adds recipient to folder's built-in `_group`
+3. Sets Jazz role: `reader` (view) or `writer` (edit/admin)
 
 ---
 
@@ -83,13 +86,10 @@ Extend `FolderNode` with:
 **Backend**: 4 files, ~150 lines
 - `migrations/shares.sql` - Table
 - `db.ts` - Migration runner
-- `agent.ts` - Jazz agent (stub)
+- `agent.ts` - Jazz agent (uses built-in groups)
 - `shares.ts` - 3 API endpoints
 
 **Frontend**: TODO
 - React Router for `/invite/:token`
 - InviteAcceptPage component
 - ShareDialog component
-
-**Schema**: TODO
-- Add Jazz group support to FolderNode
