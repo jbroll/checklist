@@ -7,7 +7,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Simplified UI - View Mode Toggle', () => {
-  test('should show Simplified View option in More menu', async ({ page }) => {
+  test('should show Basic View option in More menu', async ({ page }) => {
     await page.goto('/');
 
     // Wait for page to load
@@ -18,8 +18,8 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     // Open the More options dropdown
     await page.getByLabel('More options').first().click();
 
-    // Check for Simplified View option
-    await expect(page.getByRole('menuitem', { name: /simplified view/i })).toBeVisible();
+    // Check for Basic View option
+    await expect(page.getByRole('menuitem', { name: /basic view/i })).toBeVisible();
   });
 
   test('should switch to simplified view when clicking menu item', async ({ page }) => {
@@ -30,16 +30,16 @@ test.describe('Simplified UI - View Mode Toggle', () => {
       timeout: 10000,
     });
 
-    // Open the More options dropdown and click Simplified View
+    // Open the More options dropdown and click Basic View
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Should see empty state message (using TreeView)
     await expect(page.getByText(/no lists yet/i)).toBeVisible();
 
-    // Should see Classic View menu item
+    // Should see Advanced View menu item
     await page.getByLabel('More options').first().click();
-    await expect(page.getByRole('menuitem', { name: /classic view/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /advanced view/i })).toBeVisible();
   });
 
   test('should persist view mode preference in localStorage', async ({ page }) => {
@@ -52,17 +52,17 @@ test.describe('Simplified UI - View Mode Toggle', () => {
 
     // Switch to simplified view
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Reload the page
     await page.reload();
 
-    // Should still be in simplified view (check for Classic View menu item)
+    // Should still be in simplified view (check for Advanced View menu item)
     await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
     await page.getByLabel('More options').first().click();
-    await expect(page.getByRole('menuitem', { name: /classic view/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /advanced view/i })).toBeVisible();
   });
 
   test('should switch back to classic view from simplified', async ({ page }) => {
@@ -75,18 +75,18 @@ test.describe('Simplified UI - View Mode Toggle', () => {
 
     // Switch to simplified view
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
-    // Verify we're in simplified view (check for Classic View menu item)
+    // Verify we're in simplified view (check for Advanced View menu item)
     await page.getByLabel('More options').first().click();
-    await expect(page.getByRole('menuitem', { name: /classic view/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /advanced view/i })).toBeVisible();
 
-    // Click Classic View menu item
-    await page.getByRole('menuitem', { name: /classic view/i }).click();
+    // Click Advanced View menu item
+    await page.getByRole('menuitem', { name: /advanced view/i }).click();
 
-    // Should be back in classic view (check for Simplified View menu item)
+    // Should be back in classic view (check for Basic View menu item)
     await page.getByLabel('More options').first().click();
-    await expect(page.getByRole('menuitem', { name: /simplified view/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /basic view/i })).toBeVisible();
   });
 });
 
@@ -101,7 +101,7 @@ test.describe('Simplified UI - Template Selection', () => {
 
     // Switch to simplified view
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Should show TreeView empty state
     await expect(page.getByText(/no lists yet/i)).toBeVisible();
@@ -130,7 +130,7 @@ test.describe('Simplified UI - Template Selection', () => {
     });
 
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Should see the template in the list
     await expect(page.getByText('Test List')).toBeVisible();
@@ -176,7 +176,7 @@ test.describe('Simplified UI - Session View', () => {
     });
 
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Click on the template
     await page.getByText('Shopping List').click();
@@ -227,14 +227,14 @@ test.describe('Simplified UI - Data Synchronization', () => {
     });
 
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /simplified view/i }).click();
+    await page.getByRole('menuitem', { name: /basic view/i }).click();
 
-    // Template should be visible in simplified view
-    await expect(page.getByText('Shared List')).toBeVisible();
+    // Template should be visible in simplified view (wait for sync)
+    await expect(page.getByText('Shared List')).toBeVisible({ timeout: 10000 });
 
     // Switch back to classic view via menu
     await page.getByLabel('More options').first().click();
-    await page.getByRole('menuitem', { name: /classic view/i }).click();
+    await page.getByRole('menuitem', { name: /advanced view/i }).click();
 
     // Template should be visible in classic view
     await expect(page.getByText('Shared List')).toBeVisible();

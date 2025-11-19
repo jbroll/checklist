@@ -90,6 +90,9 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           setSelectedFolderId(null);
           setCurrentSessionId(null);
         }}
+        onSwitchSession={(newSessionId) => {
+          setCurrentSessionId(newSessionId);
+        }}
       />
     );
   }
@@ -187,7 +190,7 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSwitchToSimplified={() => onViewModeChange('classic')}
-          switchViewLabel="Classic View"
+          switchViewLabel="Advanced View"
           sessionsEnabled={false}
           hideArchivedToggle={true}
         />

@@ -186,10 +186,16 @@ export function setItemSelected(
     return; // No change needed
   }
 
+  // Check if this is the first item being selected
+  const hasAnySelectedItems = Object.values(itemStates).some((state) => state.selected);
+  const isFirstSelection = selected && !hasAnySelectedItems;
+
   // Update session with new item states and activity timestamp
+  // If this is the first selection, also update createdAt
   updateSession(account, templateId, sessionId, {
     itemStates: newItemStates,
     lastActivityAt: new Date(),
+    ...(isFirstSelection ? { createdAt: new Date() } : {}),
   });
 }
 

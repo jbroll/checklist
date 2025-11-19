@@ -29,15 +29,17 @@ interface SessionViewProps {
   template: InstanceOfSchema<typeof Template>;
   sessionId: string;
   onBack: () => void;
+  onSwitchSession?: (newSessionId: string) => void;
 }
 
-export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
+export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // Insertion point in ADDING mode
   const [currentItemId, setCurrentItemId] = useState<string | null>(null); // Current item in NORMAL mode
+  const [newItemType, setNewItemType] = useState<'item' | 'category'>('item'); // Type for new items
   const [zoneExpanded, setZoneExpanded] = useState({
     selected: true,
     checked: false,
@@ -144,6 +146,27 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
   };
 
+  const handleClearOrNew = () => {
+    if (!me) return;
+
+    // Check if any items are selected or checked
+    const hasCheckedItems = selectedItems.length > 0 || checkedItems.length > 0;
+
+    if (hasCheckedItems) {
+      // Create a new session
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
+      const newSessionId = SessionService.createSession(me, template.$jazz.id);
+      // Switch to the new session if callback is provided
+      if (onSwitchSession) {
+        onSwitchSession(newSessionId);
+      }
+    } else {
+      // Clear all selections in current session
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
+      SessionService.clearSessionState(me, template.$jazz.id, sessionId);
+    }
+  };
+
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = newItemName.trim();
@@ -155,16 +178,26 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
       selectedItemId,
     );
 
-    // Add item at calculated position
-    const newItemId = templateService.createItem(
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-      me,
-      template.$jazz.id,
-      trimmedName,
-      parentPath,
-      '',
-      sortOrder,
-    );
+    // Add item or category based on toggle
+    const newItemId =
+      newItemType === 'category'
+        ? templateService.createCategory(
+            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+            me,
+            template.$jazz.id,
+            trimmedName,
+            parentPath,
+            sortOrder,
+          )
+        : templateService.createItem(
+            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+            me,
+            template.$jazz.id,
+            trimmedName,
+            parentPath,
+            '',
+            sortOrder,
+          );
 
     setNewItemName('');
     // Select the newly created item for consecutive insertion
@@ -390,6 +423,16 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
               <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold text-neutral-900">{template.name}</h1>
                 <div className="flex items-center gap-2">
+                  {/* New Button */}
+                  {!showAddForm && (
+                    <button
+                      type="button"
+                      onClick={handleClearOrNew}
+                      className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                    >
+                      New
+                    </button>
+                  )}
                   {/* View Mode Toggle */}
                   {!showAddForm && (
                     <button
@@ -441,9 +484,33 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
                     type="text"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="Item name..."
+                    placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
                     className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
+                  <div className="flex items-center gap-3 rounded border border-neutral-300 bg-white px-3 py-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="itemType"
+                        value="item"
+                        checked={newItemType === 'item'}
+                        onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
+                        className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-neutral-700">Item</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="itemType"
+                        value="category"
+                        checked={newItemType === 'category'}
+                        onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
+                        className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-neutral-700">Category</span>
+                    </label>
+                  </div>
                   <button
                     type="submit"
                     className="flex items-center justify-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700"
