@@ -51,10 +51,10 @@ export function SessionHeader({
 
   return (
     <>
-      <div className="flex flex-col gap-3 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
+      <div className="flex flex-col gap-3 border-b border-neutral-100 px-3 py-3 sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl lg:text-3xl">
           {template.name}{' '}
-          <span className="text-neutral-500">
+          <span className="text-sm sm:text-base text-neutral-500">
             · {formatSessionDate(session.createdAt, showTime)}
           </span>
         </h1>
@@ -73,11 +73,11 @@ export function SessionHeader({
           <button
             type="button"
             onClick={onCycleViewMode}
-            className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
+            className="rounded-lg border border-neutral-300 bg-white p-3 hover:bg-neutral-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
             title={`Cycle view - ${viewModeLabel}`}
             aria-label={`Cycle view - ${viewModeLabel}`}
           >
-            <ViewModeIcon className="h-4 w-4" />
+            <ViewModeIcon className="h-5 w-5" />
           </button>
 
           {/* Add/Edit button */}
@@ -85,7 +85,7 @@ export function SessionHeader({
             <button
               type="button"
               onClick={onToggleAddForm}
-              className={`rounded-lg border px-2 py-2 transition-colors ${
+              className={`rounded-lg border px-3 py-3 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
                 showAddForm
                   ? 'border-green-500 bg-green-50 text-green-600'
                   : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50'
@@ -94,8 +94,8 @@ export function SessionHeader({
               aria-label="Toggle edit mode"
             >
               <div className="flex items-center gap-1">
-                <Plus className="h-4 w-4" />
-                <Pencil className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
+                <Pencil className="h-5 w-5" />
               </div>
             </button>
           )}
@@ -113,10 +113,10 @@ export function SessionHeader({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="rounded-lg border border-neutral-300 bg-white p-2 hover:bg-neutral-50"
+                className="rounded-lg border border-neutral-300 bg-white p-3 hover:bg-neutral-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="More options"
               >
-                <MoreVertical className="h-4 w-4 text-neutral-600" />
+                <MoreVertical className="h-5 w-5 text-neutral-600" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
