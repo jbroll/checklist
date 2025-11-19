@@ -12,11 +12,17 @@ interface UseViewModeParams {
 
 export function useViewMode({ template, session, sessionId, me }: UseViewModeParams) {
   const currentViewMode = session?.viewMode || 'zone-in-hierarchy';
+  console.log('[useViewMode] Current view mode:', currentViewMode, 'session.viewMode:', session?.viewMode);
 
   const cycleViewMode = () => {
-    if (!session || !me) return;
+    if (!session || !me) {
+      console.log('[useViewMode] Cannot cycle - session or me is null');
+      return;
+    }
     const current = session.viewMode || 'zone-in-hierarchy';
     const next = current === 'flat' ? 'zone-in-hierarchy' : 'flat';
+    console.log('[useViewMode] Cycling view mode from', current, 'to', next);
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.updateViewMode(me, template.$jazz.id, sessionId, next);
   };
 
