@@ -220,11 +220,11 @@ export const FolderNodeView = memo(function FolderNodeView({
                     onKeyDown={handleKeyDown}
                     onBlur={handleSaveEdit}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                    className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-base focus:outline-none focus:ring-2 focus:ring-green-500/20"
                   />
                 ) : (
                   <span
-                    className={`flex-1 min-w-0 truncate text-left text-sm ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+                    className={`flex-1 min-w-0 truncate text-left text-base ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
                   >
                     {name}
                   </span>
