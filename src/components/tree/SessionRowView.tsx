@@ -104,12 +104,12 @@ export const SessionRowView = memo(function SessionRowView({
           <ShoppingCart className="h-4 w-4" />
 
           {/* Relative date */}
-          <span className="flex-1 text-left text-sm text-neutral-500">
+          <span className="flex-1 text-left text-base text-neutral-500">
             {formatSessionDate(session.createdAt, showTime)}
           </span>
 
           {/* Session stats */}
-          <div className="flex items-center gap-1 text-sm">
+          <div className="flex items-center gap-1 text-base">
             <span className="text-green-600">{session.checkedCount || 0}</span>
             <span className="text-neutral-900">/</span>
             <span className="text-neutral-900">
