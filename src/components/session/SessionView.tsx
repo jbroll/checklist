@@ -9,7 +9,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Pencil, Plus, X } from 'lucide-react';
+import { CheckCircle2, ListChecks, Pencil, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
@@ -20,6 +20,10 @@ import * as templateService from '@/services/templateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
+import { FlatViewRenderer } from './FlatViewRenderer';
+import { useSessionItems } from './useSessionItems';
+import { useViewMode } from './useViewMode';
+import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
 
 interface SessionViewProps {
   template: InstanceOfSchema<typeof Template>;
@@ -34,6 +38,10 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const [newItemName, setNewItemName] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // Insertion point in ADDING mode
   const [currentItemId, setCurrentItemId] = useState<string | null>(null); // Current item in NORMAL mode
+  const [zoneExpanded, setZoneExpanded] = useState({
+    selected: true,
+    checked: false,
+  });
 
   // Configure sensors for drag detection
   const sensors = useSensors(
@@ -79,6 +87,23 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
   const items = template.items || [];
   const activeItems = items.filter((item) => item && !item.archived);
 
+  // Initialize category expanded state from session data
+  const categoryExpanded: Record<string, boolean> = session.categoryExpanded || {};
+
+  // Use hooks for partitioning items
+  const { selectedItems, checkedItems } = useSessionItems({
+    template,
+    session,
+  });
+
+  // Use hook for view mode management
+  const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
+    template,
+    session,
+    sessionId,
+    me,
+  });
+
   // Build hierarchical tree structure
   const itemTree = buildItemTree(activeItems);
 
@@ -104,6 +129,17 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     // Use the session service to toggle selected state
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
+  };
+
+  const handleToggleChecked = (itemId: string) => {
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
+  };
+
+  const handleToggleCategoryExpanded = (catKey: string) => {
+    if (!session || !me) return;
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -352,6 +388,20 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
               <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold text-neutral-900">{template.name}</h1>
                 <div className="flex items-center gap-2">
+                  {/* View Mode Toggle */}
+                  {!showAddForm && (
+                    <button
+                      type="button"
+                      onClick={cycleViewMode}
+                      className="flex items-center justify-center rounded bg-neutral-100 p-2 text-neutral-700 hover:bg-neutral-200"
+                      aria-label={`Switch to ${getViewModeLabel()} view`}
+                    >
+                      {(() => {
+                        const Icon = getViewModeIcon();
+                        return <Icon className="h-5 w-5" />;
+                      })()}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowAddForm(!showAddForm)}
@@ -404,17 +454,62 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
               </div>
             )}
 
-            {itemTree.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
-                <p>No items in this list yet.</p>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <div className="divide-y divide-neutral-100">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {/* Selected and Checked Zones - rendered based on view mode */}
+              {!showAddForm && currentViewMode === 'flat' && (
+                <FlatViewRenderer
+                  template={template}
+                  session={session}
+                  selectedItems={selectedItems}
+                  checkedItems={checkedItems}
+                  zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
+                  onToggleZoneExpanded={(zone) =>
+                    setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
+                  }
+                  onToggleSelected={handleToggleSelected}
+                  onToggleChecked={handleToggleChecked}
+                  showDeleteIcon={false}
+                  onDeleteItem={handleDeleteItem}
+                  interactionMode={{ mode: 'normal' }}
+                  onEnterEditMode={() => {}}
+                  onExitEditMode={() => {}}
+                  canEdit={() => false}
+                  canDrag={() => false}
+                />
+              )}
+
+              {/* Zone-in-hierarchy mode */}
+              {!showAddForm && currentViewMode === 'zone-in-hierarchy' && (
+                <ZoneInHierarchyRenderer
+                  template={template}
+                  session={session}
+                  selectedItems={selectedItems}
+                  checkedItems={checkedItems}
+                  categoryExpanded={categoryExpanded}
+                  onToggleCategoryExpanded={handleToggleCategoryExpanded}
+                  onToggleSelected={handleToggleSelected}
+                  onToggleChecked={handleToggleChecked}
+                  showDeleteIcon={false}
+                  onDeleteItem={handleDeleteItem}
+                  interactionMode={{ mode: 'normal' }}
+                  onEnterEditMode={() => {}}
+                  onExitEditMode={() => {}}
+                  canEdit={() => false}
+                  canDrag={() => false}
+                />
+              )}
+
+              {/* Available Zone (List) */}
+              {itemTree.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 bg-blue-50">
+                  <p>No items in this list yet.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-100 bg-blue-50 p-4">
                   {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
