@@ -13,6 +13,8 @@
     "prepare:deploy": "mkdir -p deploy-backend && cp -r backend/dist deploy-backend/ && cp backend/package.json backend/package-lock.json deploy-backend/ && cp backend/.env.example deploy-backend/.env.example 2>/dev/null || true",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js",
+    "generate-screenshots": "node scripts/generate-screenshots.js",
+    "generate-pwa-assets": "npm run generate-icons && npm run generate-screenshots",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",

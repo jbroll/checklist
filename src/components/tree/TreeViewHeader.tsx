@@ -79,7 +79,7 @@ export function TreeViewHeader({
   return (
     <header
       ref={effectiveSetDropRef}
-      className={`px-4 py-4 border-b transition-all ${
+      className={`px-3 py-3 sm:px-4 sm:py-4 border-b transition-all ${
         isDragging && effectiveIsOver
           ? 'bg-green-50 border-green-500 border-2 border-dashed'
           : isDragging
@@ -87,15 +87,15 @@ export function TreeViewHeader({
             : 'bg-white border-neutral-100'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onHeaderClick}
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-h-[44px]"
           aria-label="Return to main view"
         >
-          <BubbleListIcon className="h-8 w-8" size={32} />
-          <h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
+          <BubbleListIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
+          <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl lg:text-3xl">BubbleList</h1>
         </button>
         <TooltipProvider>
           <div className="flex items-center gap-2">

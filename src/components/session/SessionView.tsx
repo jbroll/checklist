@@ -415,20 +415,20 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="h-screen bg-neutral-50 p-6 flex flex-col">
-        <div className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
+      <div className="h-screen bg-neutral-50 p-3 sm:p-4 lg:p-6 flex flex-col">
+        <div className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0">
           <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
             {/* Header */}
-            <div className="border-b border-neutral-200 p-4">
-              <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold text-neutral-900">{template.name}</h1>
-                <div className="flex items-center gap-2">
+            <div className="border-b border-neutral-200 p-3 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl">{template.name}</h1>
+                <div className="flex items-center gap-2 flex-wrap">
                   {/* New Button */}
                   {!showAddForm && (
                     <button
                       type="button"
                       onClick={handleClearOrNew}
-                      className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                      className="rounded border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 min-h-[44px]"
                     >
                       New
                     </button>
@@ -438,7 +438,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     <button
                       type="button"
                       onClick={cycleViewMode}
-                      className="flex items-center justify-center rounded bg-neutral-100 p-2 text-neutral-700 hover:bg-neutral-200"
+                      className="flex items-center justify-center rounded bg-neutral-100 p-3 text-neutral-700 hover:bg-neutral-200 min-h-[44px] min-w-[44px]"
                       aria-label={`Switch to ${getViewModeLabel()} view`}
                     >
                       {(() => {
@@ -450,25 +450,25 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <button
                     type="button"
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 min-h-[44px]"
                     aria-label={showAddForm ? 'Cancel' : 'Add and edit items'}
                   >
                     {showAddForm ? (
                       <>
-                        <X className="h-4 w-4" />
+                        <X className="h-5 w-5" />
                         <span>Cancel</span>
                       </>
                     ) : (
                       <>
-                        <Plus className="h-4 w-4" />
-                        <Pencil className="h-4 w-4" />
+                        <Plus className="h-5 w-5" />
+                        <Pencil className="h-5 w-5" />
                       </>
                     )}
                   </button>
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
+                    className="rounded bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 min-h-[44px]"
                   >
                     Done
                   </button>
