@@ -5,7 +5,8 @@ import {
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -133,10 +134,18 @@ export function TreeView({
   }, [selectedFolder, showArchived, onHeaderClick]);
 
   // Configure sensors for drag detection
+  // Use MouseSensor + TouchSensor instead of PointerSensor for proper mobile support
+  // TouchSensor allows scrolling while supporting drag gestures
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 8, // Require 8px of movement before activating drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // 250ms hold before drag starts (allows scrolling)
+        tolerance: 8, // Allow 8px of movement during the delay
       },
     }),
   );
