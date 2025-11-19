@@ -9,7 +9,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { CheckCircle2, ListChecks, Pencil, Plus, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
@@ -52,6 +52,26 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
     }),
   );
 
+  // Get session early (before hooks)
+  const sessions = template.sessions || [];
+  const session = (sessions.find((s) => s?.id === sessionId) as SessionData | undefined) || null;
+
+  // Use hooks for partitioning items (must be before any returns)
+  const { selectedItems, checkedItems } = useSessionItems({
+    template,
+    session,
+  });
+
+  // Use hook for view mode management (must be before any returns)
+  const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
+    template,
+    session,
+    sessionId,
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    me,
+  });
+
+  // Early returns after all hooks
   if (!me || !me.root) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -62,10 +82,6 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
       </div>
     );
   }
-
-  // Get session
-  const sessions = template.sessions || [];
-  const session = sessions.find((s) => s?.id === sessionId) as SessionData | undefined;
 
   if (!session) {
     return (
@@ -89,20 +105,6 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
 
   // Initialize category expanded state from session data
   const categoryExpanded: Record<string, boolean> = session.categoryExpanded || {};
-
-  // Use hooks for partitioning items
-  const { selectedItems, checkedItems } = useSessionItems({
-    template,
-    session,
-  });
-
-  // Use hook for view mode management
-  const { currentViewMode, cycleViewMode, getViewModeLabel, getViewModeIcon } = useViewMode({
-    template,
-    session,
-    sessionId,
-    me,
-  });
 
   // Build hierarchical tree structure
   const itemTree = buildItemTree(activeItems);
@@ -440,7 +442,6 @@ export function SessionView({ template, sessionId, onBack }: SessionViewProps) {
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                     placeholder="Item name..."
-                    autoFocus
                     className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                   <button

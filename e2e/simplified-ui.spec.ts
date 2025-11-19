@@ -183,13 +183,13 @@ test.describe('Simplified UI - Session View', () => {
   });
 
   test('should display session header with controls', async ({ page }) => {
-    // Verify header elements - simplified UI has icon buttons, not labeled buttons
+    // Verify header elements - simplified SessionView has view mode toggle and add/edit buttons
     await expect(page.getByRole('heading', { name: /shopping list/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /clear/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
-    // View cycle button and Add/Edit button are present but have aria-labels with "Cycle view" and "Toggle edit mode"
-    await expect(page.getByRole('button', { name: /cycle view/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /toggle edit mode/i })).toBeVisible();
+    // View mode toggle button has aria-label like "Switch to Flat view" or "Switch to Zones in Categories view"
+    await expect(page.getByRole('button', { name: /switch to/i })).toBeVisible();
+    // Add/Edit button has aria-label "Add and edit items" when not in adding mode
+    await expect(page.getByRole('button', { name: /add and edit items/i })).toBeVisible();
   });
 
   test('should display items', async ({ page }) => {
