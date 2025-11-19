@@ -8,6 +8,9 @@ dotenv.config();
 // Create SQLite database instance
 const sqliteDb = new Database('./auth.db');
 
+// Export database for sharing functionality
+export { sqliteDb };
+
 // Create BetterAuth instance with SQLite
 export const auth = betterAuth({
   // Use better-sqlite3 directly (recommended pattern)

@@ -2,9 +2,16 @@ import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { auth } from './auth.js';
+import { auth, sqliteDb } from './auth.js';
+import { initDb } from './db.js';
+import { initAgent } from './agent.js';
+import { setupSharingRoutes } from './shares.js';
 
 dotenv.config();
+
+// Initialize database and agent
+initDb(sqliteDb);
+initAgent();
 
 // Express server
 const app = express();
@@ -52,6 +59,9 @@ app.all('/api/auth/*', toNodeHandler(auth));
 // Parse JSON bodies (AFTER Better Auth handler)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Sharing routes
+setupSharingRoutes(app, sqliteDb);
 
 // Health check
 app.get('/health', (req, res) => {
