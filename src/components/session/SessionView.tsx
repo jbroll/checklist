@@ -439,7 +439,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     <button
                       type="button"
                       onClick={handleClearOrNew}
-                      className="rounded border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 min-h-[44px]"
+                      className="rounded border border-neutral-300 bg-white px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-50 min-h-[44px]"
                     >
                       New
                     </button>
@@ -461,7 +461,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <button
                     type="button"
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 min-h-[44px]"
+                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
                     aria-label={showAddForm ? 'Cancel' : 'Add and edit items'}
                   >
                     {showAddForm ? (
@@ -479,7 +479,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 min-h-[44px]"
+                    className="rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
                   >
                     Done
                   </button>
@@ -496,7 +496,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                     placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
-                    className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="flex-1 rounded border border-neutral-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                   <div className="flex items-center gap-3 rounded border border-neutral-300 bg-white px-3 py-2">
                     <label className="flex items-center gap-1.5 cursor-pointer">
@@ -508,7 +508,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                         onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
                         className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-neutral-700">Item</span>
+                      <span className="text-base text-neutral-700">Item</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -519,7 +519,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                         onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
                         className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-neutral-700">Category</span>
+                      <span className="text-base text-neutral-700">Category</span>
                     </label>
                   </div>
                   <button
