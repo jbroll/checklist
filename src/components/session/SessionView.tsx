@@ -4,7 +4,8 @@ import {
   type DragEndEvent,
   DragOverlay,
   type DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -46,10 +47,18 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   });
 
   // Configure sensors for drag detection
+  // Use MouseSensor + TouchSensor instead of PointerSensor for proper mobile support
+  // TouchSensor allows scrolling while supporting drag gestures
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8, // Require 8px of movement before activating drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // 250ms hold before drag starts (allows scrolling)
+        tolerance: 8, // Allow 8px of movement during the delay
       },
     }),
   );
@@ -421,7 +430,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
             {/* Header */}
             <div className="border-b border-neutral-200 p-3 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl">{template.name}</h1>
+                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl">
+                  {template.name}
+                </h1>
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* New Button */}
                   {!showAddForm && (
