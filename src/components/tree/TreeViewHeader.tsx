@@ -6,6 +6,7 @@ import {
   FolderPlus,
   LayoutGrid,
   ListPlus,
+  LogIn,
   LogOut,
   MoreVertical,
   Pencil,
@@ -38,6 +39,8 @@ interface TreeViewHeaderProps {
   onImport: () => void;
   onToggleShowArchived?: () => void;
   onSignOut?: () => void;
+  onSignIn?: () => void;
+  isAuthenticated?: boolean;
   onSwitchView?: () => void;
   switchViewLabel?: string;
 }
@@ -63,6 +66,8 @@ export function TreeViewHeader({
   onImport,
   onToggleShowArchived,
   onSignOut,
+  onSignIn,
+  isAuthenticated = false,
   onSwitchView,
   switchViewLabel = 'Basic View',
 }: TreeViewHeaderProps) {
@@ -207,13 +212,22 @@ export function TreeViewHeader({
                     </DropdownMenuCheckboxItem>
                   </>
                 )}
-                {onSignOut && (
+                {(onSignOut || onSignIn) && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
+                    {isAuthenticated && onSignOut ? (
+                      <DropdownMenuItem onClick={onSignOut}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    ) : (
+                      onSignIn && (
+                        <DropdownMenuItem onClick={onSignIn}>
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Sign In
+                        </DropdownMenuItem>
+                      )
+                    )}
                   </>
                 )}
               </DropdownMenuContent>

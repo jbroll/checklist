@@ -15,8 +15,8 @@ export function JazzProvider({ children }: { children: ReactNode }) {
     <JazzReactProvider
       sync={{
         peer: syncPeer,
-        // Only sync when user is authenticated (prevents anonymous account pollution)
-        when: 'signedUp',
+        // Always sync to enable local mode (anonymous accounts)
+        when: 'always',
       }}
       AccountSchema={Account}
       onAnonymousAccountDiscarded={async (anonymousAccount) => {

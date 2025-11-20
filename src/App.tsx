@@ -10,7 +10,7 @@ const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: mo
 
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
-  import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector }))
+  import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
 );
 
 /**

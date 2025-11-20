@@ -45,6 +45,8 @@ interface TreeViewProps {
   onExport?: () => void;
   onImport?: () => void;
   onSignOut?: () => void;
+  onSignIn?: () => void;
+  isAuthenticated?: boolean;
   onSwitchToSimplified?: () => void;
   switchViewLabel?: string;
   // Session display control
@@ -97,6 +99,8 @@ export function TreeView({
   onExport,
   onImport,
   onSignOut,
+  onSignIn,
+  isAuthenticated,
   onSwitchToSimplified,
   switchViewLabel,
   sessionsEnabled = true,
@@ -465,6 +469,8 @@ export function TreeView({
           onImport={onImport || (() => {})}
           onToggleShowArchived={() => setShowArchived(!showArchived)}
           onSignOut={onSignOut}
+          onSignIn={onSignIn}
+          isAuthenticated={isAuthenticated}
           onSwitchView={onSwitchToSimplified}
           switchViewLabel={switchViewLabel}
         />

@@ -14,6 +14,8 @@ interface SimplifiedAppProps {
   account: InstanceOfSchema<typeof Account>;
   onViewModeChange: (mode: ViewMode) => void;
   onSignOut?: () => void;
+  onSignIn?: () => void;
+  isAuthenticated: boolean;
 }
 
 /**
@@ -21,7 +23,13 @@ interface SimplifiedAppProps {
  * This is a completely separate component tree from the classic Dashboard/TreeView
  * Manages navigation between template selection and session view
  */
-export function SimplifiedApp({ account, onViewModeChange, onSignOut }: SimplifiedAppProps) {
+export function SimplifiedApp({
+  account,
+  onViewModeChange,
+  onSignOut,
+  onSignIn,
+  isAuthenticated,
+}: SimplifiedAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -192,6 +200,8 @@ export function SimplifiedApp({ account, onViewModeChange, onSignOut }: Simplifi
           onExport={() => setShowExportDialog(true)}
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
+          onSignIn={onSignIn}
+          isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('classic')}
           switchViewLabel="Advanced View"
           sessionsEnabled={false}

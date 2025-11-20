@@ -16,11 +16,19 @@ import { TemplateItemEditor } from './TemplateItemEditor';
 
 interface AppContainerProps {
   onSignOut?: () => void;
+  onSignIn?: () => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  isAuthenticated: boolean;
 }
 
-export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppContainerProps) {
+export function AppContainer({
+  onSignOut,
+  onSignIn,
+  viewMode,
+  onViewModeChange,
+  isAuthenticated,
+}: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
@@ -91,6 +99,8 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
         account={me as any}
         onViewModeChange={onViewModeChange}
         onSignOut={onSignOut}
+        onSignIn={onSignIn}
+        isAuthenticated={isAuthenticated}
       />
     );
   }
@@ -228,6 +238,8 @@ export function AppContainer({ onSignOut, viewMode, onViewModeChange }: AppConta
           onExport={() => setShowExportDialog(true)}
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
+          onSignIn={onSignIn}
+          isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
           switchViewLabel="Basic View"
           sessionsEnabled={true}

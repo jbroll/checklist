@@ -19,17 +19,40 @@ if (process.env.VITE_JAZZ_API_KEY && !process.env.JAZZ_API_KEY) {
   process.env.JAZZ_API_KEY = process.env.VITE_JAZZ_API_KEY;
 }
 
-// Initialize database and agent
+// Initialize database
 initDb(sqliteDb);
-initAgent();
+
+// Initialize agent asynchronously in the background (non-blocking)
+// Agent is optional - server will work without it, sharing features will be disabled
+initAgent().catch((error) => {
+  console.error('Failed to start Jazz agent:', error);
+  console.log('Server will continue running, but sharing features will be unavailable');
+});
 
 // Express server
 const app = express();
 
 // CORS configuration (MUST come before Better Auth handler)
+// Allow multiple localhost ports for development
+const allowedOrigins = [
+  'http://localhost:8765',
+  'http://localhost:8766',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.some(allowed => origin.startsWith(allowed as string))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   }),

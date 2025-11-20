@@ -11,7 +11,8 @@ import { LoadingScreen } from './ui/loading';
 export type ViewMode = 'classic' | 'simplified';
 
 export function AuthGate() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { me, logOut } = useAccount(Account);
   const { showAlert } = useDialog();
 
@@ -28,6 +29,30 @@ export function AuthGate() {
 
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
+
+  // Check authentication status with BetterAuth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const session = await betterAuthClient.getSession();
+        const hasValidSession = !!session?.data?.user;
+        setIsAuthenticated(hasValidSession);
+
+        // If no valid session, clear the signed-out flag (user was logged out on server)
+        if (!hasValidSession) {
+          localStorage.setItem('user-signed-out', 'true');
+        }
+      } catch (error) {
+        console.error('[AuthGate] Failed to check session:', error);
+        setIsAuthenticated(false);
+        localStorage.setItem('user-signed-out', 'true');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Debug: Log account state changes
   useEffect(() => {
@@ -81,7 +106,6 @@ export function AuthGate() {
     // Clear the signed-out flag when user signs in
     localStorage.removeItem('user-signed-out');
 
-    setIsLoading(true);
     try {
       await betterAuthClient.signIn.social({
         provider: 'google',
@@ -93,8 +117,6 @@ export function AuthGate() {
         title: 'Sign-in Failed',
         message: 'Sign-in failed.',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -125,17 +147,32 @@ export function AuthGate() {
     }
   };
 
-  // If user explicitly signed out, show sign-in screen even if still authenticated
-  if (userSignedOut || !me) {
-    // If no account, show loading briefly
-    if (!me && !userSignedOut) {
-      return <LoadingScreen />;
-    }
-    // Otherwise show sign-in screen (will be shown below)
-  } else if (me) {
-    // User is authenticated and hasn't signed out, show the app
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // If authenticated with BetterAuth and has Jazz account, show the app with sign out
+  if (isAuthenticated && me && !userSignedOut) {
     return (
-      <AppContainer onSignOut={handleSignOut} viewMode={viewMode} onViewModeChange={setViewMode} />
+      <AppContainer
+        onSignOut={handleSignOut}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isAuthenticated={true}
+      />
+    );
+  }
+
+  // Allow local mode - show app without authentication (Jazz creates anonymous account)
+  if (me) {
+    return (
+      <AppContainer
+        onSignIn={handleGoogleSignIn}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        isAuthenticated={false}
+      />
     );
   }
 
