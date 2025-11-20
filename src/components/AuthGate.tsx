@@ -29,6 +29,33 @@ export function AuthGate() {
   // Check if user explicitly signed out
   const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
 
+  // Debug: Log account state changes
+  useEffect(() => {
+    if (me) {
+      const logAccountState = async () => {
+        try {
+          const accountId = me.$jazz.id;
+          const hasRoot = me.$jazz.has('root');
+
+          // Load root to get folder count
+          const { root } = await me.$jazz.ensureLoaded({ resolve: { root: { folders: true } } });
+          const foldersCount = root?.folders?.length || 0;
+
+          console.log('[AuthGate] Account state:', {
+            accountId,
+            hasRoot,
+            foldersCount,
+            profileName: me.profile?.name,
+          });
+        } catch (error) {
+          console.error('[AuthGate] Error loading account state:', error);
+        }
+      };
+
+      logAccountState();
+    }
+  }, [me]);
+
   // Update profile name from BetterAuth session when Jazz account becomes available
   useEffect(() => {
     const syncProfileName = async () => {

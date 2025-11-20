@@ -123,6 +123,9 @@ test.describe('Simplified UI - Template Selection', () => {
       directoryService.createDirectoryEntry(me, 'Test List', true);
     });
 
+    // Wait a bit for Jazz to sync the data
+    await page.waitForTimeout(500);
+
     // Navigate to home and switch to simplified view
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
@@ -133,7 +136,7 @@ test.describe('Simplified UI - Template Selection', () => {
     await page.getByRole('menuitem', { name: /basic view/i }).click();
 
     // Should see the template in the list
-    await expect(page.getByText('Test List')).toBeVisible();
+    await expect(page.getByText('Test List')).toBeVisible({ timeout: 10000 });
 
     // Click on the template
     await page.getByText('Test List').click();

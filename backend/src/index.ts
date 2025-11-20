@@ -35,6 +35,7 @@ app.use((req, res, next) => {
       cookie: req.headers.cookie || '(none)',
       origin: req.headers.origin,
       referer: req.headers.referer,
+      'x-jazz-auth': req.headers['x-jazz-auth'] || '(none)',
     });
   }
 

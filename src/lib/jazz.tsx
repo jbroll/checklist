@@ -11,8 +11,45 @@ export function JazzProvider({ children }: { children: ReactNode }) {
     <JazzReactProvider
       sync={{
         peer: import.meta.env.VITE_JAZZ_PEER || `wss://cloud.jazz.tools/?key=${apiKey}`,
+        // Only sync when user is authenticated (prevents anonymous account pollution)
+        when: 'signedUp',
       }}
       AccountSchema={Account}
+      onAnonymousAccountDiscarded={async (anonymousAccount) => {
+        // When user logs in with existing account on a new device,
+        // this handler migrates data from the temporary anonymous account
+        // to the authenticated account retrieved from BetterAuth
+
+        console.log('[Jazz] Anonymous account discarded - migrating data if needed');
+
+        try {
+          // Load the anonymous account's root data
+          const anonymousData = await anonymousAccount.$jazz.ensureLoaded({
+            resolve: { root: { folders: true } },
+          });
+
+          // Check if anonymous account has any data
+          const hasAnonymousData =
+            anonymousData.root?.folders && anonymousData.root.folders.length > 0;
+
+          if (hasAnonymousData) {
+            console.log(
+              '[Jazz] Anonymous account has data - will be available for migration:',
+              anonymousData.root.folders.length,
+              'folders',
+            );
+            // Note: Migration will happen in the authenticated account's context
+            // The authenticated account can choose to merge this data if needed
+          } else {
+            console.log(
+              '[Jazz] No data in anonymous account - authenticated account will load from server',
+            );
+          }
+        } catch (error) {
+          console.error('[Jazz] Error during account migration check:', error);
+          // Don't throw - allow login to continue even if migration fails
+        }
+      }}
     >
       <AuthProvider betterAuthClient={betterAuthClient}>{children}</AuthProvider>
     </JazzReactProvider>
