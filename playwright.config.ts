@@ -7,6 +7,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
 
+  // Global setup to start mock OAuth server
+  globalSetup: './playwright-global-setup.ts',
+
   // Run tests in files in parallel
   fullyParallel: true,
 
@@ -25,7 +28,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:8765',
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -45,7 +48,7 @@ export default defineConfig({
   // Run your local dev server before starting the tests
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    url: 'http://localhost:8765',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

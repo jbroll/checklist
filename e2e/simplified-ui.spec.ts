@@ -169,6 +169,9 @@ test.describe('Simplified UI - Session View', () => {
       templateService.createItem(me, template.$jazz.id, 'Eggs', 'item');
     });
 
+    // Wait a bit for Jazz to sync the data
+    await page.waitForTimeout(500);
+
     // Navigate to simplified view
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
@@ -177,6 +180,9 @@ test.describe('Simplified UI - Session View', () => {
 
     await page.getByLabel('More options').first().click();
     await page.getByRole('menuitem', { name: /basic view/i }).click();
+
+    // Wait for the template to appear before clicking
+    await expect(page.getByText('Shopping List')).toBeVisible({ timeout: 10000 });
 
     // Click on the template
     await page.getByText('Shopping List').click();
@@ -219,6 +225,9 @@ test.describe('Simplified UI - Data Synchronization', () => {
       const me = (window as any).testExports.account;
       directoryService.createDirectoryEntry(me, 'Shared List', true);
     });
+
+    // Wait a bit for Jazz to sync the data
+    await page.waitForTimeout(500);
 
     // Go to simplified view
     await page.goto('/');

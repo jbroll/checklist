@@ -119,10 +119,20 @@ export default defineConfig({
     },
   },
   server: {
+    port: 8765,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        // Ensure custom headers are forwarded (critical for Jazz BetterAuth plugin)
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Forward the x-jazz-auth header required by Jazz BetterAuth plugin
+            if (req.headers['x-jazz-auth']) {
+              proxyReq.setHeader('x-jazz-auth', req.headers['x-jazz-auth']);
+            }
+          });
+        },
       },
     },
   },
