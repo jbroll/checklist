@@ -5,12 +5,16 @@ import { Account } from '../schemas';
 import { betterAuthClient } from './auth-client';
 
 const apiKey = import.meta.env.VITE_JAZZ_API_KEY;
+const jazzPeer = import.meta.env.VITE_JAZZ_PEER || 'wss://cloud.jazz.tools';
 
 export function JazzProvider({ children }: { children: ReactNode }) {
+  // Append API key to sync server URL if provided
+  const syncPeer = apiKey ? `${jazzPeer}/?key=${apiKey}` : jazzPeer;
+
   return (
     <JazzReactProvider
       sync={{
-        peer: import.meta.env.VITE_JAZZ_PEER || `wss://cloud.jazz.tools/?key=${apiKey}`,
+        peer: syncPeer,
         // Only sync when user is authenticated (prevents anonymous account pollution)
         when: 'signedUp',
       }}

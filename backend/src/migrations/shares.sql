@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS share_invites (
   accepted_at INTEGER
 );
 
-CREATE INDEX idx_expires ON share_invites(expires_at);
+CREATE INDEX IF NOT EXISTS idx_expires ON share_invites(expires_at);

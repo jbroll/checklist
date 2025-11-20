@@ -1,4 +1,3 @@
-import { JazzInspector } from 'jazz-tools/inspector';
 import { XCircle } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { AuthGate } from './components/AuthGate';
@@ -8,6 +7,11 @@ import { JazzProvider } from './lib/jazz';
 
 // Lazy load TestPage only in development to avoid bundling it in production
 const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
+
+// Lazy load Jazz Inspector to avoid bundling it unnecessarily
+const JazzInspector = lazy(() =>
+  import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector }))
+);
 
 /**
  * Conditional Jazz Inspector wrapper
@@ -21,7 +25,11 @@ function ConditionalJazzInspector() {
     return null;
   }
 
-  return <JazzInspector />;
+  return (
+    <Suspense fallback={null}>
+      <JazzInspector />
+    </Suspense>
+  );
 }
 
 function App() {

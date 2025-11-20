@@ -2,12 +2,22 @@ import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'node:path';
 import { auth, sqliteDb } from './auth.js';
 import { initDb } from './db.js';
 import { initAgent } from './agent.js';
 import { setupSharingRoutes } from './shares.js';
 
+// Load environment variables from both root .env and backend .env
+// Root .env first (shared config like JAZZ_API_KEY)
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+// Backend .env second (backend-specific overrides)
 dotenv.config();
+
+// Alias VITE_JAZZ_API_KEY to JAZZ_API_KEY for backend use
+if (process.env.VITE_JAZZ_API_KEY && !process.env.JAZZ_API_KEY) {
+  process.env.JAZZ_API_KEY = process.env.VITE_JAZZ_API_KEY;
+}
 
 // Initialize database and agent
 initDb(sqliteDb);
@@ -55,7 +65,7 @@ app.use((req, res, next) => {
 });
 
 // BetterAuth handler - MUST come before express.json()
-app.all('/api/auth/*', toNodeHandler(auth));
+app.use('/api/auth', toNodeHandler(auth));
 
 // Parse JSON bodies (AFTER Better Auth handler)
 app.use(express.json());
