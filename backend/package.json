@@ -13,8 +13,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "jazz-tools": "^0.18.33",
-    "kysely": "^0.28.8"
+    "jazz-tools": "^0.18.33"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
