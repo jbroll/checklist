@@ -12,6 +12,10 @@ import { LoadingScreen } from './ui/loading';
 export type ViewMode = 'classic' | 'simplified';
 
 export function AuthGate() {
+  // Check if we're returning from OAuth callback
+  const isOAuthCallback =
+    window.location.search.includes('code=') && window.location.search.includes('state=');
+
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
@@ -36,6 +40,12 @@ export function AuthGate() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // If returning from OAuth, add a small delay to let BetterAuth process the callback
+        if (isOAuthCallback) {
+          console.log('[AuthGate] OAuth callback detected - waiting for session...');
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+
         const session = await betterAuthClient.getSession();
         const hasValidSession = !!session?.data?.user;
         setIsAuthenticated(hasValidSession);
@@ -65,7 +75,7 @@ export function AuthGate() {
     };
 
     checkAuth();
-  }, []);
+  }, [isOAuthCallback]);
 
   // Re-check authentication when Jazz account changes
   // This handles the case where Jazz switches from anonymous to authenticated account
@@ -76,6 +86,10 @@ export function AuthGate() {
           const session = await betterAuthClient.getSession();
           const hasValidSession = !!session?.data?.user;
           if (hasValidSession !== isAuthenticated) {
+            console.log('[AuthGate] Auth state changed:', {
+              hasValidSession,
+              wasAuthenticated: isAuthenticated,
+            });
             setIsAuthenticated(hasValidSession);
             if (hasValidSession) {
               localStorage.setItem('had-session', 'true');
