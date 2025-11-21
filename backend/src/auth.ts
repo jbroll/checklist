@@ -2,11 +2,27 @@ import { betterAuth } from 'better-auth';
 import { jazzPlugin } from 'jazz-tools/better-auth/auth/server';
 import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 dotenv.config();
 
 // Create SQLite database instance
-const sqliteDb = new Database('./auth.db');
+// Store in data directory to persist across deployments
+// Use AUTH_DB_PATH environment variable if set, otherwise default to ./data/auth.db
+const dbPath = process.env.AUTH_DB_PATH || (
+  process.env.NODE_ENV === 'production'
+    ? './data/auth.db'  // Production: /var/lib/bubblelist-api/data/auth.db
+    : './auth.db'       // Development: ./auth.db
+)
+
+// Ensure directory exists
+const dir = dirname(dbPath);
+if (dir !== '.') {
+  mkdirSync(dir, { recursive: true });
+}
+
+const sqliteDb = new Database(dbPath);
 
 // Export database for sharing functionality
 export { sqliteDb };
@@ -34,15 +50,18 @@ export const auth = betterAuth({
 
   // Advanced configuration
   advanced: {
-    // Use secure cookies (false for localhost HTTP)
-    useSecureCookies: false,
-    // Disable CSRF check for development
-    disableCSRFCheck: true,
+    // Use secure cookies in production (HTTPS), disable for local development (HTTP)
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    // Disable CSRF check for development only
+    disableCSRFCheck: process.env.NODE_ENV !== 'production',
     // Configure cookie attributes for OAuth redirects
     defaultCookieAttributes: {
-      sameSite: "lax", // Lax for development (None requires HTTPS)
+      // Use 'lax' for same-domain OAuth (frontend and backend on same domain)
+      // 'none' is only needed for cross-domain setups
+      sameSite: "lax",
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
+      path: "/",  // Ensure cookies are accessible across the whole domain
     },
   },
 
