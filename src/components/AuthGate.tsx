@@ -4,6 +4,7 @@ import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import { Account } from '@/schemas';
+import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
 import { Button } from './ui/button';
 import { LoadingScreen } from './ui/loading';
@@ -13,6 +14,7 @@ export type ViewMode = 'classic' | 'simplified';
 export function AuthGate() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { me, logOut } = useAccount(Account);
   const { showAlert } = useDialog();
 
@@ -34,18 +36,36 @@ export function AuthGate() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log(
+          '[AuthGate] Checking session with baseURL:',
+          import.meta.env.PROD ? `${import.meta.env.VITE_AUTH_URL}/api/auth` : '(dev proxy)',
+        );
+        console.log('[AuthGate] Document cookies:', document.cookie);
         const session = await betterAuthClient.getSession();
+        console.log('[AuthGate] Session response:', session);
         const hasValidSession = !!session?.data?.user;
+        console.log('[AuthGate] Has valid session:', hasValidSession, 'User:', session?.data?.user);
         setIsAuthenticated(hasValidSession);
 
-        // If no valid session, clear the signed-out flag (user was logged out on server)
+        // Only update signed-out flag if we DON'T have a valid session
+        // This prevents marking user as signed-out after successful OAuth
         if (!hasValidSession) {
-          localStorage.setItem('user-signed-out', 'true');
+          // Don't set signed-out flag if we've never tried to sign in
+          // This allows local/anonymous mode to work
+          const hadPreviousSession = localStorage.getItem('had-session') === 'true';
+          if (hadPreviousSession) {
+            localStorage.setItem('user-signed-out', 'true');
+          }
+        } else {
+          // Mark that we've had a session, and clear signed-out flag
+          localStorage.setItem('had-session', 'true');
+          localStorage.removeItem('user-signed-out');
         }
       } catch (error) {
         console.error('[AuthGate] Failed to check session:', error);
         setIsAuthenticated(false);
-        localStorage.setItem('user-signed-out', 'true');
+        // Don't automatically set signed-out flag on error
+        // This could be a temporary network issue
       } finally {
         setIsLoading(false);
       }
@@ -102,22 +122,25 @@ export function AuthGate() {
     syncProfileName();
   }, [me?.profile]); // Only run when profile becomes available, not on name changes
 
-  const handleGoogleSignIn = async () => {
+  const handleShowSignInDialog = () => {
+    console.log('[AuthGate] Sign-in clicked - showing provider selection dialog');
+    setShowSignInDialog(true);
+  };
+
+  const handleGoogleSignIn = () => {
+    console.log('[AuthGate] handleGoogleSignIn called!');
+
     // Clear the signed-out flag when user signs in
     localStorage.removeItem('user-signed-out');
 
-    try {
-      await betterAuthClient.signIn.social({
-        provider: 'google',
-        callbackURL: `${window.location.origin}/`,
-      });
-      // Note: Profile name will be synced via useEffect after redirect
-    } catch {
-      await showAlert({
-        title: 'Sign-in Failed',
-        message: 'Sign-in failed.',
-      });
-    }
+    // Use BetterAuth client API - this should automatically redirect to Google
+    // No await or .then() - the redirect happens synchronously
+    betterAuthClient.signIn.social({
+      provider: 'google',
+      callbackURL: '/',
+    });
+
+    console.log('[AuthGate] signIn.social() called - redirect should happen automatically');
   };
 
   const handleAppleSignIn = async () => {
@@ -167,12 +190,20 @@ export function AuthGate() {
   // Allow local mode - show app without authentication (Jazz creates anonymous account)
   if (me) {
     return (
-      <AppContainer
-        onSignIn={handleGoogleSignIn}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        isAuthenticated={false}
-      />
+      <>
+        <SignInDialog
+          open={showSignInDialog}
+          onOpenChange={setShowSignInDialog}
+          onGoogleSignIn={handleGoogleSignIn}
+          onAppleSignIn={handleAppleSignIn}
+        />
+        <AppContainer
+          onSignIn={handleShowSignInDialog}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          isAuthenticated={false}
+        />
+      </>
     );
   }
 

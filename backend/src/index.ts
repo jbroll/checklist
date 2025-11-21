@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { auth, sqliteDb } from './auth.js';
 import { initDb } from './db.js';
 import { initAgent } from './agent.js';
@@ -19,7 +22,15 @@ if (process.env.VITE_JAZZ_API_KEY && !process.env.JAZZ_API_KEY) {
   process.env.JAZZ_API_KEY = process.env.VITE_JAZZ_API_KEY;
 }
 
-// Initialize database
+// Initialize database - ensure BetterAuth tables exist first
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// BetterAuth will auto-create tables on first request
+// No manual table creation needed - BetterAuth handles migrations
+console.log('[startup] BetterAuth will auto-create tables on first use');
+
+// Initialize sharing tables
 initDb(sqliteDb);
 
 // Initialize agent asynchronously in the background (non-blocking)

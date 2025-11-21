@@ -7,7 +7,7 @@ import { addToFolderGroup, validateSenderAccess } from './agent.js';
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
   app.post('/api/shares/invite', async (req, res) => {
-    const session = await auth.api.getSession({ headers: req.headers });
+    const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
     const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
@@ -44,7 +44,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
   app.get('/api/shares/validate/:token', (req, res) => {
     const invite = db.prepare(`
       SELECT * FROM share_invites WHERE token = ? AND accepted_at IS NULL
-    `).get(req.params.token);
+    `).get(req.params.token) as any;
 
     if (!invite) return res.json({ valid: false, error: 'not_found' });
 
@@ -61,14 +61,14 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
   // Accept invite
   app.post('/api/shares/accept', async (req, res) => {
-    const session = await auth.api.getSession({ headers: req.headers });
+    const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
     const { token } = req.body;
 
     const invite = db.prepare(`
       SELECT * FROM share_invites WHERE token = ? AND accepted_at IS NULL
-    `).get(token);
+    `).get(token) as any;
 
     if (!invite) return res.status(400).json({ error: 'invalid_token' });
 
