@@ -61,4 +61,4 @@ export function JazzProvider({ children }: { children: ReactNode }) {
 }
 
 // Re-export hooks from jazz-tools/react
-export { useAcceptInvite, useAccount, useCoState } from 'jazz-tools/react';
+export { useAcceptInvite, useAccount, useCoState, useIsAuthenticated } from 'jazz-tools/react';
