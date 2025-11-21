@@ -29,14 +29,17 @@ export function AuthGate() {
     localStorage.setItem('view-mode', viewMode);
   }, [viewMode]);
 
-  // Check if user explicitly signed out
-  const userSignedOut = localStorage.getItem('user-signed-out') === 'true';
+  // Track if user explicitly signed out (reactive state)
+  const [userSignedOut, setUserSignedOut] = useState(
+    () => localStorage.getItem('user-signed-out') === 'true',
+  );
 
   // Track authentication state for localStorage flags
   useEffect(() => {
     if (isAuthenticated) {
       localStorage.setItem('had-session', 'true');
       localStorage.removeItem('user-signed-out');
+      setUserSignedOut(false); // Update reactive state
     }
   }, [isAuthenticated]);
 
@@ -115,6 +118,7 @@ export function AuthGate() {
   const handleSignOut = async () => {
     // Set a flag to prevent auto-login after sign out
     localStorage.setItem('user-signed-out', 'true');
+    setUserSignedOut(true); // Update reactive state
 
     // Sign out from BetterAuth first (clear server session)
     try {
