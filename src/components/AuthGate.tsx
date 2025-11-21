@@ -40,29 +40,51 @@ export function AuthGate() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // If returning from OAuth, add a small delay to let BetterAuth process the callback
+        // If returning from OAuth, add a delay to let BetterAuth process the callback
+        // and wait for Jazz AuthProvider to get the session
         if (isOAuthCallback) {
           console.log('[AuthGate] OAuth callback detected - waiting for session...');
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
+          // Try multiple times with increasing delays to ensure session is ready
+          let attempts = 0;
+          const maxAttempts = 5;
+          let session = null;
 
-        const session = await betterAuthClient.getSession();
-        const hasValidSession = !!session?.data?.user;
-        setIsAuthenticated(hasValidSession);
+          while (attempts < maxAttempts && !session?.data?.user) {
+            await new Promise((resolve) => setTimeout(resolve, attempts === 0 ? 300 : 500));
+            session = await betterAuthClient.getSession();
+            attempts++;
+            console.log(
+              `[AuthGate] Session check attempt ${attempts}:`,
+              session?.data?.user ? 'Found' : 'Not found',
+            );
+          }
 
-        // Only update signed-out flag if we DON'T have a valid session
-        // This prevents marking user as signed-out after successful OAuth
-        if (!hasValidSession) {
-          // Don't set signed-out flag if we've never tried to sign in
-          // This allows local/anonymous mode to work
-          const hadPreviousSession = localStorage.getItem('had-session') === 'true';
-          if (hadPreviousSession) {
-            localStorage.setItem('user-signed-out', 'true');
+          const hasValidSession = !!session?.data?.user;
+          setIsAuthenticated(hasValidSession);
+
+          if (hasValidSession) {
+            localStorage.setItem('had-session', 'true');
+            localStorage.removeItem('user-signed-out');
           }
         } else {
-          // Mark that we've had a session, and clear signed-out flag
-          localStorage.setItem('had-session', 'true');
-          localStorage.removeItem('user-signed-out');
+          const session = await betterAuthClient.getSession();
+          const hasValidSession = !!session?.data?.user;
+          setIsAuthenticated(hasValidSession);
+
+          // Only update signed-out flag if we DON'T have a valid session
+          // This prevents marking user as signed-out after successful OAuth
+          if (!hasValidSession) {
+            // Don't set signed-out flag if we've never tried to sign in
+            // This allows local/anonymous mode to work
+            const hadPreviousSession = localStorage.getItem('had-session') === 'true';
+            if (hadPreviousSession) {
+              localStorage.setItem('user-signed-out', 'true');
+            }
+          } else {
+            // Mark that we've had a session, and clear signed-out flag
+            localStorage.setItem('had-session', 'true');
+            localStorage.removeItem('user-signed-out');
+          }
         }
       } catch (error) {
         console.error('[AuthGate] Failed to check session:', error);
