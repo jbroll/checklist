@@ -5,17 +5,6 @@ import { jazzPluginClient } from 'jazz-tools/better-auth/auth/client';
 const authURL = import.meta.env.VITE_AUTH_URL || '';
 const baseURL = authURL ? `${authURL}/api/auth` : '';
 
-// Debug: Log what's embedded at build time
-if (import.meta.env.DEV) {
-  console.log('[auth-client] Development mode - using Vite proxy');
-} else {
-  console.log('[auth-client] Production mode:', {
-    authURL,
-    baseURL,
-    MODE: import.meta.env.MODE,
-  });
-}
-
 export const betterAuthClient = createAuthClient({
   baseURL,
   plugins: [jazzPluginClient()],

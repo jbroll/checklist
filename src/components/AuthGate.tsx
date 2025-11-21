@@ -36,15 +36,8 @@ export function AuthGate() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log(
-          '[AuthGate] Checking session with baseURL:',
-          import.meta.env.PROD ? `${import.meta.env.VITE_AUTH_URL}/api/auth` : '(dev proxy)',
-        );
-        console.log('[AuthGate] Document cookies:', document.cookie);
         const session = await betterAuthClient.getSession();
-        console.log('[AuthGate] Session response:', session);
         const hasValidSession = !!session?.data?.user;
-        console.log('[AuthGate] Has valid session:', hasValidSession, 'User:', session?.data?.user);
         setIsAuthenticated(hasValidSession);
 
         // Only update signed-out flag if we DON'T have a valid session
@@ -123,24 +116,18 @@ export function AuthGate() {
   }, [me?.profile]); // Only run when profile becomes available, not on name changes
 
   const handleShowSignInDialog = () => {
-    console.log('[AuthGate] Sign-in clicked - showing provider selection dialog');
     setShowSignInDialog(true);
   };
 
   const handleGoogleSignIn = () => {
-    console.log('[AuthGate] handleGoogleSignIn called!');
-
     // Clear the signed-out flag when user signs in
     localStorage.removeItem('user-signed-out');
 
-    // Use BetterAuth client API - this should automatically redirect to Google
-    // No await or .then() - the redirect happens synchronously
+    // Use BetterAuth client API - this redirects to Google OAuth
     betterAuthClient.signIn.social({
       provider: 'google',
       callbackURL: '/',
     });
-
-    console.log('[AuthGate] signIn.social() called - redirect should happen automatically');
   };
 
   const handleAppleSignIn = async () => {

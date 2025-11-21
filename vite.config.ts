@@ -32,8 +32,6 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Disable service worker temporarily for debugging
-      injectRegister: false,
       registerType: 'autoUpdate',
       includeAssets: ['bubblelist.svg', 'apple-touch-icon.png'],
       manifest: {
