@@ -43,18 +43,20 @@ export function AuthGate() {
         // If returning from OAuth, add a delay to let BetterAuth process the callback
         // and wait for Jazz AuthProvider to get the session
         if (isOAuthCallback) {
-          console.log('[AuthGate] OAuth callback detected - waiting for session...');
-          // Try multiple times with increasing delays to ensure session is ready
+          console.log('[AuthGate] OAuth callback detected - waiting for BetterAuth to process...');
+          // BetterAuth needs time to process the OAuth callback
+          // Wait longer initially to let the callback complete
           let attempts = 0;
-          const maxAttempts = 5;
+          const maxAttempts = 10;
           let session = null;
 
           while (attempts < maxAttempts && !session?.data?.user) {
-            await new Promise((resolve) => setTimeout(resolve, attempts === 0 ? 300 : 500));
+            // Start with 1 second delay, then 500ms for retries
+            await new Promise((resolve) => setTimeout(resolve, attempts === 0 ? 1000 : 500));
             session = await betterAuthClient.getSession();
             attempts++;
             console.log(
-              `[AuthGate] Session check attempt ${attempts}:`,
+              `[AuthGate] Session check attempt ${attempts}/${maxAttempts}:`,
               session?.data?.user ? 'Found' : 'Not found',
             );
           }
@@ -65,6 +67,12 @@ export function AuthGate() {
           if (hasValidSession) {
             localStorage.setItem('had-session', 'true');
             localStorage.removeItem('user-signed-out');
+          } else {
+            console.warn(
+              '[AuthGate] OAuth callback completed but no session found after',
+              maxAttempts,
+              'attempts',
+            );
           }
         } else {
           const session = await betterAuthClient.getSession();
@@ -184,9 +192,10 @@ export function AuthGate() {
     localStorage.removeItem('user-signed-out');
 
     // Use BetterAuth client API - this redirects to Google OAuth
+    // Don't specify callbackURL - let BetterAuth handle the OAuth callback automatically
+    // at /api/auth/callback/google, then it will redirect back to the app root
     betterAuthClient.signIn.social({
       provider: 'google',
-      callbackURL: '/',
     });
   };
 
