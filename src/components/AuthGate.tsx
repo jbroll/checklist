@@ -67,6 +67,30 @@ export function AuthGate() {
     checkAuth();
   }, []);
 
+  // Re-check authentication when Jazz account changes
+  // This handles the case where Jazz switches from anonymous to authenticated account
+  useEffect(() => {
+    if (me) {
+      const recheckAuth = async () => {
+        try {
+          const session = await betterAuthClient.getSession();
+          const hasValidSession = !!session?.data?.user;
+          if (hasValidSession !== isAuthenticated) {
+            setIsAuthenticated(hasValidSession);
+            if (hasValidSession) {
+              localStorage.setItem('had-session', 'true');
+              localStorage.removeItem('user-signed-out');
+            }
+          }
+        } catch (error) {
+          console.error('[AuthGate] Failed to recheck session:', error);
+        }
+      };
+
+      recheckAuth();
+    }
+  }, [me, isAuthenticated]);
+
   // Debug: Log account state changes
   useEffect(() => {
     if (me) {

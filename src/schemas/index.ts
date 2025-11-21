@@ -22,6 +22,13 @@ export const ListsRoot = co.map({
 /**
  * Account Schema
  * Each user has a root containing their folder tree.
+ *
+ * Migration pattern follows Jazz best practices:
+ * 1. Initialize root if never set (creates placeholder for new accounts)
+ * 2. Load from cloud (replaces placeholder if cloud data exists)
+ * 3. Fix any broken structures in the loaded root
+ *
+ * This prevents data loss when logging in from private/incognito tabs.
  */
 export const Account = co
   .account({
@@ -29,16 +36,21 @@ export const Account = co
     profile: co.profile(),
   })
   .withMigration(async (account) => {
-    // Initialize root for new accounts
+    // Step 1: Initialize root if never set (for truly new accounts)
+    // This creates a local placeholder that will be replaced if cloud data exists
     if (!account.$jazz.has('root')) {
       const folders = co.list(FolderNode).create([], { owner: account });
       account.$jazz.set('root', ListsRoot.create({ folders }, { owner: account }));
-      return;
     }
 
-    // Fix existing accounts with broken root
-    const { root } = await account.$jazz.ensureLoaded({ resolve: { root: {} } });
-    if (root && !root.$jazz.has('folders')) {
+    // Step 2: Load from cloud - this will replace the placeholder if cloud data exists
+    // ensureLoaded() updates the account reference to point to cloud version when available
+    const { root } = await account.$jazz.ensureLoaded({
+      resolve: { root: { folders: true } },
+    });
+
+    // Step 3: Fix structure if needed (for broken existing accounts)
+    if (!root.$jazz.has('folders')) {
       const folders = co.list(FolderNode).create([], { owner: account });
       root.$jazz.set('folders', folders);
     }

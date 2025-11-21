@@ -32,8 +32,9 @@ export const auth = betterAuth({
   // Use better-sqlite3 directly (recommended pattern)
   database: sqliteDb,
 
-  // Base URL for OAuth callbacks - must match frontend URL for same-origin cookies
-  baseURL: process.env.BASE_URL || 'http://localhost:5173',
+  // Base URL for OAuth callbacks - must be the full path to the auth API
+  // This tells BetterAuth where OAuth providers should redirect back to
+  baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}/api/auth` : 'http://localhost:5173/api/auth',
 
   // Trust the frontend origin
   trustedOrigins: [
