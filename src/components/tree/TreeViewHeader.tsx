@@ -183,15 +183,6 @@ export function TreeViewHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {onSwitchView && (
-                  <>
-                    <DropdownMenuItem onClick={onSwitchView}>
-                      <LayoutGrid className="mr-2 h-4 w-4" />
-                      {switchViewLabel}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
                 <DropdownMenuItem onClick={onImport}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import
@@ -215,6 +206,12 @@ export function TreeViewHeader({
                 {(onSignOut || onSignIn) && (
                   <>
                     <DropdownMenuSeparator />
+                    {onSwitchView && (
+                      <DropdownMenuItem onClick={onSwitchView}>
+                        <LayoutGrid className="mr-2 h-4 w-4" />
+                        {switchViewLabel}
+                      </DropdownMenuItem>
+                    )}
                     {isAuthenticated && onSignOut ? (
                       <DropdownMenuItem onClick={onSignOut}>
                         <LogOut className="mr-2 h-4 w-4" />
