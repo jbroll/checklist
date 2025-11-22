@@ -75,21 +75,25 @@ app.use((req, res, next) => {
   console.log(`[${timestamp}] ${req.method} ${req.url}`);
 
   if (req.url.includes('/auth/')) {
-    console.log('  Headers:', {
+    console.log('  Auth request details:', {
+      url: req.url,
+      method: req.method,
       cookie: req.headers.cookie || '(none)',
       origin: req.headers.origin,
       referer: req.headers.referer,
       'x-jazz-auth': req.headers['x-jazz-auth'] || '(none)',
+      query: req.query,
     });
   }
 
-  // Log response
+  // Log response for all auth endpoints
   const originalSend = res.send;
   res.send = function(data) {
-    if (req.url.includes('/auth/sign-out')) {
-      console.log('  Sign-out response:', {
+    if (req.url.includes('/auth/')) {
+      console.log(`  Auth response for ${req.url}:`, {
         statusCode: res.statusCode,
         headers: res.getHeaders(),
+        bodyPreview: typeof data === 'string' ? data.substring(0, 200) : '(binary data)',
       });
     }
     return originalSend.call(this, data);

@@ -13,9 +13,6 @@ export function AuthGate() {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { me, logOut } = useAccount(Account);
   const { showAlert } = useDialog();
-
-  // Use Jazz's built-in authentication state detection (recommended by Jazz docs)
-  // This automatically syncs with BetterAuth plugin and handles OAuth callbacks
   const isAuthenticated = useIsAuthenticated();
 
   // View mode state - defaults to "classic" to preserve existing experience
@@ -29,22 +26,23 @@ export function AuthGate() {
     localStorage.setItem('view-mode', viewMode);
   }, [viewMode]);
 
-  // Track if user explicitly signed out (reactive state)
+  // Track if user explicitly signed out
   const [userSignedOut, setUserSignedOut] = useState(
     () => localStorage.getItem('user-signed-out') === 'true',
   );
 
-  // Track authentication state for localStorage flags
   useEffect(() => {
+    console.log('[AuthGate] isAuthenticated changed:', isAuthenticated);
     if (isAuthenticated) {
-      localStorage.setItem('had-session', 'true');
+      console.log('[AuthGate] User is authenticated - clearing signed-out flag');
       localStorage.removeItem('user-signed-out');
-      setUserSignedOut(false); // Update reactive state
+      setUserSignedOut(false);
     }
   }, [isAuthenticated]);
 
   // Debug: Log account state changes
   useEffect(() => {
+    console.log('[AuthGate] Account (me) changed:', me?.$jazz.id);
     if (me) {
       const logAccountState = async () => {
         try {
@@ -71,26 +69,21 @@ export function AuthGate() {
     }
   }, [me, isAuthenticated]);
 
-  // Update profile name from BetterAuth session when Jazz account becomes available
-  useEffect(() => {
-    const syncProfileName = async () => {
-      // Only sync if we have a Jazz account with a profile but no name set
-      if (me?.profile && !me.profile.name) {
-        try {
-          // Get the current BetterAuth session to access user data
-          const session = await betterAuthClient.getSession();
+  // Wait for Jazz to finish swapping from anonymous to authenticated account
+  // When isAuthenticated becomes true, Jazz may still be on the anonymous account
+  // Compute accountReady directly from current state instead of storing in useState
+  const accountId = me?.$jazz.id;
+  const profileName = me?.profile?.name;
 
-          if (session?.data?.user?.name) {
-            me.profile.$jazz.set('name', session.data.user.name);
-          }
-        } catch {
-          // Silently ignore profile sync errors
-        }
-      }
-    };
+  // Compute accountReady synchronously - no state, no effects
+  const accountReady = isAuthenticated && profileName && profileName !== 'Anonymous user';
 
-    syncProfileName();
-  }, [me?.profile]); // Only run when profile becomes available, not on name changes
+  console.log('[AuthGate] accountReady computed:', {
+    isAuthenticated,
+    accountId,
+    profileName,
+    accountReady,
+  });
 
   const handleShowSignInDialog = () => {
     setShowSignInDialog(true);
@@ -99,10 +92,9 @@ export function AuthGate() {
   const handleGoogleSignIn = () => {
     // Clear the signed-out flag when user signs in
     localStorage.removeItem('user-signed-out');
+    setUserSignedOut(false);
 
-    // Use BetterAuth client API - this redirects to Google OAuth
-    // Don't specify callbackURL - let BetterAuth handle the OAuth callback automatically
-    // at /api/auth/callback/google, then it will redirect back to the app root
+    // BetterAuth handles OAuth redirect automatically
     betterAuthClient.signIn.social({
       provider: 'google',
     });
@@ -138,13 +130,30 @@ export function AuthGate() {
 
   // Wait for Jazz account to be initialized
   if (!me) {
+    console.log('[AuthGate] Rendering: LoadingScreen (no me)');
+    return <LoadingScreen />;
+  }
+
+  // Show loading when authenticated but account swap isn't complete yet
+  // This happens during OAuth callback when Jazz is swapping from anonymous to authenticated account
+  if (isAuthenticated && !accountReady) {
+    console.log('[AuthGate] Rendering: LoadingScreen (authenticated but not ready)', {
+      accountId,
+      profileName,
+    });
     return <LoadingScreen />;
   }
 
   // If authenticated with BetterAuth and has Jazz account, show the app with sign out
   if (isAuthenticated && !userSignedOut) {
+    console.log('[AuthGate] Rendering: Authenticated UI', {
+      accountId,
+      profileName,
+      userSignedOut,
+    });
     return (
       <AppContainer
+        key={`auth-${accountId}`}
         onSignOut={handleSignOut}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -154,6 +163,12 @@ export function AuthGate() {
   }
 
   // Allow local mode - show app without authentication (Jazz creates anonymous account)
+  console.log('[AuthGate] Rendering: Anonymous mode', {
+    accountId,
+    profileName,
+    isAuthenticated,
+    userSignedOut,
+  });
   return (
     <>
       <SignInDialog
@@ -163,6 +178,7 @@ export function AuthGate() {
         onAppleSignIn={handleAppleSignIn}
       />
       <AppContainer
+        key={`anon-${accountId}`}
         onSignIn={handleShowSignInDialog}
         viewMode={viewMode}
         onViewModeChange={setViewMode}

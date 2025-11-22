@@ -87,6 +87,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // CRITICAL: Exclude /api/* routes from navigation fallback to prevent service worker
+        // from intercepting OAuth callbacks and auth endpoints
+        navigateFallbackDenylist: [/^\/api\//],
         // Jazz.tools handles data sync, so we use a simple runtime caching strategy
         runtimeCaching: [
           {
