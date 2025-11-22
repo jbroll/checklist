@@ -206,6 +206,7 @@ export function SimplifiedApp({
           switchViewLabel="Advanced View"
           sessionsEnabled={false}
           hideArchivedToggle={true}
+          hideArchiveAction={true}
         />
 
         <AddFolderDialog

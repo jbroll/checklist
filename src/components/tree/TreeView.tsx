@@ -52,6 +52,7 @@ interface TreeViewProps {
   // Session display control
   sessionsEnabled?: boolean;
   hideArchivedToggle?: boolean;
+  hideArchiveAction?: boolean;
 }
 
 /**
@@ -105,6 +106,7 @@ export function TreeView({
   switchViewLabel,
   sessionsEnabled = true,
   hideArchivedToggle = false,
+  hideArchiveAction = false,
 }: TreeViewProps) {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -358,6 +360,7 @@ export function TreeView({
           onDelete={(sessionId) => handleDeleteSession(folder, sessionId)}
           onExport={(sessionId) => onExportSession?.(folder.$jazz.id, sessionId)}
           allSessions={activeSessions}
+          hideArchiveAction={hideArchiveAction}
         />
       ));
     }
@@ -385,6 +388,7 @@ export function TreeView({
         onUseTemplate={isTemplate ? () => onUseTemplate?.(folder.$jazz.id) : undefined}
         onEditTemplate={isTemplate ? () => onEditTemplate?.(folder.$jazz.id) : undefined}
         account={account}
+        hideArchiveAction={hideArchiveAction}
       >
         {/* Render children only when expanded */}
         {folder.expanded && (

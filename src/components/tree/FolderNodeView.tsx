@@ -44,6 +44,7 @@ interface FolderNodeViewProps {
   onEditTemplate?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
+  hideArchiveAction?: boolean;
 }
 
 export const FolderNodeView = memo(function FolderNodeView({
@@ -60,6 +61,7 @@ export const FolderNodeView = memo(function FolderNodeView({
   onEditTemplate: _onEditTemplate,
   children,
   account,
+  hideArchiveAction = false,
 }: FolderNodeViewProps) {
   const isTemplate = folderService.isTemplateFolder(folder);
   const isOrganizational = folderService.isOrganizationalFolder(folder);
@@ -283,21 +285,25 @@ export const FolderNodeView = memo(function FolderNodeView({
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleToggleArchived}>
-                    {folder.archived ? (
-                      <>
-                        <ArchiveX className="mr-2 h-4 w-4" />
-                        Restore
-                      </>
-                    ) : (
-                      <>
-                        <Archive className="mr-2 h-4 w-4" />
-                        Archive
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {!hideArchiveAction && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleToggleArchived}>
+                        {folder.archived ? (
+                          <>
+                            <ArchiveX className="mr-2 h-4 w-4" />
+                            Restore
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleDelete} className="text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

@@ -21,6 +21,7 @@ interface SessionRowViewProps {
   onArchive?: (sessionId: string) => void;
   onExport?: (sessionId: string) => void;
   allSessions: readonly (SessionData | null)[];
+  hideArchiveAction?: boolean;
 }
 
 export const SessionRowView = memo(function SessionRowView({
@@ -32,6 +33,7 @@ export const SessionRowView = memo(function SessionRowView({
   onArchive,
   onExport,
   allSessions,
+  hideArchiveAction = false,
 }: SessionRowViewProps) {
   const [showMenu, setShowMenu] = useState(false);
   const { showConfirm } = useDialog();
@@ -141,21 +143,25 @@ export const SessionRowView = memo(function SessionRowView({
                 Export
               </DropdownMenuItem>
             )}
-            {onExport && <DropdownMenuSeparator />}
-            <DropdownMenuItem onClick={handleToggleArchived}>
-              {session.archived ? (
-                <>
-                  <ArchiveX className="mr-2 h-4 w-4" />
-                  Restore
-                </>
-              ) : (
-                <>
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive
-                </>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {onExport && !hideArchiveAction && <DropdownMenuSeparator />}
+            {!hideArchiveAction && (
+              <>
+                <DropdownMenuItem onClick={handleToggleArchived}>
+                  {session.archived ? (
+                    <>
+                      <ArchiveX className="mr-2 h-4 w-4" />
+                      Restore
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
