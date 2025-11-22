@@ -38,14 +38,9 @@ export function AuthGate() {
     }
   }, [isAuthenticated]);
 
-  // Wait for Jazz to finish swapping from anonymous to authenticated account
-  // When isAuthenticated becomes true, Jazz may still be on the anonymous account
-  // Compute accountReady directly from current state instead of storing in useState
+  // Get account ID for keying the AppContainer
+  // The key forces a remount when switching between accounts
   const accountId = me?.$jazz.id;
-  const profileName = me?.profile?.name;
-
-  // Compute accountReady synchronously - no state, no effects
-  const accountReady = isAuthenticated && profileName && profileName !== 'Anonymous user';
 
   const handleShowSignInDialog = () => {
     setShowSignInDialog(true);
@@ -92,12 +87,6 @@ export function AuthGate() {
 
   // Wait for Jazz account to be initialized
   if (!me) {
-    return <LoadingScreen />;
-  }
-
-  // Show loading when authenticated but account swap isn't complete yet
-  // This happens during OAuth callback when Jazz is swapping from anonymous to authenticated account
-  if (isAuthenticated && !accountReady) {
     return <LoadingScreen />;
   }
 
