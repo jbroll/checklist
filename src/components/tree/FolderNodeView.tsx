@@ -10,12 +10,10 @@ import {
   Share2,
   Trash2,
   Upload,
-  Users,
 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
-import { ManageAccessDialog } from '@/components/sharing/ManageAccessDialog';
 import { ShareDialog } from '@/components/sharing/ShareDialog';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
@@ -75,7 +73,6 @@ export const FolderNodeView = memo(function FolderNodeView({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showManageAccessDialog, setShowManageAccessDialog] = useState(false);
   const { showConfirm } = useDialog();
 
   // Draggable setup - all folders are draggable
@@ -268,10 +265,6 @@ export const FolderNodeView = memo(function FolderNodeView({
                     <Share2 className="mr-2 h-4 w-4" />
                     Share
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowManageAccessDialog(true)}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Access
-                  </DropdownMenuItem>
                   {isTemplate && (
                     <>
                       <DropdownMenuSeparator />
@@ -340,13 +333,6 @@ export const FolderNodeView = memo(function FolderNodeView({
 
       {/* Share Dialog - for all folders */}
       <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} folder={folder} />
-
-      {/* Manage Access Dialog - for all folders */}
-      <ManageAccessDialog
-        open={showManageAccessDialog}
-        onOpenChange={setShowManageAccessDialog}
-        folder={folder}
-      />
     </div>
   );
 });
