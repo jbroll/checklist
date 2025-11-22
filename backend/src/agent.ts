@@ -150,3 +150,84 @@ export async function addToFolderGroup(
     throw error;
   }
 }
+
+/**
+ * Get all members of a folder's access group
+ *
+ * Returns list of members with their roles
+ */
+export async function getFolderGroupMembers(
+  folderCoValueId: string
+): Promise<Array<{ id: string; role: string }>> {
+  if (!worker) {
+    throw new Error('Jazz agent not initialized - cannot get group members');
+  }
+
+  try {
+    // Load the folder CoValue as a generic CoMap
+    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+      loadAs: worker,
+    });
+
+    if (!folder) {
+      throw new Error(`Folder ${folderCoValueId} not found`);
+    }
+
+    // Get all members of the group
+    const ownerGroup = folder.$jazz.owner;
+    const members = ownerGroup.members;
+
+    // Return member IDs and roles
+    return members.map((member: { id: string; role: string }) => ({
+      id: member.id,
+      role: member.role,
+    }));
+  } catch (error) {
+    console.error('Error getting folder group members:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a user from a folder's access group
+ */
+export async function removeFromFolderGroup(
+  folderCoValueId: string,
+  userJazzAccountId: string
+): Promise<void> {
+  if (!worker) {
+    throw new Error('Jazz agent not initialized - cannot remove member from group');
+  }
+
+  try {
+    // Load the folder CoValue as a generic CoMap
+    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+      loadAs: worker,
+    });
+
+    if (!folder) {
+      throw new Error(`Folder ${folderCoValueId} not found`);
+    }
+
+    // Load user's account
+    const userAccount = await Account.load(userJazzAccountId as ID<Account>, {
+      loadAs: worker,
+    });
+
+    if (!userAccount) {
+      throw new Error(`User account ${userJazzAccountId} not found`);
+    }
+
+    // Remove member from folder's owner group
+    const ownerGroup = folder.$jazz.owner;
+    ownerGroup.removeMember(userAccount);
+
+    console.log(`✅ Removed ${userJazzAccountId} from ${folderCoValueId}`);
+
+    // Wait for sync
+    await ownerGroup.$jazz.waitForSync();
+  } catch (error) {
+    console.error('Error removing member from folder group:', error);
+    throw error;
+  }
+}

@@ -8,6 +8,13 @@ import { JazzProvider } from './lib/jazz';
 // Lazy load TestPage only in development to avoid bundling it in production
 const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
 
+// Lazy load InviteAcceptPage for sharing invites
+const InviteAcceptPage = lazy(() =>
+  import('./components/sharing/InviteAcceptPage').then((module) => ({
+    default: module.InviteAcceptPage,
+  })),
+);
+
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
   import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
@@ -33,8 +40,11 @@ function ConditionalJazzInspector() {
 }
 
 function App() {
-  // Check if we're on the test page route
-  const isTestPage = window.location.pathname === '/test';
+  // Parse current route
+  const pathname = window.location.pathname;
+  const isTestPage = pathname === '/test';
+  const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
+  const inviteToken = inviteMatch ? inviteMatch[1] : null;
 
   // Block test page in production
   if (isTestPage && import.meta.env.PROD) {
@@ -67,7 +77,11 @@ function App() {
           Skip to main content
         </a>
         <div className="min-h-screen bg-neutral-50">
-          {isTestPage ? (
+          {inviteToken ? (
+            <Suspense fallback={<LoadingScreen />}>
+              <InviteAcceptPage token={inviteToken} />
+            </Suspense>
+          ) : isTestPage ? (
             <Suspense fallback={<LoadingScreen />}>
               <TestPage />
             </Suspense>

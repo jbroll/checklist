@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
-import { addToFolderGroup, validateSenderAccess } from './agent.js';
+import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
@@ -126,6 +126,129 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     } catch (error) {
       console.error('Failed to add to group:', error);
       res.status(500).json({ error: 'failed_to_grant_access' });
+    }
+  });
+
+  // Get pending invites for a folder
+  app.get('/api/shares/folders/:folderId/invites', async (req, res) => {
+    const session = await auth.api.getSession({ headers: req.headers as any });
+    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+
+    const { folderId } = req.params;
+
+    try {
+      const invites = db.prepare(`
+        SELECT token, recipient_email, permission, created_at, expires_at
+        FROM share_invites
+        WHERE folder_covalue_id = ? AND accepted_at IS NULL AND (expires_at > ? OR expires_at IS NULL)
+        ORDER BY created_at DESC
+      `).all(folderId, Math.floor(Date.now() / 1000)) as any[];
+
+      res.json({
+        invites: invites.map(invite => ({
+          token: invite.token,
+          recipientEmail: invite.recipient_email,
+          permission: invite.permission,
+          createdAt: new Date(invite.created_at * 1000).toISOString(),
+          expiresAt: invite.expires_at ? new Date(invite.expires_at * 1000).toISOString() : null,
+        }))
+      });
+    } catch (error) {
+      console.error('Failed to get invites:', error);
+      res.status(500).json({ error: 'failed_to_get_invites' });
+    }
+  });
+
+  // Revoke an invite
+  app.delete('/api/shares/invites/:token', async (req, res) => {
+    const session = await auth.api.getSession({ headers: req.headers as any });
+    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+
+    const { token } = req.params;
+
+    try {
+      const invite = db.prepare(`
+        SELECT * FROM share_invites WHERE token = ?
+      `).get(token) as any;
+
+      if (!invite) {
+        return res.status(404).json({ error: 'not_found' });
+      }
+
+      // Only the sender can revoke their own invites
+      if (invite.sender_email !== session.user.email) {
+        return res.status(403).json({ error: 'forbidden' });
+      }
+
+      // Delete the invite (soft delete would be better, but this works)
+      db.prepare(`DELETE FROM share_invites WHERE token = ?`).run(token);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to revoke invite:', error);
+      res.status(500).json({ error: 'failed_to_revoke' });
+    }
+  });
+
+  // Get collaborators for a folder
+  app.get('/api/shares/folders/:folderId/collaborators', async (req, res) => {
+    const session = await auth.api.getSession({ headers: req.headers as any });
+    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+
+    const { folderId } = req.params;
+
+    try {
+      // Get Jazz group members
+      const members = await getFolderGroupMembers(folderId);
+
+      // Map Jazz account IDs to user info from BetterAuth
+      const collaborators = [];
+
+      for (const member of members) {
+        // Query BetterAuth database for user with this Jazz account ID
+        const user = db.prepare(`
+          SELECT id, email, name FROM user WHERE accountID = ?
+        `).get(member.id) as any;
+
+        if (user) {
+          // Map Jazz role back to permission level
+          const permission =
+            member.role === 'reader' ? 'view' :
+            member.role === 'writer' ? 'edit' : 'admin';
+
+          collaborators.push({
+            userId: user.id,
+            accountId: member.id,
+            email: user.email,
+            name: user.name || user.email,
+            permission,
+            role: member.role,
+          });
+        }
+      }
+
+      res.json({ collaborators });
+    } catch (error) {
+      console.error('Failed to get collaborators:', error);
+      res.status(500).json({ error: 'failed_to_get_collaborators' });
+    }
+  });
+
+  // Remove a collaborator
+  app.delete('/api/shares/folders/:folderId/collaborators/:accountId', async (req, res) => {
+    const session = await auth.api.getSession({ headers: req.headers as any });
+    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+
+    const { folderId, accountId } = req.params;
+
+    try {
+      // Remove from Jazz group
+      await removeFromFolderGroup(folderId, accountId);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove collaborator:', error);
+      res.status(500).json({ error: 'failed_to_remove_collaborator' });
     }
   });
 }
