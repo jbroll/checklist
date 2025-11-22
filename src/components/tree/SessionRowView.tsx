@@ -128,7 +128,7 @@ export const SessionRowView = memo(function SessionRowView({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="invisible rounded p-1 hover:bg-neutral-200 group-hover:visible"
+              className="rounded p-1 hover:bg-neutral-200"
               aria-label="More options"
             >
               <MoreVertical className="h-4 w-4 text-neutral-600" />

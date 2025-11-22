@@ -250,7 +250,7 @@ export const FolderNodeView = memo(function FolderNodeView({
                   <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
-                    className="invisible shrink-0 rounded p-1 hover:bg-neutral-200 group-hover:visible"
+                    className="shrink-0 rounded p-1 hover:bg-neutral-200"
                     aria-label="More options"
                   >
                     <MoreVertical className="h-4 w-4 text-neutral-600" />
