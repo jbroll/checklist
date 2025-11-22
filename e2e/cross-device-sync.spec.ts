@@ -96,30 +96,14 @@ test.describe('Cross-Device Sync', () => {
 
     await page.reload();
 
-    // Set up console listener
-    const consoleLogs: string[] = [];
-    page.on('console', (msg) => {
-      const text = msg.text();
-      if (
-        text.includes('[AuthGate]') ||
-        text.includes('[Jazz]') ||
-        text.includes('Account state')
-      ) {
-        consoleLogs.push(text);
-      }
-    });
-
     // Wait for page to load
     await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
       timeout: 10000,
     });
 
-    // Wait for account initialization
-    await page.waitForTimeout(3000);
-
-    // Should see account state logged (anonymous account initially)
-    console.log('Console logs:', consoleLogs);
-    expect(consoleLogs.length).toBeGreaterThan(0);
+    // Should be able to use the app in anonymous mode
+    const newFolderButton = page.getByRole('button', { name: /new folder/i });
+    await expect(newFolderButton).toBeVisible();
   });
 
   test('should create folder and verify it exists', async ({ page }) => {

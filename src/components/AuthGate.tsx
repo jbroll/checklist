@@ -32,42 +32,11 @@ export function AuthGate() {
   );
 
   useEffect(() => {
-    console.log('[AuthGate] isAuthenticated changed:', isAuthenticated);
     if (isAuthenticated) {
-      console.log('[AuthGate] User is authenticated - clearing signed-out flag');
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
     }
   }, [isAuthenticated]);
-
-  // Debug: Log account state changes
-  useEffect(() => {
-    console.log('[AuthGate] Account (me) changed:', me?.$jazz.id);
-    if (me) {
-      const logAccountState = async () => {
-        try {
-          const accountId = me.$jazz.id;
-          const hasRoot = me.$jazz.has('root');
-
-          // Load root to get folder count
-          const { root } = await me.$jazz.ensureLoaded({ resolve: { root: { folders: true } } });
-          const foldersCount = root?.folders?.length || 0;
-
-          console.log('[AuthGate] Account state:', {
-            accountId,
-            hasRoot,
-            foldersCount,
-            profileName: me.profile?.name,
-            isAuthenticated,
-          });
-        } catch (error) {
-          console.error('[AuthGate] Error loading account state:', error);
-        }
-      };
-
-      logAccountState();
-    }
-  }, [me, isAuthenticated]);
 
   // Wait for Jazz to finish swapping from anonymous to authenticated account
   // When isAuthenticated becomes true, Jazz may still be on the anonymous account
@@ -77,13 +46,6 @@ export function AuthGate() {
 
   // Compute accountReady synchronously - no state, no effects
   const accountReady = isAuthenticated && profileName && profileName !== 'Anonymous user';
-
-  console.log('[AuthGate] accountReady computed:', {
-    isAuthenticated,
-    accountId,
-    profileName,
-    accountReady,
-  });
 
   const handleShowSignInDialog = () => {
     setShowSignInDialog(true);
@@ -130,27 +92,17 @@ export function AuthGate() {
 
   // Wait for Jazz account to be initialized
   if (!me) {
-    console.log('[AuthGate] Rendering: LoadingScreen (no me)');
     return <LoadingScreen />;
   }
 
   // Show loading when authenticated but account swap isn't complete yet
   // This happens during OAuth callback when Jazz is swapping from anonymous to authenticated account
   if (isAuthenticated && !accountReady) {
-    console.log('[AuthGate] Rendering: LoadingScreen (authenticated but not ready)', {
-      accountId,
-      profileName,
-    });
     return <LoadingScreen />;
   }
 
   // If authenticated with BetterAuth and has Jazz account, show the app with sign out
   if (isAuthenticated && !userSignedOut) {
-    console.log('[AuthGate] Rendering: Authenticated UI', {
-      accountId,
-      profileName,
-      userSignedOut,
-    });
     return (
       <AppContainer
         key={`auth-${accountId}`}
@@ -163,12 +115,6 @@ export function AuthGate() {
   }
 
   // Allow local mode - show app without authentication (Jazz creates anonymous account)
-  console.log('[AuthGate] Rendering: Anonymous mode', {
-    accountId,
-    profileName,
-    isAuthenticated,
-    userSignedOut,
-  });
   return (
     <>
       <SignInDialog
