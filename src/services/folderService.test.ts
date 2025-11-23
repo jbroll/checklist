@@ -39,8 +39,17 @@ vi.mock('jazz-tools', async () => {
         return {
           $jazz: { id, owner: options.owner },
           members,
-          addMember: vi.fn((account: any, role: string) => {
-            members.push({ id: account.$jazz?.id || account.id, role });
+          addMember: vi.fn((memberOrGroup: any, role?: string) => {
+            // Handle both Account and Group members
+            const memberId = memberOrGroup.$jazz?.id || memberOrGroup.id;
+            members.push({ id: memberId, role: role || 'member' });
+          }),
+          removeMember: vi.fn((memberOrGroup: any) => {
+            const memberId = memberOrGroup.$jazz?.id || memberOrGroup.id;
+            const index = members.findIndex((m: any) => m.id === memberId);
+            if (index !== -1) {
+              members.splice(index, 1);
+            }
           }),
         };
       }),
@@ -85,6 +94,7 @@ let folderIdCounter = 0;
 
   folder.$jazz = {
     id,
+    owner: options?.owner, // Include the owner (Group) from options
     set: (key: string, value: any) => {
       folder[key] = value;
     },

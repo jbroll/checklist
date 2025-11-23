@@ -42,6 +42,13 @@ export function createFolder(
   // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
   folderGroup.addMember(account, 'admin');
 
+  // Add parent's group as member for cascading permissions
+  // Anyone with access to parent will also have access to this folder
+  if (parent) {
+    const parentGroup = parent.$jazz.owner as Group;
+    folderGroup.addMember(parentGroup);
+  }
+
   if (isTemplate) {
     // Create template folder
     const folder = FolderNode.create(
@@ -249,6 +256,8 @@ export function expandAncestorFolders(folder: InstanceOfSchema<typeof FolderNode
 
 /**
  * Move a folder to a new parent location
+ *
+ * Updates group membership to maintain cascading permissions hierarchy.
  */
 export function moveFolder(
   account: InstanceOfSchema<typeof Account>,
@@ -266,6 +275,21 @@ export function moveFolder(
       }
       current = current.parent;
     }
+  }
+
+  const folderGroup = folder.$jazz.owner as Group;
+
+  // Update group membership for cascading permissions
+  // Remove old parent's group from folder's group membership
+  if (folder.parent) {
+    const oldParentGroup = folder.parent.$jazz.owner as Group;
+    folderGroup.removeMember(oldParentGroup);
+  }
+
+  // Add new parent's group to folder's group membership
+  if (newParent) {
+    const newParentGroup = newParent.$jazz.owner as Group;
+    folderGroup.addMember(newParentGroup);
   }
 
   // Remove from old parent
