@@ -1,3 +1,10 @@
+// WebSocket polyfill for Node.js < 21 (Jazz requires WebSocket API)
+import { WebSocket } from 'ws';
+if (typeof globalThis.WebSocket === 'undefined') {
+  // @ts-expect-error - Polyfilling WebSocket for Node < 21
+  globalThis.WebSocket = WebSocket;
+}
+
 import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import cors from 'cors';
