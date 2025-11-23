@@ -162,6 +162,7 @@ export function TemplateItemView({
     // biome-ignore lint/a11y/noStaticElementInteractions: This div is conditionally interactive for drag-and-drop and item selection
     <div
       ref={setDropRef}
+      data-item-id={item.id}
       onClick={handleRowClick}
       onKeyDown={(e) => {
         if (onSelect && !showCheckbox && (e.key === 'Enter' || e.key === ' ')) {

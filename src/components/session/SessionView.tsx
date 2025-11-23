@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Pencil, Plus, X } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useAccount } from '@/lib/jazz';
@@ -63,6 +63,16 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     }),
   );
 
+  // Scroll preservation refs and state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const availableZoneRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const prevSelectedCountRef = useRef(0);
+  const prevCheckedCountRef = useRef(0);
+  const savedScrollInfoRef = useRef<{
+    availableZoneTop: number; // Distance from container top to available zone top
+  } | null>(null);
+
   // Get session early (before hooks)
   const sessions = template.sessions || [];
   const session = (sessions.find((s) => s?.id === sessionId) as SessionData | undefined) || null;
@@ -81,6 +91,41 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     me,
   });
+
+  // Scroll preservation logic - runs synchronously after DOM updates but before paint
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+    if (!container || !availableZone || showAddForm) return;
+
+    // Update prev counts for next render
+    prevSelectedCountRef.current = selectedItems.length;
+    prevCheckedCountRef.current = checkedItems.length;
+
+    // If we have saved scroll info, restore the Available zone position
+    if (savedScrollInfoRef.current) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Calculate where the Available zone is NOW
+      const currentAvailableTop = availableRect.top - containerRect.top;
+
+      // Calculate where we WANT it to be (same as before)
+      const targetAvailableTop = savedScrollInfoRef.current.availableZoneTop;
+
+      // Calculate the difference
+      const diff = currentAvailableTop - targetAvailableTop;
+
+      // Adjust scroll to keep Available zone in the same viewport position
+      // This must happen synchronously in useLayoutEffect to prevent visual bounce
+      if (Math.abs(diff) > 0.5) {
+        container.scrollTop = container.scrollTop + diff;
+      }
+
+      // Clear saved info after applying
+      savedScrollInfoRef.current = null;
+    }
+  }, [selectedItems.length, checkedItems.length, showAddForm]);
 
   // Early returns after all hooks
   if (!me || !me.root) {
@@ -139,12 +184,40 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   };
 
   const handleToggleSelected = (itemId: string) => {
+    // Capture Available zone position BEFORE the state change
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+
+    if (container && availableZone) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Save where the Available zone currently is in the viewport
+      savedScrollInfoRef.current = {
+        availableZoneTop: availableRect.top - containerRect.top,
+      };
+    }
+
     // Use the session service to toggle selected state
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
   };
 
   const handleToggleChecked = (itemId: string) => {
+    // Capture Available zone position BEFORE the state change
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+
+    if (container && availableZone) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Save where the Available zone currently is in the viewport
+      savedScrollInfoRef.current = {
+        availableZoneTop: availableRect.top - containerRect.top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
   };
@@ -533,7 +606,11 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto min-h-0"
+              style={{ scrollBehavior: 'auto' }}
+            >
               {/* Selected and Checked Zones - rendered based on view mode */}
               {!showAddForm && currentViewMode === 'flat' && (
                 <FlatViewRenderer
@@ -584,7 +661,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <p>No items in this list yet.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-neutral-100 bg-blue-50 p-4">
+                <div ref={availableZoneRef} className="divide-y divide-neutral-100 bg-blue-50 p-4">
+                  {/* Invisible anchor element for scroll preservation */}
+                  <div ref={anchorRef} className="h-0" />
                   {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
                 </div>
               )}

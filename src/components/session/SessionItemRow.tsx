@@ -184,8 +184,8 @@ export const SessionItemRow = memo(function SessionItemRow({
       : 'border-neutral-300 hover:border-blue-400';
   };
 
-  // Only animate items in selected/checked zones (not available)
-  // Disable animation during drag to prevent interference with dnd-kit
+  // Enable animations within selected/checked zones (smooth movement when checking/unchecking)
+  // Disable when in available zone and during drag
   const shouldAnimate = (zone === 'selected' || zone === 'checked') && !isDragging;
 
   const handleRowClick = (e: React.MouseEvent) => {
@@ -206,6 +206,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   return (
     <motion.div
       ref={canActuallyDrag ? setDragRef : undefined}
+      data-item-id={item.id}
       {...(canActuallyDrag ? dragAttributes : {})}
       {...(canActuallyDrag ? dragListeners : {})}
       {...(canActuallyDrag ? longPressHandlers : {})}
