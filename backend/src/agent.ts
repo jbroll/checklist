@@ -229,7 +229,8 @@ export async function removeFromFolderGroup(
 
     // Prevent removing the group owner (they should always have access)
     const ownerGroup = folder.$jazz.owner;
-    const groupOwnerId = ownerGroup.$jazz.owner?.id;
+    const groupOwner = ownerGroup?.$jazz?.owner as { id: string } | undefined;
+    const groupOwnerId = groupOwner?.id;
 
     if (groupOwnerId === userJazzAccountId) {
       throw new Error('Cannot remove the folder owner from collaborators. Transfer ownership first.');
