@@ -5,7 +5,7 @@
  * Supports v2.0 (hierarchical with IDs) format.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
+import { Group, type InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
 import { type Account, FolderNode, type SessionData } from '../../schemas';
 import type { ItemState, TemplateItem } from '../../schemas/tree';
@@ -282,6 +282,13 @@ async function importTemplateFolder(
     }
   }
 
+  // Create a new group for this folder to enable sharing
+  const folderGroup = Group.create({ owner: account });
+
+  // Add creator explicitly to members for consistency
+  // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
+  folderGroup.addMember(account, 'admin');
+
   // Create FolderNode for template
   const folder = FolderNode.create(
     {
@@ -296,7 +303,7 @@ async function importTemplateFolder(
       createdAt: new Date(exportedFolder.createdAt),
       updatedAt: new Date(exportedFolder.updatedAt),
     },
-    { owner: account },
+    { owner: folderGroup },
   );
 
   return {

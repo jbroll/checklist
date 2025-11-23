@@ -5,8 +5,7 @@
  * Replaces the old path-based directory service.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { co } from 'jazz-tools';
+import { co, Group, type InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
 
 /**
@@ -36,6 +35,13 @@ export function createFolder(
 
   const now = new Date();
 
+  // Create a new group for this folder to enable sharing
+  const folderGroup = Group.create({ owner: account });
+
+  // Add creator explicitly to members for consistency
+  // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
+  folderGroup.addMember(account, 'admin');
+
   if (isTemplate) {
     // Create template folder
     const folder = FolderNode.create(
@@ -51,7 +57,7 @@ export function createFolder(
         createdAt: now,
         updatedAt: now,
       },
-      { owner: account },
+      { owner: folderGroup },
     );
 
     // Add to parent or root
@@ -64,7 +70,7 @@ export function createFolder(
     return folder;
   } else {
     // Create organizational folder
-    const children = co.list(FolderNode).create([], { owner: account });
+    const children = co.list(FolderNode).create([], { owner: folderGroup });
 
     const folder = FolderNode.create(
       {
@@ -77,7 +83,7 @@ export function createFolder(
         createdAt: now,
         updatedAt: now,
       },
-      { owner: account },
+      { owner: folderGroup },
     );
 
     // Add to parent or root

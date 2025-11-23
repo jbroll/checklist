@@ -4,9 +4,55 @@
  * Tests for hierarchical folder management using FolderNode CoValues.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { co } from 'jazz-tools';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock jazz-tools Group and co.list before importing
+let groupIdCounter = 0;
+let listIdCounter = 0;
+vi.mock('jazz-tools', async () => {
+  const actual: any = await vi.importActual('jazz-tools');
+
+  // Wrapper for co.list that mocks the create method
+  const mockCoList = (schema: any) => {
+    const originalListSchema = actual.co.list(schema);
+    return {
+      ...originalListSchema,
+      create: vi.fn((data: any[], options: any) => {
+        const list: any[] = [...data];
+        list.$jazz = {
+          id: `list-${listIdCounter++}`,
+          push: (item: any) => list.push(item),
+          splice: (index: number, deleteCount: number, ...items: any[]) =>
+            list.splice(index, deleteCount, ...items),
+        };
+        return list;
+      }),
+    };
+  };
+
+  return {
+    ...actual,
+    Group: {
+      create: vi.fn((options: any) => {
+        const id = `group-${groupIdCounter++}`;
+        const members: any[] = [];
+        return {
+          $jazz: { id, owner: options.owner },
+          members,
+          addMember: vi.fn((account: any, role: string) => {
+            members.push({ id: account.$jazz?.id || account.id, role });
+          }),
+        };
+      }),
+    },
+    co: {
+      ...actual.co,
+      list: mockCoList,
+    },
+  };
+});
+
+import type { InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
 import {
   archiveFolder,
@@ -29,7 +75,7 @@ import {
   unarchiveFolder,
 } from './folderService';
 
-// Spy on FolderNode.create and co.list.create
+// Spy on FolderNode.create
 let folderIdCounter = 0;
 
 // Mock FolderNode.create before tests
@@ -58,19 +104,6 @@ let folderIdCounter = 0;
   // items are plain arrays
   return folder;
 });
-
-// Mock co.list to return mock CoList
-(co as any).list = vi.fn((schema: any) => ({
-  create: vi.fn((data: any[], options: any) => {
-    const list: any[] = [...data];
-    list.$jazz = {
-      push: (item: any) => list.push(item),
-      splice: (index: number, deleteCount: number, ...items: any[]) =>
-        list.splice(index, deleteCount, ...items),
-    };
-    return list;
-  }),
-}));
 
 // Mock Jazz CoValues
 const createMockAccount = (): InstanceOfSchema<typeof Account> => {

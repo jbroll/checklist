@@ -124,6 +124,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
       // Add the agent to the folder so it can manage future accepts
       if (data.agentAccountId) {
+        console.log(`Attempting to add agent ${data.agentAccountId} to folder ${folder.$jazz.id}`);
         try {
           const agentAccount = await Account.load(data.agentAccountId as ID<Account>, {
             loadAs: folder.$jazz.owner,
@@ -137,13 +138,23 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
             if (!isMember) {
               folder.$jazz.owner.addMember(agentAccount, 'admin');
-              console.log('Added agent to folder for invite management');
+              await folder.$jazz.owner.$jazz.waitForSync();
+              console.log('✅ Successfully added agent to folder for invite management');
+            } else {
+              console.log('Agent is already a member of this folder');
             }
+          } else {
+            console.error('⚠️ Could not load agent account');
           }
         } catch (err) {
-          console.error('Failed to add agent to folder:', err);
-          // Continue anyway - this is not critical for the invite creation
+          console.error('❌ Failed to add agent to folder:', err);
+          setError(
+            'Warning: Could not add sharing agent to folder. Invite link created but accepting may fail. Try refreshing and creating a new invite.',
+          );
         }
+      } else {
+        console.error('⚠️ No agent account ID returned from backend');
+        setError('Warning: No sharing agent configured. Invite accepting may not work.');
       }
 
       setShareUrl(data.shareUrl);

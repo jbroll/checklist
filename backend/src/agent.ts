@@ -139,6 +139,17 @@ export async function addToFolderGroup(
 
     // Add member to folder's owner group
     const ownerGroup = folder.$jazz.owner;
+
+    // Check if already a member
+    const existingMember = ownerGroup.members.find(
+      (m: { id: string }) => m.id === recipientJazzAccountId
+    );
+
+    if (existingMember) {
+      console.log(`⚠️ User ${recipientJazzAccountId} is already a member of ${folderCoValueId} - skipping`);
+      return; // Don't add them again
+    }
+
     ownerGroup.addMember(recipientAccount, jazzRole);
 
     console.log(`✅ Added ${recipientJazzAccountId} to ${folderCoValueId} with role ${jazzRole}`);
@@ -175,6 +186,13 @@ export async function getFolderGroupMembers(
 
     // Get all members of the group
     const ownerGroup = folder.$jazz.owner;
+
+    // Check if owner is a Group (has members property)
+    if (!ownerGroup.members) {
+      console.error(`Folder ${folderCoValueId} owner is not a Group (likely an Account from old code)`);
+      throw new Error(`Folder ${folderCoValueId} was created with account ownership. Please create a new folder to enable sharing.`);
+    }
+
     const members = ownerGroup.members;
 
     // Return member IDs and roles
@@ -209,6 +227,14 @@ export async function removeFromFolderGroup(
       throw new Error(`Folder ${folderCoValueId} not found`);
     }
 
+    // Prevent removing the group owner (they should always have access)
+    const ownerGroup = folder.$jazz.owner;
+    const groupOwnerId = ownerGroup.$jazz.owner?.id;
+
+    if (groupOwnerId === userJazzAccountId) {
+      throw new Error('Cannot remove the folder owner from collaborators. Transfer ownership first.');
+    }
+
     // Load user's account
     const userAccount = await Account.load(userJazzAccountId as ID<Account>, {
       loadAs: worker,
@@ -219,7 +245,6 @@ export async function removeFromFolderGroup(
     }
 
     // Remove member from folder's owner group
-    const ownerGroup = folder.$jazz.owner;
     ownerGroup.removeMember(userAccount);
 
     console.log(`✅ Removed ${userJazzAccountId} from ${folderCoValueId}`);
