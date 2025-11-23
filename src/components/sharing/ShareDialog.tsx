@@ -1,17 +1,17 @@
 import { Account, type ID, type InstanceOfSchema } from 'jazz-tools';
-import { Check, Clock, Copy, Loader2, Mail, Share2, Trash2, Users, X } from 'lucide-react';
+import { Check, Clock, Contact, Copy, Loader2, Mail, Share2, Trash2, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { FolderNode } from '@/schemas';
+
+// Check if Contact Picker API is available
+const hasContactPicker = 'contacts' in navigator && 'ContactsManager' in window;
+
+// Check if Web Share API is available
+const hasWebShare = 'share' in navigator;
 
 interface ShareDialogProps {
   open: boolean;
@@ -92,11 +92,22 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
   }, [open, loadAccessData]);
 
+  // Validation: Check if recipient input is valid (basic email or phone number pattern)
+  const isRecipientValid = () => {
+    const trimmed = recipientEmail.trim();
+    if (!trimmed) return false;
+
+    // Simple email pattern (contains @ and .)
+    const hasEmailPattern = trimmed.includes('@') && trimmed.includes('.');
+
+    // Simple phone pattern (starts with + or digit, has at least 10 digits)
+    const phoneDigits = trimmed.replace(/\D/g, '');
+    const hasPhonePattern = phoneDigits.length >= 10;
+
+    return hasEmailPattern || hasPhonePattern;
+  };
+
   const handleGenerateInvite = async () => {
-    if (!recipientEmail.trim()) {
-      setError('Please enter a recipient email address');
-      return;
-    }
     setError(null);
 
     setIsGenerating(true);
@@ -250,6 +261,43 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
   };
 
+  const handleContactPicker = async () => {
+    if (!hasContactPicker) return;
+
+    try {
+      // @ts-expect-error - Contact Picker API not in TS types yet
+      const contacts = await navigator.contacts.select(['email'], { multiple: false });
+
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0];
+        if (contact.email && contact.email.length > 0) {
+          setRecipientEmail(contact.email[0]);
+        }
+      }
+    } catch (err) {
+      // User cancelled or error occurred
+      console.log('Contact picker cancelled or error:', err);
+    }
+  };
+
+  const handleWebShare = async () => {
+    if (!hasWebShare || !shareUrl) return;
+
+    try {
+      await navigator.share({
+        title: `Join ${folder.name}`,
+        text: `You've been invited to collaborate on "${folder.name}"`,
+        url: shareUrl,
+      });
+    } catch (err) {
+      // User cancelled or error occurred
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Share failed:', err);
+        setError('Failed to share link');
+      }
+    }
+  };
+
   const handleClose = () => {
     setRecipientEmail('');
     setPermission('edit');
@@ -302,45 +350,39 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
             <Share2 className="h-5 w-5" />
             Share "{folder.name}"
           </DialogTitle>
-          <DialogDescription>
-            Invite people to collaborate or manage existing access
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {/* Invite Form */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-neutral-900">Invite New Collaborator</h3>
-
-            {shareUrl && (
-              <div className="rounded-lg bg-green-50 p-3 space-y-2">
-                <p className="text-sm font-medium text-green-900">Link generated!</p>
-                <div className="flex gap-2">
-                  <Input value={shareUrl} readOnly className="font-mono text-xs bg-white" />
-                  <Button size="sm" variant="outline" onClick={handleCopyLink}>
-                    {copied ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-2">
-              <Label htmlFor="email">Recipient Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="recipient@example.com"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                disabled={isGenerating}
-              />
+              <Label htmlFor="email">Share with a collaborator by email or phone number</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  type="text"
+                  placeholder="colleague@example.com or +1234567890"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  disabled={isGenerating}
+                  className="flex-1"
+                />
+                {hasContactPicker && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleContactPicker}
+                    disabled={isGenerating}
+                    title="Pick from contacts"
+                    className="shrink-0"
+                  >
+                    <Contact className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
               <div className="space-y-2">
                 <Label htmlFor="permission">Permission</Label>
                 <select
@@ -371,11 +413,41 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   <option value="90">90 days</option>
                 </select>
               </div>
+
+              <Button
+                onClick={handleGenerateInvite}
+                disabled={isGenerating || !isRecipientValid()}
+                className="h-10"
+              >
+                {isGenerating ? 'Getting...' : 'Get Link'}
+              </Button>
             </div>
 
-            <Button onClick={handleGenerateInvite} disabled={isGenerating} className="w-full">
-              {isGenerating ? 'Generating...' : 'Generate Invite Link'}
-            </Button>
+            {shareUrl && (
+              <div className="rounded-lg bg-green-50 p-3 space-y-2">
+                <p className="text-sm font-medium text-green-900">Invite link generated!</p>
+                <div className="flex gap-2">
+                  <Input value={shareUrl} readOnly className="font-mono text-xs bg-white flex-1" />
+                  <Button size="sm" variant="outline" onClick={handleCopyLink} title="Copy link">
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                  {hasWebShare && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleWebShare}
+                      title="Share via..."
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-900">{error}</div>}
@@ -387,37 +459,37 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
           ) : (
             <>
               {/* Current Collaborators */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-medium text-neutral-500 flex items-center gap-1.5 px-1">
+                  <Users className="h-3.5 w-3.5" />
                   Collaborators ({collaborators.length})
                 </h3>
 
                 {collaborators.length === 0 ? (
-                  <p className="text-sm text-neutral-500 py-4 text-center">No collaborators yet</p>
+                  <p className="text-sm text-neutral-500 py-3 text-center">No collaborators yet</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {collaborators.map((collab) => (
                       <div
                         key={collab.accountId}
-                        className="flex items-center justify-between p-3 border border-neutral-200 rounded-lg hover:bg-neutral-50"
+                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-neutral-200 rounded hover:bg-neutral-50"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900 truncate">
-                              {collab.name}
-                            </p>
-                            {getPermissionBadge(collab.permission)}
-                          </div>
-                          <p className="text-xs text-neutral-500 truncate">{collab.email}</p>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-sm font-medium text-neutral-900 truncate">
+                            {collab.name}
+                          </span>
+                          <span className="text-xs text-neutral-500 truncate">
+                            ({collab.email})
+                          </span>
+                          {getPermissionBadge(collab.permission)}
                         </div>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleRemoveCollaborator(collab.accountId)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0 shrink-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ))}
@@ -426,57 +498,53 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
               </div>
 
               {/* Pending Invites */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-medium text-neutral-500 flex items-center gap-1.5 px-1">
+                  <Mail className="h-3.5 w-3.5" />
                   Pending Invites ({pendingInvites.length})
                 </h3>
 
                 {pendingInvites.length === 0 ? (
-                  <p className="text-sm text-neutral-500 py-4 text-center">No pending invites</p>
+                  <p className="text-sm text-neutral-500 py-3 text-center">No pending invites</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {pendingInvites.map((invite) => (
                       <div
                         key={invite.token}
-                        className="flex items-center justify-between p-3 border border-yellow-200 bg-yellow-50 rounded-lg"
+                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-yellow-200 bg-yellow-50 rounded"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900 truncate">
-                              {invite.recipientEmail}
-                            </p>
-                            {getPermissionBadge(invite.permission)}
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Clock className="h-3 w-3 text-neutral-500" />
-                            <p className="text-xs text-neutral-500">
-                              Expires {invite.expiresAt ? formatDate(invite.expiresAt) : 'never'}
-                            </p>
-                          </div>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-sm font-medium text-neutral-900 truncate">
+                            {invite.recipientEmail}
+                          </span>
+                          {getPermissionBadge(invite.permission)}
+                          <span className="text-xs text-neutral-500 flex items-center gap-1 shrink-0">
+                            <Clock className="h-3 w-3" />
+                            Expires {invite.expiresAt ? formatDate(invite.expiresAt) : 'never'}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleCopyInviteLink(invite.token)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 h-7 w-7 p-0"
                             title="Copy invite link"
                           >
                             {copiedToken === invite.token ? (
-                              <Check className="h-4 w-4" />
+                              <Check className="h-3.5 w-3.5" />
                             ) : (
-                              <Copy className="h-4 w-4" />
+                              <Copy className="h-3.5 w-3.5" />
                             )}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleRevokeInvite(invite.token, invite.recipientEmail)}
-                            className="text-neutral-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-neutral-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
                             title="Revoke invite"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
