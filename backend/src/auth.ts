@@ -57,12 +57,11 @@ export const auth = betterAuth({
     disableCSRFCheck: process.env.NODE_ENV !== 'production',
     // Configure cookie attributes for OAuth redirects
     defaultCookieAttributes: {
-      // Use 'lax' for same-domain OAuth (frontend and backend on same domain)
-      // 'none' is only needed for cross-domain setups
+      // Use 'lax' for both dev and production (frontend/backend on same origin via proxy)
       sameSite: "lax",
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      path: "/",  // Ensure cookies are accessible across the whole domain
+      path: "/",
     },
   },
 

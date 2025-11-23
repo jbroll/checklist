@@ -7,7 +7,9 @@
     "build": "tsc && cp -r src/migrations dist/",
     "start": "node dist/migrate-auth.js && node dist/index.js",
     "migrate": "node dist/migrate.js",
-    "migrate-auth": "node dist/migrate-auth.js"
+    "migrate-auth": "node dist/migrate-auth.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "better-auth": "^1.3.7",
@@ -22,6 +24,8 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.5",
     "@types/node": "^22.10.5",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }

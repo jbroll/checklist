@@ -1,4 +1,4 @@
-import type { InstanceOfSchema } from 'jazz-tools';
+import { Account, type ID, type InstanceOfSchema } from 'jazz-tools';
 import { Check, Clock, Copy, Loader2, Mail, Share2, Trash2, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Access management state
@@ -59,10 +60,9 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
     try {
       // Load collaborators
-      const collabResponse = await fetch(
-        `http://localhost:3001/api/shares/folders/${folder.$jazz.id}/collaborators`,
-        { credentials: 'include' },
-      );
+      const collabResponse = await fetch(`/api/shares/folders/${folder.$jazz.id}/collaborators`, {
+        credentials: 'include',
+      });
 
       if (collabResponse.ok) {
         const collabData = await collabResponse.json();
@@ -70,10 +70,9 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       }
 
       // Load pending invites
-      const invitesResponse = await fetch(
-        `http://localhost:3001/api/shares/folders/${folder.$jazz.id}/invites`,
-        { credentials: 'include' },
-      );
+      const invitesResponse = await fetch(`/api/shares/folders/${folder.$jazz.id}/invites`, {
+        credentials: 'include',
+      });
 
       if (invitesResponse.ok) {
         const invitesData = await invitesResponse.json();
@@ -102,7 +101,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:3001/api/shares/invite', {
+      const response = await fetch('/api/shares/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,6 +121,31 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       }
 
       const data = await response.json();
+
+      // Add the agent to the folder so it can manage future accepts
+      if (data.agentAccountId) {
+        try {
+          const agentAccount = await Account.load(data.agentAccountId as ID<Account>, {
+            loadAs: folder.$jazz.owner,
+          });
+
+          if (agentAccount) {
+            // Check if agent is already a member
+            const isMember = folder.$jazz.owner.members.some(
+              (m: { id: string }) => m.id === data.agentAccountId,
+            );
+
+            if (!isMember) {
+              folder.$jazz.owner.addMember(agentAccount, 'admin');
+              console.log('Added agent to folder for invite management');
+            }
+          }
+        } catch (err) {
+          console.error('Failed to add agent to folder:', err);
+          // Continue anyway - this is not critical for the invite creation
+        }
+      }
+
       setShareUrl(data.shareUrl);
       setRecipientEmail('');
       // Refresh the pending invites list
@@ -153,7 +177,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/api/shares/folders/${folder.$jazz.id}/collaborators/${accountId}`,
+        `/api/shares/folders/${folder.$jazz.id}/collaborators/${accountId}`,
         {
           method: 'DELETE',
           credentials: 'include',
@@ -171,9 +195,15 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
   };
 
-  const handleRevokeInvite = async (token: string) => {
+  const handleRevokeInvite = async (token: string, recipientEmail: string) => {
+    if (
+      !confirm(`Revoke invite for ${recipientEmail}? They will no longer be able to use this link.`)
+    ) {
+      return;
+    }
+
     try {
-      const response = await fetch(`http://localhost:3001/api/shares/invites/${token}`, {
+      const response = await fetch(`/api/shares/invites/${token}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -190,6 +220,22 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       }
     } catch (_err) {
       setError('Failed to revoke invite');
+    }
+  };
+
+  const handleCopyInviteLink = async (token: string) => {
+    const inviteUrl = `${window.location.origin}/invite/${token}`;
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedToken(token);
+
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedToken(null);
+      }, 2000);
+    } catch (_err) {
+      setError('Failed to copy invite link');
     }
   };
 
@@ -398,14 +444,30 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRevokeInvite(invite.token)}
-                          className="text-neutral-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleCopyInviteLink(invite.token)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Copy invite link"
+                          >
+                            {copiedToken === invite.token ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRevokeInvite(invite.token, invite.recipientEmail)}
+                            className="text-neutral-600 hover:text-red-700 hover:bg-red-50"
+                            title="Revoke invite"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

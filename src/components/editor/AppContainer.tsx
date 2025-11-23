@@ -1,5 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
@@ -11,6 +11,7 @@ import { useAccount } from '@/lib/jazz';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
+import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
 
@@ -30,6 +31,14 @@ export function AppContainer({
   isAuthenticated,
 }: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
+
+  // Expose services to window for E2E tests (development only)
+  useEffect(() => {
+    if (me && import.meta.env.DEV) {
+      exposeServicesToWindow(() => me as InstanceOfSchema<typeof Account> | null);
+    }
+  }, [me]);
+
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);

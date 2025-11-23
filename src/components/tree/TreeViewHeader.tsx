@@ -8,6 +8,7 @@ import {
   ListPlus,
   LogIn,
   LogOut,
+  Mail,
   MoreVertical,
   Pencil,
   Upload,
@@ -40,6 +41,7 @@ interface TreeViewHeaderProps {
   onToggleShowArchived?: () => void;
   onSignOut?: () => void;
   onSignIn?: () => void;
+  onPendingInvites?: () => void;
   isAuthenticated?: boolean;
   onSwitchView?: () => void;
   switchViewLabel?: string;
@@ -67,6 +69,7 @@ export function TreeViewHeader({
   onToggleShowArchived,
   onSignOut,
   onSignIn,
+  onPendingInvites,
   isAuthenticated = false,
   onSwitchView,
   switchViewLabel = 'Basic View',
@@ -203,13 +206,19 @@ export function TreeViewHeader({
                     </DropdownMenuCheckboxItem>
                   </>
                 )}
-                {(onSignOut || onSignIn) && (
+                {(onSignOut || onSignIn || onPendingInvites) && (
                   <>
                     <DropdownMenuSeparator />
                     {onSwitchView && (
                       <DropdownMenuItem onClick={onSwitchView}>
                         <LayoutGrid className="mr-2 h-4 w-4" />
                         {switchViewLabel}
+                      </DropdownMenuItem>
+                    )}
+                    {isAuthenticated && onPendingInvites && (
+                      <DropdownMenuItem onClick={onPendingInvites}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Pending Invites
                       </DropdownMenuItem>
                     )}
                     {isAuthenticated && onSignOut ? (

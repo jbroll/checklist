@@ -286,6 +286,101 @@ export function exposeServicesToWindow(
         withAccount((acc) => SessionService.updateSessionCounts(acc, templateId, sessionId)),
     },
 
+    // Sharing operations
+    sharing: {
+      createInvite: async (
+        folderId: string,
+        recipientEmail: string,
+        permission: 'view' | 'edit' | 'admin' = 'edit',
+        expiresInDays = 7,
+      ) => {
+        const response = await fetch('/api/shares/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            recipientEmail,
+            folderCoValueId: folderId,
+            permission,
+            expiresInDays,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(
+            error.error || error.message || `Failed to create invite (${response.status})`,
+          );
+        }
+
+        const data = await response.json();
+
+        // Add agent to folder if needed
+        if (data.agentAccountId) {
+          return withAccount(async (acc) => {
+            const folder = findFolderById(acc, folderId);
+            if (!folder) throw new Error(`Folder ${folderId} not found`);
+
+            // Import Account from jazz-tools
+            const { Account } = await import('jazz-tools');
+            const agentAccount = await Account.load(data.agentAccountId, {
+              loadAs: folder.$jazz.owner,
+            });
+
+            if (agentAccount) {
+              const isMember = folder.$jazz.owner.members.some(
+                (m: { id: string }) => m.id === data.agentAccountId,
+              );
+
+              if (!isMember) {
+                folder.$jazz.owner.addMember(agentAccount, 'admin');
+              }
+            }
+
+            return {
+              token: data.token,
+              shareUrl: data.shareUrl,
+            };
+          });
+        }
+
+        return {
+          token: data.token,
+          shareUrl: data.shareUrl,
+        };
+      },
+
+      acceptInvite: async (token: string) => {
+        const response = await fetch('/api/shares/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ token }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to accept invite');
+        }
+
+        const data = await response.json();
+        return { folderId: data.folderId };
+      },
+
+      getInvites: async (folderId: string) => {
+        const response = await fetch(`/api/shares/folders/${folderId}/invites`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get invites');
+        }
+
+        const data = await response.json();
+        return data.invites;
+      },
+    },
+
     // Utility operations
     util: {
       waitForSync: async () => {

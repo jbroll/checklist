@@ -35,6 +35,14 @@ export function AuthGate() {
     if (isAuthenticated) {
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
+
+      // Check for invite token in URL parameters after OAuth redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteToken = urlParams.get('inviteToken');
+      if (inviteToken) {
+        // Redirect to the invite page and clean up URL
+        window.location.href = `/invite/${inviteToken}`;
+      }
     }
   }, [isAuthenticated]);
 
