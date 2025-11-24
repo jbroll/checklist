@@ -79,6 +79,34 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 - Wraps app with authentication context
 - Connects to Jazz sync server
 
+## Folder Sharing
+
+**Overview**:
+Folders (both organizational and template folders) can be shared via email invitations. The sharing system uses Jazz's built-in CoValue groups with an invite-based access control layer.
+
+**Architecture** (`backend/src/`):
+- `shares.ts` - API endpoints for invite creation, validation, and acceptance
+- `agent.ts` - Jazz agent for adding users to folder groups
+- `migrations/shares.sql` - SQLite table for tracking invitations
+
+**Flow**:
+1. **Invite Creation**: Owner generates a shareable link with recipient email and permissions
+2. **Invite Acceptance**: Recipient clicks link, logs in, and gains access via Jazz groups
+3. **Access Control**: Jazz automatically syncs folder to recipient's device
+
+**Security**:
+- Email validation: Recipient email must match authenticated session
+- Sender validation: Sender must still have folder access when invite is accepted
+- Token-based: 32-byte cryptographic tokens for invite URLs
+- Expiration: Time-limited invites enforced server-side
+
+**Components** (`src/components/sharing/`):
+- `ShareDialog.tsx` - Create and manage folder invitations
+- `InviteAcceptPage.tsx` - Accept invitation and join folder group
+
+**Routes**:
+- `/invite/:token` - Invitation acceptance page
+
 ## File Structure Reference
 
 ```
@@ -90,6 +118,7 @@ src/
 │   ├── tree/             # Folder navigation
 │   ├── editor/           # Template editing
 │   ├── session/          # Shopping interface
+│   ├── sharing/          # Folder sharing UI
 │   ├── import/           # Import dialogs
 │   └── export/           # Export dialogs
 ├── services/
@@ -99,6 +128,13 @@ src/
 └── lib/
     ├── auth-client.ts    # BetterAuth config
     └── jazz.tsx          # Jazz provider
+
+backend/src/
+├── migrations/
+│   └── shares.sql        # Share invites table
+├── agent.ts              # Jazz agent for groups
+├── shares.ts             # Sharing API endpoints
+└── auth.ts               # BetterAuth config
 ```
 
 ## Development Workflow

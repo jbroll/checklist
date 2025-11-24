@@ -91,11 +91,30 @@ See `ARCHITECTURE.md` for system overview and code locations.
 
 ## Documentation
 
+**Getting Started**:
 - `QUICKSTART.md` - Get started in 5 minutes
+- `README.md` - This file
+
+**Architecture & Development**:
 - `ARCHITECTURE.md` - System architecture and code organization
 - `CLAUDE.md` - Development guide and Jazz patterns
-- `DEPLOY.md` - Deployment instructions
+- `SERVICE_ARCHITECTURE.md` - Backend service architecture
+- `DESIGN_SYSTEM.md` - UI/UX design patterns
 - `docs/INDENTED_LIST_FORMAT.md` - Hierarchical text import/export format
+
+**Configuration & Deployment**:
+- `DEPLOY.md` - Deployment instructions
+- `OAUTH_SETUP_NOTES.md` - OAuth provider configuration
+- `PRE-DEPLOY-CHECKLIST.md` - Pre-deployment validation
+
+**Features**:
+- `SECURE_INVITE_SERVICE.md` - Folder sharing security model
+- `INTEGRATION_GUIDE.md` - Third-party integrations
+- `MOBILE_NITS.md` - Mobile readiness review
+
+**Go-to-Market**:
+- `GO_TO_MARKET_PLAN.md` - Marketing and launch strategy
+- `GTM_EXECUTIVE_SUMMARY.md` - Executive summary
 
 ## Deployment
 
