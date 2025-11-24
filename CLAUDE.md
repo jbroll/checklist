@@ -247,8 +247,6 @@ npm run preview      # Test production build
 
 ## Troubleshooting
 
-See `TYPESCRIPT_FIXES.md` for common TypeScript issues with Jazz.
-
 **Build errors**:
 - Clear `node_modules` and reinstall
 - Check TypeScript errors: `npx tsc --noEmit`
@@ -276,7 +274,7 @@ See `TYPESCRIPT_FIXES.md` for common TypeScript issues with Jazz.
 - **README.md** - Getting started and setup
 - **QUICKSTART.md** - Quick setup guide
 - **ARCHITECTURE.md** - System architecture overview
-- **AUTONOMOUS_EXECUTION_PLAN.md** - Quality gates workflow
-- **TYPESCRIPT_FIXES.md** - TypeScript troubleshooting
+- **DEPLOY.md** - Deployment instructions
+- **docs/INDENTED_LIST_FORMAT.md** - Hierarchical text import/export format
 - **Jazz Docs**: https://jazz.tools/docs
 - **BetterAuth Docs**: https://better-auth.com/docs

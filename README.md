@@ -10,6 +10,7 @@ A real-time collaborative list app built with Jazz.tools and BetterAuth.
 - Multi-provider OAuth (Google + Apple)
 - Hierarchical template organization
 - Session-based shopping tracking
+- Folder sharing and collaboration
 
 ## Getting Started
 
@@ -52,7 +53,7 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 APPLE_CLIENT_ID=your_apple_client_id
 APPLE_CLIENT_SECRET=your_apple_client_secret
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3001
 VITE_JAZZ_PEER=wss://cloud.jazz.tools
 ```
 
@@ -93,8 +94,8 @@ See `ARCHITECTURE.md` for system overview and code locations.
 - `QUICKSTART.md` - Get started in 5 minutes
 - `ARCHITECTURE.md` - System architecture and code organization
 - `CLAUDE.md` - Development guide and Jazz patterns
-- `AUTONOMOUS_EXECUTION_PLAN.md` - Quality gates and workflow
-- `TYPESCRIPT_FIXES.md` - Troubleshooting reference
+- `DEPLOY.md` - Deployment instructions
+- `docs/INDENTED_LIST_FORMAT.md` - Hierarchical text import/export format
 
 ## Deployment
 
