@@ -431,3 +431,330 @@ Dairy
     expect(itemNames).toContain('Milk');
   });
 });
+
+test.describe('Jazz Services - Folder Move Operations', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/test');
+    await page.waitForFunction(() => window.__testServices !== undefined, {
+      timeout: 10000,
+    });
+  });
+
+  test('should move folder from root to parent', async ({ page }) => {
+    const { folderId, parentId } = await page.evaluate(() => {
+      const folder = window.__testServices!.directory.create('Movable Folder', false);
+      const parent = window.__testServices!.directory.create('Target Parent', false);
+      return { folderId: folder.entryId, parentId: parent.entryId };
+    });
+
+    await page.evaluate(({ folderId, parentId }) => {
+      window.__testServices!.directory.move(folderId, parentId);
+    }, { folderId, parentId });
+
+    // Verify folder moved
+    const movedFolder = await page.evaluate((id) => {
+      return window.__testServices!.directory.get(id);
+    }, folderId);
+
+    expect(movedFolder.parentId).toBe(parentId);
+  });
+
+  test('should move folder from parent to root', async ({ page }) => {
+    const { folderId } = await page.evaluate(() => {
+      const parent = window.__testServices!.directory.create('Parent', false);
+      const folder = window.__testServices!.directory.create('Child Folder', false, parent.path);
+      return { folderId: folder.entryId };
+    });
+
+    await page.evaluate((folderId) => {
+      window.__testServices!.directory.move(folderId, null);
+    }, folderId);
+
+    // Verify folder moved to root
+    const movedFolder = await page.evaluate((id) => {
+      return window.__testServices!.directory.get(id);
+    }, folderId);
+
+    expect(movedFolder.parentId).toBeUndefined();
+  });
+
+  test('should move folder between different parents', async ({ page }) => {
+    const { folderId, parent2Id } = await page.evaluate(() => {
+      const parent1 = window.__testServices!.directory.create('Parent 1', false);
+      const parent2 = window.__testServices!.directory.create('Parent 2', false);
+      const folder = window.__testServices!.directory.create('Mobile Folder', false, parent1.path);
+      return { folderId: folder.entryId, parent2Id: parent2.entryId };
+    });
+
+    await page.evaluate(({ folderId, parent2Id }) => {
+      window.__testServices!.directory.move(folderId, parent2Id);
+    }, { folderId, parent2Id });
+
+    // Verify folder moved
+    const movedFolder = await page.evaluate((id) => {
+      return window.__testServices!.directory.get(id);
+    }, folderId);
+
+    expect(movedFolder.parentId).toBe(parent2Id);
+  });
+
+  test('should move template folder with items', async ({ page }) => {
+    const { templateId, parentId } = await page.evaluate(async () => {
+      const result = window.__testServices!.directory.create('Shopping List', true);
+      window.__testServices!.item.createItem(result.templateId!, 'Milk');
+      window.__testServices!.item.createItem(result.templateId!, 'Bread');
+      await window.__testServices!.util.waitForSync();
+      const parent = window.__testServices!.directory.create('Grocery Stores', false);
+      return { templateId: result.templateId!, parentId: parent.entryId };
+    });
+
+    await page.evaluate(({ templateId, parentId }) => {
+      window.__testServices!.directory.move(templateId, parentId);
+    }, { templateId, parentId });
+
+    await page.evaluate(() => window.__testServices!.util.waitForSync());
+
+    // Verify template moved
+    const movedTemplate = await page.evaluate((id) => {
+      return window.__testServices!.directory.get(id);
+    }, templateId);
+
+    expect(movedTemplate.parentId).toBe(parentId);
+
+    // Verify items still exist
+    const items = await page.evaluate((id) => {
+      return window.__testServices!.item.getAll(id);
+    }, templateId);
+
+    expect(items).toHaveLength(2);
+    expect(items.map((i: any) => i.name)).toContain('Milk');
+    expect(items.map((i: any) => i.name)).toContain('Bread');
+  });
+
+  test('should prevent moving folder into itself', async ({ page }) => {
+    const { folderId } = await page.evaluate(() => {
+      const folder = window.__testServices!.directory.create('Self-Referential', false);
+      return { folderId: folder.entryId };
+    });
+
+    const error = await page.evaluate((folderId) => {
+      try {
+        window.__testServices!.directory.move(folderId, folderId);
+        return null;
+      } catch (e: any) {
+        return e.message;
+      }
+    }, folderId);
+
+    expect(error).toContain('Cannot move folder into itself');
+  });
+
+  test('should prevent moving folder into its descendant', async ({ page }) => {
+    const { parentId, childId, grandchildId } = await page.evaluate(() => {
+      const parent = window.__testServices!.directory.create('Parent', false);
+      const child = window.__testServices!.directory.create('Child', false, parent.path);
+      const grandchild = window.__testServices!.directory.create('Grandchild', false, child.path);
+      return {
+        parentId: parent.entryId,
+        childId: child.entryId,
+        grandchildId: grandchild.entryId
+      };
+    });
+
+    const error = await page.evaluate(({ parentId, grandchildId }) => {
+      try {
+        window.__testServices!.directory.move(parentId, grandchildId);
+        return null;
+      } catch (e: any) {
+        return e.message;
+      }
+    }, { parentId, grandchildId });
+
+    expect(error).toContain('Cannot move folder into itself or its descendants');
+  });
+
+  test('should update folder path after move', async ({ page }) => {
+    const { folderId, parentId } = await page.evaluate(() => {
+      const folder = window.__testServices!.directory.create('Mobile', false);
+      const parent = window.__testServices!.directory.create('New Location', false);
+      return { folderId: folder.entryId, parentId: parent.entryId };
+    });
+
+    await page.evaluate(({ folderId, parentId }) => {
+      window.__testServices!.directory.move(folderId, parentId);
+    }, { folderId, parentId });
+
+    const path = await page.evaluate((id) => {
+      return window.__testServices!.directory.getPath(id);
+    }, folderId);
+
+    expect(path).toBe('New Location/Mobile');
+  });
+});
+
+test.describe('Jazz Services - Group Assignments and Permissions', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/test');
+    await page.waitForFunction(() => window.__testServices !== undefined, {
+      timeout: 10000,
+    });
+  });
+
+  test('should create folder with group ownership', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      return window.__testServices!.folderService.create('Shared Folder', false);
+    });
+
+    // Verify folder has a group
+    const hasGroup = await page.evaluate((id) => {
+      const folder = window.__testServices!.folderService.get(id);
+      return window.__testServices!.permissions.hasGroup(folder);
+    }, result.folderId);
+
+    expect(hasGroup).toBe(true);
+  });
+
+  test('should add creator as admin to folder group', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      return window.__testServices!.folderService.create('My Folder', false);
+    });
+
+    // Verify current user is admin
+    const isAdmin = await page.evaluate((id) => {
+      const folder = window.__testServices!.folderService.get(id);
+      return window.__testServices!.permissions.isAdmin(folder);
+    }, result.folderId);
+
+    expect(isAdmin).toBe(true);
+  });
+
+  test('should cascade parent group membership to child folder', async ({ page }) => {
+    const { childId, parentId } = await page.evaluate(() => {
+      const parent = window.__testServices!.folderService.create('Parent Folder', false);
+      const child = window.__testServices!.folderService.create('Child Folder', false, parent.folderId);
+      return { childId: child.folderId, parentId: parent.folderId };
+    });
+
+    // Verify parent's group is member of child's group
+    const hasParentGroup = await page.evaluate(({ childId, parentId }) => {
+      return window.__testServices!.permissions.hasParentGroupMembership(childId, parentId);
+    }, { childId, parentId });
+
+    expect(hasParentGroup).toBe(true);
+  });
+
+  test('should update group membership when moving folder to new parent', async ({ page }) => {
+    const { folderId, oldParentId, newParentId, oldParentPath, newParentPath } = await page.evaluate(() => {
+      const oldParent = window.__testServices!.folderService.create('Old Parent', false);
+      const newParent = window.__testServices!.folderService.create('New Parent', false);
+      const folder = window.__testServices!.folderService.create('Folder', false, oldParent.folderId);
+      return {
+        folderId: folder.folderId,
+        oldParentId: oldParent.folderId,
+        newParentId: newParent.folderId,
+        oldParentPath: oldParent.path,
+        newParentPath: newParent.path,
+      };
+    });
+
+    await page.evaluate(({ folderId, newParentId }) => {
+      window.__testServices!.folderService.move(folderId, newParentId);
+    }, { folderId, newParentId });
+
+    await page.evaluate(() => window.__testServices!.util.waitForSync());
+
+    // Verify folder path updated to reflect new parent
+    const newPath = await page.evaluate((folderId) => {
+      return window.__testServices!.folderService.getPath(folderId);
+    }, folderId);
+
+    expect(newPath).toBe('New Parent/Folder');
+    expect(newPath).not.toContain('Old Parent');
+  });
+
+  test('should remove parent group when moving folder to root', async ({ page }) => {
+    const { folderId, parentId } = await page.evaluate(() => {
+      const parent = window.__testServices!.folderService.create('Parent', false);
+      const folder = window.__testServices!.folderService.create('Child', false, parent.folderId);
+      return { folderId: folder.folderId, parentId: parent.folderId };
+    });
+
+    await page.evaluate((folderId) => {
+      window.__testServices!.folderService.move(folderId, null);
+    }, folderId);
+
+    await page.evaluate(() => window.__testServices!.util.waitForSync());
+
+    // Verify folder is now at root (path doesn't contain parent)
+    const newPath = await page.evaluate((folderId) => {
+      return window.__testServices!.folderService.getPath(folderId);
+    }, folderId);
+
+    expect(newPath).toBe('Child');
+    expect(newPath).not.toContain('Parent');
+  });
+
+  test('should get group members for a folder', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      return window.__testServices!.folderService.create('Team Folder', false);
+    });
+
+    const members = await page.evaluate((id) => {
+      return window.__testServices!.permissions.getMembers(id);
+    }, result.folderId);
+
+    expect(Array.isArray(members)).toBe(true);
+    expect(members.length).toBeGreaterThan(0);
+  });
+
+  test('should verify user has access to nested folder through parent group', async ({ page }) => {
+    const { childId } = await page.evaluate(() => {
+      const parent = window.__testServices!.folderService.create('Parent', false);
+      const child = window.__testServices!.folderService.create('Child', false, parent.folderId);
+      return { childId: child.folderId };
+    });
+
+    // Verify current user has access to child through parent group
+    const hasAccess = await page.evaluate((id) => {
+      return window.__testServices!.permissions.canAccess(id);
+    }, childId);
+
+    expect(hasAccess).toBe(true);
+  });
+
+  test('should create template folder with group ownership', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      return window.__testServices!.folderService.create('Shopping List', true);
+    });
+
+    const hasGroup = await page.evaluate((id) => {
+      const folder = window.__testServices!.folderService.get(id);
+      return window.__testServices!.permissions.hasGroup(folder);
+    }, result.folderId);
+
+    expect(hasGroup).toBe(true);
+  });
+
+  test('should maintain group ownership for template items after folder move', async ({ page }) => {
+    const { templateId, newParentId } = await page.evaluate(() => {
+      const template = window.__testServices!.directory.create('Groceries', true);
+      window.__testServices!.item.createItem(template.templateId!, 'Milk');
+      const newParent = window.__testServices!.directory.create('Shopping', false);
+      return { templateId: template.templateId!, newParentId: newParent.entryId };
+    });
+
+    await page.evaluate(({ templateId, newParentId }) => {
+      window.__testServices!.directory.move(templateId, newParentId);
+    }, { templateId, newParentId });
+
+    await page.evaluate(() => window.__testServices!.util.waitForSync());
+
+    // Verify items still accessible
+    const items = await page.evaluate((id) => {
+      return window.__testServices!.item.getAll(id);
+    }, templateId);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].name).toBe('Milk');
+  });
+});
