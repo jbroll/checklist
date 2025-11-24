@@ -232,18 +232,63 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
   const handleBatchSelectAll = (itemIds: string[]) => {
     if (!me) return;
+
+    // Capture Available zone position BEFORE the state change
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+
+    if (container && availableZone) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Save where the Available zone currently is in the viewport
+      savedScrollInfoRef.current = {
+        availableZoneTop: availableRect.top - containerRect.top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
   };
 
   const handleBatchDeselectAll = (itemIds: string[]) => {
     if (!me) return;
+
+    // Capture Available zone position BEFORE the state change
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+
+    if (container && availableZone) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Save where the Available zone currently is in the viewport
+      savedScrollInfoRef.current = {
+        availableZoneTop: availableRect.top - containerRect.top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
   };
 
   const handleBatchToggle = (itemIds: string[]) => {
     if (!me) return;
+
+    // Capture Available zone position BEFORE the state change
+    const container = scrollContainerRef.current;
+    const availableZone = availableZoneRef.current;
+
+    if (container && availableZone) {
+      const containerRect = container.getBoundingClientRect();
+      const availableRect = availableZone.getBoundingClientRect();
+
+      // Save where the Available zone currently is in the viewport
+      savedScrollInfoRef.current = {
+        availableZoneTop: availableRect.top - containerRect.top,
+      };
+    }
+
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
   };

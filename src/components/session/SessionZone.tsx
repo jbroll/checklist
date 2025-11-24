@@ -257,9 +257,9 @@ export function SessionZone({
                 type="button"
                 onClick={handleSelectAll}
                 disabled={selectionState === 'all'}
-                className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                <ListChecks className="h-4 w-4" />
+                <ListChecks className="h-5 w-5" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
@@ -273,9 +273,9 @@ export function SessionZone({
               <button
                 type="button"
                 onClick={handleToggle}
-                className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                <ListMinus className="h-4 w-4" />
+                <ListMinus className="h-5 w-5" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
@@ -290,9 +290,9 @@ export function SessionZone({
                 type="button"
                 onClick={handleDeselectAll}
                 disabled={selectionState === 'none'}
-                className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                <ListX className="h-4 w-4" />
+                <ListX className="h-5 w-5" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
@@ -372,7 +372,7 @@ export function SessionZone({
             </span>
           )}
           {count !== undefined && totalCount > 0 && (
-            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
+            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-700">
               {selectedCount} of {totalCount}
             </span>
           )}
