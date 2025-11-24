@@ -10,7 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Pencil, Plus, X } from 'lucide-react';
+import { Package, Pencil, Plus, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
@@ -22,6 +22,7 @@ import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
+import { SessionZone } from './SessionZone';
 import { useSessionItems } from './useSessionItems';
 import { useViewMode } from './useViewMode';
 import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
@@ -42,6 +43,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const [currentItemId, setCurrentItemId] = useState<string | null>(null); // Current item in NORMAL mode
   const [newItemType, setNewItemType] = useState<'item' | 'category'>('item'); // Type for new items
   const [zoneExpanded, setZoneExpanded] = useState({
+    available: true,
     selected: true,
     checked: false,
   });
@@ -226,6 +228,24 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     if (!session || !me) return;
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
     SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
+  };
+
+  const handleBatchSelectAll = (itemIds: string[]) => {
+    if (!me) return;
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
+  };
+
+  const handleBatchDeselectAll = (itemIds: string[]) => {
+    if (!me) return;
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
+  };
+
+  const handleBatchToggle = (itemIds: string[]) => {
+    if (!me) return;
+    // @ts-expect-error Jazz TypeScript inference issue with Account root type
+    SessionService.toggleSelectAllItems(me, template.$jazz.id, sessionId, itemIds);
   };
 
   const handleClearOrNew = () => {
@@ -419,6 +439,22 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     setActiveItem(null);
   };
 
+  // Helper to collect all item IDs from a category tree (for batch operations)
+  const collectCategoryItemIds = (node: ReturnType<typeof buildItemTree>[number]): string[] => {
+    const ids: string[] = [];
+
+    // Add items from this node and all children recursively
+    const collect = (n: ReturnType<typeof buildItemTree>[number]) => {
+      if (n.item.type === 'item') {
+        ids.push(n.item.id);
+      }
+      n.children.forEach(collect);
+    };
+
+    collect(node);
+    return ids;
+  };
+
   // Recursive function to render item tree
   const renderItemNode = (
     node: ReturnType<typeof buildItemTree>[number],
@@ -429,6 +465,42 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     const { item, children } = node;
     const parentPath = getParentPath(item.path);
 
+    // For categories in normal mode (not edit mode), use SessionZone to get batch operation icons
+    if (item.type === 'category' && !showAddForm) {
+      const categoryItemIds = collectCategoryItemIds(node);
+
+      // Get all items for this category (needed for SessionZone to calculate selection state)
+      const categoryItems = activeItems.filter((i) => categoryItemIds.includes(i.id));
+
+      return (
+        <div key={item.id}>
+          <SessionZone
+            title={item.name}
+            zone="available"
+            items={categoryItems}
+            itemStates={session.itemStates || {}}
+            expanded={item.expanded ?? true}
+            onToggleExpand={() => handleToggleExpand(item.id)}
+            onToggleSelected={handleToggleSelected}
+            onToggleChecked={handleToggleChecked}
+            onBatchSelectAll={handleBatchSelectAll}
+            onBatchDeselectAll={handleBatchDeselectAll}
+            onBatchToggle={handleBatchToggle}
+            count={categoryItemIds.length}
+            categoryItem={item}
+            template={template}
+          >
+            <div className="pl-4">
+              {children.map((child, childIndex) =>
+                renderItemNode(child, depth + 1, children, childIndex),
+              )}
+            </div>
+          </SessionZone>
+        </div>
+      );
+    }
+
+    // For items or categories in edit mode, use TemplateItemView
     return (
       <div key={item.id}>
         {/* Reorder zone before first sibling */}
@@ -661,10 +733,31 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <p>No items in this list yet.</p>
                 </div>
               ) : (
-                <div ref={availableZoneRef} className="divide-y divide-neutral-100 bg-blue-50 p-4">
-                  {/* Invisible anchor element for scroll preservation */}
-                  <div ref={anchorRef} className="h-0" />
-                  {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
+                <div ref={availableZoneRef} className="bg-blue-50 p-4">
+                  <SessionZone
+                    title="List"
+                    icon={Package}
+                    zone="available"
+                    items={activeItems}
+                    itemStates={session.itemStates || {}}
+                    expanded={zoneExpanded.available}
+                    onToggleExpand={() =>
+                      setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
+                    }
+                    onToggleSelected={handleToggleSelected}
+                    onToggleChecked={handleToggleChecked}
+                    onBatchSelectAll={!showAddForm ? handleBatchSelectAll : undefined}
+                    onBatchDeselectAll={!showAddForm ? handleBatchDeselectAll : undefined}
+                    onBatchToggle={!showAddForm ? handleBatchToggle : undefined}
+                    count={activeItems.length}
+                    showHeading={!showAddForm}
+                  >
+                    <div className="divide-y divide-neutral-100">
+                      {/* Invisible anchor element for scroll preservation */}
+                      <div ref={anchorRef} className="h-0" />
+                      {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
+                    </div>
+                  </SessionZone>
                 </div>
               )}
             </div>

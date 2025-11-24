@@ -170,6 +170,12 @@ export function SessionZone({
     ? getSelectionState(category, itemStates)
     : getSelectionState(null, itemStates, items);
 
+  // Calculate selected count for "N of M" display
+  const selectedCount = allItemIds.filter(
+    (id) => itemStates[id]?.selected || itemStates[id]?.checked,
+  ).length;
+  const totalCount = allItemIds.length;
+
   // Content to render (items or children)
   const content = children ? (
     children
@@ -365,9 +371,9 @@ export function SessionZone({
               {title}
             </span>
           )}
-          {count !== undefined && (
+          {count !== undefined && totalCount > 0 && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
-              {count}
+              {selectedCount} of {totalCount}
             </span>
           )}
           {renderBatchButtons()}
