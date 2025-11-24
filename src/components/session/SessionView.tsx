@@ -245,7 +245,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const handleBatchToggle = (itemIds: string[]) => {
     if (!me) return;
     // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.toggleSelectAllItems(me, template.$jazz.id, sessionId, itemIds);
+    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
   };
 
   const handleClearOrNew = () => {
