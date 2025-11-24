@@ -32,6 +32,8 @@ interface SessionZoneProps {
   isTopLevelZone?: boolean; // Controls whether this is a top-level zone (for styling)
   category?: CategoryNode | null; // Category node for batch operations
   showDeleteIcon?: boolean;
+  // For zone-in-hierarchy: show checked vs selected instead of selected vs total
+  checkedVsSelectedCount?: { checked: number; selected: number };
   onDeleteItem?: (itemId: string) => void;
   categoryItem?: TemplateItem; // The actual category item for selection
   isSelected?: boolean; // Category selection state
@@ -70,6 +72,7 @@ export function SessionZone({
   isTopLevelZone = false,
   category,
   showDeleteIcon = false,
+  checkedVsSelectedCount,
   onDeleteItem,
   categoryItem,
   isSelected = false,
@@ -371,9 +374,11 @@ export function SessionZone({
               {title}
             </span>
           )}
-          {count !== undefined && totalCount > 0 && (
+          {count !== undefined && (totalCount > 0 || checkedVsSelectedCount) && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-700">
-              {selectedCount} of {totalCount}
+              {checkedVsSelectedCount
+                ? `${checkedVsSelectedCount.checked} of ${checkedVsSelectedCount.selected}`
+                : `${selectedCount} of ${totalCount}`}
             </span>
           )}
           {renderBatchButtons()}

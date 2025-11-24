@@ -141,6 +141,10 @@ export function ZoneInHierarchyRenderer({
           onToggleSelected={onToggleSelected}
           onToggleChecked={onToggleChecked}
           count={totalItems}
+          checkedVsSelectedCount={{
+            checked: counts.checked,
+            selected: counts.selected + counts.checked,
+          }}
           interactionMode={interactionMode}
           onEnterItemEditMode={onEnterEditMode}
           onExitItemEditMode={onExitEditMode}
@@ -163,6 +167,10 @@ export function ZoneInHierarchyRenderer({
                     onToggleSelected={onToggleSelected}
                     onToggleChecked={onToggleChecked}
                     count={catSelected.length}
+                    checkedVsSelectedCount={{
+                      checked: catChecked.length,
+                      selected: catSelected.length + catChecked.length,
+                    }}
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
@@ -185,6 +193,10 @@ export function ZoneInHierarchyRenderer({
                     onToggleSelected={onToggleSelected}
                     onToggleChecked={onToggleChecked}
                     count={catChecked.length}
+                    checkedVsSelectedCount={{
+                      checked: catChecked.length,
+                      selected: catSelected.length + catChecked.length,
+                    }}
                     showHeading={showZoneHeadings}
                     showDeleteIcon={showDeleteIcon}
                     onDeleteItem={onDeleteItem}
@@ -223,6 +235,10 @@ export function ZoneInHierarchyRenderer({
               onToggleSelected={onToggleSelected}
               onToggleChecked={onToggleChecked}
               count={uncategorizedSelectedItems.length}
+              checkedVsSelectedCount={{
+                checked: uncategorizedCheckedItems.length,
+                selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+              }}
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
@@ -245,6 +261,10 @@ export function ZoneInHierarchyRenderer({
               onToggleSelected={onToggleSelected}
               onToggleChecked={onToggleChecked}
               count={uncategorizedCheckedItems.length}
+              checkedVsSelectedCount={{
+                checked: uncategorizedCheckedItems.length,
+                selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+              }}
               showHeading={showZoneHeadings}
               showDeleteIcon={showDeleteIcon}
               onDeleteItem={onDeleteItem}
