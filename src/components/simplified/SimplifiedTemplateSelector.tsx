@@ -47,7 +47,7 @@ export function SimplifiedTemplateSelector({
           <TreeViewHeader
             canCreateFolderOrList={true}
             canEditOrUse={false}
-            hideArchivedToggle={true}
+            hideArchivedSessionsToggle={true}
             onHeaderClick={() => {}}
             onEditTemplate={() => {}}
             onUseTemplate={() => {}}

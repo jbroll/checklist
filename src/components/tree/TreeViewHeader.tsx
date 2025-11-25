@@ -11,6 +11,7 @@ import {
   Mail,
   MoreVertical,
   Pencil,
+  Trash2,
   Upload,
 } from 'lucide-react';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
@@ -29,8 +30,11 @@ interface TreeViewHeaderProps {
   isDragging?: boolean;
   canCreateFolderOrList: boolean;
   canEditOrUse: boolean;
-  showArchived?: boolean;
-  hideArchivedToggle?: boolean;
+  showArchivedTemplates?: boolean;
+  showArchivedSessions?: boolean;
+  hideArchivedTemplatesToggle?: boolean;
+  hideArchivedSessionsToggle?: boolean;
+  hasArchivedTemplates?: boolean;
   onHeaderClick: () => void;
   onEditTemplate: () => void;
   onUseTemplate: () => void;
@@ -38,7 +42,9 @@ interface TreeViewHeaderProps {
   onAddTemplate: () => void;
   onExport: () => void;
   onImport: () => void;
-  onToggleShowArchived?: () => void;
+  onToggleShowArchivedTemplates?: () => void;
+  onToggleShowArchivedSessions?: () => void;
+  onEmptyTrash?: () => void;
   onSignOut?: () => void;
   onSignIn?: () => void;
   onPendingInvites?: () => void;
@@ -57,8 +63,11 @@ export function TreeViewHeader({
   isDragging = false,
   canCreateFolderOrList,
   canEditOrUse,
-  showArchived = false,
-  hideArchivedToggle = false,
+  showArchivedTemplates = false,
+  showArchivedSessions = false,
+  hideArchivedTemplatesToggle = false,
+  hideArchivedSessionsToggle = false,
+  hasArchivedTemplates = false,
   onHeaderClick,
   onEditTemplate,
   onUseTemplate,
@@ -66,7 +75,9 @@ export function TreeViewHeader({
   onAddTemplate,
   onExport,
   onImport,
-  onToggleShowArchived,
+  onToggleShowArchivedTemplates,
+  onToggleShowArchivedSessions,
+  onEmptyTrash,
   onSignOut,
   onSignIn,
   onPendingInvites,
@@ -194,18 +205,36 @@ export function TreeViewHeader({
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </DropdownMenuItem>
-                {!hideArchivedToggle && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      checked={showArchived}
-                      onCheckedChange={onToggleShowArchived}
-                    >
-                      <Archive className="mr-2 h-4 w-4" />
-                      Show Archived
-                    </DropdownMenuCheckboxItem>
-                  </>
+                {(!hideArchivedTemplatesToggle || !hideArchivedSessionsToggle) && (
+                  <DropdownMenuSeparator />
                 )}
+                {!hideArchivedTemplatesToggle && (
+                  <DropdownMenuCheckboxItem
+                    checked={showArchivedTemplates}
+                    onCheckedChange={onToggleShowArchivedTemplates}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Show Archived Lists
+                  </DropdownMenuCheckboxItem>
+                )}
+                {!hideArchivedSessionsToggle && (
+                  <DropdownMenuCheckboxItem
+                    checked={showArchivedSessions}
+                    onCheckedChange={onToggleShowArchivedSessions}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Show Archived Sessions
+                  </DropdownMenuCheckboxItem>
+                )}
+                {!hideArchivedTemplatesToggle &&
+                  showArchivedTemplates &&
+                  hasArchivedTemplates &&
+                  onEmptyTrash && (
+                    <DropdownMenuItem onClick={onEmptyTrash} className="text-red-600">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Empty Trash
+                    </DropdownMenuItem>
+                  )}
                 {(onSignOut || onSignIn || onPendingInvites) && (
                   <>
                     <DropdownMenuSeparator />

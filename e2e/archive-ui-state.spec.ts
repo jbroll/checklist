@@ -30,7 +30,9 @@ test.describe('Archive UI State Management', () => {
     await expect(page.getByRole('button', { name: /new list/i })).toBeVisible();
   });
 
-  test('should hide New Folder/List buttons when in archived view', async ({ page }) => {
+  test('should show New Folder/List buttons even when archived view is enabled', async ({
+    page,
+  }) => {
     // Verify New Folder and New List buttons are visible initially
     await expect(page.getByRole('button', { name: /new folder/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /new list/i })).toBeVisible();
@@ -38,30 +40,36 @@ test.describe('Archive UI State Management', () => {
     // Open the More options dropdown
     await page.getByLabel('More options').click();
 
-    // Enable "Archived" view
-    await page.getByRole('menuitemcheckbox', { name: /archived/i }).click();
+    // Enable "Show Archived Lists" view
+    await page.getByRole('menuitemcheckbox', { name: /show archived lists/i }).click();
 
-    // New Folder and New List buttons should be hidden
-    await expect(page.getByRole('button', { name: /new folder/i })).not.toBeVisible();
-    await expect(page.getByRole('button', { name: /new list/i })).not.toBeVisible();
-  });
-
-  test('should restore New Folder/List buttons when disabling archived view', async ({ page }) => {
-    // Enable archived view
-    await page.getByLabel('More options').click();
-    await page.getByRole('menuitemcheckbox', { name: /archived/i }).click();
-
-    // Verify buttons are hidden
-    await expect(page.getByRole('button', { name: /new folder/i })).not.toBeVisible();
-    await expect(page.getByRole('button', { name: /new list/i })).not.toBeVisible();
-
-    // Disable archived view
-    await page.getByLabel('More options').click();
-    await page.getByRole('menuitemcheckbox', { name: /archived/i }).click();
-
-    // Buttons should be visible again
+    // New Folder and New List buttons should still be visible
+    // (users can create new items while viewing archived)
     await expect(page.getByRole('button', { name: /new folder/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /new list/i })).toBeVisible();
+  });
+
+  test('should toggle archived lists view', async ({ page }) => {
+    // Open menu and enable archived view
+    await page.getByLabel('More options').click();
+    const checkbox = page.getByRole('menuitemcheckbox', { name: /show archived lists/i });
+    await expect(checkbox).toHaveAttribute('aria-checked', 'false');
+    await checkbox.click();
+
+    // Re-open menu and verify it's now checked
+    await page.getByLabel('More options').click();
+    await expect(
+      page.getByRole('menuitemcheckbox', { name: /show archived lists/i }),
+    ).toHaveAttribute('aria-checked', 'true');
+
+    // Toggle off
+    await page.getByRole('menuitemcheckbox', { name: /show archived lists/i }).click();
+
+    // Re-open menu and verify it's unchecked
+    await page.getByLabel('More options').click();
+    await expect(
+      page.getByRole('menuitemcheckbox', { name: /show archived lists/i }),
+    ).toHaveAttribute('aria-checked', 'false');
   });
 
   test('should recursively delete folder contents when deleting archived folder', async ({

@@ -205,7 +205,7 @@ export function SimplifiedApp({
           onSwitchToSimplified={() => onViewModeChange('classic')}
           switchViewLabel="Advanced View"
           sessionsEnabled={false}
-          hideArchivedToggle={true}
+          hideArchivedSessionsToggle={true}
           hideArchiveAction={true}
         />
 

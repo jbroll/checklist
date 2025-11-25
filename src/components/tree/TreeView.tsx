@@ -51,7 +51,8 @@ interface TreeViewProps {
   switchViewLabel?: string;
   // Session display control
   sessionsEnabled?: boolean;
-  hideArchivedToggle?: boolean;
+  hideArchivedTemplatesToggle?: boolean;
+  hideArchivedSessionsToggle?: boolean;
   hideArchiveAction?: boolean;
 }
 
@@ -105,11 +106,28 @@ export function TreeView({
   onSwitchToSimplified,
   switchViewLabel,
   sessionsEnabled = true,
-  hideArchivedToggle = false,
+  hideArchivedTemplatesToggle = false,
+  hideArchivedSessionsToggle = false,
   hideArchiveAction = false,
 }: TreeViewProps) {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
+    const stored = localStorage.getItem('bubblelist-show-archived-templates');
+    return stored === 'true';
+  });
+  const [showArchivedSessions, setShowArchivedSessions] = useState(() => {
+    const stored = localStorage.getItem('bubblelist-show-archived-sessions');
+    return stored === 'true';
+  });
+
+  // Persist archived view preferences
+  useEffect(() => {
+    localStorage.setItem('bubblelist-show-archived-templates', String(showArchivedTemplates));
+  }, [showArchivedTemplates]);
+
+  useEffect(() => {
+    localStorage.setItem('bubblelist-show-archived-sessions', String(showArchivedSessions));
+  }, [showArchivedSessions]);
 
   // Get selected folder by ID
   const selectedFolder = useMemo(() => {
@@ -134,10 +152,10 @@ export function TreeView({
 
   // Clear selection when selected folder becomes archived
   useEffect(() => {
-    if (selectedFolder?.archived && !showArchived) {
+    if (selectedFolder?.archived && !showArchivedTemplates) {
       onHeaderClick?.();
     }
-  }, [selectedFolder, showArchived, onHeaderClick]);
+  }, [selectedFolder, showArchivedTemplates, onHeaderClick]);
 
   // Configure sensors for drag detection
   // Use MouseSensor + TouchSensor instead of PointerSensor for proper mobile support
@@ -318,9 +336,29 @@ export function TreeView({
 
   // Build hierarchical tree structure
   const folderTree = useMemo(
-    () => buildFolderTree(Array.from(account.root?.folders || []), showArchived),
-    [account.root?.folders, showArchived],
+    () => buildFolderTree(Array.from(account.root?.folders || []), showArchivedTemplates),
+    [account.root?.folders, showArchivedTemplates],
   );
+
+  // Check if there are any archived folders
+  const hasArchivedTemplates = useMemo(() => {
+    return folderService.getArchivedFolders(account).length > 0;
+  }, [account.root?.folders, account]);
+
+  // Handle empty trash
+  const handleEmptyTrash = async () => {
+    const count = folderService.getArchivedFolders(account).length;
+    if (count === 0) return;
+
+    // Import showConfirm from dialog context at the component level
+    // For now, we'll use window.confirm as a fallback
+    const confirmed = window.confirm(
+      `Permanently delete ${count} archived item${count === 1 ? '' : 's'}? This cannot be undone.`,
+    );
+    if (confirmed) {
+      folderService.emptyTrash(account);
+    }
+  };
 
   const renderNode = (node: TreeNode): React.ReactNode => {
     const { folder, children } = node;
@@ -336,7 +374,7 @@ export function TreeView({
       const activeSessions = sessions
         .filter((s: SessionData) => {
           if (!s || !s.id) return false; // Filter out sessions without IDs
-          return showArchived || !s.archived;
+          return showArchivedSessions || !s.archived;
         })
         .sort((a: SessionData, b: SessionData) => {
           const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -435,9 +473,9 @@ export function TreeView({
   const canEditOrUse = isTemplate && !selectedFolder?.archived;
 
   // Show New Folder/List buttons when:
-  // - Not in archived view AND
-  // - (nothing is selected OR a non-archived folder is selected)
-  const canCreateFolderOrList = !showArchived && (!selectedFolderId || !selectedFolder?.archived);
+  // - Nothing is selected OR a non-archived folder is selected
+  // (User can create new items even while viewing archived items)
+  const canCreateFolderOrList = !selectedFolderId || !selectedFolder?.archived;
 
   return (
     <DndContext
@@ -454,8 +492,11 @@ export function TreeView({
           isDragging={!!activeFolderId}
           canCreateFolderOrList={canCreateFolderOrList}
           canEditOrUse={canEditOrUse}
-          showArchived={showArchived}
-          hideArchivedToggle={hideArchivedToggle}
+          showArchivedTemplates={showArchivedTemplates}
+          showArchivedSessions={showArchivedSessions}
+          hideArchivedTemplatesToggle={hideArchivedTemplatesToggle}
+          hideArchivedSessionsToggle={hideArchivedSessionsToggle}
+          hasArchivedTemplates={hasArchivedTemplates}
           onHeaderClick={onHeaderClick || (() => {})}
           onEditTemplate={() => {
             if (selectedTemplateId && onEditTemplate) {
@@ -471,7 +512,9 @@ export function TreeView({
           onAddTemplate={onAddTemplate || (() => {})}
           onExport={onExport || (() => {})}
           onImport={onImport || (() => {})}
-          onToggleShowArchived={() => setShowArchived(!showArchived)}
+          onToggleShowArchivedTemplates={() => setShowArchivedTemplates(!showArchivedTemplates)}
+          onToggleShowArchivedSessions={() => setShowArchivedSessions(!showArchivedSessions)}
+          onEmptyTrash={handleEmptyTrash}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
           isAuthenticated={isAuthenticated}

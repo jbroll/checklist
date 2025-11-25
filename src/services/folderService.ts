@@ -193,13 +193,31 @@ export function renameFolder(folder: InstanceOfSchema<typeof FolderNode>, newNam
 }
 
 /**
+ * Format archive timestamp for folder name suffix
+ * Format: "YYYY-MM-DD HH:MM" (24-hour, local time)
+ */
+function formatArchiveTimestamp(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+/**
  * Archive (soft delete) a folder
  * Recursively archives all children
+ * Appends archive timestamp to name to avoid collisions with active folders
  */
 export function archiveFolder(folder: InstanceOfSchema<typeof FolderNode>): void {
   const now = new Date();
 
+  // Append archive timestamp to name to differentiate from active folders
+  const archiveSuffix = ` (archived ${formatArchiveTimestamp(now)})`;
+  folder.$jazz.set('name', folder.name + archiveSuffix);
   folder.$jazz.set('archived', true);
+  folder.$jazz.set('archivedAt', now);
   folder.$jazz.set('updatedAt', now);
 
   // Recursively archive children (for organizational folders)
@@ -215,11 +233,20 @@ export function archiveFolder(folder: InstanceOfSchema<typeof FolderNode>): void
 /**
  * Unarchive (restore) a folder
  * Recursively unarchives all children
+ * Removes the archive timestamp suffix from the name
  */
 export function unarchiveFolder(folder: InstanceOfSchema<typeof FolderNode>): void {
   const now = new Date();
 
+  // Remove the archive timestamp suffix from the name if present
+  const archivePattern = / \(archived \d{4}-\d{2}-\d{2} \d{2}:\d{2}\)$/;
+  const cleanedName = folder.name.replace(archivePattern, '');
+  if (cleanedName !== folder.name) {
+    folder.$jazz.set('name', cleanedName);
+  }
+
   folder.$jazz.set('archived', false);
+  folder.$jazz.set('archivedAt', undefined);
   folder.$jazz.set('updatedAt', now);
 
   // Recursively unarchive children (for organizational folders)
@@ -254,11 +281,9 @@ export function deleteFolder(
     }
   }
 
-  // For template folders, clean up sessions
+  // For template folders, clear sessions (plain array, not CoList)
   if (folder.sessions) {
-    while (folder.sessions.length > 0) {
-      folder.sessions.$jazz.splice(0, 1);
-    }
+    folder.$jazz.set('sessions', []);
   }
 
   // Remove from parent or root
@@ -472,4 +497,57 @@ export function getAllTemplateFolders(
 
   collectTemplates(Array.from(account.root.folders));
   return templates;
+}
+
+/**
+ * Get top-level archived folders (not children of other archived folders)
+ * This returns only the root-level archived folders to avoid double-deletion
+ */
+export function getArchivedFolders(
+  account: InstanceOfSchema<typeof Account>,
+): InstanceOfSchema<typeof FolderNode>[] {
+  if (!account.root?.folders) return [];
+
+  const archived: InstanceOfSchema<typeof FolderNode>[] = [];
+
+  function collectArchived(folders: InstanceOfSchema<typeof FolderNode>[]) {
+    for (const folder of folders) {
+      if (!folder) continue;
+
+      if (folder.archived) {
+        // Only add archived folders - don't recurse into their children
+        // since deleting the parent will delete children too
+        archived.push(folder);
+      } else if (folder.children) {
+        // Only recurse into non-archived folders to find nested archived ones
+        collectArchived(folder.children);
+      }
+    }
+  }
+
+  collectArchived(Array.from(account.root.folders));
+  return archived;
+}
+
+/**
+ * Empty trash - permanently delete all archived folders
+ *
+ * @param account - User's Account
+ * @returns Number of folders permanently deleted
+ */
+export function emptyTrash(account: InstanceOfSchema<typeof Account>): number {
+  const archivedFolders = getArchivedFolders(account);
+  let deletedCount = 0;
+
+  // Delete each archived folder (in reverse to handle nested folders properly)
+  for (const folder of archivedFolders.reverse()) {
+    try {
+      deleteFolder(account, folder);
+      deletedCount++;
+    } catch {
+      // Continue with other deletions if one fails
+    }
+  }
+
+  return deletedCount;
 }

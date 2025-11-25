@@ -79,6 +79,7 @@ export const FolderNode: any = co.map({
   name: z.string(),
   expanded: z.boolean(),
   archived: z.boolean(),
+  archivedAt: z.optional(z.date()), // When the folder was archived (for retention policies)
 
   // Optional fields - use as required for different types
 

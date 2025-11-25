@@ -161,20 +161,23 @@ async function importFolder(
   folder: InstanceOfSchema<typeof FolderNode>;
   stats: { itemsAdded: number; sessionsCreated: number; nameConflict: boolean };
 }> {
-  // Check for name conflict in target parent's children
+  // Check for name conflict in target parent's children (excluding archived folders)
   const siblings = parentFolder?.children || account.root?.folders || [];
+  const activeSiblings = Array.from(siblings).filter(
+    (f: InstanceOfSchema<typeof FolderNode> | null) => f && !f.archived,
+  );
   let finalName = exportedFolder.name;
   let nameConflict = false;
 
-  // Check if name already exists in siblings
-  const existingFolder = Array.from(siblings).find(
+  // Check if name already exists in active siblings
+  const existingFolder = activeSiblings.find(
     (f: InstanceOfSchema<typeof FolderNode> | null) => f?.name === finalName,
   );
   if (existingFolder) {
     // Append a number to make it unique
     let counter = 1;
     while (
-      Array.from(siblings).some(
+      activeSiblings.some(
         (f: InstanceOfSchema<typeof FolderNode> | null) =>
           f?.name === `${exportedFolder.name} (${counter})`,
       )
