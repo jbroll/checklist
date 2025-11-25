@@ -29,7 +29,7 @@ function findTemplateById(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
 ): InstanceOfSchema<typeof FolderNode> | null {
-  const templates = folderService.getAllTemplateFolders(account, true);
+  const templates = folderService.getAllTemplateFolders(account);
   return templates.find((t) => t?.$jazz?.id === templateId) || null;
 }
 

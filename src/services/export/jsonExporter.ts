@@ -42,7 +42,7 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
   const folders: ExportedFolder[] = [];
 
   // Get all template folders from the hierarchy
-  const templates = folderService.getAllTemplateFolders(account, true);
+  const templates = folderService.getAllTemplateFolders(account);
   for (const template of templates) {
     if (!template) continue;
     const exportedFolder = exportTemplateNode(template);
