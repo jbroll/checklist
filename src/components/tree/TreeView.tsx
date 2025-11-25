@@ -472,10 +472,9 @@ export function TreeView({
   // Show Edit/Use buttons only when a non-archived template is selected
   const canEditOrUse = isTemplate && !selectedFolder?.archived;
 
-  // Show New Folder/List buttons when:
-  // - Nothing is selected OR a non-archived folder is selected
-  // (User can create new items even while viewing archived items)
-  const canCreateFolderOrList = !selectedFolderId || !selectedFolder?.archived;
+  // Always show New Folder/List buttons
+  // Users can create new items at any time, regardless of selection or archived view state
+  const canCreateFolderOrList = true;
 
   return (
     <DndContext
