@@ -10,6 +10,7 @@ The **Indented List Format** is a new plain text format for importing and export
 - **Flexible indentation**: Supports tabs, 2-space, 3-space, or 4-space indentation
 - **Mixed indentation**: Can handle mixed tabs and spaces
 - **Comments**: Lines starting with `#` are ignored
+- **Metadata**: Comments with `# key: value` format can specify list name and description
 - **Blank lines**: Empty lines are ignored
 - **Round-trip support**: Export preserves hierarchy when re-imported
 
@@ -24,8 +25,14 @@ The **Indented List Format** is a new plain text format for importing and export
    - Items without children → Items (leaf nodes)
 
 3. **Comments and blank lines**
-   - Lines starting with `#` are comments (ignored)
+   - Lines starting with `#` are comments (ignored for items)
    - Blank lines are ignored
+
+4. **Metadata in comments**
+   - Use `# key: value` format to specify metadata
+   - `# name:` sets the list/template name on import
+   - `# description:` sets an optional description
+   - Any key can be used; `name` and `description` are recognized by the importer
 
 ## Examples
 
@@ -93,6 +100,22 @@ Dairy
   Milk
   Cheese
 ```
+
+### With Metadata
+
+```
+# name: Weekly Groceries
+# description: Standard weekly shopping list
+
+Produce
+  Apples
+  Bananas
+Dairy
+  Milk
+  Cheese
+```
+
+When imported, this creates a template named "Weekly Groceries" instead of using the filename.
 
 ### Mixed Root-Level Items
 
@@ -162,7 +185,8 @@ Category1
 
 1. **Consistent indentation**: Use consistent spacing (all 2-space or all 4-space)
 2. **Comments for organization**: Use `#` comments to document your lists
-3. **Round-trip editing**: Export → Edit in text editor → Re-import
+3. **Use metadata for names**: Add `# name: My List` to set the template name on import
+4. **Round-trip editing**: Export → Edit in text editor → Re-import
 
 ## Comparison with Other Formats
 
@@ -171,7 +195,7 @@ Category1
 | Hierarchy | ❌ | ✅ | ✅ | ✅ |
 | Human-readable | ✅ | ✅ | ⚠️ | ❌ |
 | Comments | ❌ | ✅ | ❌ | ❌ |
-| Metadata | ❌ | ❌ | ✅ | ✅ |
+| Metadata | ❌ | ✅ | ✅ | ✅ |
 | Quick editing | ✅ | ✅ | ⚠️ | ❌ |
 
 ## Technical Details

@@ -1,0 +1,73 @@
+# name: Birthday Party
+# description: Party planning supplies and activities
+
+Invitations
+  Create Guest List
+  Design Invitations
+  Send Invitations
+  Track RSVPs
+
+Decorations
+  Balloons
+  Streamers
+  Banner
+  Table Cloths
+  Centerpieces
+  Party Hats
+  Confetti
+
+Food & Drinks
+  Main Course
+    Pizza
+    Hot Dogs
+    Chicken Fingers
+    Veggie Tray
+    Fruit Platter
+  Sides
+    Chips
+    Pretzels
+    Cheese and Crackers
+  Desserts
+    Birthday Cake
+    Ice Cream
+    Cupcakes
+    Cookies
+  Drinks
+    Juice Boxes
+    Soda
+    Water
+    Lemonade
+
+Supplies
+  Plates
+  Napkins
+  Cups
+  Forks
+  Spoons
+  Serving Utensils
+  Trash Bags
+  Ice
+
+Activities
+  Games
+    Pin the Tail
+    Musical Chairs
+    Scavenger Hunt
+    Relay Races
+  Entertainment
+    Face Painting
+    Balloon Animals
+    Photo Booth
+  Prizes
+    Small Toys
+    Candy
+    Stickers
+    Temporary Tattoos
+
+Party Favors
+  Goodie Bags
+  Candy
+  Small Toys
+  Bubbles
+  Stickers
+  Thank You Tags

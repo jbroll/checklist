@@ -2,6 +2,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
 import type { Account, FolderNode } from '@/schemas';
+import { generateUniqueFolderName } from '@/services/folderService';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
   importAsNewTemplate,
@@ -9,8 +10,9 @@ import {
   importItemsFromCsvFile,
   importItemsFromTxtFile,
 } from '@/services/import/importService';
-import type { TxtImportResult } from '@/services/import/txtImporter';
+import { parseTextMetadata, type TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
+import { readFileAsText } from '@/utils/fileUpload';
 
 // Track file identity for change detection
 function getFileId(file: File | null): string {
@@ -75,12 +77,33 @@ export function useImportDialog({
 
     setFileType(detectedType);
 
-    // Auto-generate template name from filename (for TXT/CSV at top level)
+    // Auto-generate template name from metadata or filename (for TXT/CSV at top level)
     if (!isFolderLevel && detectedType !== 'json') {
-      const baseName = selectedFile.name.replace(/\.(txt|csv)$/i, '');
-      setTemplateName(baseName);
+      // Read file to check for metadata (for TXT files)
+      const generateName = async () => {
+        let baseName = selectedFile.name.replace(/\.(txt|csv)$/i, '');
+
+        // For TXT files, try to extract name from metadata
+        if (detectedType === 'txt') {
+          try {
+            const content = await readFileAsText(selectedFile);
+            const metadata = parseTextMetadata(content);
+            if (metadata.name) {
+              baseName = metadata.name;
+            }
+          } catch {
+            // Ignore read errors, use filename
+          }
+        }
+
+        // Generate unique name to avoid duplicates
+        const uniqueName = generateUniqueFolderName(baseName, account, parentFolder);
+        setTemplateName(uniqueName);
+      };
+
+      generateName();
     }
-  }, [selectedFile, isFolderLevel]);
+  }, [selectedFile, isFolderLevel, account, parentFolder]);
 
   const handleSuccessfulImport = () => {
     setTimeout(() => {

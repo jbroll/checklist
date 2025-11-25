@@ -1,0 +1,34 @@
+# name: Laundry Routine
+
+Sorting
+  Whites
+  Light Colors
+  Dark Colors
+  Delicates
+  Towels
+  Bedding
+
+Wash Loads
+  Regular Clothes
+  Work Clothes
+  Gym Clothes
+  Kids Clothes
+  Towels and Washcloths
+  Sheets
+  Blankets
+
+Special Care
+  Hand Wash Items
+  Dry Clean Only
+  Air Dry Items
+  Iron Needed
+
+Tasks
+  Sort Laundry
+  Check Pockets
+  Treat Stains
+  Start Washer
+  Transfer to Dryer
+  Fold Clothes
+  Put Away
+  Iron if Needed

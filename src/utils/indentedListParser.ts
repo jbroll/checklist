@@ -26,11 +26,30 @@
 
 import { PATH_SEPARATOR } from './pathUtils';
 
+/**
+ * Metadata extracted from comment headers
+ *
+ * Format: # key: value
+ * Example:
+ *   # name: My Grocery List
+ *   # description: Weekly shopping template
+ */
+export interface ListMetadata {
+  name?: string;
+  description?: string;
+  [key: string]: string | undefined;
+}
+
 export interface ParsedItem {
   name: string;
   type: 'category' | 'item';
   path: string;
   level: number;
+}
+
+export interface ParsedList {
+  metadata: ListMetadata;
+  items: ParsedItem[];
 }
 
 interface TreeNode {
@@ -46,16 +65,53 @@ interface IndentConfig {
 }
 
 /**
- * Parse indented list text into hierarchical items
+ * Parse metadata from comment lines
+ *
+ * Extracts key-value pairs from comments in the format: # key: value
+ *
+ * @param lines - All lines from the text
+ * @returns Metadata object with extracted key-value pairs
+ */
+function parseMetadata(lines: string[]): ListMetadata {
+  const metadata: ListMetadata = {};
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Only process comment lines
+    if (!trimmed.startsWith('#')) continue;
+
+    // Remove the # and trim
+    const content = trimmed.slice(1).trim();
+
+    // Look for key: value pattern
+    const colonIndex = content.indexOf(':');
+    if (colonIndex > 0) {
+      const key = content.slice(0, colonIndex).trim().toLowerCase();
+      const value = content.slice(colonIndex + 1).trim();
+
+      if (key && value) {
+        metadata[key] = value;
+      }
+    }
+  }
+
+  return metadata;
+}
+
+/**
+ * Parse indented list text into hierarchical items with metadata
  *
  * @param text - Text content with indentation
- * @returns Array of parsed items with paths and types
+ * @returns Parsed list with metadata and items
  */
-export function parseIndentedList(text: string): ParsedItem[] {
-  // Split into lines
+export function parseIndentedListWithMetadata(text: string): ParsedList {
   const lines = text.split(/\r?\n/);
 
-  // Filter and clean lines
+  // Extract metadata from comments
+  const metadata = parseMetadata(lines);
+
+  // Filter and clean lines for items
   const cleanedLines = lines
     .map((line, index) => ({ line, index }))
     .filter(({ line }) => {
@@ -69,7 +125,7 @@ export function parseIndentedList(text: string): ParsedItem[] {
     }));
 
   if (cleanedLines.length === 0) {
-    return [];
+    return { metadata, items: [] };
   }
 
   // Detect indentation config
@@ -79,7 +135,17 @@ export function parseIndentedList(text: string): ParsedItem[] {
   const tree = buildTree(cleanedLines, indentConfig);
 
   // Flatten tree to items with paths and types
-  return flattenTree(tree);
+  return { metadata, items: flattenTree(tree) };
+}
+
+/**
+ * Parse indented list text into hierarchical items
+ *
+ * @param text - Text content with indentation
+ * @returns Array of parsed items with paths and types
+ */
+export function parseIndentedList(text: string): ParsedItem[] {
+  return parseIndentedListWithMetadata(text).items;
 }
 
 /**

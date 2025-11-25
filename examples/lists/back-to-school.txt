@@ -1,0 +1,75 @@
+# name: Back to School
+# description: School supplies, clothing, and prep tasks
+
+School Supplies
+  Writing
+    Pencils
+    Pens
+    Highlighters
+    Markers
+    Colored Pencils
+    Crayons
+    Erasers
+    Pencil Sharpener
+  Paper
+    Notebooks
+    Loose Leaf Paper
+    Index Cards
+    Construction Paper
+    Graph Paper
+  Organization
+    Binders
+    Folders
+    Dividers
+    Planner
+    Pencil Case
+    Backpack
+    Lunchbox
+  Other
+    Scissors
+    Glue Sticks
+    Tape
+    Ruler
+    Calculator
+    Stapler
+
+Clothing
+  Tops
+    T-Shirts
+    Long Sleeve Shirts
+    Sweaters
+    Hoodie
+  Bottoms
+    Jeans
+    Khakis
+    Shorts
+    Leggings
+  Outerwear
+    Light Jacket
+    Winter Coat
+    Rain Jacket
+  Footwear
+    Sneakers
+    Dress Shoes
+    Boots
+    Sandals
+  Accessories
+    Socks
+    Underwear
+    Belt
+    Watch
+
+Electronics
+  Laptop
+  Tablet
+  Headphones
+  Calculator
+  USB Drive
+
+Forms and Tasks
+  Complete Registration
+  Submit Health Forms
+  Order School Photos
+  Set Up Lunch Account
+  Meet the Teacher Night
+  Label Everything

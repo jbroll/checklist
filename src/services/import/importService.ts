@@ -17,7 +17,7 @@ import {
   type SessionImportOptions,
   type SessionImportResult,
 } from './sessionImporter';
-import { importItemsFromText, type TxtImportResult } from './txtImporter';
+import { importItemsFromText, parseTextMetadata, type TxtImportResult } from './txtImporter';
 import type { ImportFileType, ImportResult } from './types';
 
 /**
@@ -134,6 +134,7 @@ export async function importItemsFromTxtFile(
       skipped: 0,
       errors: [error instanceof Error ? error.message : 'Validation failed'],
       duplicates: [],
+      metadata: {},
     };
   }
 
@@ -215,10 +216,12 @@ export async function importSessionFromCsvFile(
  * Import TXT/CSV file as a new template
  *
  * Creates a new template with the given name and imports all items into it.
+ * For TXT files, if the file contains a `# name:` metadata comment, it will
+ * be used as the template name (unless overridden by templateName parameter).
  *
  * @param file - TXT or CSV file with items
  * @param account - User's Account
- * @param templateName - Name for the new template folder
+ * @param templateName - Name for the new template folder (optional for TXT files with metadata)
  * @param fileType - File type ('txt' or 'csv')
  * @param parentFolder - Optional parent folder (if not provided, creates at root)
  * @returns Import result with statistics
@@ -226,7 +229,7 @@ export async function importSessionFromCsvFile(
 export async function importAsNewTemplate(
   file: File,
   account: InstanceOfSchema<typeof Account>,
-  templateName: string,
+  templateName: string | undefined,
   fileType: 'txt' | 'csv',
   parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
@@ -245,8 +248,24 @@ export async function importAsNewTemplate(
   // Read file content
   const content = await readFileAsText(file);
 
+  // Determine the template name
+  let finalTemplateName = templateName;
+
+  // For TXT files, check for metadata name if no explicit name provided
+  if (fileType === 'txt' && !finalTemplateName) {
+    const metadata = parseTextMetadata(content);
+    if (metadata.name) {
+      finalTemplateName = metadata.name;
+    }
+  }
+
+  // Fall back to filename without extension if still no name
+  if (!finalTemplateName) {
+    finalTemplateName = file.name.replace(/\.(txt|csv)$/i, '');
+  }
+
   // Create new template using folderService
-  const newTemplate = folderService.createFolder(account, templateName, true, parentFolder);
+  const newTemplate = folderService.createFolder(account, finalTemplateName, true, parentFolder);
 
   if (!newTemplate) {
     return createErrorResult('Failed to create template');

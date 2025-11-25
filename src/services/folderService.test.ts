@@ -69,6 +69,8 @@ import {
   deleteFolder,
   expandAncestorFolders,
   findFolderByPath,
+  folderNameExists,
+  generateUniqueFolderName,
   getAllTemplateFolders,
   getChildFolders,
   getFolderDisplayPath,
@@ -757,6 +759,96 @@ describe('FolderService', () => {
 
       expect(templates).toHaveLength(1);
       expect(templates[0].name).toBe('Template 1');
+    });
+  });
+
+  describe('folderNameExists', () => {
+    it('should return true if name exists at root level', () => {
+      createFolder(account, 'My Folder', true);
+
+      expect(folderNameExists('My Folder', account)).toBe(true);
+    });
+
+    it('should return false if name does not exist', () => {
+      createFolder(account, 'Other Folder', true);
+
+      expect(folderNameExists('My Folder', account)).toBe(false);
+    });
+
+    it('should check case-insensitively', () => {
+      createFolder(account, 'My Folder', true);
+
+      expect(folderNameExists('MY FOLDER', account)).toBe(true);
+      expect(folderNameExists('my folder', account)).toBe(true);
+    });
+
+    it('should ignore archived folders', () => {
+      const folder = createFolder(account, 'Archived Folder', true);
+      archiveFolder(folder);
+
+      expect(folderNameExists('Archived Folder', account)).toBe(false);
+    });
+
+    it('should check within parent folder when provided', () => {
+      const parent = createFolder(account, 'Parent', false);
+      createFolder(account, 'Child', true, parent);
+
+      expect(folderNameExists('Child', account, parent)).toBe(true);
+      expect(folderNameExists('Child', account)).toBe(false); // Not at root
+    });
+
+    it('should allow same name in different locations', () => {
+      createFolder(account, 'Common Name', true);
+      const parent = createFolder(account, 'Parent', false);
+
+      // "Common Name" exists at root, but not in parent
+      expect(folderNameExists('Common Name', account)).toBe(true);
+      expect(folderNameExists('Common Name', account, parent)).toBe(false);
+    });
+  });
+
+  describe('generateUniqueFolderName', () => {
+    it('should return original name if not duplicate', () => {
+      const name = generateUniqueFolderName('New Folder', account);
+
+      expect(name).toBe('New Folder');
+    });
+
+    it('should add (2) suffix if name exists', () => {
+      createFolder(account, 'My Folder', true);
+
+      const name = generateUniqueFolderName('My Folder', account);
+
+      expect(name).toBe('My Folder (2)');
+    });
+
+    it('should increment suffix until unique', () => {
+      createFolder(account, 'My Folder', true);
+      createFolder(account, 'My Folder (2)', true);
+      createFolder(account, 'My Folder (3)', true);
+
+      const name = generateUniqueFolderName('My Folder', account);
+
+      expect(name).toBe('My Folder (4)');
+    });
+
+    it('should work within parent folder context', () => {
+      const parent = createFolder(account, 'Parent', false);
+      createFolder(account, 'Child', true, parent);
+
+      const name = generateUniqueFolderName('Child', account, parent);
+
+      expect(name).toBe('Child (2)');
+    });
+
+    it('should allow same name in different locations', () => {
+      createFolder(account, 'Common Name', true);
+      const parent = createFolder(account, 'Parent', false);
+
+      // Should not need suffix because parent doesn't have "Common Name"
+      const name = generateUniqueFolderName('Common Name', account, parent);
+
+      expect(name).toBe('Common Name');
     });
   });
 });

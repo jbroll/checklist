@@ -1,0 +1,22 @@
+# name: Weekly Groceries
+
+Produce
+  Bananas
+  Apples
+  Salad Mix
+  Tomatoes
+  Onions
+
+Dairy
+  Milk
+  Eggs
+  Butter
+  Cheese
+
+Meat
+  Chicken
+  Ground Beef
+
+Bread
+Cereal
+Coffee

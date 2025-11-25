@@ -105,6 +105,62 @@ export function createFolder(
 }
 
 /**
+ * Check if a folder name exists in the target location (case-insensitive)
+ *
+ * @param name - Folder name to check
+ * @param account - User's Account
+ * @param parentFolder - Optional parent folder (checks parent's children, or root if not provided)
+ * @returns True if name already exists
+ */
+export function folderNameExists(
+  name: string,
+  account: InstanceOfSchema<typeof Account>,
+  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
+): boolean {
+  const normalizedName = name.toLowerCase();
+  const foldersToCheck = parentFolder?.children ?? account.root?.folders ?? [];
+
+  for (const folder of foldersToCheck) {
+    if (folder && !folder.archived && folder.name?.toLowerCase() === normalizedName) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Generate a unique folder name by adding a numeric suffix if needed
+ *
+ * @param baseName - Desired folder name
+ * @param account - User's Account
+ * @param parentFolder - Optional parent folder
+ * @returns Unique name (original or with suffix like "Name (2)")
+ */
+export function generateUniqueFolderName(
+  baseName: string,
+  account: InstanceOfSchema<typeof Account>,
+  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
+): string {
+  if (!folderNameExists(baseName, account, parentFolder)) {
+    return baseName;
+  }
+
+  // Try adding numeric suffixes
+  let suffix = 2;
+  while (suffix <= 100) {
+    const candidateName = `${baseName} (${suffix})`;
+    if (!folderNameExists(candidateName, account, parentFolder)) {
+      return candidateName;
+    }
+    suffix++;
+  }
+
+  // Fallback: add timestamp
+  return `${baseName} (${Date.now()})`;
+}
+
+/**
  * Get all root folders
  */
 export function getRootFolders(

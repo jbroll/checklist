@@ -1,0 +1,103 @@
+# name: New Baby Prep
+# description: Everything to prepare for a new baby
+
+Nursery
+  Furniture
+    Crib
+    Crib Mattress
+    Changing Table
+    Dresser
+    Glider or Rocker
+    Bookshelf
+  Bedding
+    Crib Sheets
+    Mattress Protector
+    Swaddle Blankets
+    Sleep Sacks
+  Decor
+    Mobile
+    Night Light
+    Wall Art
+    Curtains
+    Rug
+
+Feeding
+  Breastfeeding
+    Nursing Pillow
+    Breast Pump
+    Storage Bags
+    Nipple Cream
+    Nursing Bras
+    Nursing Pads
+  Bottle Feeding
+    Bottles
+    Nipples
+    Bottle Brush
+    Drying Rack
+    Formula
+    Bottle Warmer
+  Later Feeding
+    High Chair
+    Bibs
+    Burp Cloths
+    Baby Spoons
+
+Diapering
+  Diapers Newborn
+  Diapers Size 1
+  Wipes
+  Diaper Cream
+  Changing Pad
+  Diaper Bag
+  Diaper Pail
+  Pail Liners
+
+Clothing
+  Onesies
+  Sleepers
+  Socks
+  Hats
+  Mittens
+  Receiving Blankets
+  Going Home Outfit
+
+Bathing
+  Baby Tub
+  Hooded Towels
+  Washcloths
+  Baby Shampoo
+  Baby Lotion
+  Baby Nail Clippers
+  Soft Brush
+
+Health and Safety
+  Thermometer
+  Nasal Aspirator
+  Baby Monitor
+  Outlet Covers
+  Cabinet Locks
+  Baby Gate
+  Car Seat
+  Infant Tylenol
+
+Gear
+  Stroller
+  Baby Carrier
+  Bouncer
+  Swing
+  Play Mat
+  Pacifiers
+
+Hospital Bag
+  For Baby
+    Going Home Outfit
+    Blanket
+    Car Seat
+    Diapers
+  For Mom
+    Comfortable Clothes
+    Nursing Bras
+    Toiletries
+    Phone Charger
+    Snacks
+    Pillow

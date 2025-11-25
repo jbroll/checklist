@@ -1,0 +1,111 @@
+# name: Complete Grocery List
+# description: A comprehensive grocery list with categories
+
+Produce
+  Fruits
+    Apples
+    Bananas
+    Oranges
+    Grapes
+    Strawberries
+    Blueberries
+    Lemons
+    Avocados
+  Vegetables
+    Lettuce
+    Spinach
+    Tomatoes
+    Onions
+    Garlic
+    Carrots
+    Celery
+    Bell Peppers
+    Broccoli
+    Cucumbers
+    Potatoes
+    Sweet Potatoes
+
+Dairy & Eggs
+  Milk
+  Half and Half
+  Heavy Cream
+  Butter
+  Eggs
+  Yogurt
+  Sour Cream
+  Cream Cheese
+  Cheddar Cheese
+  Mozzarella
+  Parmesan
+
+Meat & Seafood
+  Chicken Breast
+  Ground Beef
+  Bacon
+  Sausage Links
+  Pork Chops
+  Salmon
+  Shrimp
+  Deli Turkey
+  Deli Ham
+
+Bakery
+  Bread
+  Bagels
+  Tortillas
+  Hamburger Buns
+  Hot Dog Buns
+  English Muffins
+  Croissants
+
+Pantry
+  Pasta
+  Rice
+  Olive Oil
+  Vegetable Oil
+  Flour
+  Sugar
+  Brown Sugar
+  Salt
+  Black Pepper
+  Chicken Broth
+  Canned Tomatoes
+  Tomato Sauce
+  Peanut Butter
+  Jelly
+  Honey
+  Maple Syrup
+  Cereal
+  Oatmeal
+
+Frozen
+  Ice Cream
+  Frozen Vegetables
+  Frozen Fruit
+  Pizza
+  Frozen Waffles
+
+Beverages
+  Coffee
+  Tea
+  Orange Juice
+  Apple Juice
+  Sparkling Water
+  Soda
+
+Snacks
+  Chips
+  Crackers
+  Nuts
+  Granola Bars
+  Popcorn
+  Pretzels
+
+Household
+  Paper Towels
+  Toilet Paper
+  Dish Soap
+  Laundry Detergent
+  Trash Bags
+  Aluminum Foil
+  Plastic Wrap

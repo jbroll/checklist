@@ -1,0 +1,85 @@
+# name: Moving Checklist
+# description: Everything for a smooth move
+
+Before Moving Day
+  Logistics
+    Book Moving Company
+    Confirm Moving Date
+    Get Boxes and Supplies
+    Change Address with Post Office
+    Update Address with Bank
+    Transfer Utilities
+    Cancel Old Utilities
+  Packing Supplies
+    Moving Boxes
+    Packing Tape
+    Bubble Wrap
+    Packing Paper
+    Markers
+    Labels
+    Scissors
+    Box Cutter
+
+Room by Room Packing
+  Kitchen
+    Dishes
+    Glasses
+    Pots and Pans
+    Small Appliances
+    Utensils
+    Food Items
+  Living Room
+    Books
+    Electronics
+    Decorations
+    Lamps
+    Remotes
+  Bedroom
+    Clothing
+    Bedding
+    Shoes
+    Jewelry
+    Personal Items
+  Bathroom
+    Toiletries
+    Towels
+    Medications
+    Cleaning Supplies
+  Office
+    Computer
+    Files
+    Office Supplies
+    Desk Items
+  Garage
+    Tools
+    Sports Equipment
+    Garden Supplies
+    Holiday Decorations
+
+Moving Day Essentials
+  Important Documents
+  Medications
+  Phone Chargers
+  Laptop
+  Toiletries Bag
+  Change of Clothes
+  Snacks
+  Water Bottles
+  Cash
+  Keys
+
+First Night Box
+  Sheets
+  Pillows
+  Towels
+  Toilet Paper
+  Hand Soap
+  Phone Charger
+  Pajamas
+  Coffee Maker
+  Coffee
+  Mugs
+  Paper Plates
+  Plastic Utensils
+  Trash Bags
+  Basic Tools

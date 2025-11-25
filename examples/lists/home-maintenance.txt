@@ -1,0 +1,56 @@
+# name: Home Maintenance
+# description: Monthly, seasonal, and annual home tasks
+
+Monthly Tasks
+  Replace HVAC Filter
+  Test Smoke Detectors
+  Test CO Detectors
+  Clean Garbage Disposal
+  Check Fire Extinguisher
+  Clean Range Hood Filter
+
+Seasonal - Spring
+  Service AC Unit
+  Clean Gutters
+  Power Wash Deck
+  Check Roof
+  Fertilize Lawn
+  Mulch Garden Beds
+  Clean Windows
+  Replace Weatherstripping
+
+Seasonal - Summer
+  Trim Trees and Shrubs
+  Check Irrigation System
+  Clean Outdoor Furniture
+  Inspect Deck for Damage
+  Check Caulking
+  Clean Dryer Vent
+
+Seasonal - Fall
+  Clean Gutters
+  Service Furnace
+  Drain Outdoor Faucets
+  Store Outdoor Furniture
+  Rake Leaves
+  Check Insulation
+  Test Heating System
+  Seal Driveway Cracks
+
+Seasonal - Winter
+  Check Pipes for Freezing
+  Clear Snow and Ice
+  Check for Drafts
+  Test Sump Pump
+  Inspect Fireplace
+  Stock Emergency Supplies
+
+Annual Tasks
+  Deep Clean Carpets
+  Service Water Heater
+  Check Electrical Panel
+  Inspect Foundation
+  Service Garage Door
+  Check Attic
+  Inspect Plumbing
+  Update Home Inventory

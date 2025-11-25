@@ -5,16 +5,26 @@
  * Supports two formats:
  * 1. Flat list (one item per line)
  * 2. Indented list (hierarchical with tabs/spaces)
+ *
+ * Metadata can be specified in comments:
+ *   # name: My List Name
+ *   # description: Optional description
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
 import { parseTextList } from '../../utils/csvParser';
-import { isIndentedFormat, parseIndentedList } from '../../utils/indentedListParser';
+import {
+  isIndentedFormat,
+  type ListMetadata,
+  parseIndentedListWithMetadata,
+} from '../../utils/indentedListParser';
 import { normalizePathSegment } from '../../utils/pathUtils';
 import { type BaseImportResult, importItems } from './baseImporter';
 
-export type TxtImportResult = BaseImportResult;
+export interface TxtImportResult extends BaseImportResult {
+  metadata: ListMetadata;
+}
 
 /**
  * Import template items from plain text
@@ -37,6 +47,19 @@ export type TxtImportResult = BaseImportResult;
  * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
+/**
+ * Parse metadata from text content without importing
+ *
+ * Useful for extracting the list name before creating a template.
+ *
+ * @param textContent - Plain text content
+ * @returns Metadata extracted from comments
+ */
+export function parseTextMetadata(textContent: string): ListMetadata {
+  const { metadata } = parseIndentedListWithMetadata(textContent);
+  return metadata;
+}
+
 export function importItemsFromText(
   textContent: string,
   template: InstanceOfSchema<typeof FolderNode>,
@@ -44,8 +67,8 @@ export function importItemsFromText(
 ): TxtImportResult {
   // Detect format
   if (isIndentedFormat(textContent)) {
-    // Parse indented format
-    const parsedItems = parseIndentedList(textContent);
+    // Parse indented format with metadata
+    const { metadata, items: parsedItems } = parseIndentedListWithMetadata(textContent);
 
     // Convert to import format (name, path, type)
     const itemsToImport = parsedItems.map((item) => ({
@@ -55,10 +78,12 @@ export function importItemsFromText(
     }));
 
     // Use base importer to handle the actual import
-    return importItems(itemsToImport, template, account);
+    const result = importItems(itemsToImport, template, account);
+    return { ...result, metadata };
   }
 
-  // Parse flat format (original behavior)
+  // Parse flat format - also check for metadata in comments
+  const { metadata } = parseIndentedListWithMetadata(textContent);
   const itemNames = parseTextList(textContent);
 
   // Convert names to items with paths
@@ -68,5 +93,6 @@ export function importItemsFromText(
   }));
 
   // Use base importer to handle the actual import
-  return importItems(itemsToImport, template, account);
+  const result = importItems(itemsToImport, template, account);
+  return { ...result, metadata };
 }

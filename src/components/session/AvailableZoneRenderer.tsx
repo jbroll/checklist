@@ -196,8 +196,8 @@ export function AvailableZoneRenderer({
 
   // Create top-level category node for batch operations
   const topLevelCategory = {
-    name: 'List',
-    path: 'list',
+    name: 'Available Items',
+    path: 'available',
     items: availableItems,
     children: itemTree.map(toCategoryNode),
     depth: 0,
@@ -205,7 +205,7 @@ export function AvailableZoneRenderer({
 
   return (
     <SessionZone
-      title="List"
+      title="Available Items"
       icon={Package}
       zone="available"
       items={[]}

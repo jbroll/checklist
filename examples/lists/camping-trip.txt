@@ -1,0 +1,109 @@
+# name: Camping Trip
+# description: Complete camping gear and supplies checklist
+
+Shelter & Sleep
+  Tent
+  Tent Footprint
+  Sleeping Bags
+  Sleeping Pads
+  Pillows
+  Tarps
+  Tent Stakes
+  Mallet
+
+Cooking
+  Equipment
+    Camp Stove
+    Fuel Canisters
+    Cooler
+    Ice
+    Pots and Pans
+    Utensils
+    Plates
+    Cups
+    Can Opener
+    Cutting Board
+    Knife
+  Food Storage
+    Food Containers
+    Ziplock Bags
+    Bear Canister
+    Trash Bags
+  Cleaning
+    Dish Soap
+    Sponge
+    Dish Towel
+
+Food & Drinks
+  Breakfast
+    Eggs
+    Bacon
+    Pancake Mix
+    Syrup
+    Coffee
+    Creamer
+  Lunch
+    Bread
+    Deli Meat
+    Cheese
+    Chips
+    Fruit
+  Dinner
+    Hot Dogs
+    Hamburgers
+    Buns
+    Condiments
+    Canned Beans
+  Snacks
+    Trail Mix
+    Granola Bars
+    Marshmallows
+    Graham Crackers
+    Chocolate Bars
+  Drinks
+    Water
+    Juice Boxes
+    Soda
+
+Clothing
+  Layers
+  Rain Jacket
+  Hiking Boots
+  Camp Shoes
+  Extra Socks
+  Hat
+  Gloves
+
+Safety & First Aid
+  First Aid Kit
+  Sunscreen
+  Bug Spray
+  Bear Spray
+  Whistle
+  Emergency Blanket
+
+Tools & Lighting
+  Flashlight
+  Headlamp
+  Lantern
+  Extra Batteries
+  Multi-tool
+  Rope
+  Duct Tape
+  Matches
+  Lighter
+
+Personal Items
+  Toiletries
+  Towels
+  Sunglasses
+  Medications
+  ID and Cash
+
+Recreation
+  Fishing Gear
+  Binoculars
+  Field Guide
+  Cards
+  Frisbee
+  Hammock

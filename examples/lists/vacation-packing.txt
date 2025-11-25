@@ -1,0 +1,92 @@
+# name: Beach Vacation Packing
+# description: Everything you need for a beach vacation
+
+Clothing
+  Tops
+    T-Shirts
+    Tank Tops
+    Button Down Shirt
+    Light Sweater
+  Bottoms
+    Shorts
+    Jeans
+    Casual Pants
+  Swimwear
+    Swimsuit
+    Cover Up
+    Rash Guard
+  Footwear
+    Sandals
+    Sneakers
+    Water Shoes
+  Accessories
+    Sunglasses
+    Hat
+    Belt
+  Undergarments
+    Underwear
+    Socks
+    Bras
+
+Toiletries
+  Basics
+    Toothbrush
+    Toothpaste
+    Deodorant
+    Shampoo
+    Conditioner
+    Body Wash
+    Razor
+  Sun Protection
+    Sunscreen SPF 30
+    Sunscreen SPF 50
+    Aloe Vera Gel
+    Lip Balm with SPF
+  Medications
+    Prescription Meds
+    Pain Reliever
+    Allergy Medicine
+    Motion Sickness Pills
+    First Aid Kit
+
+Electronics
+  Phone Charger
+  Portable Battery Pack
+  Camera
+  Camera Charger
+  Headphones
+  E-Reader
+  Travel Adapter
+
+Documents
+  Passport
+  ID
+  Flight Confirmation
+  Hotel Reservation
+  Travel Insurance Card
+  Credit Cards
+  Cash
+
+Beach Gear
+  Beach Towels
+  Beach Bag
+  Cooler
+  Snorkeling Gear
+  Floaties
+  Beach Umbrella
+  Beach Chairs
+
+Entertainment
+  Books
+  Playing Cards
+  Travel Games
+  Journal
+  Sketchbook
+
+Miscellaneous
+  Reusable Water Bottle
+  Snacks
+  Ziplock Bags
+  Laundry Bag
+  Daypack
+  Umbrella

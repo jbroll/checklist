@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isIndentedFormat, parseIndentedList } from './indentedListParser';
+import {
+  isIndentedFormat,
+  parseIndentedList,
+  parseIndentedListWithMetadata,
+} from './indentedListParser';
 import { PATH_SEPARATOR } from './pathUtils';
 
 describe('indentedListParser', () => {
@@ -449,6 +453,114 @@ Cat 4
       const item4 = result.find((r) => r.name === 'Item 4');
       expect(item4).toBeDefined();
       expect(item4?.type).toBe('item');
+    });
+  });
+
+  describe('parseIndentedListWithMetadata', () => {
+    it('extracts name metadata from comments', () => {
+      const text = `
+# name: My Grocery List
+# description: Weekly shopping
+
+Produce
+  Apples
+  Bananas
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('My Grocery List');
+      expect(result.metadata.description).toBe('Weekly shopping');
+      expect(result.items).toHaveLength(3);
+    });
+
+    it('handles metadata with extra spaces', () => {
+      const text = `
+#  name:   Spaced Out Name
+# description:  Some description
+
+Item1
+Item2
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('Spaced Out Name');
+      expect(result.metadata.description).toBe('Some description');
+    });
+
+    it('returns empty metadata when no key:value comments', () => {
+      const text = `
+# Just a regular comment
+# Another comment
+
+Item1
+Item2
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata).toEqual({});
+      expect(result.items).toHaveLength(2);
+    });
+
+    it('extracts arbitrary metadata keys', () => {
+      const text = `
+# name: Test List
+# author: John Doe
+# version: 1.0
+
+Item1
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('Test List');
+      expect(result.metadata.author).toBe('John Doe');
+      expect(result.metadata.version).toBe('1.0');
+    });
+
+    it('handles colons in values', () => {
+      const text = `
+# name: List: With Colon
+# time: 10:30 AM
+
+Item1
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('List: With Colon');
+      expect(result.metadata.time).toBe('10:30 AM');
+    });
+
+    it('ignores comments without colons', () => {
+      const text = `
+# name: Valid Name
+# This is just a comment
+# Another comment without colon
+
+Item1
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('Valid Name');
+      expect(Object.keys(result.metadata)).toHaveLength(1);
+    });
+
+    it('normalizes keys to lowercase', () => {
+      const text = `
+# NAME: Test
+# Description: Test desc
+
+Item1
+      `.trim();
+
+      const result = parseIndentedListWithMetadata(text);
+
+      expect(result.metadata.name).toBe('Test');
+      expect(result.metadata.description).toBe('Test desc');
     });
   });
 });

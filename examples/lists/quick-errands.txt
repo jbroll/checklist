@@ -1,0 +1,10 @@
+# name: Quick Errands
+
+Post Office
+Bank
+Dry Cleaner
+Pharmacy
+Gas Station
+Library
+Hardware Store
+Pet Store

@@ -1,0 +1,75 @@
+# name: Weekly Workout Plan
+# description: Full week exercise routine by muscle group
+
+Monday - Upper Body
+  Warmup
+    Jumping Jacks
+    Arm Circles
+    Push-ups (light)
+  Chest
+    Bench Press
+    Incline Press
+    Chest Flyes
+  Back
+    Pull-ups
+    Bent Over Rows
+    Lat Pulldowns
+  Shoulders
+    Overhead Press
+    Lateral Raises
+    Front Raises
+  Arms
+    Bicep Curls
+    Tricep Dips
+    Hammer Curls
+
+Tuesday - Cardio
+  Treadmill
+  Stair Climber
+  Rowing Machine
+  Cool Down Stretches
+
+Wednesday - Lower Body
+  Warmup
+    Walking Lunges
+    Leg Swings
+    Bodyweight Squats
+  Quads
+    Squats
+    Leg Press
+    Leg Extensions
+  Hamstrings
+    Romanian Deadlifts
+    Leg Curls
+    Good Mornings
+  Glutes
+    Hip Thrusts
+    Glute Bridges
+    Cable Kickbacks
+  Calves
+    Calf Raises
+    Seated Calf Raises
+
+Thursday - Rest
+  Light Walking
+  Stretching
+  Foam Rolling
+
+Friday - Full Body
+  Deadlifts
+  Squats
+  Bench Press
+  Pull-ups
+  Overhead Press
+  Planks
+
+Saturday - Active Recovery
+  Yoga
+  Swimming
+  Light Hiking
+  Stretching
+
+Sunday - Rest
+  Complete Rest
+  Meal Prep
+  Plan Next Week

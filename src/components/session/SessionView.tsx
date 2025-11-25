@@ -772,7 +772,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                 />
               )}
 
-              {/* Available Zone (List) */}
+              {/* Available Items Zone */}
               {itemTree.length === 0 ? (
                 <div className="p-8 text-center text-neutral-500 bg-blue-50">
                   <p>No items in this list yet.</p>
@@ -780,7 +780,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
               ) : (
                 <div ref={availableZoneRef} className="bg-blue-50 p-4">
                   <SessionZone
-                    title="List"
+                    title="Available Items"
                     icon={Package}
                     zone="available"
                     items={activeItems}
