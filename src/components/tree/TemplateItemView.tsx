@@ -18,6 +18,7 @@ interface TemplateItemViewProps {
   hasChildren?: boolean;
   isSelected?: boolean; // Row highlight (grey background)
   isChecked?: boolean; // Checkbox state (for SessionView normal mode)
+  expanded?: boolean; // Override expanded state (for viewState-based expansion)
   onSelect?: (itemId: string) => void;
   onRename?: (itemId: string, newName: string) => void;
   onDelete?: (itemId: string) => void;
@@ -32,9 +33,10 @@ interface TemplateItemViewProps {
 export function TemplateItemView({
   item,
   level,
-  hasChildren = false,
+  hasChildren: _hasChildren = false,
   isSelected = false,
   isChecked = false,
+  expanded,
   onSelect,
   onRename,
   onDelete,
@@ -45,6 +47,8 @@ export function TemplateItemView({
   showCheckbox = false,
   onCheckboxToggle,
 }: TemplateItemViewProps) {
+  // Note: hasChildren prop is kept for API compatibility but categories always show chevrons
+  void _hasChildren;
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,9 +182,9 @@ export function TemplateItemView({
     >
       <IndentedRow
         level={level}
-        expanded={isCategory ? item.expanded : false}
-        onToggleExpand={isCategory && hasChildren ? handleToggle : () => {}}
-        hasChildren={isCategory && hasChildren}
+        expanded={isCategory ? (expanded ?? item.expanded ?? true) : false}
+        onToggleExpand={isCategory ? handleToggle : () => {}}
+        hasChildren={isCategory}
         className="group"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">

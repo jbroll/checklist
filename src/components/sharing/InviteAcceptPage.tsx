@@ -1,9 +1,22 @@
-import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import type { CoMap, ID } from 'jazz-tools';
+import {
+  AlertTriangle,
+  Apple,
+  Check,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Share2,
+  XCircle,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
-import { Account } from '@/schemas';
+import { Account, FolderNode } from '@/schemas';
+import type { InAppBrowserInfo } from '@/utils/inAppBrowserDetection';
+import { copyToClipboard, getCurrentUrl } from '@/utils/inAppBrowserDetection';
+import { useInAppBrowserDetection } from './InAppBrowserWarning';
 
 interface InviteAcceptPageProps {
   token: string;
@@ -18,6 +31,7 @@ interface InviteValidation {
 }
 
 type PageState =
+  | { type: 'in_app_browser' }
   | { type: 'loading' }
   | { type: 'not_authenticated' }
   | { type: 'email_mismatch'; inviteEmail: string; userEmail: string }
@@ -28,11 +42,28 @@ type PageState =
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   const { me } = useAccount(Account);
-  const [state, setState] = useState<PageState>({ type: 'loading' });
+  const browserInfo = useInAppBrowserDetection();
+  const [state, setState] = useState<PageState>(() =>
+    browserInfo.isInAppBrowser ? { type: 'in_app_browser' } : { type: 'loading' },
+  );
+
+  // Track if we've moved past the initial validation phase
+  // Once we're in accepting/success/error state, don't re-validate
+  const hasStartedAcceptingRef = useRef(false);
 
   // Validate the invite token
   useEffect(() => {
-    async function validateInvite() {
+    // Don't validate if in-app browser
+    if (browserInfo.isInAppBrowser) {
+      return;
+    }
+
+    // Don't re-validate if we've already started accepting or completed
+    if (hasStartedAcceptingRef.current) {
+      return;
+    }
+
+    async function doValidation() {
       try {
         const response = await fetch(`/api/shares/validate/${token}`);
         const data: InviteValidation = await response.json();
@@ -72,10 +103,12 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       }
     }
 
-    validateInvite();
-  }, [token, me]);
+    doValidation();
+  }, [token, me, browserInfo.isInAppBrowser]);
 
   const handleAccept = async () => {
+    // Mark that we've started accepting - prevents re-validation on me changes
+    hasStartedAcceptingRef.current = true;
     setState({ type: 'accepting' });
 
     try {
@@ -94,6 +127,31 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       }
 
       const data = await response.json();
+
+      // Load the shared folder and add it to root.folders if not already present
+      if (me?.root?.folders && data.folderId) {
+        try {
+          // Load the folder CoValue using the ID from the accept response
+          const folder = await FolderNode.load(data.folderId as ID<CoMap>, {
+            loadAs: me,
+          });
+
+          if (folder) {
+            // Check if folder is already in root.folders (avoid duplicates)
+            const alreadyExists = me.root.folders.some(
+              (f: { $jazz?: { id?: string } } | null) => f?.$jazz?.id === folder.$jazz.id,
+            );
+
+            if (!alreadyExists) {
+              me.root.folders.$jazz.push(folder);
+            }
+          }
+        } catch (loadError) {
+          // Log but don't fail - user still got access, folder just won't appear immediately
+          console.error('Failed to add folder to root:', loadError);
+        }
+      }
+
       setState({ type: 'success', folderId: data.folderId });
 
       // Redirect to dashboard after 2 seconds
@@ -116,6 +174,8 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
       <div className="w-full max-w-md">
+        {state.type === 'in_app_browser' && <InAppBrowserState browserInfo={browserInfo} />}
+
         {state.type === 'loading' && <LoadingState />}
 
         {state.type === 'not_authenticated' && <NotAuthenticatedState token={token} />}
@@ -152,6 +212,72 @@ function LoadingState() {
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-green-600" />
         <p className="text-neutral-600">Loading invite...</p>
+      </div>
+    </div>
+  );
+}
+
+function InAppBrowserState({ browserInfo }: { browserInfo: InAppBrowserInfo }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    const url = getCurrentUrl();
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const browserName = browserInfo.browserName || 'this app';
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 shadow-sm">
+      <div className="mb-6 flex justify-center">
+        <div className="rounded-full bg-amber-100 p-3">
+          <AlertTriangle className="h-8 w-8 text-amber-600" />
+        </div>
+      </div>
+
+      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Open in Browser</h1>
+
+      <p className="mb-4 text-center text-neutral-600">
+        You're viewing this page in <span className="font-medium">{browserName}</span>'s built-in
+        browser, which doesn't support sign-in properly.
+      </p>
+
+      <div className="mb-6 rounded-lg bg-white p-4 border border-amber-200">
+        <div className="flex items-start gap-3">
+          <ExternalLink className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-neutral-700">
+            <p className="font-medium mb-1">How to open in your browser:</p>
+            <p>{browserInfo.openInBrowserInstructions}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          className="w-full"
+          onClick={handleCopyLink}
+          variant={copied ? 'primary' : 'outline'}
+        >
+          {copied ? (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Link Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy Link
+            </>
+          )}
+        </Button>
+
+        <p className="text-center text-xs text-neutral-500">
+          Copy this link and paste it in Safari, Chrome, or your preferred browser.
+        </p>
       </div>
     </div>
   );
@@ -376,8 +502,11 @@ function ErrorState({ message }: { message: string }) {
       <div className="mb-6 flex justify-center">
         <XCircle className="h-12 w-12 text-red-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-red-900">Invalid Invite</h1>
+      <h1 className="mb-2 text-center text-2xl font-bold text-red-900">Invite Error</h1>
       <p className="mb-6 text-center text-red-700">{message}</p>
+      <p className="mb-6 text-center text-sm text-red-600">
+        Please read the message above before continuing.
+      </p>
       <Button
         variant="outline"
         className="w-full"
@@ -399,6 +528,10 @@ function getErrorMessage(errorCode: string): string {
       return 'This invite link has expired.';
     case 'already_accepted':
       return 'This invite has already been accepted.';
+    case 'already_member':
+      return 'You already have access to this folder.';
+    case 'self_invite':
+      return 'You cannot accept an invite to your own folder.';
     default:
       return 'This invite link is no longer valid.';
   }

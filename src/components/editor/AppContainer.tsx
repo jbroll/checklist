@@ -12,6 +12,7 @@ import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { exposeServicesToWindow } from '@/services/testHelpers';
+import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
 
@@ -142,9 +143,13 @@ export function AppContainer({
   const handleUseTemplate = () => {
     if (!selectedTemplateId || !selectedFolder) return;
 
-    // Expand the template and its ancestors so it's visible when returning
-    folderService.expandAncestorFolders(selectedFolder);
-    folderService.setFolderExpanded(selectedFolder, true);
+    // Expand the template and its ancestors so it's visible when returning (using viewState)
+    let current = selectedFolder.parent;
+    while (current) {
+      viewStateService.setFolderExpanded(me, current.$jazz.id, true);
+      current = current.parent;
+    }
+    viewStateService.setFolderExpanded(me, selectedFolder.$jazz.id, true);
 
     // Create session using service
     // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type

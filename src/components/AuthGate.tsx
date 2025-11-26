@@ -1,5 +1,6 @@
 import { useAccount, useIsAuthenticated } from 'jazz-tools/react';
 import { useEffect, useState } from 'react';
+import { useViewStateCleanup } from '@/hooks/useViewStateCleanup';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
 import { Account } from '@/schemas';
@@ -14,6 +15,10 @@ export function AuthGate() {
   const { me, logOut } = useAccount(Account);
   const { showAlert } = useDialog();
   const isAuthenticated = useIsAuthenticated();
+
+  // Run viewState cleanup in the background
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with optional root
+  useViewStateCleanup(me as any);
 
   // View mode state - defaults to "classic" to preserve existing experience
   const [viewMode, setViewMode] = useState<ViewMode>(() => {

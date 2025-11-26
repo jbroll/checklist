@@ -1,4 +1,4 @@
-import { co } from 'jazz-tools';
+import { co, z } from 'jazz-tools';
 import {
   FolderNode,
   type ItemState,
@@ -9,14 +9,35 @@ import {
 } from './tree';
 
 /**
+ * ViewState - Per-user UI state (not shared with collaborators)
+ *
+ * Stores expand/collapse state separately from shared CoValues so each user
+ * can have their own view preferences without affecting others.
+ */
+export const ViewState = co.map({
+  // Which folders are expanded in the tree (folderId -> expanded)
+  folderExpanded: z.record(z.string(), z.boolean()),
+
+  // Which categories are expanded in template editor (templateId -> categoryId -> expanded)
+  templateCategoryExpanded: z.record(z.string(), z.record(z.string(), z.boolean())),
+
+  // Which categories are expanded per session (sessionId -> categoryKey -> expanded)
+  sessionCategoryExpanded: z.record(z.string(), z.record(z.string(), z.boolean())),
+});
+
+/**
  * ListsRoot - Root schema with hierarchical folder tree
  *
- * New structure:
+ * Structure:
  * - folders: Hierarchical tree of FolderNode CoValues
+ * - viewState: Per-user UI state (expand/collapse preferences)
  */
 export const ListsRoot = co.map({
   // Hierarchical folder tree - each FolderNode is a CoValue
   folders: co.list(FolderNode),
+
+  // Per-user view state (not shared with collaborators)
+  viewState: co.optional(ViewState),
 });
 
 /**
@@ -40,19 +61,40 @@ export const Account = co
     // This creates a local placeholder that will be replaced if cloud data exists
     if (!account.$jazz.has('root')) {
       const folders = co.list(FolderNode).create([], { owner: account });
-      account.$jazz.set('root', ListsRoot.create({ folders }, { owner: account }));
+      const viewState = ViewState.create(
+        {
+          folderExpanded: {},
+          templateCategoryExpanded: {},
+          sessionCategoryExpanded: {},
+        },
+        { owner: account },
+      );
+      account.$jazz.set('root', ListsRoot.create({ folders, viewState }, { owner: account }));
     }
 
     // Step 2: Load from cloud - this will replace the placeholder if cloud data exists
     // ensureLoaded() updates the account reference to point to cloud version when available
     const { root } = await account.$jazz.ensureLoaded({
-      resolve: { root: { folders: true } },
+      resolve: { root: { folders: true, viewState: true } },
     });
 
     // Step 3: Fix structure if needed (for broken existing accounts)
     if (!root.$jazz.has('folders')) {
       const folders = co.list(FolderNode).create([], { owner: account });
       root.$jazz.set('folders', folders);
+    }
+
+    // Step 4: Initialize viewState for existing accounts that don't have it
+    if (!root.$jazz.has('viewState')) {
+      const viewState = ViewState.create(
+        {
+          folderExpanded: {},
+          templateCategoryExpanded: {},
+          sessionCategoryExpanded: {},
+        },
+        { owner: account },
+      );
+      root.$jazz.set('viewState', viewState);
     }
   });
 

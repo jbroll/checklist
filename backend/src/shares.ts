@@ -100,17 +100,22 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     // Add recipient to Jazz group
     try {
-      await addToFolderGroup(
+      const result = await addToFolderGroup(
         invite.folder_covalue_id,
         recipientJazzAccountId,
         invite.permission
       );
 
-      // Mark as accepted
+      // Mark as accepted (even if already a member - the invite was still valid)
       db.prepare(`UPDATE share_invites SET accepted_at = ? WHERE token = ?`)
         .run(now, token);
 
-      res.json({ success: true, folderId: invite.folder_covalue_id });
+      // Return success - if already a member, they still have access which is the goal
+      res.json({
+        success: true,
+        folderId: invite.folder_covalue_id,
+        alreadyMember: result?.alreadyMember || false
+      });
     } catch (error) {
       console.error('Failed to add to group:', error);
       res.status(500).json({ error: 'failed_to_grant_access' });

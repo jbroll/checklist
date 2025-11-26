@@ -26,6 +26,7 @@ import {
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
+import * as viewStateService from '@/services/viewStateService';
 import { IndentedRow } from './IndentedRow';
 
 interface FolderNodeViewProps {
@@ -65,7 +66,7 @@ export const FolderNodeView = memo(function FolderNodeView({
   const isOrganizational = folderService.isOrganizationalFolder(folder);
 
   const name = folder.name;
-  const expanded = folder.expanded;
+  const expanded = viewStateService.getFolderExpanded(account, folder.$jazz.id);
   const folderId = folder.$jazz.id;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -205,7 +206,7 @@ export const FolderNodeView = memo(function FolderNodeView({
               <button
                 type="button"
                 onClick={handleClick}
-                className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
+                className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full min-w-0 transition-colors ${
                   isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
                 }`}
               >

@@ -10,7 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { Package, Pencil, Plus, X } from 'lucide-react';
+import { Package, Pencil, Plus } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
@@ -18,6 +18,7 @@ import { useAccount } from '@/lib/jazz';
 import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
+import * as viewStateService from '@/services/viewStateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
@@ -161,8 +162,15 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const items = template.items || [];
   const activeItems = items.filter((item) => item && !item.archived);
 
-  // Initialize category expanded state from session data
-  const categoryExpanded: Record<string, boolean> = session.categoryExpanded || {};
+  // Get category expanded state from viewState (per-user, not shared)
+  // For session view, we use templateCategoryExpanded keyed by template ID
+  const templateCategoryExpanded: Record<string, boolean> =
+    me?.root?.viewState?.templateCategoryExpanded?.[template.$jazz.id] || {};
+
+  // Helper to check if a category is expanded (from viewState, defaults to true)
+  const isCategoryExpanded = (itemId: string): boolean => {
+    return templateCategoryExpanded[itemId] ?? true;
+  };
 
   // Build hierarchical tree structure
   const itemTree = buildItemTree(activeItems);
@@ -179,9 +187,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
   const handleToggleExpand = (itemId: string) => {
     const item = items.find((i) => i?.id === itemId);
-    if (item && item.type === 'category') {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-      templateService.toggleCategoryExpanded(me, template.$jazz.id, itemId);
+    if (item && item.type === 'category' && me) {
+      // Use viewState for per-user category expansion in template editor
+      viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, itemId);
     }
   };
 
@@ -226,8 +234,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
   const handleToggleCategoryExpanded = (catKey: string) => {
     if (!session || !me) return;
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
-    SessionService.toggleCategoryExpanded(me, template.$jazz.id, sessionId, catKey);
+    // Use viewState for per-user category expansion (not shared with collaborators)
+    // Use template-based expansion so category state is consistent across all views
+    viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, catKey);
   };
 
   const handleBatchSelectAll = (itemIds: string[]) => {
@@ -524,7 +533,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
             zone="available"
             items={categoryItems}
             itemStates={session.itemStates || {}}
-            expanded={item.expanded ?? true}
+            expanded={isCategoryExpanded(item.id)}
             onToggleExpand={() => handleToggleExpand(item.id)}
             onToggleSelected={handleToggleSelected}
             onToggleChecked={handleToggleChecked}
@@ -567,6 +576,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
               : currentItemId === item.id // Current item highlight in NORMAL mode
           }
           isChecked={session.itemStates?.[item.id]?.selected ?? false}
+          expanded={item.type === 'category' ? isCategoryExpanded(item.id) : undefined}
           onSelect={
             showAddForm
               ? () => {
@@ -595,7 +605,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
           isDragging={!!activeItem}
         />
         {/* Render children if category is expanded */}
-        {item.type === 'category' && item.expanded && children.length > 0 && (
+        {item.type === 'category' && isCategoryExpanded(item.id) && children.length > 0 && (
           <div>
             {children.map((child, childIndex) =>
               renderItemNode(child, depth + 1, children, childIndex),
@@ -619,13 +629,21 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
           <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
             {/* Header */}
             <div className="border-b border-neutral-200 p-3 sm:p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl">
+              <div className="flex items-center justify-between gap-3">
+                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl truncate">
                   {template.name}
                 </h1>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* New Button */}
-                  {!showAddForm && (
+                {showAddForm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px] shrink-0"
+                  >
+                    Done
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* New Button */}
                     <button
                       type="button"
                       onClick={handleClearOrNew}
@@ -633,9 +651,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     >
                       New
                     </button>
-                  )}
-                  {/* View Mode Toggle */}
-                  {!showAddForm && (
+                    {/* View Mode Toggle */}
                     <button
                       type="button"
                       onClick={cycleViewMode}
@@ -647,48 +663,48 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                         return <Icon className="h-5 w-5" />;
                       })()}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
-                    aria-label={showAddForm ? 'Cancel' : 'Add and edit items'}
-                  >
-                    {showAddForm ? (
-                      <>
-                        <X className="h-5 w-5" />
-                        <span>Cancel</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-5 w-5" />
-                        <Pencil className="h-5 w-5" />
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
-                  >
-                    Done
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(true)}
+                      className="flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
+                      aria-label="Add and edit items"
+                    >
+                      <Plus className="h-5 w-5" />
+                      <Pencil className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onBack}
+                      className="rounded bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 min-h-[44px]"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Add Item Form */}
             {showAddForm && (
-              <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-                <form onSubmit={handleAddItem} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
-                    className="flex-1 rounded border border-neutral-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                  <div className="flex items-center gap-3 rounded border border-neutral-300 bg-white px-3 py-2">
+              <div className="border-b border-neutral-200 bg-neutral-50 px-3 py-3 sm:px-4">
+                <form onSubmit={handleAddItem} className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
+                      className="flex-1 min-w-0 rounded border border-neutral-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 shrink-0"
+                      aria-label="Add item"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 rounded border border-neutral-300 bg-white px-3 py-2 sm:shrink-0">
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
                         type="radio"
@@ -712,13 +728,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                       <span className="text-base text-neutral-700">Category</span>
                     </label>
                   </div>
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700"
-                    aria-label="Add item"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
                 </form>
               </div>
             )}
@@ -758,7 +767,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   session={session}
                   selectedItems={selectedItems}
                   checkedItems={checkedItems}
-                  categoryExpanded={categoryExpanded}
+                  categoryExpanded={templateCategoryExpanded}
                   onToggleCategoryExpanded={handleToggleCategoryExpanded}
                   onToggleSelected={handleToggleSelected}
                   onToggleChecked={handleToggleChecked}

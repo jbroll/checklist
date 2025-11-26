@@ -19,6 +19,7 @@ import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Template, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/templateService';
+import * as viewStateService from '@/services/viewStateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
@@ -93,9 +94,9 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
 
   const handleToggleExpand = (itemId: string) => {
     const item = items.find((i) => i?.id === itemId);
-    if (item && item.type === 'category') {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-      ItemService.toggleCategoryExpanded(me, template.$jazz.id, itemId);
+    if (item && item.type === 'category' && me) {
+      // Use viewState for per-user category expansion (not shared with collaborators)
+      viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, itemId);
     }
   };
 
@@ -340,14 +341,17 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
           parentPath={parentPath}
           isDragging={!!activeItem}
         />
-        {/* Render children if category is expanded */}
-        {item.type === 'category' && item.expanded && children.length > 0 && (
-          <div>
-            {children.map((child, childIndex) =>
-              renderItemNode(child, depth + 1, children, childIndex),
-            )}
-          </div>
-        )}
+        {/* Render children if category is expanded (using viewState for per-user expansion) */}
+        {item.type === 'category' &&
+          me &&
+          viewStateService.getTemplateCategoryExpanded(me, template.$jazz.id, item.id) &&
+          children.length > 0 && (
+            <div>
+              {children.map((child, childIndex) =>
+                renderItemNode(child, depth + 1, children, childIndex),
+              )}
+            </div>
+          )}
       </div>
     );
   };

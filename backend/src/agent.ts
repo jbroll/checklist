@@ -107,7 +107,7 @@ export async function addToFolderGroup(
   folderCoValueId: string,
   recipientJazzAccountId: string,
   permission: 'view' | 'edit' | 'admin'
-): Promise<void> {
+): Promise<{ alreadyMember: boolean }> {
   if (!worker) {
     throw new Error('Jazz agent not initialized - cannot add member to group');
   }
@@ -147,7 +147,7 @@ export async function addToFolderGroup(
 
     if (existingMember) {
       console.log(`⚠️ User ${recipientJazzAccountId} is already a member of ${folderCoValueId} - skipping`);
-      return; // Don't add them again
+      return { alreadyMember: true };
     }
 
     ownerGroup.addMember(recipientAccount, jazzRole);
@@ -156,6 +156,8 @@ export async function addToFolderGroup(
 
     // Wait for sync to ensure the change is persisted
     await ownerGroup.$jazz.waitForSync();
+
+    return { alreadyMember: false };
   } catch (error) {
     console.error('Error adding member to folder group:', error);
     throw error;

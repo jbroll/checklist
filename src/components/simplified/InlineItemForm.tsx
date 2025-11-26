@@ -38,58 +38,60 @@ export function InlineItemForm({ onSubmit, onClose }: InlineItemFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-green-50 border border-green-200 rounded-md p-4">
-      <div className="flex items-start gap-3">
-        {/* Text input */}
-        <div className="flex-1">
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter item or category name..."
-            className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-
-          {/* Radio buttons */}
-          <div className="flex gap-4 mt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="type"
-                value="item"
-                checked={type === 'item'}
-                onChange={() => setType('item')}
-                className="w-4 h-4 text-green-600 focus:ring-green-500"
-              />
-              <span className="text-sm text-neutral-700">Item</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="type"
-                value="category"
-                checked={type === 'category'}
-                onChange={() => setType('category')}
-                className="w-4 h-4 text-green-600 focus:ring-green-500"
-              />
-              <span className="text-sm text-neutral-700">Category</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Close button */}
+    <form
+      onSubmit={handleSubmit}
+      className="bg-green-50 border border-green-200 rounded-md p-3 sm:p-4"
+    >
+      {/* Header with close button */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-neutral-700">Add new</span>
         <Button
           type="button"
           onClick={onClose}
           variant="ghost"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 -mr-1"
           aria-label="Close form"
         >
           <X className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Text input */}
+      <input
+        ref={inputRef}
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Enter item or category name..."
+        className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+      />
+
+      {/* Radio buttons */}
+      <div className="flex gap-4 mt-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="type"
+            value="item"
+            checked={type === 'item'}
+            onChange={() => setType('item')}
+            className="w-4 h-4 text-green-600 focus:ring-green-500"
+          />
+          <span className="text-sm text-neutral-700">Item</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="type"
+            value="category"
+            checked={type === 'category'}
+            onChange={() => setType('category')}
+            className="w-4 h-4 text-green-600 focus:ring-green-500"
+          />
+          <span className="text-sm text-neutral-700">Category</span>
+        </label>
       </div>
 
       {/* Hint text */}

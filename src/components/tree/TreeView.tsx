@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
+import * as viewStateService from '@/services/viewStateService';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
 import { SessionRowView } from './SessionRowView';
@@ -54,6 +55,20 @@ interface TreeViewProps {
   hideArchivedTemplatesToggle?: boolean;
   hideArchivedSessionsToggle?: boolean;
   hideArchiveAction?: boolean;
+}
+
+/**
+ * Expand all ancestor folders in viewState to make a folder visible
+ */
+function expandAncestorFoldersInViewState(
+  account: InstanceOfSchema<typeof Account>,
+  folder: InstanceOfSchema<typeof FolderNode>,
+): void {
+  let current = folder.parent;
+  while (current) {
+    viewStateService.setFolderExpanded(account, current.$jazz.id, true);
+    current = current.parent;
+  }
 }
 
 /**
@@ -175,7 +190,7 @@ export function TreeView({
   );
 
   const handleToggleFolderExpand = (folder: InstanceOfSchema<typeof FolderNode>) => {
-    folderService.toggleFolderExpanded(folder);
+    viewStateService.toggleFolderExpanded(account, folder.$jazz.id);
   };
 
   const handleRenameFolder = (folder: InstanceOfSchema<typeof FolderNode>, newName: string) => {
@@ -389,9 +404,9 @@ export function TreeView({
           templateName={folder.name}
           level={node.level + 1}
           onOpen={(sessionId) => {
-            // Expand the template and its ancestors
-            folderService.expandAncestorFolders(folder);
-            folderService.setFolderExpanded(folder, true);
+            // Expand the template and its ancestors using viewState
+            expandAncestorFoldersInViewState(account, folder);
+            viewStateService.setFolderExpanded(account, folder.$jazz.id, true);
             onOpenSession?.(folder.$jazz.id, sessionId);
           }}
           onArchive={(sessionId) => handleToggleArchiveSession(folder, sessionId)}
@@ -428,8 +443,8 @@ export function TreeView({
         account={account}
         hideArchiveAction={hideArchiveAction}
       >
-        {/* Render children only when expanded */}
-        {folder.expanded && (
+        {/* Render children only when expanded - use viewState for per-user expansion */}
+        {viewStateService.getFolderExpanded(account, folder.$jazz.id) && (
           <>
             {/* Render sessions for templates */}
             {sessionChildren}
