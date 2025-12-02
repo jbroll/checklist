@@ -20,10 +20,10 @@ export function AuthGate() {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with optional root
   useViewStateCleanup(me as any);
 
-  // View mode state - defaults to "classic" to preserve existing experience
+  // View mode state - defaults to "simplified" for new users
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = localStorage.getItem('view-mode');
-    return (stored === 'simplified' ? 'simplified' : 'classic') as ViewMode;
+    return stored ? (stored as ViewMode) : 'simplified';
   });
 
   // Persist view mode preference to localStorage
