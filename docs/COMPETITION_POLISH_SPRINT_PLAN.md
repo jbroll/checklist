@@ -3,6 +3,7 @@
 A focused sprint to add features that bring Bubblelist to parity with general checklist apps while maintaining our unique differentiators.
 
 *Created: December 2025*
+*PWA Implementation Completed: December 2, 2025*
 
 ---
 
@@ -248,29 +249,24 @@ notes?: string; // Optional item notes
 
 ---
 
-#### 3.4 PWA Install Prompt
+#### 3.4 PWA Install Prompt ✅ DONE
 **Effort:** 2-3 hours
+**Status:** Completed December 2, 2025
 **Files:**
-- New: `src/components/ui/InstallPrompt.tsx`
-- New: `src/lib/usePWAInstall.ts`
+- `src/components/InstallMenu.tsx` - Install menu with platform instructions
+- `src/lib/usePWAInstall.ts` - PWA install hook
 - `src/App.tsx`
 
-**Current State:** App works as PWA but doesn't prompt installation.
-
-**Desired State:** Prompt users to "Add to Home Screen" on mobile.
-
 **Implementation:**
-1. Listen for `beforeinstallprompt` event
-2. Show custom install banner/button
-3. Track if already installed
-4. Dismiss permanently if declined
+- Install menu in header with platform-specific instructions (iOS Safari, Android Chrome, Desktop)
+- Detects standalone mode to hide when already installed
+- Shows native install prompt on supported browsers (Chrome/Edge)
 
 **Acceptance Criteria:**
-- [ ] Install prompt appears on mobile (after brief delay)
-- [ ] Can dismiss prompt
-- [ ] Doesn't show if already installed
-- [ ] Doesn't show on desktop (or shows subtly)
-- [ ] Preference remembered
+- [x] Install option in app menu
+- [x] Platform-specific instructions
+- [x] Doesn't show if already installed (standalone mode)
+- [x] Native prompt on supported browsers
 
 ---
 
@@ -309,6 +305,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [x] **Privacy/Cleanup: Account deletion** - Delete Account UI + API + Jazz cleanup
 - [x] **Privacy/Cleanup: Data retention** - Immediate deletion with crypto-shredding
 - [x] **Privacy/Cleanup: OAuth privacy** - Email-only scope (no name/image)
+- [x] **3.4 PWA Install Prompt** - Install menu with platform-specific instructions
 
 ### Sprint Execution Plan
 
@@ -326,7 +323,7 @@ These are larger features that could differentiate Bubblelist further but requir
 
 ### Phase 4: Visual Polish (Days 6-7)
 - [ ] 3.3 Dark mode
-- [ ] 3.4 PWA install prompt
+- [x] 3.4 PWA install prompt
 
 ---
 
@@ -360,7 +357,7 @@ After sprint completion, Bubblelist should:
 | Search | ❌ | ✅ | ✅ All |
 | Dark mode | ❌ | ✅ | ✅ Most |
 | Keyboard shortcuts | ❌ | ✅ | ⚠️ Some |
-| PWA install | ❌ | ✅ | ⚠️ Few |
+| PWA install | ✅ | ✅ | ⚠️ Few |
 
 **Maintained Unique Advantages:**
 - ✅ Template-session separation (still unique)
