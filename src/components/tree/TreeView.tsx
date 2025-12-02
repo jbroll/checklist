@@ -11,7 +11,9 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
+import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
@@ -136,6 +138,18 @@ export function TreeView({
     const stored = localStorage.getItem('bubblelist-show-archived-sessions');
     return stored === 'true';
   });
+
+  // PWA install state
+  const { showInstallOption, hasNativePrompt, triggerInstall } = usePWAInstall();
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+
+  const handleInstallApp = useCallback(() => {
+    if (hasNativePrompt) {
+      triggerInstall();
+    } else {
+      setShowInstallDialog(true);
+    }
+  }, [hasNativePrompt, triggerInstall]);
 
   // Persist archived view preferences
   useEffect(() => {
@@ -537,6 +551,8 @@ export function TreeView({
           isAuthenticated={isAuthenticated}
           onSwitchView={onSwitchToSimplified}
           switchViewLabel={switchViewLabel}
+          canInstallApp={showInstallOption}
+          onInstallApp={handleInstallApp}
         />
 
         {folderTree.length === 0 ? (
@@ -580,6 +596,9 @@ export function TreeView({
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* PWA Install Instructions Dialog */}
+      <InstallInstructionsDialog open={showInstallDialog} onOpenChange={setShowInstallDialog} />
     </DndContext>
   );
 }

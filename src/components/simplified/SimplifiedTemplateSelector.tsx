@@ -1,7 +1,10 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { ShoppingCart } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
 import { TreeViewHeader } from '@/components/tree/TreeViewHeader';
+import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
+import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account } from '@/schemas';
 import * as folderService from '@/services/folderService';
 
@@ -30,6 +33,18 @@ export function SimplifiedTemplateSelector({
   onImport,
   onSignOut,
 }: SimplifiedTemplateSelectorProps) {
+  // PWA install state
+  const { showInstallOption, hasNativePrompt, triggerInstall } = usePWAInstall();
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+
+  const handleInstallApp = useCallback(() => {
+    if (hasNativePrompt) {
+      triggerInstall();
+    } else {
+      setShowInstallDialog(true);
+    }
+  }, [hasNativePrompt, triggerInstall]);
+
   // Get all template folders (recursively from hierarchy)
   const templates = folderService.getAllTemplateFolders(account, false);
 
@@ -58,6 +73,8 @@ export function SimplifiedTemplateSelector({
             onSignOut={onSignOut}
             onSwitchView={() => onViewModeChange('classic')}
             switchViewLabel="Classic View"
+            canInstallApp={showInstallOption}
+            onInstallApp={handleInstallApp}
           />
 
           {/* Template list */}
@@ -88,6 +105,9 @@ export function SimplifiedTemplateSelector({
           </div>
         </div>
       </main>
+
+      {/* PWA Install Instructions Dialog */}
+      <InstallInstructionsDialog open={showInstallDialog} onOpenChange={setShowInstallDialog} />
     </div>
   );
 }

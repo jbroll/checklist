@@ -11,6 +11,7 @@ import {
   Mail,
   MoreVertical,
   Pencil,
+  Smartphone,
   Trash2,
   Upload,
   UserX,
@@ -53,6 +54,8 @@ interface TreeViewHeaderProps {
   isAuthenticated?: boolean;
   onSwitchView?: () => void;
   switchViewLabel?: string;
+  canInstallApp?: boolean;
+  onInstallApp?: () => void;
 }
 
 /**
@@ -87,6 +90,8 @@ export function TreeViewHeader({
   isAuthenticated = false,
   onSwitchView,
   switchViewLabel = 'Basic View',
+  canInstallApp = false,
+  onInstallApp,
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops (always called for hooks rules)
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -250,13 +255,19 @@ export function TreeViewHeader({
                       Empty Trash
                     </DropdownMenuItem>
                   )}
-                {(onSignOut || onSignIn || onPendingInvites) && (
+                {(onSignOut || onSignIn || onPendingInvites || canInstallApp) && (
                   <>
                     <DropdownMenuSeparator />
                     {onSwitchView && (
                       <DropdownMenuItem onClick={onSwitchView}>
                         <LayoutGrid className="mr-2 h-4 w-4" />
                         {switchViewLabel}
+                      </DropdownMenuItem>
+                    )}
+                    {canInstallApp && onInstallApp && (
+                      <DropdownMenuItem onClick={onInstallApp}>
+                        <Smartphone className="mr-2 h-4 w-4" />
+                        Install App
                       </DropdownMenuItem>
                     )}
                     {isAuthenticated && onPendingInvites && (
