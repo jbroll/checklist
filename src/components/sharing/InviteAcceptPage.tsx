@@ -33,7 +33,7 @@ interface InviteValidation {
 type PageState =
   | { type: 'in_app_browser' }
   | { type: 'loading' }
-  | { type: 'not_authenticated' }
+  | { type: 'not_authenticated'; invite: InviteValidation }
   | { type: 'email_mismatch'; inviteEmail: string; userEmail: string }
   | { type: 'valid'; invite: InviteValidation }
   | { type: 'accepting' }
@@ -81,7 +81,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
         // Check if user is authenticated
         if (!sessionResult?.data?.user || !me) {
-          setState({ type: 'not_authenticated' });
+          setState({ type: 'not_authenticated', invite: data });
           return;
         }
 
@@ -178,7 +178,9 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
         {state.type === 'loading' && <LoadingState />}
 
-        {state.type === 'not_authenticated' && <NotAuthenticatedState token={token} />}
+        {state.type === 'not_authenticated' && (
+          <NotAuthenticatedState token={token} invite={state.invite} />
+        )}
 
         {state.type === 'email_mismatch' && (
           <EmailMismatchState
@@ -283,9 +285,10 @@ function InAppBrowserState({ browserInfo }: { browserInfo: InAppBrowserInfo }) {
   );
 }
 
-function NotAuthenticatedState({ token }: { token: string }) {
+function NotAuthenticatedState({ token, invite }: { token: string; invite: InviteValidation }) {
+  const [showSignIn, setShowSignIn] = useState(false);
+
   const handleGoogleSignIn = () => {
-    // Trigger Google OAuth sign-in with invite token in redirect URL
     betterAuthClient.signIn.social({
       provider: 'google',
       callbackURL: `${window.location.origin}?inviteToken=${token}`,
@@ -293,21 +296,65 @@ function NotAuthenticatedState({ token }: { token: string }) {
   };
 
   const handleAppleSignIn = () => {
-    // Trigger Apple OAuth sign-in with invite token in redirect URL
     betterAuthClient.signIn.social({
       provider: 'apple',
       callbackURL: `${window.location.origin}?inviteToken=${token}`,
     });
   };
 
+  const handleDecline = () => {
+    window.location.href = '/';
+  };
+
+  // Show invite details first, then sign-in options after Accept
+  if (!showSignIn) {
+    return (
+      <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 flex justify-center">
+          <Share2 className="h-12 w-12 text-green-600" />
+        </div>
+        <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Folder Invitation</h1>
+        <p className="mb-6 text-center text-neutral-600">
+          {invite.senderEmail} has invited you to collaborate
+        </p>
+
+        <div className="mb-6 space-y-3 rounded-lg bg-neutral-50 p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-neutral-600">Permission Level:</span>
+            <span className="font-medium text-neutral-900">
+              {invite.permission === 'view' && 'View Only'}
+              {invite.permission === 'edit' && 'Can Edit'}
+              {invite.permission === 'admin' && 'Admin'}
+            </span>
+          </div>
+          <div className="text-sm text-neutral-600">
+            {invite.permission === 'view' && 'You can view items in this folder'}
+            {invite.permission === 'edit' && 'You can view and modify items in this folder'}
+            {invite.permission === 'admin' && 'You have full control including sharing permissions'}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={handleDecline}>
+            Decline
+          </Button>
+          <Button className="flex-1" onClick={() => setShowSignIn(true)}>
+            Accept Invite
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // After clicking Accept, show sign-in options
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
         <Share2 className="h-12 w-12 text-green-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Sign In Required</h1>
+      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Sign In to Continue</h1>
       <p className="mb-6 text-center text-neutral-600">
-        Please sign in to accept this folder invitation.
+        Sign in to accept the invitation from {invite.senderEmail}
       </p>
       <div className="space-y-3">
         <Button
@@ -347,14 +394,8 @@ function NotAuthenticatedState({ token }: { token: string }) {
           Continue with Apple
         </Button>
 
-        <Button
-          variant="ghost"
-          className="w-full"
-          onClick={() => {
-            window.location.href = '/';
-          }}
-        >
-          Go to Dashboard
+        <Button variant="ghost" className="w-full" onClick={() => setShowSignIn(false)}>
+          Back
         </Button>
       </div>
     </div>
@@ -362,7 +403,6 @@ function NotAuthenticatedState({ token }: { token: string }) {
 }
 
 function EmailMismatchState({
-  inviteEmail,
   userEmail,
   token,
 }: {
@@ -375,21 +415,15 @@ function EmailMismatchState({
       <div className="mb-6 flex justify-center">
         <XCircle className="h-12 w-12 text-yellow-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Email Mismatch</h1>
-      <div className="mb-6 space-y-2 text-center text-sm">
-        <p className="text-neutral-600">This invite was sent to:</p>
-        <p className="font-medium text-neutral-900">{inviteEmail}</p>
-        <p className="text-neutral-600">You are currently signed in as:</p>
-        <p className="font-medium text-neutral-900">{userEmail}</p>
-      </div>
-      <p className="mb-6 text-center text-neutral-600">
-        Please sign in with the invited email address to accept this invitation.
+      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Wrong Account</h1>
+      <p className="mb-4 text-center text-neutral-600">
+        This invite was sent to a different email address.
       </p>
+      <p className="mb-6 text-center text-sm text-neutral-500">You're signed in as {userEmail}</p>
       <div className="flex flex-col gap-3">
         <Button
           className="w-full"
           onClick={async () => {
-            // Sign out and redirect with invite token in URL
             await betterAuthClient.signOut();
             window.location.href = `/invite/${token}`;
           }}
