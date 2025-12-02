@@ -190,6 +190,18 @@ export function TreeViewHeader({
                 </Tooltip>
               </>
             )}
+            {!isAuthenticated && onSignIn && (
+              <Button
+                type="button"
+                onClick={onSignIn}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="icon" aria-label="More options">
