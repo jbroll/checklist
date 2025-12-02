@@ -74,15 +74,24 @@ export default defineConfig({
         screenshots: [
           {
             src: '/screenshot-mobile.png',
-            sizes: '390x844',
+            sizes: '536x858',
             type: 'image/png',
             form_factor: 'narrow',
+            label: 'Organize lists into folders',
+          },
+          {
+            src: '/screenshot-checklist.png',
+            sizes: '536x858',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Check off items while shopping',
           },
           {
             src: '/screenshot-desktop.png',
-            sizes: '1920x1080',
+            sizes: '1288x636',
             type: 'image/png',
             form_factor: 'wide',
+            label: 'Organize lists into folders',
           },
         ],
       },
