@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Privacy-focused list app with offline-first sync and encrypted storage. No tracking, no ads, works everywhere.">
-    <title>BubbleList - Privacy-Focused List App</title>
+    <meta name="description" content="Checklists you can use again and again. Create a list once, use it forever. Checking things off doesn't change your list. Real-time sync, works offline.">
+    <title>BubbleList - Checklists You Can Use Again and Again</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -14,7 +14,7 @@
         }
 
         .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
 
         .feature-card {
@@ -25,6 +25,10 @@
             transform: translateY(-4px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
+
+        .comparison-row:nth-child(even) {
+            background-color: #f9fafb;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -33,19 +37,16 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <svg class="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="8" r="3"/>
-                        <circle cx="12" cy="16" r="3"/>
-                        <path d="M12 11v2"/>
-                    </svg>
+                    <img src="bubblelist.svg" alt="BubbleList" class="w-8 h-8">
                     <span class="ml-2 text-xl font-bold text-gray-900">BubbleList</span>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
+                    <a href="#how-it-works" class="text-gray-600 hover:text-gray-900">How It Works</a>
                     <a href="#features" class="text-gray-600 hover:text-gray-900">Features</a>
-                    <a href="#privacy" class="text-gray-600 hover:text-gray-900">Privacy</a>
+                    <a href="#compare" class="text-gray-600 hover:text-gray-900">Compare</a>
                     <a href="#faq" class="text-gray-600 hover:text-gray-900">FAQ</a>
-                    <a href="privacy.html" class="text-gray-600 hover:text-gray-900">Legal</a>
-                    <a href="https://bubblelist-app.rkroll.com" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">Try Beta</a>
+                    <a href="legal.html" class="text-gray-600 hover:text-gray-900">Legal</a>
+                    <a href="https://bubblelist-app.rkroll.com" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">Try Free</a>
                 </div>
                 <button class="md:hidden p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,200 +62,446 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h1 class="text-4xl md:text-6xl font-bold mb-6">
-                    Your Lists. Your Privacy.<br>
-                    <span class="text-indigo-200">Everywhere—Even Offline.</span>
+                    Checklists You Can<br>
+                    <span class="text-green-200">Use Again and Again.</span>
                 </h1>
-                <p class="text-xl md:text-2xl mb-8 text-indigo-100 max-w-3xl mx-auto">
-                    Privacy-focused list app with offline-first sync and encrypted storage.
-                    No tracking, no ads, no data mining.
+                <p class="text-xl md:text-2xl mb-8 text-green-100 max-w-3xl mx-auto">
+                    Create a list once, use it forever.
+                    Checking things off doesn't change your list.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="https://bubblelist-app.rkroll.com" class="bg-white text-indigo-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition text-lg">
-                        Try Free Beta
+                    <a href="https://bubblelist-app.rkroll.com" class="bg-white text-green-700 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition text-lg">
+                        Try Free
                     </a>
-                    <a href="#features" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-indigo-600 transition text-lg">
-                        Learn More
+                    <a href="#how-it-works" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-green-700 transition text-lg">
+                        See How It Works
                     </a>
                 </div>
-                <p class="mt-6 text-indigo-200 text-sm">
-                    Free during beta • No credit card required • Desktop-optimized
+                <p class="mt-6 text-green-200 text-sm">
+                    No account required to start • No ads • Works offline
                 </p>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section id="features" class="py-20 bg-white">
+    <!-- Use Cases -->
+    <section class="py-12 bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-wrap justify-center gap-4 md:gap-8 text-gray-600">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span>Grocery Shopping</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Daily Routines</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Packing Lists</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    <span>Home Maintenance</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Event Planning</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    <span>Work Procedures</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                    Built for Privacy & Reliability
+                    A Better Checklist App
                 </h2>
                 <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                    Modern list management with cutting-edge local-first technology
+                    Your list is your list. Progress is tracked separately.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+                <!-- Other Apps -->
+                <div class="bg-red-50 rounded-xl p-8 border-2 border-red-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <h3 class="text-xl font-bold text-red-700">Other List Apps</h3>
+                    </div>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500 mt-1">•</span>
+                            <span>Checking items off modifies your list</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500 mt-1">•</span>
+                            <span>Must uncheck everything to use it again</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500 mt-1">•</span>
+                            <span>Easy to accidentally delete items</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-500 mt-1">•</span>
+                            <span>No history of previous uses</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- BubbleList -->
+                <div class="bg-green-50 rounded-xl p-8 border-2 border-green-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <h3 class="text-xl font-bold text-green-700">BubbleList</h3>
+                    </div>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500 mt-1">•</span>
+                            <span>Your list stays exactly as you made it</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500 mt-1">•</span>
+                            <span>Progress is tracked separately</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500 mt-1">•</span>
+                            <span>Always ready for the next use</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-500 mt-1">•</span>
+                            <span>Full history preserved automatically</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Examples -->
+            <div class="mt-16 max-w-4xl mx-auto">
+                <h3 class="text-xl font-semibold text-gray-900 text-center mb-8">How people use it</h3>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-3">🛒</div>
+                        <div class="font-semibold text-gray-900 mb-2">Weekly Groceries</div>
+                        <p class="text-sm text-gray-600">
+                            Same list every week. Each shopping trip tracked separately. See what you bought last time.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-3">🏕️</div>
+                        <div class="font-semibold text-gray-900 mb-2">Camping Gear</div>
+                        <p class="text-sm text-gray-600">
+                            Pack the same gear every trip. Never forget the tent stakes again.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-3">🚀</div>
+                        <div class="font-semibold text-gray-900 mb-2">Release Checklist</div>
+                        <p class="text-sm text-gray-600">
+                            Same deployment steps every release. Track each release independently.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Diagram -->
+            <div class="mt-16 max-w-3xl mx-auto">
+                <h3 class="text-xl font-semibold text-gray-900 text-center mb-8">Your list + sessions</h3>
+                <p class="text-center text-gray-600 mb-6">
+                    Think of it like a grocery list and your shopping trips, or a packing list and your camping trips.
+                    The list stays the same. Each use is a new <strong>session</strong>.
+                </p>
+                <div class="bg-gray-100 rounded-xl p-8">
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                        <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 w-48">
+                            <div class="text-sm text-gray-500 mb-2">Your List</div>
+                            <div class="font-semibold text-gray-900">"Weekly Groceries"</div>
+                            <div class="text-sm text-gray-600 mt-2">24 items</div>
+                            <div class="text-xs text-green-600 mt-1">Never changes</div>
+                        </div>
+                        <svg class="w-8 h-8 text-gray-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                        <svg class="w-8 h-8 text-gray-400 md:hidden rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                        <div class="flex flex-col gap-3">
+                            <div class="bg-white rounded-lg p-3 shadow-sm border border-green-200 w-48">
+                                <div class="text-sm text-gray-500">This week's trip</div>
+                                <div class="font-medium text-gray-900">Dec 2</div>
+                                <div class="text-sm text-green-600">18/24 done</div>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 w-48">
+                                <div class="text-sm text-gray-500">Last week's trip</div>
+                                <div class="font-medium text-gray-900">Nov 25</div>
+                                <div class="text-sm text-gray-500">Completed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    Powerful Organization
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Beyond simple lists: hierarchical folders, nested categories, and real-time collaboration
                 </p>
             </div>
 
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
+                <!-- Feature 1: Hierarchical Folders -->
+                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Hierarchical Folders</h3>
+                    <p class="text-gray-600">
+                        Organize templates in unlimited nested folders.
+                        <span class="text-gray-500">Stores → Costco → Monthly</span>
+                    </p>
+                </div>
+
+                <!-- Feature 2: Nested Categories -->
+                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Nested Categories</h3>
+                    <p class="text-gray-600">
+                        Categories within categories for complex lists.
+                        <span class="text-gray-500">Produce → Fruits → Berries</span>
+                    </p>
+                </div>
+
+                <!-- Feature 3: Real-Time Collaboration -->
+                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Real-Time Collaboration</h3>
+                    <p class="text-gray-600">
+                        Share folders with family via email. Changes sync instantly across all devices.
+                    </p>
+                </div>
+
+                <!-- Feature 4: True Offline -->
+                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">True Offline-First</h3>
+                    <p class="text-gray-600">
+                        Full functionality without internet. Works in airplane mode, underground, anywhere.
+                    </p>
+                </div>
+
+                <!-- Feature 5: Encrypted Sync -->
                 <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
                     <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                         <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Encrypted Storage</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Encrypted Sync</h3>
                     <p class="text-gray-600">
-                        Built on Jazz.tools with encrypted storage and sync. Your data is protected end-to-end.
+                        Data encrypted in transit and at rest. Not stored as plaintext on servers.
                     </p>
                 </div>
 
-                <!-- Feature 2 -->
-                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">True Offline-First</h3>
-                    <p class="text-gray-600">
-                        Works everywhere, even with no signal. Full CRUD operations without network connection.
-                    </p>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
-                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Real-Time Sync</h3>
-                    <p class="text-gray-600">
-                        Changes appear instantly across all your devices. Automatic sync when you reconnect.
-                    </p>
-                </div>
-
-                <!-- Feature 4 -->
-                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Hierarchical Templates</h3>
-                    <p class="text-gray-600">
-                        Organize lists with folders, categories, and items. Create reusable templates for recurring tasks.
-                    </p>
-                </div>
-
-                <!-- Feature 5 -->
+                <!-- Feature 6: No Ads -->
                 <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
                     <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">No Tracking or Ads</h3>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">No Ads, No Tracking</h3>
                     <p class="text-gray-600">
-                        Privacy-focused design. No data mining, no invasive analytics, no third-party trackers.
-                    </p>
-                </div>
-
-                <!-- Feature 6 -->
-                <div class="feature-card bg-white p-6 rounded-xl border border-gray-200">
-                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Open Data</h3>
-                    <p class="text-gray-600">
-                        Import and export anytime (JSON, CSV, TXT). Your data, your choice. No vendor lock-in.
+                        We don't show ads, track behavior, or sell your data. Your lists are your business.
                     </p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Privacy Section -->
-    <section id="privacy" class="py-20 bg-gray-50">
+    <!-- Comparison Section -->
+    <section id="compare" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto text-center">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                    Privacy You Can Trust
-                </h2>
-                <p class="text-xl text-gray-600 mb-8">
-                    Built from the ground up with privacy and data ownership in mind.
-                    No compromises, no hidden agendas.
-                </p>
-                <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200 text-left">
-                    <ul class="space-y-4">
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span class="text-gray-700"><strong>Encrypted storage and sync</strong> via Jazz.tools local-first database</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span class="text-gray-700"><strong>No tracking, no ads, no data mining</strong> – we don't sell your data</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span class="text-gray-700"><strong>Local-first architecture</strong> – your data lives on your device</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span class="text-gray-700"><strong>Open data formats</strong> – export your data anytime, anywhere</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span class="text-gray-700"><strong>Transparent development</strong> – built with modern open-source stack</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Tech Stack Section -->
-    <section class="py-20 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
+            <div class="text-center mb-16">
                 <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                    Built With Modern Technology
+                    How We Compare
                 </h2>
-                <p class="text-xl text-gray-600">
-                    Cutting-edge stack for reliability and performance
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    BubbleList vs popular checklist and list apps
                 </p>
             </div>
-            <div class="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-                <div class="text-center p-6">
-                    <div class="text-2xl font-bold text-indigo-600 mb-2">React 18</div>
-                    <p class="text-gray-600 text-sm">Modern UI</p>
-                </div>
-                <div class="text-center p-6">
-                    <div class="text-2xl font-bold text-blue-600 mb-2">TypeScript</div>
-                    <p class="text-gray-600 text-sm">Type Safety</p>
-                </div>
-                <div class="text-center p-6">
-                    <div class="text-2xl font-bold text-purple-600 mb-2">Jazz.tools</div>
-                    <p class="text-gray-600 text-sm">Local-First DB</p>
-                </div>
-                <div class="text-center p-6">
-                    <div class="text-2xl font-bold text-green-600 mb-2">380+ Tests</div>
-                    <p class="text-gray-600 text-sm">Quality Assured</p>
-                </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full max-w-4xl mx-auto">
+                    <thead>
+                        <tr class="border-b-2 border-gray-200">
+                            <th class="text-left py-4 px-4 font-semibold text-gray-900">Feature</th>
+                            <th class="text-center py-4 px-4 font-semibold text-green-600">BubbleList</th>
+                            <th class="text-center py-4 px-4 font-semibold text-gray-500">Others</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Lists don't change when checked</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-red-100 rounded-full">
+                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Nested category hierarchy</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-red-100 rounded-full">
+                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Hierarchical folders</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center text-sm text-gray-500">Some (premium)</td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">True offline-first</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center text-sm text-gray-500">Varies</td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Encrypted sync</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-red-100 rounded-full">
+                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Ad-free (no premium needed)</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center text-sm text-gray-500">Usually premium</td>
+                        </tr>
+                        <tr class="comparison-row border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Real-time sharing</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="comparison-row">
+                            <td class="py-4 px-4 text-gray-700">Import/Export</td>
+                            <td class="py-4 px-4 text-center">
+                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 rounded-full">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-center text-sm text-gray-500">Some</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+
+            <p class="text-center mt-8 text-gray-500 text-sm">
+                Compared against AnyList, OurGroceries, Bring!, Todoist, and similar apps
+            </p>
         </div>
     </section>
 
@@ -265,43 +512,36 @@
                 Frequently Asked Questions
             </h2>
             <div class="space-y-6">
+                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200" open>
+                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
+                        How does checking things off work?
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Your list never changes when you check things off. Instead, each time you use a list
+                        (like a grocery run or packing for a trip), you start a new <strong>session</strong>.
+                        The session tracks your progress. When you're done, your list is ready for next time—no resetting needed.
+                    </p>
+                </details>
+
                 <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                     <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
                         How does offline mode work?
                     </summary>
                     <p class="mt-4 text-gray-600">
-                        BubbleList is built on Jazz.tools, a local-first database. All your data is stored locally on your device.
-                        You can create, edit, and delete lists completely offline. When you reconnect, changes sync automatically
-                        using CRDTs (Conflict-free Replicated Data Types).
+                        BubbleList is built on Jazz.tools, a local-first database. All your data lives on your device first.
+                        You can create, edit, and check items completely offline. When you reconnect, changes sync automatically
+                        using conflict-free merge technology.
                     </p>
                 </details>
 
                 <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                     <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
-                        Is my data private?
+                        Is my data encrypted?
                     </summary>
                     <p class="mt-4 text-gray-600">
-                        Yes. BubbleList doesn't track you, show ads, or mine your data. All data is stored with Jazz.tools encrypted storage.
-                        We don't sell or share user data. For more details, see our <a href="privacy.html" class="text-indigo-600 hover:underline">Privacy Policy</a>.
-                    </p>
-                </details>
-
-                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
-                        Can I export my data?
-                    </summary>
-                    <p class="mt-4 text-gray-600">
-                        Yes. BubbleList supports export to JSON, CSV, and TXT formats. You can export anytime and aren't locked into the platform.
-                    </p>
-                </details>
-
-                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
-                        Does it work on mobile?
-                    </summary>
-                    <p class="mt-4 text-gray-600">
-                        Yes! BubbleList works on mobile browsers as a Progressive Web App (PWA).
-                        Install it to your home screen for the best experience with offline support.
+                        Yes. Data is encrypted in transit and at rest using Jazz.tools' cryptographic layer.
+                        Your data isn't stored as plaintext on sync servers. However, this is group-based encryption
+                        (for sharing), not zero-knowledge end-to-end encryption like Signal.
                     </p>
                 </details>
 
@@ -310,8 +550,28 @@
                         Can I share lists with others?
                     </summary>
                     <p class="mt-4 text-gray-600">
-                        Yes! You can share lists with others via email invite. Shared lists sync in real-time
-                        across all participants' devices, with granular permission controls (view or edit).
+                        Yes! Share folders via email invite. Recipients get real-time sync of all templates
+                        and sessions in that folder. You control permissions—view-only or full edit access.
+                    </p>
+                </details>
+
+                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
+                        Can I export my data?
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Yes. Export templates and sessions to JSON, CSV, or TXT formats anytime.
+                        Your data, your choice. No vendor lock-in.
+                    </p>
+                </details>
+
+                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
+                        Does it work on mobile?
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Yes! BubbleList is a Progressive Web App (PWA). Works in any browser and can be
+                        installed to your home screen for an app-like experience with full offline support.
                     </p>
                 </details>
 
@@ -320,8 +580,20 @@
                         Is it free?
                     </summary>
                     <p class="mt-4 text-gray-600">
-                        Yes, currently free during public beta. Future sustainable monetization may include optional premium features,
-                        but core functionality will remain accessible.
+                        Yes, currently free during beta. No ads, no data harvesting. Future pricing (if any)
+                        will focus on optional premium features while keeping core functionality accessible.
+                    </p>
+                </details>
+
+                <details class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                    <summary class="font-semibold text-gray-900 cursor-pointer text-lg">
+                        How is this different from AnyList, OurGroceries, etc.?
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Most list apps modify your list when you check things off. You have to uncheck everything
+                        to use it again. BubbleList keeps your list separate from your progress—so your list
+                        is always ready for the next use. Plus: nested folders, nested categories, encrypted sync,
+                        and no ads.
                     </p>
                 </details>
             </div>
@@ -329,21 +601,22 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 bg-indigo-600 text-white">
+    <section class="py-20 bg-green-600 text-white">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 class="text-3xl md:text-4xl font-bold mb-6">
                 Ready to Try BubbleList?
             </h2>
-            <p class="text-xl mb-8 text-indigo-100">
-                Join the free beta and experience privacy-focused list management.
+            <p class="text-xl mb-8 text-green-100">
+                Create a list once, use it forever.
+                Sync across devices. No ads.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="https://bubblelist-app.rkroll.com" class="bg-white text-indigo-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition text-lg">
+                <a href="https://bubblelist-app.rkroll.com" class="bg-white text-green-700 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition text-lg">
                     Start Using BubbleList
                 </a>
             </div>
-            <p class="mt-6 text-indigo-200 text-sm">
-                No credit card required • Free during beta • Desktop-optimized
+            <p class="mt-6 text-green-200 text-sm">
+                No account required to start • Free during beta • Works on any device
             </p>
         </div>
     </section>
@@ -354,30 +627,26 @@
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div>
                     <div class="flex items-center mb-4">
-                        <svg class="w-8 h-8 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
-                            <circle cx="12" cy="8" r="3"/>
-                            <circle cx="12" cy="16" r="3"/>
-                            <path d="M12 11v2"/>
-                        </svg>
+                        <img src="bubblelist.svg" alt="BubbleList" class="w-8 h-8">
                         <span class="ml-2 text-xl font-bold text-white">BubbleList</span>
                     </div>
                     <p class="text-sm">
-                        Privacy-focused list management with offline-first sync.
+                        Checklists you can use again and again. Encrypted sync, works offline.
                     </p>
                 </div>
                 <div>
                     <h3 class="text-white font-semibold mb-4">Product</h3>
                     <ul class="space-y-2 text-sm">
+                        <li><a href="#how-it-works" class="hover:text-white">How It Works</a></li>
                         <li><a href="#features" class="hover:text-white">Features</a></li>
-                        <li><a href="#privacy" class="hover:text-white">Privacy</a></li>
+                        <li><a href="#compare" class="hover:text-white">Compare</a></li>
                         <li><a href="#faq" class="hover:text-white">FAQ</a></li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="text-white font-semibold mb-4">Legal</h3>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="privacy.html" class="hover:text-white">Privacy Policy</a></li>
-                        <li><a href="terms.html" class="hover:text-white">Terms of Service</a></li>
+                        <li><a href="legal.html" class="hover:text-white">Privacy & Terms</a></li>
                     </ul>
                 </div>
                 <div>
@@ -389,7 +658,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-800 pt-8 text-center text-sm">
-                <p>&copy; 2025 BubbleList. Built with privacy in mind.</p>
+                <p>&copy; 2025 BubbleList. Checklists you can use again and again.</p>
             </div>
         </div>
     </footer>

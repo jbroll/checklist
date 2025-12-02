@@ -7,3 +7,11 @@ count:
 			| grep -v test-pages/ \
 			| grep -v test/ \
 			| xargs wc -l | sort -rn | less
+
+icons: bubblelist.svg
+	convert bubblelist.svg -resize 512x512 public/icon-512.png
+	convert bubblelist.svg -resize 192x192 public/icon-192.png
+	convert bubblelist.svg -resize 180x180 public/apple-touch-icon.png
+	convert bubblelist.svg -resize 512x512 bubblelist.png
+	convert bubblelist.svg -resize 512x512 -background white -flatten public/icon-512-maskable.png
+	convert bubblelist.svg -resize 192x192 -background white -flatten public/icon-192-maskable.png
