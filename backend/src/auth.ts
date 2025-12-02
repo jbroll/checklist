@@ -71,11 +71,16 @@ export const auth = betterAuth({
   ],
 
   // OAuth providers
+  // Privacy: Only request email scope, not profile (name/image)
+  // This way user's name and profile photo never hit our servers
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       prompt: "select_account",
+      // Only request email, not profile data (name/image)
+      scope: ["openid", "email"],
+      disableDefaultScopes: true,
     },
   },
 

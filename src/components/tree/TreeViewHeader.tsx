@@ -13,6 +13,7 @@ import {
   Pencil,
   Trash2,
   Upload,
+  UserX,
 } from 'lucide-react';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ interface TreeViewHeaderProps {
   onEmptyTrash?: () => void;
   onSignOut?: () => void;
   onSignIn?: () => void;
+  onDeleteAccount?: () => void;
   onPendingInvites?: () => void;
   isAuthenticated?: boolean;
   onSwitchView?: () => void;
@@ -80,6 +82,7 @@ export function TreeViewHeader({
   onEmptyTrash,
   onSignOut,
   onSignIn,
+  onDeleteAccount,
   onPendingInvites,
   isAuthenticated = false,
   onSwitchView,
@@ -274,6 +277,15 @@ export function TreeViewHeader({
                           Sign In
                         </DropdownMenuItem>
                       )
+                    )}
+                    {isAuthenticated && onDeleteAccount && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={onDeleteAccount} className="text-red-600">
+                          <UserX className="mr-2 h-4 w-4" />
+                          Delete Account
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </>
                 )}

@@ -15,6 +15,7 @@ interface SimplifiedAppProps {
   onViewModeChange: (mode: ViewMode) => void;
   onSignOut?: () => void;
   onSignIn?: () => void;
+  onDeleteAccount?: () => void;
   isAuthenticated: boolean;
 }
 
@@ -28,6 +29,7 @@ export function SimplifiedApp({
   onViewModeChange,
   onSignOut,
   onSignIn,
+  onDeleteAccount,
   isAuthenticated,
 }: SimplifiedAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -201,6 +203,7 @@ export function SimplifiedApp({
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
+          onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('classic')}
           switchViewLabel="Advanced View"

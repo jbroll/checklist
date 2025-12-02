@@ -551,3 +551,38 @@ export function emptyTrash(account: InstanceOfSchema<typeof Account>): number {
 
   return deletedCount;
 }
+
+/**
+ * Delete all user data - used for account deletion.
+ * Removes all folders (and their nested items/sessions) from the account.
+ * This ensures Jazz data is cleaned up before account keys are deleted.
+ * @param account - User's Account
+ */
+export function deleteAllUserData(account: InstanceOfSchema<typeof Account>): void {
+  if (!account.root?.folders) return;
+
+  // Delete all root folders (which recursively deletes children)
+  while (account.root.folders.length > 0) {
+    const folder = account.root.folders[0];
+    if (folder) {
+      try {
+        deleteFolder(account, folder);
+      } catch {
+        // If deletion fails, try to remove from list to avoid infinite loop
+        try {
+          account.root.folders.$jazz.splice(0, 1);
+        } catch {
+          // If that also fails, break to avoid infinite loop
+          break;
+        }
+      }
+    } else {
+      // Remove null entry
+      try {
+        account.root.folders.$jazz.splice(0, 1);
+      } catch {
+        break;
+      }
+    }
+  }
+}

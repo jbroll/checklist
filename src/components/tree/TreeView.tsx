@@ -47,6 +47,7 @@ interface TreeViewProps {
   onImport?: () => void;
   onSignOut?: () => void;
   onSignIn?: () => void;
+  onDeleteAccount?: () => void;
   isAuthenticated?: boolean;
   onSwitchToSimplified?: () => void;
   switchViewLabel?: string;
@@ -117,6 +118,7 @@ export function TreeView({
   onImport,
   onSignOut,
   onSignIn,
+  onDeleteAccount,
   isAuthenticated,
   onSwitchToSimplified,
   switchViewLabel,
@@ -531,6 +533,7 @@ export function TreeView({
           onEmptyTrash={handleEmptyTrash}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
+          onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
           onSwitchView={onSwitchToSimplified}
           switchViewLabel={switchViewLabel}

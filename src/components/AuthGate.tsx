@@ -4,6 +4,7 @@ import { useViewStateCleanup } from '@/hooks/useViewStateCleanup';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
 import { Account } from '@/schemas';
+import * as folderService from '@/services/folderService';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
 import { LoadingScreen } from './ui/loading';
@@ -13,7 +14,7 @@ export type ViewMode = 'classic' | 'simplified';
 export function AuthGate() {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { me, logOut } = useAccount(Account);
-  const { showAlert } = useDialog();
+  const { showAlert, showConfirm } = useDialog();
   const isAuthenticated = useIsAuthenticated();
 
   // Run viewState cleanup in the background
@@ -98,6 +99,76 @@ export function AuthGate() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    // Show confirmation dialog
+    const confirmed = await showConfirm({
+      title: 'Delete Account',
+      message:
+        'This will permanently delete your account and all your data.\n\n' +
+        'This action cannot be undone. Are you sure you want to continue?',
+      confirmText: 'Delete Account',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      // First, delete all Jazz data while we still have access to the account keys
+      // This ensures the data is actually deleted from Jazz, not just orphaned
+      if (me) {
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+        folderService.deleteAllUserData(me as any);
+      }
+
+      // Call the delete account API to remove BetterAuth user
+      const response = await fetch('/api/account', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete account');
+      }
+
+      // Sign out after successful deletion
+      localStorage.setItem('user-signed-out', 'true');
+      setUserSignedOut(true);
+
+      try {
+        await logOut();
+      } catch {
+        // Silently ignore logOut errors
+      }
+
+      // Clean up Jazz local storage and IndexedDB
+      // This ensures no local data remnants after account deletion
+      const jazzKeys = Object.keys(localStorage).filter(
+        (key) => key.startsWith('jazz-') || key.startsWith('co_z'),
+      );
+      for (const key of jazzKeys) {
+        localStorage.removeItem(key);
+      }
+
+      try {
+        indexedDB.deleteDatabase('jazz-storage');
+      } catch {
+        // Silently ignore IndexedDB errors
+      }
+
+      await showAlert({
+        title: 'Account Deleted',
+        message: 'Your account has been permanently deleted.',
+      });
+    } catch (error) {
+      await showAlert({
+        title: 'Error',
+        message: error instanceof Error ? error.message : 'Failed to delete account',
+      });
+    }
+  };
+
   // Wait for Jazz account to be initialized
   if (!me) {
     return <LoadingScreen />;
@@ -109,6 +180,7 @@ export function AuthGate() {
       <AppContainer
         key={`auth-${accountId}`}
         onSignOut={handleSignOut}
+        onDeleteAccount={handleDeleteAccount}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         isAuthenticated={true}

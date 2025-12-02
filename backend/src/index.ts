@@ -93,6 +93,42 @@ app.use(express.urlencoded({ extended: true }));
 // Sharing routes
 setupSharingRoutes(app, sqliteDb);
 
+// Account deletion endpoint
+// Deletes the user's BetterAuth account and all associated data
+// Jazz data becomes inaccessible since account keys are deleted with the user
+app.delete('/api/account', async (req, res) => {
+  try {
+    // Get session from BetterAuth
+    const session = await auth.api.getSession({
+      headers: req.headers as Record<string, string>,
+    });
+
+    if (!session?.user?.id) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+
+    console.log(`[account-deletion] Deleting account for user ${userId} (${userEmail})`);
+
+    // Delete any share invites sent by or to this user
+    sqliteDb.prepare('DELETE FROM share_invites WHERE sender_email = ? OR recipient_email = ?').run(userEmail, userEmail);
+
+    // Delete the user - this cascades to sessions and OAuth accounts
+    // The Jazz account keys (stored in user.accountID) are also deleted,
+    // making the user's Jazz data inaccessible
+    sqliteDb.prepare('DELETE FROM user WHERE id = ?').run(userId);
+
+    console.log(`[account-deletion] Successfully deleted account for user ${userId}`);
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('[account-deletion] Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

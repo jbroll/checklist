@@ -1,7 +1,58 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// Custom plugin to serve static website files in development
+function serveWebsiteFiles(): Plugin {
+  return {
+    name: 'serve-website-files',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const websiteDir = path.resolve(__dirname, 'website');
+
+        // Redirect /website to /website/ for consistent relative links
+        if (req.url === '/website') {
+          res.writeHead(302, { Location: '/website/' });
+          res.end();
+          return;
+        }
+
+        // Handle /website/* routes
+        if (req.url?.startsWith('/website/')) {
+          let filePath = req.url.replace('/website/', '/') || '/index.html';
+          if (filePath === '/') filePath = '/index.html';
+
+          const fullPath = path.join(websiteDir, filePath);
+
+          if (fs.existsSync(fullPath)) {
+            const ext = path.extname(fullPath);
+            const contentType =
+              ext === '.html'
+                ? 'text/html'
+                : ext === '.css'
+                  ? 'text/css'
+                  : ext === '.js'
+                    ? 'application/javascript'
+                    : ext === '.svg'
+                      ? 'image/svg+xml'
+                      : ext === '.png'
+                        ? 'image/png'
+                        : ext === '.jpg' || ext === '.jpeg'
+                          ? 'image/jpeg'
+                          : 'text/plain';
+
+            res.setHeader('Content-Type', contentType);
+            res.end(fs.readFileSync(fullPath));
+            return;
+          }
+        }
+        next();
+      });
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -31,6 +82,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    serveWebsiteFiles(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['bubblelist.svg', 'apple-touch-icon.png'],

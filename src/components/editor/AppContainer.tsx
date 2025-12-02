@@ -19,6 +19,7 @@ import { TemplateItemEditor } from './TemplateItemEditor';
 interface AppContainerProps {
   onSignOut?: () => void;
   onSignIn?: () => void;
+  onDeleteAccount?: () => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   isAuthenticated: boolean;
@@ -27,6 +28,7 @@ interface AppContainerProps {
 export function AppContainer({
   onSignOut,
   onSignIn,
+  onDeleteAccount,
   viewMode,
   onViewModeChange,
   isAuthenticated,
@@ -110,6 +112,7 @@ export function AppContainer({
         onViewModeChange={onViewModeChange}
         onSignOut={onSignOut}
         onSignIn={onSignIn}
+        onDeleteAccount={onDeleteAccount}
         isAuthenticated={isAuthenticated}
       />
     );
@@ -253,6 +256,7 @@ export function AppContainer({
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
+          onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
           switchViewLabel="Basic View"
