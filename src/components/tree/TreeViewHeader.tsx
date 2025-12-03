@@ -7,14 +7,13 @@ import {
   LayoutGrid,
   ListPlus,
   LogIn,
-  LogOut,
   Mail,
   MoreVertical,
   Pencil,
   Smartphone,
   Trash2,
   Upload,
-  UserX,
+  User,
 } from 'lucide-react';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import { Button } from '@/components/ui/button';
@@ -54,6 +53,8 @@ interface TreeViewHeaderProps {
   isAuthenticated?: boolean;
   onSwitchView?: () => void;
   switchViewLabel?: string;
+  showProfileDialog?: boolean;
+  onShowProfileDialogChange?: (show: boolean) => void;
   canInstallApp?: boolean;
   onInstallApp?: () => void;
 }
@@ -90,6 +91,8 @@ export function TreeViewHeader({
   isAuthenticated = false,
   onSwitchView,
   switchViewLabel = 'Basic View',
+  showProfileDialog: _showProfileDialog = false,
+  onShowProfileDialogChange,
   canInstallApp = false,
   onInstallApp,
 }: TreeViewHeaderProps) {
@@ -258,12 +261,6 @@ export function TreeViewHeader({
                 {(onSignOut || onSignIn || onPendingInvites || canInstallApp) && (
                   <>
                     <DropdownMenuSeparator />
-                    {onSwitchView && (
-                      <DropdownMenuItem onClick={onSwitchView}>
-                        <LayoutGrid className="mr-2 h-4 w-4" />
-                        {switchViewLabel}
-                      </DropdownMenuItem>
-                    )}
                     {canInstallApp && onInstallApp && (
                       <DropdownMenuItem onClick={onInstallApp}>
                         <Smartphone className="mr-2 h-4 w-4" />
@@ -276,26 +273,28 @@ export function TreeViewHeader({
                         Pending Invites
                       </DropdownMenuItem>
                     )}
-                    {isAuthenticated && onSignOut ? (
-                      <DropdownMenuItem onClick={onSignOut}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
+                    {isAuthenticated &&
+                    onSignOut &&
+                    onDeleteAccount &&
+                    onShowProfileDialogChange ? (
+                      <DropdownMenuItem onClick={() => onShowProfileDialogChange(true)}>
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
                       </DropdownMenuItem>
                     ) : (
-                      onSignIn && (
-                        <DropdownMenuItem onClick={onSignIn}>
-                          <LogIn className="mr-2 h-4 w-4" />
-                          Sign In
-                        </DropdownMenuItem>
-                      )
-                    )}
-                    {isAuthenticated && onDeleteAccount && (
                       <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={onDeleteAccount} className="text-red-600">
-                          <UserX className="mr-2 h-4 w-4" />
-                          Delete Account
-                        </DropdownMenuItem>
+                        {onSwitchView && (
+                          <DropdownMenuItem onClick={onSwitchView}>
+                            <LayoutGrid className="mr-2 h-4 w-4" />
+                            {switchViewLabel}
+                          </DropdownMenuItem>
+                        )}
+                        {onSignIn && (
+                          <DropdownMenuItem onClick={onSignIn}>
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Sign In
+                          </DropdownMenuItem>
+                        )}
                       </>
                     )}
                   </>

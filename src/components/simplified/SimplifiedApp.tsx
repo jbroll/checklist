@@ -17,6 +17,8 @@ interface SimplifiedAppProps {
   onSignIn?: () => void;
   onDeleteAccount?: () => void;
   isAuthenticated: boolean;
+  showProfileDialog?: boolean;
+  onShowProfileDialogChange?: (show: boolean) => void;
 }
 
 /**
@@ -31,6 +33,8 @@ export function SimplifiedApp({
   onSignIn,
   onDeleteAccount,
   isAuthenticated,
+  showProfileDialog,
+  onShowProfileDialogChange,
 }: SimplifiedAppProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -207,6 +211,8 @@ export function SimplifiedApp({
           isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('classic')}
           switchViewLabel="Advanced View"
+          showProfileDialog={showProfileDialog}
+          onShowProfileDialogChange={onShowProfileDialogChange}
           sessionsEnabled={false}
           hideArchivedSessionsToggle={true}
           hideArchiveAction={true}

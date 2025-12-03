@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
+import { ProfileDialog } from '@/components/auth/ProfileDialog';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { SessionExportDialog } from '@/components/export/SessionExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
@@ -47,6 +48,7 @@ export function AppContainer({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [sessionExportData, setSessionExportData] = useState<{
     templateId: string;
     sessionId: string;
@@ -103,18 +105,35 @@ export function AppContainer({
     );
   }
 
+  // Compute switch view label based on current mode
+  const switchViewLabel = viewMode === 'simplified' ? 'Advanced View' : 'Basic View';
+
   // If view mode is simplified, render SimplifiedApp instead of classic UI
   if (viewMode === 'simplified') {
     return (
-      <SimplifiedApp
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-        account={me as any}
-        onViewModeChange={onViewModeChange}
-        onSignOut={onSignOut}
-        onSignIn={onSignIn}
-        onDeleteAccount={onDeleteAccount}
-        isAuthenticated={isAuthenticated}
-      />
+      <>
+        <SimplifiedApp
+          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+          account={me as any}
+          onViewModeChange={onViewModeChange}
+          onSignOut={onSignOut}
+          onSignIn={onSignIn}
+          onDeleteAccount={onDeleteAccount}
+          isAuthenticated={isAuthenticated}
+          showProfileDialog={showProfileDialog}
+          onShowProfileDialogChange={setShowProfileDialog}
+        />
+        {onSignOut && onDeleteAccount && (
+          <ProfileDialog
+            open={showProfileDialog}
+            onOpenChange={setShowProfileDialog}
+            onSignOut={onSignOut}
+            onDeleteAccount={onDeleteAccount}
+            onSwitchView={() => onViewModeChange('classic')}
+            switchViewLabel={switchViewLabel}
+          />
+        )}
+      </>
     );
   }
 
@@ -259,7 +278,9 @@ export function AppContainer({
           onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
           onSwitchToSimplified={() => onViewModeChange('simplified')}
-          switchViewLabel="Basic View"
+          switchViewLabel={switchViewLabel}
+          showProfileDialog={showProfileDialog}
+          onShowProfileDialogChange={setShowProfileDialog}
           sessionsEnabled={true}
         />
 
@@ -321,6 +342,18 @@ export function AppContainer({
             }
             return null;
           })()}
+
+        {/* Profile Dialog */}
+        {onSignOut && onDeleteAccount && (
+          <ProfileDialog
+            open={showProfileDialog}
+            onOpenChange={setShowProfileDialog}
+            onSignOut={onSignOut}
+            onDeleteAccount={onDeleteAccount}
+            onSwitchView={() => onViewModeChange('simplified')}
+            switchViewLabel={switchViewLabel}
+          />
+        )}
       </main>
     </div>
   );

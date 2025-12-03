@@ -53,6 +53,9 @@ interface TreeViewProps {
   isAuthenticated?: boolean;
   onSwitchToSimplified?: () => void;
   switchViewLabel?: string;
+  // Profile dialog control (lifted state)
+  showProfileDialog?: boolean;
+  onShowProfileDialogChange?: (show: boolean) => void;
   // Session display control
   sessionsEnabled?: boolean;
   hideArchivedTemplatesToggle?: boolean;
@@ -124,6 +127,8 @@ export function TreeView({
   isAuthenticated,
   onSwitchToSimplified,
   switchViewLabel,
+  showProfileDialog,
+  onShowProfileDialogChange,
   sessionsEnabled = true,
   hideArchivedTemplatesToggle = false,
   hideArchivedSessionsToggle = false,
@@ -560,6 +565,8 @@ export function TreeView({
           isAuthenticated={isAuthenticated}
           onSwitchView={onSwitchToSimplified}
           switchViewLabel={switchViewLabel}
+          showProfileDialog={showProfileDialog}
+          onShowProfileDialogChange={onShowProfileDialogChange}
           canInstallApp={showInstallOption}
           onInstallApp={handleInstallApp}
         />
