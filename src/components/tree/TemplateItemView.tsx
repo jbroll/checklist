@@ -179,7 +179,9 @@ export function TemplateItemView({
       role={onSelect && !showCheckbox ? 'button' : undefined}
       tabIndex={onSelect && !showCheckbox ? 0 : undefined}
       className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
-        isOver && isCategory ? 'bg-green-100 border-2 border-green-500 border-dashed rounded' : ''
+        isOver && isCategory
+          ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500 border-dashed rounded'
+          : ''
       } ${onSelect && !showCheckbox ? 'cursor-pointer' : ''}`}
     >
       <IndentedRow
@@ -201,7 +203,7 @@ export function TemplateItemView({
               className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors shrink-0 ${
                 isChecked
                   ? 'border-blue-500 bg-blue-500 text-white'
-                  : 'border-neutral-300 hover:border-blue-400'
+                  : 'border-divider-tertiary hover:border-blue-400'
               }`}
             >
               {isChecked && (
@@ -228,7 +230,7 @@ export function TemplateItemView({
           >
             <div
               className={`flex flex-wrap items-center gap-x-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
-                isSelected ? 'bg-neutral-200' : ''
+                isSelected ? 'bg-interactive-active' : ''
               }`}
             >
               {/* Icon */}
@@ -250,7 +252,7 @@ export function TemplateItemView({
                 <span
                   {...doubleTapHandlers}
                   className={`flex-1 min-w-0 truncate text-left ${
-                    isCategory ? 'font-semibold text-neutral-900' : 'text-neutral-900'
+                    isCategory ? 'font-semibold text-content-primary' : 'text-content-primary'
                   }`}
                 >
                   {item.name}
@@ -259,13 +261,13 @@ export function TemplateItemView({
 
               {/* Quantity Badge (items only) */}
               {!isCategory && item.defaultQuantity && (
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 shrink-0">
+                <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-content-secondary shrink-0">
                   {item.defaultQuantity}
                 </span>
               )}
               {/* Note preview - wraps to new line on mobile, inline on desktop */}
               {item.notes && !isEditing && (
-                <span className="basis-full sm:basis-auto text-xs text-neutral-500 truncate sm:max-w-[200px]">
+                <span className="basis-full sm:basis-auto text-xs text-content-tertiary truncate sm:max-w-[200px]">
                   {item.notes.split('\n')[0]}
                 </span>
               )}
@@ -282,8 +284,8 @@ export function TemplateItemView({
               }}
               className={`shrink-0 rounded p-1 transition-colors ${
                 item.notes
-                  ? 'text-amber-600 hover:bg-amber-50 hover:text-amber-700'
-                  : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+                  ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700'
+                  : 'text-content-disabled hover:bg-interactive-hover hover:text-content-secondary'
               }`}
               aria-label="Edit note"
             >
@@ -292,7 +294,9 @@ export function TemplateItemView({
           )}
 
           {/* Archived indicator */}
-          {item.archived && !isEditing && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}
+          {item.archived && !isEditing && (
+            <Archive className="h-4 w-4 shrink-0 text-content-disabled" />
+          )}
 
           {/* Delete Icon (SessionView adding mode) */}
           {showDeleteIcon && !isEditing && onDelete && (
@@ -302,7 +306,7 @@ export function TemplateItemView({
                 e.stopPropagation();
                 handleDelete();
               }}
-              className="shrink-0 rounded p-1 text-neutral-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="shrink-0 rounded p-1 text-content-tertiary hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
               aria-label="Delete item"
             >
               <Trash2 className="h-4 w-4" />
@@ -316,10 +320,10 @@ export function TemplateItemView({
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
-                  className="shrink-0 rounded p-1 hover:bg-neutral-200"
+                  className="shrink-0 rounded p-1 hover:bg-interactive-hover"
                   aria-label="More options"
                 >
-                  <MoreVertical className="h-4 w-4 text-neutral-600" />
+                  <MoreVertical className="h-4 w-4 text-content-secondary" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

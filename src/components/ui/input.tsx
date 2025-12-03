@@ -3,12 +3,12 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 const inputVariants = cva(
-  'flex w-full rounded-md bg-white text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-md bg-surface-elevated text-content-primary text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-content-disabled focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
         default:
-          'h-10 border border-neutral-300 px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500/20',
+          'h-10 border border-divider-tertiary px-3 py-2 focus:border-green-500 focus:ring-2 focus:ring-green-500/20',
         inline: 'border border-green-500 px-2 py-0.5 focus:ring-2 focus:ring-green-500/20',
       },
       state: {

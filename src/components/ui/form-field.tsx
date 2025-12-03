@@ -67,7 +67,7 @@ export function FormField({
         {required && <span className="ml-1 text-red-600">*</span>}
       </Label>
       {helperText && !error && (
-        <p id={helperId} className="text-xs text-neutral-500">
+        <p id={helperId} className="text-xs text-content-tertiary">
           {helperText}
         </p>
       )}

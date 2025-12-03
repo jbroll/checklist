@@ -187,7 +187,7 @@ export function SimplifiedApp({
 
   // Otherwise show template selector using TreeView with sessionsEnabled=false
   return (
-    <div className="h-screen bg-neutral-50 p-3 sm:p-4 lg:p-6 flex flex-col">
+    <div className="h-screen bg-surface-secondary p-3 sm:p-4 lg:p-6 flex flex-col">
       <main
         id="main-content"
         className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0"

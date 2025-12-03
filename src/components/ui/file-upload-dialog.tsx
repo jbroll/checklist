@@ -167,18 +167,20 @@ export function FileUploadDialog<TResult>({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-                isDragging ? 'border-green-500 bg-green-50' : 'border-neutral-300 bg-neutral-50'
+                isDragging
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
+                  : 'border-divider-tertiary bg-surface-secondary'
               }`}
             >
               <Upload
-                className={`mb-3 h-12 w-12 ${isDragging ? 'text-green-600' : 'text-neutral-400'}`}
+                className={`mb-3 h-12 w-12 ${isDragging ? 'text-green-600' : 'text-content-disabled'}`}
               />
-              <p className="mb-2 text-sm font-medium text-neutral-700">
+              <p className="mb-2 text-sm font-medium text-content-primary">
                 {isDragging ? 'Drop file here' : `Drop ${fileTypeList} file here or`}
               </p>
               <label
                 htmlFor="file-upload"
-                className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+                className="cursor-pointer rounded-md bg-surface-elevated px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30"
               >
                 Browse Files
               </label>
@@ -189,7 +191,7 @@ export function FileUploadDialog<TResult>({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <p className="mt-2 text-xs text-neutral-500">
+              <p className="mt-2 text-xs text-content-tertiary">
                 {fileTypeList} files, up to {maxSizeMB}MB
               </p>
             </div>
@@ -197,11 +199,11 @@ export function FileUploadDialog<TResult>({
 
           {/* Selected file info */}
           {selectedFile && !result && (
-            <div className="rounded-lg border border-neutral-200 bg-white p-4">
+            <div className="rounded-lg border border-divider-primary bg-surface-elevated p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-medium text-neutral-900">{selectedFile.name}</div>
-                  <div className="text-sm text-neutral-600">
+                  <div className="font-medium text-content-primary">{selectedFile.name}</div>
+                  <div className="text-sm text-content-secondary">
                     {(selectedFile.size / 1024).toFixed(1)} KB
                     {fileType && ` • ${fileType.toUpperCase()}`}
                   </div>
@@ -210,7 +212,7 @@ export function FileUploadDialog<TResult>({
                   type="button"
                   onClick={handleReset}
                   variant="link"
-                  className="text-neutral-500 hover:text-neutral-700"
+                  className="text-content-tertiary hover:text-content-primary"
                 >
                   Change
                 </Button>
@@ -223,7 +225,7 @@ export function FileUploadDialog<TResult>({
 
           {/* Info box */}
           {!result && (
-            <div className="rounded-lg bg-neutral-50 p-3 text-sm text-neutral-700">
+            <div className="rounded-lg bg-surface-secondary p-3 text-sm text-content-primary">
               {infoContent}
             </div>
           )}

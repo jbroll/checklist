@@ -64,8 +64,8 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900" />
-          <p className="mt-4 text-neutral-600">Loading...</p>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-divider-tertiary border-t-content-primary" />
+          <p className="mt-4 text-content-secondary">Loading...</p>
         </div>
       </div>
     );
@@ -386,10 +386,10 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="h-screen bg-neutral-50 p-6 flex flex-col">
+      <div className="h-screen bg-surface-secondary p-6 flex flex-col">
         <div className="mx-auto max-w-4xl w-full flex-1 flex flex-col min-h-0">
           {/* Items Tree */}
-          <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
+          <div className="rounded-lg border border-divider-primary bg-surface-elevated flex flex-col flex-1 min-h-0">
             {/* Root-level drop zone with header */}
             <RootDropZone
               isDragging={!!activeItem}
@@ -400,13 +400,13 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
 
             {/* Selection Toolbar */}
             {itemTree.length > 0 && (
-              <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2">
+              <div className="border-b border-divider-primary bg-surface-tertiary px-4 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleSelectAll}
-                      className="rounded px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-200 transition-colors"
+                      className="rounded px-3 py-1 text-sm text-content-secondary hover:bg-interactive-hover transition-colors"
                     >
                       Select All
                     </button>
@@ -415,11 +415,11 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
                         <button
                           type="button"
                           onClick={handleDeselectAll}
-                          className="rounded px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-200 transition-colors"
+                          className="rounded px-3 py-1 text-sm text-content-secondary hover:bg-interactive-hover transition-colors"
                         >
                           Deselect All
                         </button>
-                        <span className="text-sm text-neutral-600">
+                        <span className="text-sm text-content-secondary">
                           {selectedIds.size} selected
                         </span>
                       </>
@@ -439,13 +439,13 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
             )}
 
             {itemTree.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
+              <div className="p-8 text-center text-content-tertiary">
                 <p>No items in this list yet.</p>
                 <p className="mt-1 text-sm">Click "Add Item" to get started.</p>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto min-h-0">
-                <div className="divide-y divide-neutral-100">
+                <div className="divide-y divide-divider-secondary">
                   {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
                 </div>
               </div>
@@ -476,7 +476,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       {/* Drag Overlay */}
       <DragOverlay>
         {activeItem ? (
-          <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90 flex items-center gap-2">
+          <div className="bg-surface-elevated border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90 flex items-center gap-2">
             {activeItem.type === 'category' && <Folder className="h-4 w-4" />}
             <span className="font-medium">{activeItem.name}</span>
           </div>

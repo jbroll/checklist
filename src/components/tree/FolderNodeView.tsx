@@ -211,7 +211,7 @@ export const FolderNodeView = memo(function FolderNodeView({
         ref={setDropRef}
         className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
           isOver && isOrganizational
-            ? 'bg-green-100 border-2 border-green-500 border-dashed rounded'
+            ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500 border-dashed rounded'
             : ''
         }`}
       >
@@ -233,7 +233,9 @@ export const FolderNodeView = memo(function FolderNodeView({
                 type="button"
                 onClick={handleClick}
                 className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full min-w-0 transition-colors ${
-                  isSelected ? 'bg-green-100 hover:bg-green-150' : 'hover:bg-neutral-100'
+                  isSelected
+                    ? 'bg-green-100 dark:bg-green-900/30 hover:bg-green-150 dark:hover:bg-green-900/40'
+                    : 'hover:bg-interactive-hover'
                 }`}
               >
                 {/* Icon */}
@@ -252,17 +254,17 @@ export const FolderNodeView = memo(function FolderNodeView({
                     onKeyDown={handleKeyDown}
                     onBlur={handleSaveEdit}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-base focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                    className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-base bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-green-500/20"
                   />
                 ) : (
                   <>
                     <span
-                      className={`flex-1 min-w-0 truncate text-left text-base ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+                      className={`flex-1 min-w-0 truncate text-left text-base ${isTemplate ? 'font-semibold text-green-700 dark:text-green-400' : 'font-medium text-content-primary'}`}
                     >
                       {name}
                     </span>
                     {itemCount > 0 && (
-                      <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-700">
+                      <span className="shrink-0 rounded-full bg-surface-tertiary px-2.5 py-0.5 text-sm font-medium text-content-secondary">
                         {itemCount}
                       </span>
                     )}
@@ -273,7 +275,7 @@ export const FolderNodeView = memo(function FolderNodeView({
 
             {/* Archived indicator */}
             {folder.archived && !isEditing && (
-              <Archive className="h-4 w-4 shrink-0 text-neutral-400" />
+              <Archive className="h-4 w-4 shrink-0 text-content-disabled" />
             )}
 
             {/* Actions Menu - for both folders and templates */}
@@ -283,10 +285,10 @@ export const FolderNodeView = memo(function FolderNodeView({
                   <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 rounded p-1 hover:bg-neutral-200"
+                    className="shrink-0 rounded p-1 hover:bg-interactive-hover"
                     aria-label="More options"
                   >
-                    <MoreVertical className="h-4 w-4 text-neutral-600" />
+                    <MoreVertical className="h-4 w-4 text-content-secondary" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

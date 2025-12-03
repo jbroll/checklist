@@ -186,8 +186,8 @@ export const SessionItemRow = memo(function SessionItemRow({
         : 'border-blue-500 bg-blue-500 text-white';
     }
     return leftCheckboxControlsChecked
-      ? 'border-neutral-300 hover:border-green-400'
-      : 'border-neutral-300 hover:border-blue-400';
+      ? 'border-divider-tertiary hover:border-green-400'
+      : 'border-divider-tertiary hover:border-blue-400';
   };
 
   // Enable animations within selected/checked zones (smooth movement when checking/unchecking)
@@ -220,9 +220,11 @@ export const SessionItemRow = memo(function SessionItemRow({
       layoutId={shouldAnimate ? item.id : undefined}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
-        isInsertionPointSelected ? 'bg-neutral-200' : 'hover:bg-neutral-100'
+        isInsertionPointSelected ? 'bg-interactive-active' : 'hover:bg-interactive-hover'
       } ${onSelectItem ? 'cursor-pointer' : ''} ${canActuallyDrag && !isDragging ? 'cursor-grab' : ''} ${isDragging ? 'opacity-50 cursor-grabbing' : ''} ${
-        isHolding && canActuallyDrag ? 'scale-[1.02] shadow-lg bg-blue-50 ring-2 ring-blue-300' : ''
+        isHolding && canActuallyDrag
+          ? 'scale-[1.02] shadow-lg bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-300'
+          : ''
       }`}
       {...(onSelectItem && {
         onClick: handleRowClick,
@@ -272,17 +274,19 @@ export const SessionItemRow = memo(function SessionItemRow({
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleSaveEdit}
-            className="w-full px-2 py-1 text-neutral-900 border-2 border-blue-400 rounded bg-blue-50 focus:outline-none focus:border-blue-500"
+            className="w-full px-2 py-1 text-neutral-900 dark:text-neutral-100 border-2 border-blue-400 rounded bg-blue-50 dark:bg-blue-900/30 focus:outline-none focus:border-blue-500"
           />
         ) : (
           <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
             {/* Item name and quantity */}
             <div className="flex items-center gap-2 shrink-0">
-              <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
+              <span
+                className={`text-content-primary ${isChecked ? 'line-through opacity-50' : ''}`}
+              >
                 {item.name}
               </span>
               {item.defaultQuantity && (
-                <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
+                <span className="text-sm text-content-tertiary">({item.defaultQuantity})</span>
               )}
             </div>
             {/* Notes preview - responsive: right on desktop, below on mobile */}
@@ -290,7 +294,7 @@ export const SessionItemRow = memo(function SessionItemRow({
               <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-between">
                 {/* Session note (italic, flush left) */}
                 {zone !== 'available' && state?.notes && (
-                  <span className="text-xs text-neutral-600 italic truncate max-w-[150px] sm:max-w-[200px]">
+                  <span className="text-xs text-content-secondary italic truncate max-w-[150px] sm:max-w-[200px]">
                     {state.notes.split('\n')[0]}
                   </span>
                 )}
@@ -298,13 +302,13 @@ export const SessionItemRow = memo(function SessionItemRow({
                 {zone !== 'available' && !state?.notes && item.notes && <span />}
                 {/* Template note (normal font, flush right) */}
                 {zone !== 'available' && item.notes && (
-                  <span className="text-xs text-neutral-400 truncate max-w-[150px] sm:max-w-[200px]">
+                  <span className="text-xs text-content-disabled truncate max-w-[150px] sm:max-w-[200px]">
                     {item.notes.split('\n')[0]}
                   </span>
                 )}
                 {/* Template note (shown in available zone, flush right) */}
                 {zone === 'available' && item.notes && (
-                  <span className="text-xs text-neutral-500 truncate max-w-[150px] sm:max-w-[200px] ml-auto">
+                  <span className="text-xs text-content-tertiary truncate max-w-[150px] sm:max-w-[200px] ml-auto">
                     {item.notes.split('\n')[0]}
                   </span>
                 )}
@@ -326,8 +330,8 @@ export const SessionItemRow = memo(function SessionItemRow({
           disabled={isAnyItemBeingEditedOrDragged}
           className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
             (zone === 'available' ? item.notes : state?.notes)
-              ? 'text-amber-600 hover:bg-amber-50 hover:text-amber-700'
-              : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+              ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700'
+              : 'text-content-disabled hover:bg-interactive-hover hover:text-content-secondary'
           } ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label={zone === 'available' ? 'Edit template note' : 'Edit session note'}
         >
@@ -359,7 +363,7 @@ export const SessionItemRow = memo(function SessionItemRow({
             }
           }}
           disabled={isAnyItemBeingEditedOrDragged}
-          className={`flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600 ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`flex h-6 w-6 items-center justify-center rounded border-2 border-divider-tertiary text-content-tertiary transition-colors hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label={showDeleteIcon ? 'Delete item' : 'Deselect item'}
         >
           <svg

@@ -33,13 +33,13 @@ export function IndentedRow({
             e.stopPropagation();
             onToggleExpand();
           }}
-          className="flex h-5 w-5 items-center justify-center rounded hover:bg-neutral-200"
+          className="flex h-5 w-5 items-center justify-center rounded hover:bg-interactive-hover"
           aria-label={expanded ? 'Collapse' : 'Expand'}
         >
           {expanded ? (
-            <ChevronDown className="h-4 w-4 text-neutral-600" />
+            <ChevronDown className="h-4 w-4 text-content-secondary" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-neutral-600" />
+            <ChevronRight className="h-4 w-4 text-content-secondary" />
           )}
         </button>
       ) : (

@@ -35,7 +35,7 @@ export function SimplifiedFlatView({
 
   if (sortedItems.length === 0) {
     return (
-      <div className="text-center py-12 text-neutral-500">
+      <div className="text-center py-12 text-content-tertiary">
         <p>No items in this list yet</p>
         <p className="text-sm mt-1">Click "Add Item" to get started</p>
       </div>
@@ -43,7 +43,7 @@ export function SimplifiedFlatView({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-neutral-200 divide-y divide-neutral-100">
+    <div className="bg-surface-elevated rounded-lg border border-divider-primary divide-y divide-divider-secondary">
       {sortedItems.map((item) => {
         const state = session.itemStates?.[item.id];
         const checked = state?.checked || false;

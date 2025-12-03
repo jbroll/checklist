@@ -1,3 +1,5 @@
+@import "./tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,7 +23,8 @@
   }
 
   body {
-    @apply bg-white text-neutral-900;
+    background-color: rgb(var(--color-bg-secondary));
+    color: rgb(var(--color-text-primary));
     font-feature-settings:
       "rlig" 1,
       "calt" 1;

@@ -14,7 +14,7 @@ const DropdownMenuContent = React.forwardRef<
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
-      className={`z-50 min-w-[8rem] overflow-hidden rounded-md border border-neutral-200 bg-white p-1 shadow-md ${className}`}
+      className={`z-50 min-w-[8rem] overflow-hidden rounded-md border border-divider-primary bg-surface-elevated p-1 shadow-md ${className}`}
       {...props}
     />
   </DropdownMenuPrimitive.Portal>
@@ -27,7 +27,7 @@ const DropdownMenuItem = React.forwardRef<
 >(({ className = '', ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
-    className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-neutral-100 focus:bg-neutral-100 ${className}`}
+    className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-interactive-hover focus:bg-interactive-hover ${className}`}
     {...props}
   />
 ));
@@ -39,7 +39,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className = '', ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={`-mx-1 my-1 h-px bg-neutral-200 ${className}`}
+    className={`-mx-1 my-1 h-px bg-divider-primary ${className}`}
     {...props}
   />
 ));
@@ -51,7 +51,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 >(({ className = '', children, checked, ...props }, ref) => (
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
-    className={`relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-neutral-100 focus:bg-neutral-100 ${className}`}
+    className={`relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-interactive-hover focus:bg-interactive-hover ${className}`}
     checked={checked}
     {...props}
   >

@@ -30,14 +30,14 @@ export function SimplifiedHeader({
   onToggleAddForm,
 }: SimplifiedHeaderProps) {
   return (
-    <header className="px-4 py-4 border-b bg-white border-neutral-100">
+    <header className="px-4 py-4 border-b bg-surface-elevated border-divider-secondary">
       <div className="flex items-center justify-between">
         {/* Left: Icon + Template name with session info */}
         <div className="flex items-center gap-3">
           <BubbleListIcon className="h-8 w-8" size={32} />
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900">{templateName}</h1>
-            <p className="text-sm text-neutral-500">Session: {sessionDate}</p>
+            <h1 className="text-3xl font-bold text-content-primary">{templateName}</h1>
+            <p className="text-sm text-content-tertiary">Session: {sessionDate}</p>
             {showAddForm && (
               <p className="text-xs font-semibold text-green-600 mt-1">
                 ✓ Click any item to choose insertion point

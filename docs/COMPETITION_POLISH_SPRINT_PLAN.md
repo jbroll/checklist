@@ -212,31 +212,29 @@ name?: string; // Optional custom name, falls back to date
 
 ---
 
-#### 3.3 Dark Mode
+#### 3.3 Dark Mode ✅ DONE
 **Effort:** 4-6 hours
+**Status:** Completed December 2, 2025
 **Files:**
-- `src/index.css` (CSS variables)
-- `tailwind.config.js` (dark mode config)
-- New: `src/lib/useTheme.ts`
-- Various component files
-
-**Current State:** Light mode only.
-
-**Desired State:** System-aware dark mode with manual toggle.
+- `src/tokens.css` (CSS custom properties for theming)
+- `src/index.css` (imports tokens, applies to body)
+- `tailwind.config.js` (semantic color mappings: surface-*, content-*, divider-*, interactive-*)
+- `src/lib/useTheme.ts` (theme hook with system preference detection)
+- Various component files (migrated from hardcoded neutral-* to semantic tokens)
 
 **Implementation:**
-1. Configure Tailwind for `class` dark mode strategy
-2. Create CSS variables for colors
-3. Add `useTheme` hook for system preference detection
-4. Add theme toggle in settings/header
-5. Apply dark classes throughout app
+- CSS custom properties with space-separated RGB values for Tailwind compatibility
+- Semantic token system: surface (backgrounds), content (text), divider (borders), interactive (hover/active)
+- `useTheme` hook with system preference detection and localStorage persistence
+- Theme toggle in Dashboard header
+- Migrated 20+ components from hardcoded colors to semantic tokens
 
 **Acceptance Criteria:**
-- [ ] Respects system preference by default
-- [ ] Manual toggle to override
-- [ ] Preference persisted in localStorage
-- [ ] All components styled for dark mode
-- [ ] No flash of wrong theme on load
+- [x] Respects system preference by default
+- [x] Manual toggle to override
+- [x] Preference persisted in localStorage
+- [x] All components styled for dark mode
+- [x] No flash of wrong theme on load (initializeTheme called early)
 
 ---
 
@@ -298,6 +296,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [x] **Privacy/Cleanup: OAuth privacy** - Email-only scope (no name/image)
 - [x] **3.4 PWA Install Prompt** - Install menu with platform-specific instructions
 - [x] **3.1 Item Notes** - Template and session notes with modal editor
+- [x] **3.3 Dark Mode** - CSS tokens, semantic colors, theme toggle, 20+ components migrated
 
 ### Sprint Execution Plan
 
@@ -314,7 +313,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [ ] 3.2 Search/filter
 
 ### Phase 4: Visual Polish (Days 6-7)
-- [ ] 3.3 Dark mode
+- [x] 3.3 Dark mode
 - [x] 3.4 PWA install prompt
 
 ---
@@ -343,13 +342,13 @@ After sprint completion, Bubblelist should:
 
 | Feature | Before | After | Competitors |
 |---------|:------:|:-----:|:-----------:|
-| Template duplication | ❌ | ✅ | ✅ All |
-| Custom session names | ❌ | ✅ | ✅ Most |
-| Item notes | ❌ | ✅ | ✅ Most |
-| Search | ❌ | ✅ | ✅ All |
-| Dark mode | ❌ | ✅ | ✅ Most |
-| Keyboard shortcuts | ❌ | ✅ | ⚠️ Some |
-| PWA install | ✅ | ✅ | ⚠️ Few |
+| Template duplication | ❌ | ✅ Done | ✅ All |
+| Custom session names | ❌ | ⏳ Planned | ✅ Most |
+| Item notes | ❌ | ✅ Done | ✅ Most |
+| Search | ❌ | ⏳ Planned | ✅ All |
+| Dark mode | ❌ | ✅ Done | ✅ Most |
+| Keyboard shortcuts | ❌ | ⏳ Planned | ⚠️ Some |
+| PWA install | ✅ | ✅ Done | ⚠️ Few |
 
 **Maintained Unique Advantages:**
 - ✅ Template-session separation (still unique)

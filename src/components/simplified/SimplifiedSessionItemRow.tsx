@@ -76,9 +76,9 @@ export function SimplifiedSessionItemRow({
     <div
       className={`flex items-center gap-3 py-2 px-3 transition-all group ${
         isSelected
-          ? 'bg-green-100 ring-2 ring-green-500 ring-inset'
+          ? 'bg-green-100 dark:bg-green-900/30 ring-2 ring-green-500 ring-inset'
           : onSelect
-            ? 'hover:bg-neutral-50'
+            ? 'hover:bg-interactive-hover'
             : ''
       } ${onSelect ? 'cursor-pointer' : ''}`}
       style={{
@@ -103,17 +103,17 @@ export function SimplifiedSessionItemRow({
         type="checkbox"
         checked={checked}
         onChange={() => onCheckToggle(item.id)}
-        className="w-5 h-5 rounded border-neutral-300 text-green-600 focus:ring-green-500 cursor-pointer"
+        className="w-5 h-5 rounded border-divider-tertiary text-green-600 focus:ring-green-500 cursor-pointer"
       />
 
       {/* Category icon */}
-      {isCategory && <Folder className="h-4 w-4 text-neutral-400 shrink-0" />}
+      {isCategory && <Folder className="h-4 w-4 text-content-disabled shrink-0" />}
 
       {/* Item name */}
       <span
-        className={`flex-1 ${checked ? 'line-through text-neutral-400' : 'text-neutral-900'} ${
+        className={`flex-1 ${checked ? 'line-through text-content-disabled' : 'text-content-primary'} ${
           isCategory ? 'font-medium' : ''
-        } ${isSelected ? 'font-semibold text-green-800' : ''}`}
+        } ${isSelected ? 'font-semibold text-green-700 dark:text-green-400' : ''}`}
       >
         {item.name}
       </span>
@@ -123,7 +123,7 @@ export function SimplifiedSessionItemRow({
         <button
           type="button"
           onClick={() => onDelete(item.id)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
           aria-label={`Delete ${item.name}`}
         >
           <Trash2 className="h-4 w-4 text-red-500" />

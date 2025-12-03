@@ -530,7 +530,7 @@ export function TreeView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
+      <div className="rounded-lg border border-divider-primary bg-surface-elevated flex flex-col flex-1 min-h-0">
         {/* Root-level drop zone with header */}
         <TreeViewHeader
           isDragging={!!activeFolderId}
@@ -572,13 +572,13 @@ export function TreeView({
         />
 
         {folderTree.length === 0 ? (
-          <div className="p-8 text-center text-neutral-500">
+          <div className="p-8 text-center text-content-tertiary">
             <p>No lists yet.</p>
             <p className="mt-1 text-sm">Create a folder to organize your list items.</p>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="divide-y divide-neutral-100 p-2">
+            <div className="divide-y divide-divider-secondary p-2">
               {folderTree.map((node, index) => (
                 <div key={node.folder.$jazz.id}>
                   {/* Reorder zone before first item */}
@@ -607,7 +607,7 @@ export function TreeView({
       {/* Drag Overlay */}
       <DragOverlay>
         {activeFolderId && selectedFolder ? (
-          <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
+          <div className="bg-surface-elevated border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
             <span className="font-medium">{selectedFolder.name}</span>
           </div>
         ) : null}

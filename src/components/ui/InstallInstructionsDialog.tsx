@@ -87,14 +87,14 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   if (isIOSNonSafari) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-          <p className="text-sm text-amber-800 font-medium">
+        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-3">
+          <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
             Safari is required to install apps on iOS
           </p>
         </div>
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-neutral-700">Step 1: Copy this link</p>
+          <p className="text-sm font-medium text-content-secondary">Step 1: Copy this link</p>
           <Button onClick={onCopyLink} variant="outline" className="w-full justify-center gap-2">
             {copied ? (
               <>
@@ -111,14 +111,14 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-neutral-700">
+          <p className="text-sm font-medium text-content-secondary">
             Step 2: Open Safari and paste the link
           </p>
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-neutral-700">Step 3: In Safari</p>
-          <ol className="list-decimal list-inside text-sm text-neutral-600 space-y-1 pl-2">
+          <p className="text-sm font-medium text-content-secondary">Step 3: In Safari</p>
+          <ol className="list-decimal list-inside text-sm text-content-secondary space-y-1 pl-2">
             <li>
               Tap the Share button <ShareIcon />
             </li>
@@ -134,14 +134,14 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   if (isIOS && isSafari) {
     return (
       <div className="space-y-4">
-        <ol className="list-decimal list-inside text-sm text-neutral-600 space-y-2 pl-2">
+        <ol className="list-decimal list-inside text-sm text-content-secondary space-y-2 pl-2">
           <li>
             Tap the Share button <ShareIcon /> at the bottom of Safari
           </li>
           <li>Scroll down and tap "Add to Home Screen"</li>
           <li>Tap "Add" in the top right to confirm</li>
         </ol>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-content-tertiary">
           The app will appear on your home screen and work offline.
         </p>
       </div>
@@ -152,12 +152,12 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   if (isAndroid && !platformInfo.supportsNativeInstall) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-          <p className="text-sm text-blue-800">
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             For the best experience, use Chrome or Edge on Android.
           </p>
         </div>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-content-secondary">
           In {getBrowserName(browser)}, look for "Install app" or "Add to Home screen" in the
           browser menu (three dots).
         </p>
@@ -169,11 +169,11 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   if (platform === 'macos' && isSafari) {
     return (
       <div className="space-y-4">
-        <ol className="list-decimal list-inside text-sm text-neutral-600 space-y-2 pl-2">
+        <ol className="list-decimal list-inside text-sm text-content-secondary space-y-2 pl-2">
           <li>Click the Share button in the Safari toolbar</li>
           <li>Click "Add to Dock"</li>
         </ol>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-content-tertiary">
           The app will appear in your Dock and work like a native app.
         </p>
       </div>
@@ -184,10 +184,12 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   if (browser === 'firefox') {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-          <p className="text-sm text-blue-800">Firefox has limited PWA support on desktop.</p>
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-3">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            Firefox has limited PWA support on desktop.
+          </p>
         </div>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-content-secondary">
           For the best experience, open BubbleList in Chrome or Edge, then click the install icon in
           the address bar.
         </p>
@@ -214,16 +216,16 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
       <div className="space-y-4">
         <div className="flex items-start gap-4">
           <div className="flex-1">
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-content-secondary">
               Look for the install icon in your browser's address bar (right side), or check the
               browser menu.
             </p>
-            <p className="text-xs text-neutral-500 mt-2">
+            <p className="text-xs text-content-tertiary mt-2">
               If you don't see an install option, the app may already be installed.
             </p>
           </div>
-          <div className="flex-shrink-0 p-3 bg-neutral-100 rounded-lg border border-neutral-200">
-            <MonitorDown className="h-10 w-10 text-neutral-600" />
+          <div className="flex-shrink-0 p-3 bg-surface-tertiary rounded-lg border border-divider-primary">
+            <MonitorDown className="h-10 w-10 text-content-secondary" />
           </div>
         </div>
       </div>
@@ -233,10 +235,10 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
   // Generic fallback
   return (
     <div className="space-y-4">
-      <p className="text-sm text-neutral-600">
+      <p className="text-sm text-content-secondary">
         Look for "Install", "Add to Home Screen", or similar option in your browser's menu.
       </p>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-content-tertiary">
         Different browsers have different ways to install web apps. Check your browser's menu
         (usually three dots or lines).
       </p>
@@ -247,7 +249,7 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
 /** iOS Share icon representation */
 function ShareIcon() {
   return (
-    <span className="inline-flex items-center justify-center w-5 h-5 mx-1 border border-neutral-300 rounded text-xs align-middle">
+    <span className="inline-flex items-center justify-center w-5 h-5 mx-1 border border-divider-tertiary rounded text-xs align-middle">
       <svg
         viewBox="0 0 24 24"
         className="w-3 h-3"

@@ -44,7 +44,7 @@ export function InAppBrowserWarning({ onContinue }: InAppBrowserWarningProps) {
   const browserName = browserInfo.browserName || 'this app';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-surface-secondary p-4">
       <div className="w-full max-w-md">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 shadow-sm">
           <div className="mb-6 flex justify-center">
@@ -53,9 +53,11 @@ export function InAppBrowserWarning({ onContinue }: InAppBrowserWarningProps) {
             </div>
           </div>
 
-          <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Open in Browser</h1>
+          <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">
+            Open in Browser
+          </h1>
 
-          <p className="mb-4 text-center text-neutral-600">
+          <p className="mb-4 text-center text-content-secondary">
             You're viewing this page in <span className="font-medium">{browserName}</span>'s
             built-in browser, which doesn't support sign-in properly.
           </p>
@@ -63,7 +65,7 @@ export function InAppBrowserWarning({ onContinue }: InAppBrowserWarningProps) {
           <div className="mb-6 rounded-lg bg-white p-4 border border-amber-200">
             <div className="flex items-start gap-3">
               <ExternalLink className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-neutral-700">
+              <div className="text-sm text-content-secondary">
                 <p className="font-medium mb-1">How to open in your browser:</p>
                 <p>{browserInfo.openInBrowserInstructions}</p>
               </div>
@@ -89,7 +91,7 @@ export function InAppBrowserWarning({ onContinue }: InAppBrowserWarningProps) {
               )}
             </Button>
 
-            <p className="text-center text-xs text-neutral-500">
+            <p className="text-center text-xs text-content-tertiary">
               Copy this link and paste it in Safari, Chrome, or your preferred browser.
             </p>
           </div>

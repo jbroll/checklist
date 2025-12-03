@@ -73,15 +73,17 @@ export function NoteEditorDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            <span className="font-medium text-neutral-900">{itemName}</span>
+            <span className="font-medium text-content-primary">{itemName}</span>
           </DialogDescription>
         </DialogHeader>
 
         {/* Show template note for reference when editing session notes */}
         {noteType === 'session' && templateNote && (
-          <div className="rounded-md bg-neutral-50 border border-neutral-200 p-3">
-            <p className="text-xs font-medium text-neutral-500 mb-1">Template note:</p>
-            <p className="text-sm text-neutral-700 italic whitespace-pre-wrap">{templateNote}</p>
+          <div className="rounded-md bg-surface-tertiary border border-divider-primary p-3">
+            <p className="text-xs font-medium text-content-tertiary mb-1">Template note:</p>
+            <p className="text-sm text-content-secondary italic whitespace-pre-wrap">
+              {templateNote}
+            </p>
           </div>
         )}
 
@@ -96,9 +98,9 @@ export function NoteEditorDialog({
                 ? 'Add a note (e.g., brand preference, location, tips...)'
                 : 'Add a note for this session...'
             }
-            className="w-full min-h-[120px] rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 resize-y"
+            className="w-full min-h-[120px] rounded-md border border-divider-tertiary bg-surface-primary text-content-primary px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 resize-y"
           />
-          <p className="text-xs text-neutral-500 mt-1">Press Cmd/Ctrl + Enter to save</p>
+          <p className="text-xs text-content-tertiary mt-1">Press Cmd/Ctrl + Enter to save</p>
         </div>
 
         <DialogFooter>

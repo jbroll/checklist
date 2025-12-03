@@ -34,7 +34,7 @@ export function CustomDragOverlay({ activeItem }: CustomDragOverlayProps) {
         transform: 'translate(-50%, -50%)',
       }}
     >
-      <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
+      <div className="bg-surface-elevated border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
         <span className="font-medium">{activeItem.name}</span>
       </div>
     </div>

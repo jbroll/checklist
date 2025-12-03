@@ -55,9 +55,9 @@ export function SimplifiedTemplateSelector({
   }));
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
+    <div className="min-h-screen bg-surface-secondary p-6">
       <main id="main-content" className="mx-auto max-w-4xl">
-        <div className="rounded-lg border border-neutral-200 bg-white">
+        <div className="rounded-lg border border-divider-primary bg-surface-elevated">
           {/* Header matching TreeView structure */}
           <TreeViewHeader
             canCreateFolderOrList={true}
@@ -78,9 +78,9 @@ export function SimplifiedTemplateSelector({
           />
 
           {/* Template list */}
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-divider-secondary">
             {templatesWithPath.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
+              <div className="p-8 text-center text-content-tertiary">
                 <p>No lists yet.</p>
                 <p className="mt-1 text-sm">Create a list to get started.</p>
               </div>
@@ -90,14 +90,14 @@ export function SimplifiedTemplateSelector({
                   key={template.$jazz.id}
                   type="button"
                   onClick={() => onSelectTemplate(template.$jazz.id)}
-                  className="w-full p-4 text-left hover:bg-neutral-50 transition-colors"
+                  className="w-full p-4 text-left hover:bg-interactive-hover transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-neutral-900">{template.name}</h3>
-                      <p className="text-sm text-neutral-500">{path.replace(/\//g, ' / ')}</p>
+                      <h3 className="font-medium text-content-primary">{template.name}</h3>
+                      <p className="text-sm text-content-tertiary">{path.replace(/\//g, ' / ')}</p>
                     </div>
-                    <ShoppingCart className="h-5 w-5 text-neutral-400" />
+                    <ShoppingCart className="h-5 w-5 text-content-disabled" />
                   </div>
                 </button>
               ))

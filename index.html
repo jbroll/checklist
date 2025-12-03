@@ -21,6 +21,15 @@
     <link rel="manifest" href="/manifest.json" />
 
     <title>BubbleList</title>
+    <!-- Prevent flash of wrong theme -->
+    <script>
+      (function() {
+        const stored = localStorage.getItem('bubblelist-theme');
+        const theme = stored === 'light' || stored === 'dark' ? stored : 'system';
+        const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) document.documentElement.classList.add('dark');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

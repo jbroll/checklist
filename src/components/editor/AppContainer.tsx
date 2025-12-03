@@ -98,8 +98,8 @@ export function AppContainer({
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 mx-auto" />
-          <p className="mt-4 text-neutral-600">Loading...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 dark:border-neutral-600 dark:border-t-neutral-100 mx-auto" />
+          <p className="mt-4 text-neutral-600 dark:text-neutral-400">Loading...</p>
         </div>
       </div>
     );
@@ -250,7 +250,7 @@ export function AppContainer({
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const accountAsAny = me as any;
   return (
-    <div className="h-screen bg-neutral-50 p-3 sm:p-4 lg:p-6 flex flex-col">
+    <div className="h-screen bg-neutral-50 dark:bg-neutral-900 p-3 sm:p-4 lg:p-6 flex flex-col">
       <main
         id="main-content"
         className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0"

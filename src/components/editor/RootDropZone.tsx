@@ -43,14 +43,14 @@ export function RootDropZone({
       tabIndex={0}
       className={`px-4 py-4 border-b transition-all ${
         isDragging && isOver
-          ? 'bg-green-50 border-green-500 border-2 border-dashed'
+          ? 'bg-green-50 dark:bg-green-900/30 border-green-500 border-2 border-dashed'
           : isDragging
-            ? 'bg-neutral-50 border-neutral-200 border-2 border-dashed'
-            : 'bg-white border-neutral-100'
+            ? 'bg-surface-tertiary border-divider-primary border-2 border-dashed'
+            : 'bg-surface-primary border-divider-secondary'
       }`}
     >
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-neutral-900">{folderName}</h1>
+        <h1 className="text-3xl font-bold text-content-primary">{folderName}</h1>
 
         <div className="flex items-center gap-2">
           <button
@@ -59,7 +59,7 @@ export function RootDropZone({
               e.stopPropagation();
               onAddItem();
             }}
-            className="flex items-center gap-1 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+            className="flex items-center gap-1 rounded-lg border border-green-600 bg-surface-primary px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30"
           >
             <Plus className="h-4 w-4" />
             <CheckSquare className="h-4 w-4" />

@@ -166,7 +166,8 @@ export function SessionZone({
   };
 
   // Determine background class based on zone type - only for top-level available zone
-  const bgClass = zone === 'available' && isTopLevelZone ? 'bg-blue-50 rounded-md' : '';
+  const bgClass =
+    zone === 'available' && isTopLevelZone ? 'bg-blue-50 dark:bg-blue-900/20 rounded-md' : '';
   // Remove padding - let parent control all padding
   const paddingClass = '';
 
@@ -264,7 +265,7 @@ export function SessionZone({
                 type="button"
                 onClick={handleSelectAll}
                 disabled={selectionState === 'all'}
-                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="rounded p-2 text-content-tertiary hover:bg-interactive-hover hover:text-content-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <ListChecks className="h-5 w-5" />
               </button>
@@ -280,7 +281,7 @@ export function SessionZone({
               <button
                 type="button"
                 onClick={handleToggle}
-                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="rounded p-2 text-content-tertiary hover:bg-interactive-hover hover:text-content-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <ListMinus className="h-5 w-5" />
               </button>
@@ -297,7 +298,7 @@ export function SessionZone({
                 type="button"
                 onClick={handleDeselectAll}
                 disabled={selectionState === 'none'}
-                className="rounded p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="rounded p-2 text-content-tertiary hover:bg-interactive-hover hover:text-content-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <ListX className="h-5 w-5" />
               </button>
@@ -349,7 +350,7 @@ export function SessionZone({
       >
         <div
           className={`flex items-center gap-2 w-full rounded ${
-            isSelected ? 'bg-neutral-200' : onSelectItem ? 'hover:bg-neutral-100' : ''
+            isSelected ? 'bg-interactive-active' : onSelectItem ? 'hover:bg-interactive-hover' : ''
           } ${onSelectItem ? 'cursor-pointer' : ''}`}
           {...(onSelectItem && {
             onClick: handleCategoryClick,
@@ -368,18 +369,18 @@ export function SessionZone({
               onKeyDown={handleKeyDown}
               onBlur={handleSaveEdit}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 px-2 py-1 text-sm font-semibold text-neutral-900 border-2 border-blue-400 rounded bg-blue-50 focus:outline-none focus:border-blue-500"
+              className="flex-1 px-2 py-1 text-sm font-semibold text-content-primary border-2 border-blue-400 rounded bg-blue-50 dark:bg-blue-900/30 focus:outline-none focus:border-blue-500"
             />
           ) : (
             <span
-              className="flex-1 text-sm font-semibold text-neutral-900 text-left"
+              className="flex-1 text-sm font-semibold text-content-primary text-left"
               {...doubleTapHandlers}
             >
               {title}
             </span>
           )}
           {count !== undefined && (totalCount > 0 || checkedVsSelectedCount) && (
-            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-700">
+            <span className="rounded-full bg-surface-tertiary px-2.5 py-0.5 text-sm font-medium text-content-secondary">
               {checkedVsSelectedCount
                 ? `${checkedVsSelectedCount.checked} of ${checkedVsSelectedCount.selected}`
                 : `${selectedCount} of ${totalCount}`}
@@ -394,7 +395,7 @@ export function SessionZone({
                 e.stopPropagation();
                 onDeleteItem(categoryItem.id);
               }}
-              className="flex h-6 w-6 items-center justify-center rounded border-2 border-neutral-300 text-neutral-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
+              className="flex h-6 w-6 items-center justify-center rounded border-2 border-divider-tertiary text-content-tertiary transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600"
               aria-label="Delete category"
             >
               <svg

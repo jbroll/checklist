@@ -111,10 +111,10 @@ export function TreeViewHeader({
       ref={effectiveSetDropRef}
       className={`px-3 py-3 sm:px-4 sm:py-4 border-b transition-all ${
         isDragging && effectiveIsOver
-          ? 'bg-green-50 border-green-500 border-2 border-dashed'
+          ? 'bg-green-50 dark:bg-green-900/30 border-green-500 border-2 border-dashed'
           : isDragging
-            ? 'bg-neutral-50 border-neutral-200 border-2 border-dashed'
-            : 'bg-white border-neutral-100'
+            ? 'bg-surface-secondary border-divider-primary border-2 border-dashed'
+            : 'bg-surface-elevated border-divider-secondary'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -125,7 +125,9 @@ export function TreeViewHeader({
           aria-label="Return to main view"
         >
           <BubbleListIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
-          <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl lg:text-3xl">BubbleList</h1>
+          <h1 className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
+            BubbleList
+          </h1>
         </button>
         <TooltipProvider>
           <div className="flex items-center gap-2">

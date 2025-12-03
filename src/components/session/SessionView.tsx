@@ -142,8 +142,8 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900" />
-          <p className="mt-4 text-neutral-600">Loading...</p>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-divider-tertiary border-t-content-primary" />
+          <p className="mt-4 text-content-secondary">Loading...</p>
         </div>
       </div>
     );
@@ -153,7 +153,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="text-neutral-600">Session not found</p>
+          <p className="text-content-secondary">Session not found</p>
           <button
             type="button"
             onClick={onBack}
@@ -671,13 +671,13 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="h-screen bg-neutral-50 p-3 sm:p-4 lg:p-6 flex flex-col">
+      <div className="h-screen bg-surface-secondary p-3 sm:p-4 lg:p-6 flex flex-col">
         <div className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0">
-          <div className="rounded-lg border border-neutral-200 bg-white flex flex-col flex-1 min-h-0">
+          <div className="rounded-lg border border-divider-primary bg-surface-elevated flex flex-col flex-1 min-h-0">
             {/* Header */}
-            <div className="border-b border-neutral-200 p-3 sm:p-4">
+            <div className="border-b border-divider-primary p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
-                <h1 className="text-lg font-semibold text-neutral-900 sm:text-xl lg:text-2xl truncate">
+                <h1 className="text-lg font-semibold text-content-primary sm:text-xl lg:text-2xl truncate">
                   {template.name}
                 </h1>
                 {showAddForm ? (
@@ -694,7 +694,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     <button
                       type="button"
                       onClick={handleClearOrNew}
-                      className="rounded border border-neutral-300 bg-white px-4 py-2 text-base font-medium text-neutral-700 hover:bg-neutral-50 min-h-[44px]"
+                      className="rounded border border-divider-primary bg-surface-elevated px-4 py-2 text-base font-medium text-content-primary hover:bg-interactive-hover min-h-[44px]"
                     >
                       New
                     </button>
@@ -702,7 +702,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     <button
                       type="button"
                       onClick={cycleViewMode}
-                      className="flex items-center justify-center rounded bg-neutral-100 p-3 text-neutral-700 hover:bg-neutral-200 min-h-[44px] min-w-[44px]"
+                      className="flex items-center justify-center rounded bg-surface-tertiary p-3 text-content-primary hover:bg-interactive-hover min-h-[44px] min-w-[44px]"
                       aria-label={`Switch to ${getViewModeLabel()} view`}
                     >
                       {(() => {
@@ -733,7 +733,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
             {/* Add Item Form */}
             {showAddForm && (
-              <div className="border-b border-neutral-200 bg-neutral-50 px-3 py-3 sm:px-4">
+              <div className="border-b border-divider-primary bg-surface-secondary px-3 py-3 sm:px-4">
                 <form onSubmit={handleAddItem} className="flex flex-col gap-2 sm:flex-row">
                   <div className="flex gap-2 flex-1">
                     <input
@@ -741,7 +741,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                       value={newItemName}
                       onChange={(e) => setNewItemName(e.target.value)}
                       placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
-                      className="flex-1 min-w-0 rounded border border-neutral-300 px-3 py-2 text-base focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="flex-1 min-w-0 rounded border border-divider-primary bg-surface-elevated px-3 py-2 text-base text-content-primary placeholder:text-content-disabled focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                     <button
                       type="submit"
@@ -751,7 +751,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                       <Plus className="h-5 w-5" />
                     </button>
                   </div>
-                  <div className="flex items-center gap-3 rounded border border-neutral-300 bg-white px-3 py-2 sm:shrink-0">
+                  <div className="flex items-center gap-3 rounded border border-divider-primary bg-surface-elevated px-3 py-2 sm:shrink-0">
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
                         type="radio"
@@ -759,9 +759,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                         value="item"
                         checked={newItemType === 'item'}
                         onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
-                        className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
+                        className="h-4 w-4 border-divider-tertiary text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-base text-neutral-700">Item</span>
+                      <span className="text-base text-content-primary">Item</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -770,9 +770,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                         value="category"
                         checked={newItemType === 'category'}
                         onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
-                        className="h-4 w-4 border-neutral-300 text-green-600 focus:ring-green-500"
+                        className="h-4 w-4 border-divider-tertiary text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-base text-neutral-700">Category</span>
+                      <span className="text-base text-content-primary">Category</span>
                     </label>
                   </div>
                 </form>
@@ -832,11 +832,11 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
               {/* Available Items Zone */}
               {itemTree.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500 bg-blue-50">
+                <div className="p-8 text-center text-content-tertiary bg-blue-50 dark:bg-blue-900/20">
                   <p>No items in this list yet.</p>
                 </div>
               ) : (
-                <div ref={availableZoneRef} className="bg-blue-50 p-4">
+                <div ref={availableZoneRef} className="bg-blue-50 dark:bg-blue-900/20 p-4">
                   <SessionZone
                     title="Available Items"
                     icon={Package}
@@ -856,7 +856,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     showHeading={!showAddForm}
                     onEditNote={handleEditNoteInZone('available')}
                   >
-                    <div className="divide-y divide-neutral-100">
+                    <div className="divide-y divide-divider-secondary">
                       {/* Invisible anchor element for scroll preservation */}
                       <div ref={anchorRef} className="h-0" />
                       {itemTree.map((node, index) => renderItemNode(node, 0, itemTree, index))}
@@ -872,7 +872,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
       {/* Drag Overlay */}
       <DragOverlay>
         {activeItem ? (
-          <div className="bg-white border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
+          <div className="bg-surface-elevated border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
             <span className="font-medium">{activeItem.name}</span>
           </div>
         ) : null}

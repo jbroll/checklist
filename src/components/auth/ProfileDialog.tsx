@@ -1,4 +1,4 @@
-import { LayoutGrid, LogOut, User, UserX, X } from 'lucide-react';
+import { LayoutGrid, LogOut, Moon, Sun, User, UserX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useTheme } from '@/lib/useTheme';
 
 interface ProfileDialogProps {
   open: boolean;
@@ -26,6 +27,8 @@ export function ProfileDialog({
   onSwitchView,
   switchViewLabel = 'Basic View',
 }: ProfileDialogProps) {
+  const { isDark, toggleTheme } = useTheme();
+
   const handleSignOut = () => {
     onOpenChange(false);
     onSignOut();
@@ -46,15 +49,15 @@ export function ProfileDialog({
         <DialogClose asChild>
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2"
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-surface-elevated transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </DialogClose>
         <DialogHeader>
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
-            <User className="h-6 w-6 text-neutral-600" />
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-surface-tertiary">
+            <User className="h-6 w-6 text-content-secondary" />
           </div>
           <DialogTitle className="text-center">Profile</DialogTitle>
           <DialogDescription className="text-center">
@@ -73,6 +76,15 @@ export function ProfileDialog({
               {switchViewLabel}
             </Button>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={toggleTheme}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </Button>
           <Button
             type="button"
             variant="outline"

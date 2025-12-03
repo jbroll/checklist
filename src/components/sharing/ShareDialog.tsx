@@ -310,9 +310,9 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
   const getPermissionBadge = (permission: string) => {
     const colors = {
-      view: 'bg-blue-100 text-blue-700',
-      edit: 'bg-green-100 text-green-700',
-      admin: 'bg-purple-100 text-purple-700',
+      view: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+      edit: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+      admin: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
     };
 
     const labels = {
@@ -323,7 +323,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
     return (
       <span
-        className={`px-2 py-1 text-xs font-medium rounded ${colors[permission as keyof typeof colors] || 'bg-neutral-100 text-neutral-700'}`}
+        className={`px-2 py-1 text-xs font-medium rounded ${colors[permission as keyof typeof colors] || 'bg-surface-tertiary text-content-secondary'}`}
       >
         {labels[permission as keyof typeof labels] || permission}
       </span>
@@ -390,7 +390,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   value={permission}
                   onChange={(e) => setPermission(e.target.value as PermissionLevel)}
                   disabled={isGenerating}
-                  className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-divider-primary bg-surface-primary px-3 py-2 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="view">View</option>
                   <option value="edit">Edit</option>
@@ -405,7 +405,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   value={expiresInDays.toString()}
                   onChange={(e) => setExpiresInDays(Number(e.target.value))}
                   disabled={isGenerating}
-                  className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-divider-primary bg-surface-primary px-3 py-2 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="1">1 day</option>
                   <option value="7">7 days</option>
@@ -424,10 +424,16 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
             </div>
 
             {shareUrl && (
-              <div className="rounded-lg bg-green-50 p-3 space-y-2">
-                <p className="text-sm font-medium text-green-900">Invite link generated!</p>
+              <div className="rounded-lg bg-green-50 dark:bg-green-900/20 p-3 space-y-2">
+                <p className="text-sm font-medium text-green-900 dark:text-green-300">
+                  Invite link generated!
+                </p>
                 <div className="flex gap-2">
-                  <Input value={shareUrl} readOnly className="font-mono text-xs bg-white flex-1" />
+                  <Input
+                    value={shareUrl}
+                    readOnly
+                    className="font-mono text-xs bg-surface-primary flex-1"
+                  />
                   <Button size="sm" variant="outline" onClick={handleCopyLink} title="Copy link">
                     {copied ? (
                       <Check className="h-4 w-4 text-green-600" />
@@ -450,7 +456,11 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
             )}
           </div>
 
-          {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-900">{error}</div>}
+          {error && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-900 dark:text-red-300">
+              {error}
+            </div>
+          )}
 
           {isLoadingData ? (
             <div className="flex items-center justify-center py-8">
@@ -460,25 +470,27 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
             <>
               {/* Current Collaborators */}
               <div className="space-y-1.5">
-                <h3 className="text-xs font-medium text-neutral-500 flex items-center gap-1.5 px-1">
+                <h3 className="text-xs font-medium text-content-tertiary flex items-center gap-1.5 px-1">
                   <Users className="h-3.5 w-3.5" />
                   Collaborators ({collaborators.length})
                 </h3>
 
                 {collaborators.length === 0 ? (
-                  <p className="text-sm text-neutral-500 py-3 text-center">No collaborators yet</p>
+                  <p className="text-sm text-content-tertiary py-3 text-center">
+                    No collaborators yet
+                  </p>
                 ) : (
                   <div className="space-y-1">
                     {collaborators.map((collab) => (
                       <div
                         key={collab.accountId}
-                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-neutral-200 rounded hover:bg-neutral-50"
+                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-divider-primary rounded hover:bg-interactive-hover"
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="text-sm font-medium text-neutral-900 truncate">
+                          <span className="text-sm font-medium text-content-primary truncate">
                             {collab.name}
                           </span>
-                          <span className="text-xs text-neutral-500 truncate">
+                          <span className="text-xs text-content-tertiary truncate">
                             ({collab.email})
                           </span>
                           {getPermissionBadge(collab.permission)}
@@ -499,26 +511,28 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
               {/* Pending Invites */}
               <div className="space-y-1.5">
-                <h3 className="text-xs font-medium text-neutral-500 flex items-center gap-1.5 px-1">
+                <h3 className="text-xs font-medium text-content-tertiary flex items-center gap-1.5 px-1">
                   <Mail className="h-3.5 w-3.5" />
                   Pending Invites ({pendingInvites.length})
                 </h3>
 
                 {pendingInvites.length === 0 ? (
-                  <p className="text-sm text-neutral-500 py-3 text-center">No pending invites</p>
+                  <p className="text-sm text-content-tertiary py-3 text-center">
+                    No pending invites
+                  </p>
                 ) : (
                   <div className="space-y-1">
                     {pendingInvites.map((invite) => (
                       <div
                         key={invite.token}
-                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-yellow-200 bg-yellow-50 rounded"
+                        className="flex items-center justify-between gap-2 py-1.5 px-2 border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded"
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="text-sm font-medium text-neutral-900 truncate">
+                          <span className="text-sm font-medium text-content-primary truncate">
                             {invite.recipientEmail}
                           </span>
                           {getPermissionBadge(invite.permission)}
-                          <span className="text-xs text-neutral-500 flex items-center gap-1 shrink-0">
+                          <span className="text-xs text-content-tertiary flex items-center gap-1 shrink-0">
                             <Clock className="h-3 w-3" />
                             Expires {invite.expiresAt ? formatDate(invite.expiresAt) : 'never'}
                           </span>
@@ -541,7 +555,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleRevokeInvite(invite.token, invite.recipientEmail)}
-                            className="text-neutral-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                            className="text-content-secondary hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 h-7 w-7 p-0"
                             title="Revoke invite"
                           >
                             <X className="h-3.5 w-3.5" />

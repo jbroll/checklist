@@ -106,15 +106,15 @@ export const SessionRowView = memo(function SessionRowView({
           <ShoppingCart className="h-4 w-4" />
 
           {/* Relative date */}
-          <span className="flex-1 text-left text-base text-neutral-500">
+          <span className="flex-1 text-left text-base text-content-tertiary">
             {formatSessionDate(session.createdAt, showTime)}
           </span>
 
           {/* Session stats */}
           <div className="flex items-center gap-1 text-base">
             <span className="text-green-600">{session.checkedCount || 0}</span>
-            <span className="text-neutral-900">/</span>
-            <span className="text-neutral-900">
+            <span className="text-content-primary">/</span>
+            <span className="text-content-primary">
               {(session.checkedCount || 0) +
                 (session.selectedCount || 0) +
                 (session.remainingCount || 0)}
@@ -123,17 +123,17 @@ export const SessionRowView = memo(function SessionRowView({
         </button>
 
         {/* Archived indicator */}
-        {session.archived && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}
+        {session.archived && <Archive className="h-4 w-4 shrink-0 text-content-disabled" />}
 
         {/* Actions menu */}
         <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="rounded p-1 hover:bg-neutral-200"
+              className="rounded p-1 hover:bg-interactive-hover"
               aria-label="More options"
             >
-              <MoreVertical className="h-4 w-4 text-neutral-600" />
+              <MoreVertical className="h-4 w-4 text-content-secondary" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>

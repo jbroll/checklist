@@ -51,10 +51,10 @@ export function SessionHeader({
 
   return (
     <>
-      <div className="flex flex-col gap-3 border-b border-neutral-100 px-3 py-3 sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl lg:text-3xl">
+      <div className="flex flex-col gap-3 border-b border-divider-secondary px-3 py-3 sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
           {template.name}{' '}
-          <span className="text-sm sm:text-base text-neutral-500">
+          <span className="text-sm sm:text-base text-content-tertiary">
             · {formatSessionDate(session.createdAt, showTime)}
           </span>
         </h1>
@@ -64,7 +64,7 @@ export function SessionHeader({
             <button
               type="button"
               onClick={onClear}
-              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              className="rounded-lg border border-divider-tertiary bg-surface-primary px-3 py-2 text-sm font-medium text-content-secondary hover:bg-interactive-hover"
             >
               Clear
             </button>
@@ -73,7 +73,7 @@ export function SessionHeader({
           <button
             type="button"
             onClick={onCycleViewMode}
-            className="rounded-lg border border-neutral-300 bg-white p-3 hover:bg-neutral-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="rounded-lg border border-divider-tertiary bg-surface-primary p-3 hover:bg-interactive-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
             title={`Cycle view - ${viewModeLabel}`}
             aria-label={`Cycle view - ${viewModeLabel}`}
           >
@@ -87,8 +87,8 @@ export function SessionHeader({
               onClick={onToggleAddForm}
               className={`rounded-lg border px-3 py-3 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
                 showAddForm
-                  ? 'border-green-500 bg-green-50 text-green-600'
-                  : 'border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-50'
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-600'
+                  : 'border-divider-tertiary bg-surface-primary text-content-secondary hover:bg-interactive-hover'
               }`}
               title="Toggle edit mode"
               aria-label="Toggle edit mode"
@@ -113,10 +113,10 @@ export function SessionHeader({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="rounded-lg border border-neutral-300 bg-white p-3 hover:bg-neutral-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="rounded-lg border border-divider-tertiary bg-surface-primary p-3 hover:bg-interactive-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="More options"
               >
-                <MoreVertical className="h-5 w-5 text-neutral-600" />
+                <MoreVertical className="h-5 w-5 text-content-secondary" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

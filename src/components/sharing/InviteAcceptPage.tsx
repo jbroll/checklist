@@ -172,7 +172,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-surface-secondary p-4">
       <div className="w-full max-w-md">
         {state.type === 'in_app_browser' && <InAppBrowserState browserInfo={browserInfo} />}
 
@@ -210,10 +210,10 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
 function LoadingState() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+    <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-green-600" />
-        <p className="text-neutral-600">Loading invite...</p>
+        <p className="text-content-secondary">Loading invite...</p>
       </div>
     </div>
   );
@@ -234,24 +234,24 @@ function InAppBrowserState({ browserInfo }: { browserInfo: InAppBrowserInfo }) {
   const browserName = browserInfo.browserName || 'this app';
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 shadow-sm">
+    <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
-        <div className="rounded-full bg-amber-100 p-3">
+        <div className="rounded-full bg-amber-100 dark:bg-amber-800/30 p-3">
           <AlertTriangle className="h-8 w-8 text-amber-600" />
         </div>
       </div>
 
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Open in Browser</h1>
+      <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">Open in Browser</h1>
 
-      <p className="mb-4 text-center text-neutral-600">
+      <p className="mb-4 text-center text-content-secondary">
         You're viewing this page in <span className="font-medium">{browserName}</span>'s built-in
         browser, which doesn't support sign-in properly.
       </p>
 
-      <div className="mb-6 rounded-lg bg-white p-4 border border-amber-200">
+      <div className="mb-6 rounded-lg bg-surface-primary p-4 border border-amber-200 dark:border-amber-700">
         <div className="flex items-start gap-3">
           <ExternalLink className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-neutral-700">
+          <div className="text-sm text-content-secondary">
             <p className="font-medium mb-1">How to open in your browser:</p>
             <p>{browserInfo.openInBrowserInstructions}</p>
           </div>
@@ -277,7 +277,7 @@ function InAppBrowserState({ browserInfo }: { browserInfo: InAppBrowserInfo }) {
           )}
         </Button>
 
-        <p className="text-center text-xs text-neutral-500">
+        <p className="text-center text-xs text-content-tertiary">
           Copy this link and paste it in Safari, Chrome, or your preferred browser.
         </p>
       </div>
@@ -309,25 +309,27 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
   // Show invite details first, then sign-in options after Accept
   if (!showSignIn) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+      <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
         <div className="mb-6 flex justify-center">
           <Share2 className="h-12 w-12 text-green-600" />
         </div>
-        <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Folder Invitation</h1>
-        <p className="mb-6 text-center text-neutral-600">
+        <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">
+          Folder Invitation
+        </h1>
+        <p className="mb-6 text-center text-content-secondary">
           {invite.senderEmail} has invited you to collaborate
         </p>
 
-        <div className="mb-6 space-y-3 rounded-lg bg-neutral-50 p-4">
+        <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-neutral-600">Permission Level:</span>
-            <span className="font-medium text-neutral-900">
+            <span className="text-sm text-content-secondary">Permission Level:</span>
+            <span className="font-medium text-content-primary">
               {invite.permission === 'view' && 'View Only'}
               {invite.permission === 'edit' && 'Can Edit'}
               {invite.permission === 'admin' && 'Admin'}
             </span>
           </div>
-          <div className="text-sm text-neutral-600">
+          <div className="text-sm text-content-secondary">
             {invite.permission === 'view' && 'You can view items in this folder'}
             {invite.permission === 'edit' && 'You can view and modify items in this folder'}
             {invite.permission === 'admin' && 'You have full control including sharing permissions'}
@@ -348,12 +350,14 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
 
   // After clicking Accept, show sign-in options
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+    <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
         <Share2 className="h-12 w-12 text-green-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Sign In to Continue</h1>
-      <p className="mb-6 text-center text-neutral-600">
+      <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">
+        Sign In to Continue
+      </h1>
+      <p className="mb-6 text-center text-content-secondary">
         Sign in to accept the invitation from {invite.senderEmail}
       </p>
       <div className="space-y-3">
@@ -411,15 +415,17 @@ function EmailMismatchState({
   token: string;
 }) {
   return (
-    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-8 shadow-sm">
+    <div className="rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
         <XCircle className="h-12 w-12 text-yellow-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Wrong Account</h1>
-      <p className="mb-4 text-center text-neutral-600">
+      <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">Wrong Account</h1>
+      <p className="mb-4 text-center text-content-secondary">
         This invite was sent to a different email address.
       </p>
-      <p className="mb-6 text-center text-sm text-neutral-500">You're signed in as {userEmail}</p>
+      <p className="mb-6 text-center text-sm text-content-tertiary">
+        You're signed in as {userEmail}
+      </p>
       <div className="flex flex-col gap-3">
         <Button
           className="w-full"
@@ -454,25 +460,27 @@ function ValidInviteState({
   onDecline: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+    <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
         <Share2 className="h-12 w-12 text-green-600" />
       </div>
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">Folder Invitation</h1>
-      <p className="mb-6 text-center text-neutral-600">
+      <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">
+        Folder Invitation
+      </h1>
+      <p className="mb-6 text-center text-content-secondary">
         {invite.senderEmail} has invited you to collaborate
       </p>
 
-      <div className="mb-6 space-y-3 rounded-lg bg-neutral-50 p-4">
+      <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-neutral-600">Permission Level:</span>
-          <span className="font-medium text-neutral-900">
+          <span className="text-sm text-content-secondary">Permission Level:</span>
+          <span className="font-medium text-content-primary">
             {invite.permission === 'view' && 'View Only'}
             {invite.permission === 'edit' && 'Can Edit'}
             {invite.permission === 'admin' && 'Admin'}
           </span>
         </div>
-        <div className="text-sm text-neutral-600">
+        <div className="text-sm text-content-secondary">
           {invite.permission === 'view' && 'You can view items in this folder'}
           {invite.permission === 'edit' && 'You can view and modify items in this folder'}
           {invite.permission === 'admin' && 'You have full control including sharing permissions'}
@@ -504,10 +512,10 @@ function ValidInviteState({
 
 function AcceptingState() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
+    <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-green-600" />
-        <p className="text-neutral-600">Granting access...</p>
+        <p className="text-content-secondary">Granting access...</p>
       </div>
     </div>
   );

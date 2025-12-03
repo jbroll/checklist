@@ -77,8 +77,8 @@ export function AddItemDialog({
                   onClick={() => setItemType('item')}
                   className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
                     itemType === 'item'
-                      ? 'border-green-600 bg-green-50 text-green-700'
-                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                      ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      : 'border-divider-tertiary bg-surface-primary text-content-secondary hover:bg-interactive-hover'
                   }`}
                 >
                   Item
@@ -88,8 +88,8 @@ export function AddItemDialog({
                   onClick={() => setItemType('category')}
                   className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
                     itemType === 'category'
-                      ? 'border-green-600 bg-green-50 text-green-700'
-                      : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                      ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      : 'border-divider-tertiary bg-surface-primary text-content-secondary hover:bg-interactive-hover'
                   }`}
                 >
                   Category

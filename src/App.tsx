@@ -76,7 +76,7 @@ function App() {
         >
           Skip to main content
         </a>
-        <div className="min-h-screen bg-neutral-50">
+        <div className="min-h-screen bg-surface-secondary">
           {inviteToken ? (
             <Suspense fallback={<LoadingScreen />}>
               <InviteAcceptPage token={inviteToken} />

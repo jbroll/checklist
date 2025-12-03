@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -26,6 +27,29 @@ export default {
           bakery: '#d97706',
           beverages: '#ec4899',
           other: '#6b7280',
+        },
+        // Semantic colors using CSS variables - auto-adapt to dark mode
+        surface: {
+          primary: 'rgb(var(--color-bg-primary))',
+          secondary: 'rgb(var(--color-bg-secondary))',
+          tertiary: 'rgb(var(--color-bg-tertiary))',
+          elevated: 'rgb(var(--color-bg-elevated))',
+        },
+        content: {
+          primary: 'rgb(var(--color-text-primary))',
+          secondary: 'rgb(var(--color-text-secondary))',
+          tertiary: 'rgb(var(--color-text-tertiary))',
+          disabled: 'rgb(var(--color-text-disabled))',
+        },
+        divider: {
+          DEFAULT: 'rgb(var(--color-border-primary))',
+          primary: 'rgb(var(--color-border-primary))',
+          secondary: 'rgb(var(--color-border-secondary))',
+          tertiary: 'rgb(var(--color-border-tertiary))',
+        },
+        interactive: {
+          hover: 'rgb(var(--color-interactive-hover))',
+          active: 'rgb(var(--color-interactive-active))',
         },
       },
       fontFamily: {
