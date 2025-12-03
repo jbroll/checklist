@@ -159,7 +159,8 @@ name?: string; // Optional custom name, falls back to date
 - `src/schemas/tree.ts` (notes field on TemplateItem and ItemState)
 - `src/components/session/NoteEditorDialog.tsx` (new modal editor)
 - `src/components/session/SessionItemRow.tsx` (display + edit icon)
-- `src/components/tree/TemplateItemView.tsx` (display + edit icon)
+- `src/components/tree/TemplateItemView.tsx` (display + edit in dropdown menu)
+- `src/components/editor/TemplateItemEditor.tsx` (note editing for advanced mode)
 - `src/services/templateService.ts` (updateItemNotes)
 - `src/services/sessionService.ts` (updateSessionItemNotes)
 
@@ -168,6 +169,7 @@ name?: string; // Optional custom name, falls back to date
 - Session notes: ephemeral notes for current session (e.g., "Check if on sale")
 - Notes icon in Available Items zone → edits template notes
 - Notes icon in Selected/Checked zones → edits session notes
+- Template editor dropdown menu → "Edit Note" option for advanced users
 - Template notes shown as reference when editing session notes
 - Responsive display: inline on desktop, wraps to new line on mobile
 
@@ -178,6 +180,7 @@ name?: string; // Optional custom name, falls back to date
 - [x] Notes editable via modal dialog
 - [x] Template notes visible in session view (muted)
 - [x] Session notes italic, template notes normal font
+- [x] Template notes editable from template editor (advanced mode)
 
 ---
 
@@ -294,6 +297,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [x] **Privacy/Cleanup: Data retention** - Immediate deletion with crypto-shredding
 - [x] **Privacy/Cleanup: OAuth privacy** - Email-only scope (no name/image)
 - [x] **3.4 PWA Install Prompt** - Install menu with platform-specific instructions
+- [x] **3.1 Item Notes** - Template and session notes with modal editor
 
 ### Sprint Execution Plan
 
@@ -306,7 +310,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [ ] 2.3 Keyboard shortcuts
 
 ### Phase 3: Enhanced UX (Days 4-5)
-- [ ] 3.1 Item notes
+- [x] 3.1 Item notes
 - [ ] 3.2 Search/filter
 
 ### Phase 4: Visual Polish (Days 6-7)
