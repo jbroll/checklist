@@ -130,6 +130,7 @@ export function TreeView({
   hideArchiveAction = false,
 }: TreeViewProps) {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
     const stored = localStorage.getItem('bubblelist-show-archived-templates');
     return stored === 'true';
@@ -223,6 +224,11 @@ export function TreeView({
 
   const handleDeleteFolder = (folder: InstanceOfSchema<typeof FolderNode>) => {
     folderService.deleteFolder(account, folder);
+  };
+
+  const handleFolderDuplicated = (newFolder: InstanceOfSchema<typeof FolderNode>) => {
+    // Trigger inline rename mode on the new folder (don't select/navigate)
+    setEditingFolderId(newFolder.$jazz.id);
   };
 
   const handleToggleArchiveSession = (
@@ -456,6 +462,9 @@ export function TreeView({
         onDelete={() => handleDeleteFolder(folder)}
         onUseTemplate={isTemplate ? () => onUseTemplate?.(folder.$jazz.id) : undefined}
         onEditTemplate={isTemplate ? () => onEditTemplate?.(folder.$jazz.id) : undefined}
+        onDuplicated={handleFolderDuplicated}
+        autoStartEditing={editingFolderId === folder.$jazz.id}
+        onAutoEditStarted={() => setEditingFolderId(null)}
         account={account}
         hideArchiveAction={hideArchiveAction}
       >

@@ -3,6 +3,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import {
   Archive,
   ArchiveX,
+  Copy,
   Download,
   Folder,
   MoreVertical,
@@ -11,7 +12,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { ExportDialog } from '@/components/export/ExportDialog';
 import { ImportDialog } from '@/components/import/ImportDialog';
 import { ShareDialog } from '@/components/sharing/ShareDialog';
@@ -41,6 +42,9 @@ interface FolderNodeViewProps {
   onArchive?: () => void;
   onUseTemplate?: () => void;
   onEditTemplate?: () => void;
+  onDuplicated?: (newFolder: InstanceOfSchema<typeof FolderNode>) => void;
+  autoStartEditing?: boolean;
+  onAutoEditStarted?: () => void;
   children?: React.ReactNode;
   account: InstanceOfSchema<typeof Account>;
   hideArchiveAction?: boolean;
@@ -58,6 +62,9 @@ export const FolderNodeView = memo(function FolderNodeView({
   onArchive,
   onUseTemplate: _onUseTemplate,
   onEditTemplate: _onEditTemplate,
+  onDuplicated,
+  autoStartEditing = false,
+  onAutoEditStarted,
   children,
   account,
   hideArchiveAction = false,
@@ -78,6 +85,15 @@ export const FolderNodeView = memo(function FolderNodeView({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const { showConfirm } = useDialog();
+
+  // Auto-start editing when requested (e.g., after duplication)
+  useEffect(() => {
+    if (autoStartEditing && !isEditing) {
+      setEditedName(name);
+      setIsEditing(true);
+      onAutoEditStarted?.();
+    }
+  }, [autoStartEditing, isEditing, name, onAutoEditStarted]);
 
   // Draggable setup - all folders are draggable
   const {
@@ -182,6 +198,13 @@ export const FolderNodeView = memo(function FolderNodeView({
     }
   };
 
+  const handleDuplicate = () => {
+    if (isTemplate) {
+      const newFolder = folderService.duplicateTemplate(account, folder);
+      onDuplicated?.(newFolder);
+    }
+  };
+
   return (
     <div>
       <div
@@ -271,6 +294,12 @@ export const FolderNodeView = memo(function FolderNodeView({
                     <Pencil className="mr-2 h-4 w-4" />
                     Rename
                   </DropdownMenuItem>
+                  {isTemplate && (
+                    <DropdownMenuItem onClick={handleDuplicate}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Duplicate
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
                     <Share2 className="mr-2 h-4 w-4" />

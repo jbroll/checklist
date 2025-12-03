@@ -58,32 +58,29 @@ const itemCount = folder.items?.filter(i => !i.archived).length || 0;
 
 ### Priority 2: Low Effort (2-4 hours each)
 
-#### 2.1 Duplicate Template
+#### 2.1 Duplicate Template ✅ DONE
 **Effort:** 2-4 hours
+**Status:** Completed December 2, 2025
 **Files:**
 - `src/components/tree/FolderNodeView.tsx` (menu item)
 - `src/services/folderService.ts` (duplicate logic)
-
-**Current State:** No way to copy a template.
-
-**Desired State:** Menu option to duplicate a template with all its items.
+- `src/components/tree/TreeView.tsx` (auto-edit handling)
 
 **Implementation:**
-1. Add "Duplicate" menu item in FolderNodeView dropdown
-2. Create `duplicateTemplate(folder, account)` in folderService:
-   - Deep copy folder with new ID
-   - Copy all items with new IDs
-   - Clear sessions (start fresh)
-   - Append " (Copy)" to name
-   - Add to same parent folder
+- "Duplicate" menu item in same section as Rename
+- `duplicateTemplate(account, folder)` in folderService with full unit tests
+- Deep copies all non-archived items with new UUIDs
+- Sessions NOT copied (fresh start)
+- Auto-triggers inline rename after duplication for immediate customization
 
 **Acceptance Criteria:**
-- [ ] "Duplicate" option in template context menu
-- [ ] Creates exact copy of template structure
-- [ ] All items copied with new IDs
-- [ ] Sessions NOT copied (fresh template)
-- [ ] Name has " (Copy)" suffix
-- [ ] New template appears in same location
+- [x] "Duplicate" option in template context menu
+- [x] Creates exact copy of template structure
+- [x] All items copied with new IDs
+- [x] Sessions NOT copied (fresh template)
+- [x] Name has " (Copy)" suffix
+- [x] New template appears in same location
+- [x] Inline rename triggered automatically after duplicate
 
 ---
 
@@ -313,7 +310,7 @@ These are larger features that could differentiate Bubblelist further but requir
 - [x] 1.1 Item count on template folders
 
 ### Phase 2: Core Polish (Days 2-3)
-- [ ] 2.1 Duplicate template
+- [x] 2.1 Duplicate template
 - [ ] 2.2 Custom session names
 - [ ] 2.3 Keyboard shortcuts
 

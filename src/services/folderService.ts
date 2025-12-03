@@ -553,6 +553,73 @@ export function emptyTrash(account: InstanceOfSchema<typeof Account>): number {
 }
 
 /**
+ * Duplicate a template folder with all its items.
+ * Creates a deep copy with new IDs, fresh sessions, and " (Copy)" suffix.
+ *
+ * @param account - User's Account
+ * @param folder - Template folder to duplicate
+ * @returns The duplicated template folder
+ */
+export function duplicateTemplate(
+  account: InstanceOfSchema<typeof Account>,
+  folder: InstanceOfSchema<typeof FolderNode>,
+): InstanceOfSchema<typeof FolderNode> {
+  if (!account.root) throw new Error('Account root not initialized');
+  if (!isTemplateFolder(folder)) throw new Error('Can only duplicate template folders');
+
+  // Generate unique name with " (Copy)" suffix
+  const baseName = `${folder.name} (Copy)`;
+  const uniqueName = generateUniqueFolderName(baseName, account, folder.parent);
+
+  const now = new Date();
+
+  // Create a new group for the duplicated folder
+  const folderGroup = Group.create({ owner: account });
+  folderGroup.addMember(account, 'admin');
+
+  // Add parent's group for cascading permissions
+  if (folder.parent) {
+    const parentGroup = folder.parent.$jazz.owner as Group;
+    folderGroup.addMember(parentGroup);
+  }
+
+  // Deep copy items with new IDs
+  const copiedItems = (folder.items || [])
+    .filter((item: { archived?: boolean } | null) => item && !item.archived)
+    .map((item: NonNullable<(typeof folder.items)[number]>) => ({
+      ...item,
+      id: crypto.randomUUID(),
+      createdAt: now,
+    }));
+
+  // Create the duplicated template folder (no sessions - start fresh)
+  const duplicatedFolder = FolderNode.create(
+    {
+      name: uniqueName,
+      expanded: false,
+      archived: false,
+      items: copiedItems,
+      sessions: [], // Fresh start - no sessions copied
+      showZoneHeadings: folder.showZoneHeadings ?? false,
+      parent: folder.parent || undefined,
+      owner: account,
+      createdAt: now,
+      updatedAt: now,
+    },
+    { owner: folderGroup },
+  );
+
+  // Add to same parent location as original
+  if (folder.parent?.children) {
+    folder.parent.children.$jazz.push(duplicatedFolder);
+  } else {
+    account.root.folders.$jazz.push(duplicatedFolder);
+  }
+
+  return duplicatedFolder;
+}
+
+/**
  * Delete all user data - used for account deletion.
  * Removes all folders (and their nested items/sessions) from the account.
  * This ensures Jazz data is cleaned up before account keys are deleted.

@@ -67,6 +67,7 @@ import {
   archiveFolder,
   createFolder,
   deleteFolder,
+  duplicateTemplate,
   expandAncestorFolders,
   findFolderByPath,
   folderNameExists,
@@ -849,6 +850,135 @@ describe('FolderService', () => {
       const name = generateUniqueFolderName('Common Name', account, parent);
 
       expect(name).toBe('Common Name');
+    });
+  });
+
+  describe('duplicateTemplate', () => {
+    it('should create a copy with " (Copy)" suffix', () => {
+      const template = createFolder(account, 'My Template', true);
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(duplicate.name).toBe('My Template (Copy)');
+      expect(account.root.folders).toContain(duplicate);
+    });
+
+    it('should copy all non-archived items with new IDs', () => {
+      const template = createFolder(account, 'My Template', true);
+      template.items = [
+        {
+          id: 'item-1',
+          name: 'Item 1',
+          type: 'item' as const,
+          path: 'item-1',
+          expanded: false,
+          sortOrder: 0,
+          archived: false,
+          defaultQuantity: '1',
+          createdAt: new Date(),
+        },
+        {
+          id: 'item-2',
+          name: 'Item 2',
+          type: 'category' as const,
+          path: 'item-2',
+          expanded: true,
+          sortOrder: 1,
+          archived: false,
+          defaultQuantity: '',
+          createdAt: new Date(),
+        },
+        {
+          id: 'item-3',
+          name: 'Archived Item',
+          type: 'item' as const,
+          path: 'item-3',
+          expanded: false,
+          sortOrder: 2,
+          archived: true,
+          defaultQuantity: '1',
+          createdAt: new Date(),
+        },
+      ];
+
+      const duplicate = duplicateTemplate(account, template);
+
+      // Should have 2 items (excluding archived)
+      expect(duplicate.items).toHaveLength(2);
+      // Items should have new IDs
+      expect(duplicate.items?.[0].id).not.toBe('item-1');
+      expect(duplicate.items?.[1].id).not.toBe('item-2');
+      // But same names and properties
+      expect(duplicate.items?.[0].name).toBe('Item 1');
+      expect(duplicate.items?.[1].name).toBe('Item 2');
+      expect(duplicate.items?.[0].type).toBe('item');
+      expect(duplicate.items?.[1].type).toBe('category');
+    });
+
+    it('should NOT copy sessions (start fresh)', () => {
+      const template = createFolder(account, 'My Template', true);
+      // Add mock sessions
+      template.sessions?.$jazz.push({
+        id: 'session-1',
+        itemStates: {},
+        archived: false,
+        categoryExpanded: {},
+        viewMode: 'zone-in-hierarchy',
+        selectedCount: 0,
+        checkedCount: 0,
+        remainingCount: 0,
+        createdAt: new Date(),
+        lastActivityAt: new Date(),
+      });
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(duplicate.sessions).toHaveLength(0);
+    });
+
+    it('should generate unique name when copy already exists', () => {
+      const template = createFolder(account, 'My Template', true);
+      createFolder(account, 'My Template (Copy)', true);
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(duplicate.name).toBe('My Template (Copy) (2)');
+    });
+
+    it('should place duplicate in same parent folder', () => {
+      const parent = createFolder(account, 'Parent', false);
+      const template = createFolder(account, 'Nested Template', true, parent);
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(duplicate.parent).toBe(parent);
+      expect(parent.children).toContain(duplicate);
+      expect(account.root.folders).not.toContain(duplicate);
+    });
+
+    it('should throw error for organizational folders', () => {
+      const orgFolder = createFolder(account, 'Org Folder', false);
+
+      expect(() => duplicateTemplate(account, orgFolder)).toThrow(
+        'Can only duplicate template folders',
+      );
+    });
+
+    it('should preserve showZoneHeadings setting', () => {
+      const template = createFolder(account, 'My Template', true);
+      template.showZoneHeadings = true;
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(duplicate.showZoneHeadings).toBe(true);
+    });
+
+    it('should be a template folder', () => {
+      const template = createFolder(account, 'My Template', true);
+
+      const duplicate = duplicateTemplate(account, template);
+
+      expect(isTemplateFolder(duplicate)).toBe(true);
     });
   });
 });
