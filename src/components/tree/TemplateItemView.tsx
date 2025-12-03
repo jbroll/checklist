@@ -1,5 +1,5 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { Archive, Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Folder, MoreVertical, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ interface TemplateItemViewProps {
   enableEdit?: boolean; // Enable double-click to edit (default: true)
   showCheckbox?: boolean; // Show checkbox for selection (SessionView normal mode)
   onCheckboxToggle?: (itemId: string) => void; // Separate handler for checkbox (SessionView selected state)
+  onEditNote?: (itemId: string) => void; // Open note editor dialog
 }
 
 export function TemplateItemView({
@@ -46,6 +47,7 @@ export function TemplateItemView({
   enableEdit = true,
   showCheckbox = false,
   onCheckboxToggle,
+  onEditNote,
 }: TemplateItemViewProps) {
   // Note: hasChildren prop is kept for API compatibility but categories always show chevrons
   void _hasChildren;
@@ -225,7 +227,7 @@ export function TemplateItemView({
             className={`flex-1 min-w-0 ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
           >
             <div
-              className={`flex items-center gap-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
+              className={`flex flex-wrap items-center gap-x-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
                 isSelected ? 'bg-neutral-200' : ''
               }`}
             >
@@ -261,8 +263,33 @@ export function TemplateItemView({
                   {item.defaultQuantity}
                 </span>
               )}
+              {/* Note preview - wraps to new line on mobile, inline on desktop */}
+              {item.notes && !isEditing && (
+                <span className="basis-full sm:basis-auto text-xs text-neutral-500 truncate sm:max-w-[200px]">
+                  {item.notes.split('\n')[0]}
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Notes icon - show in checkbox mode (SessionView normal mode) */}
+          {showCheckbox && onEditNote && !isEditing && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditNote(item.id);
+              }}
+              className={`shrink-0 rounded p-1 transition-colors ${
+                item.notes
+                  ? 'text-amber-600 hover:bg-amber-50 hover:text-amber-700'
+                  : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+              }`}
+              aria-label="Edit note"
+            >
+              <StickyNote className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Archived indicator */}
           {item.archived && !isEditing && <Archive className="h-4 w-4 shrink-0 text-neutral-400" />}

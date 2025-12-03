@@ -24,6 +24,7 @@ export type TemplateItem = {
   sortOrder: number;
   archived: boolean; // Soft delete flag
   defaultQuantity: string; // Default quantity for items
+  notes?: string; // Optional notes/description for the item
   createdAt: Date;
 };
 
@@ -36,6 +37,7 @@ export type ItemState = {
   checked: boolean; // Right checkbox - item marked as checked
   selectedAt?: Date;
   checkedAt?: Date;
+  notes?: string; // Optional session-specific notes for this item
 };
 
 /**
@@ -100,6 +102,7 @@ export const FolderNode: any = co.map({
         sortOrder: z.number(),
         archived: z.boolean(),
         defaultQuantity: z.string(),
+        notes: z.optional(z.string()),
         createdAt: z.date(),
       }),
     ),
@@ -115,6 +118,7 @@ export const FolderNode: any = co.map({
             checked: z.boolean(),
             selectedAt: z.optional(z.date()),
             checkedAt: z.optional(z.date()),
+            notes: z.optional(z.string()),
           }),
         ),
         archived: z.boolean(),
@@ -161,6 +165,7 @@ export const Template = co.map({
       sortOrder: z.number(),
       archived: z.boolean(),
       defaultQuantity: z.string(),
+      notes: z.optional(z.string()),
       createdAt: z.date(),
     }),
   ),
@@ -176,6 +181,7 @@ export const Template = co.map({
           checked: z.boolean(),
           selectedAt: z.optional(z.date()),
           checkedAt: z.optional(z.date()),
+          notes: z.optional(z.string()),
         }),
       ),
       archived: z.boolean(),

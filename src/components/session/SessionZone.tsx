@@ -51,6 +51,8 @@ interface SessionZoneProps {
   onExitItemEditMode?: () => void; // Exit edit mode for an item
   canEditItemFn?: (itemId: string) => boolean; // Can edit a specific item
   canDragItemFn?: (itemId: string) => boolean; // Can drag a specific item
+  // Notes
+  onEditNote?: (itemId: string) => void; // Open note editor dialog
 }
 
 export function SessionZone({
@@ -87,6 +89,7 @@ export function SessionZone({
   onExitItemEditMode,
   canEditItemFn,
   canDragItemFn,
+  onEditNote,
 }: SessionZoneProps) {
   const { me } = useAccount<typeof Account>();
   const [editValue, setEditValue] = useState('');
@@ -208,6 +211,7 @@ export function SessionZone({
           }
           onEnterEditMode={onEnterItemEditMode ? () => onEnterItemEditMode(item.id) : undefined}
           onExitEditMode={onExitItemEditMode}
+          onEditNote={onEditNote}
         />
       ))}
     </div>

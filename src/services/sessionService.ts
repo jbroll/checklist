@@ -274,6 +274,40 @@ export function toggleItemChecked(
 }
 
 /**
+ * Update session-specific notes for an item
+ */
+export function updateSessionItemNotes(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+  notes: string,
+): void {
+  const session = getSession(account, templateId, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+
+  const itemStates = session.itemStates || {};
+  const currentState = itemStates[itemId];
+
+  // Create or update item state with notes
+  const newItemStates: Record<string, ItemState> = {
+    ...itemStates,
+    [itemId]: {
+      selected: currentState?.selected || false,
+      checked: currentState?.checked || false,
+      selectedAt: currentState?.selectedAt,
+      checkedAt: currentState?.checkedAt,
+      notes: notes || undefined, // Empty string removes notes
+    },
+  };
+
+  updateSession(account, templateId, sessionId, {
+    itemStates: newItemStates,
+    lastActivityAt: new Date(),
+  });
+}
+
+/**
  * Update session counts (selected, checked, remaining)
  */
 export function updateSessionCounts(

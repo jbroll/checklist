@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
@@ -27,6 +28,9 @@ interface SessionItemRowProps {
   isAnyItemBeingEditedOrDragged?: boolean; // Is any item being edited or dragged (disables checkboxes)
   onEnterEditMode?: () => void; // Enter edit mode for this item
   onExitEditMode?: () => void; // Exit edit mode for this item
+  // Notes
+  onEditNote?: (itemId: string) => void; // Open note editor dialog
+  showNotesIcon?: boolean; // Show notes icon (defaults to true when onEditNote provided)
 }
 
 export const SessionItemRow = memo(function SessionItemRow({
@@ -47,6 +51,8 @@ export const SessionItemRow = memo(function SessionItemRow({
   isAnyItemBeingEditedOrDragged = false,
   onEnterEditMode,
   onExitEditMode,
+  onEditNote,
+  showNotesIcon,
 }: SessionItemRowProps) {
   const { me } = useAccount<typeof Account>();
   const [editValue, setEditValue] = useState('');
@@ -256,8 +262,8 @@ export const SessionItemRow = memo(function SessionItemRow({
         )}
       </button>
 
-      {/* Item name */}
-      <div className="flex-1" {...doubleTapHandlers}>
+      {/* Item name and notes */}
+      <div className="flex-1 min-w-0" {...doubleTapHandlers}>
         {isEditing ? (
           <input
             ref={inputRef}
@@ -269,16 +275,65 @@ export const SessionItemRow = memo(function SessionItemRow({
             className="w-full px-2 py-1 text-neutral-900 border-2 border-blue-400 rounded bg-blue-50 focus:outline-none focus:border-blue-500"
           />
         ) : (
-          <div className="flex items-center gap-2">
-            <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
-              {item.name}
-            </span>
-            {item.defaultQuantity && (
-              <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+            {/* Item name and quantity */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={`text-neutral-900 ${isChecked ? 'line-through opacity-50' : ''}`}>
+                {item.name}
+              </span>
+              {item.defaultQuantity && (
+                <span className="text-sm text-neutral-500">({item.defaultQuantity})</span>
+              )}
+            </div>
+            {/* Notes preview - responsive: right on desktop, below on mobile */}
+            {(item.notes || state?.notes) && (
+              <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-between">
+                {/* Session note (italic, flush left) */}
+                {zone !== 'available' && state?.notes && (
+                  <span className="text-xs text-neutral-600 italic truncate max-w-[150px] sm:max-w-[200px]">
+                    {state.notes.split('\n')[0]}
+                  </span>
+                )}
+                {/* Spacer when only template note exists */}
+                {zone !== 'available' && !state?.notes && item.notes && <span />}
+                {/* Template note (normal font, flush right) */}
+                {zone !== 'available' && item.notes && (
+                  <span className="text-xs text-neutral-400 truncate max-w-[150px] sm:max-w-[200px]">
+                    {item.notes.split('\n')[0]}
+                  </span>
+                )}
+                {/* Template note (shown in available zone, flush right) */}
+                {zone === 'available' && item.notes && (
+                  <span className="text-xs text-neutral-500 truncate max-w-[150px] sm:max-w-[200px] ml-auto">
+                    {item.notes.split('\n')[0]}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Notes icon - visible in available zone (template notes) or zones (session notes) */}
+      {onEditNote && (showNotesIcon ?? true) && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isAnyItemBeingEditedOrDragged) return;
+            onEditNote(item.id);
+          }}
+          disabled={isAnyItemBeingEditedOrDragged}
+          className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+            (zone === 'available' ? item.notes : state?.notes)
+              ? 'text-amber-600 hover:bg-amber-50 hover:text-amber-700'
+              : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+          } ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
+          aria-label={zone === 'available' ? 'Edit template note' : 'Edit session note'}
+        >
+          <StickyNote className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Right button - Trash icon (visible in available zone when showDeleteIcon, or in selected/checked zones) */}
       {((showDeleteIcon && zone === 'available') || zone === 'selected' || zone === 'checked') && (

@@ -152,41 +152,32 @@ name?: string; // Optional custom name, falls back to date
 
 ### Priority 3: Medium Effort (3-6 hours each)
 
-#### 3.1 Item Notes/Description
+#### 3.1 Item Notes/Description ✅ DONE
 **Effort:** 3-4 hours
+**Status:** Completed December 2, 2025
 **Files:**
-- `src/schemas/tree.ts` (add notes field)
-- `src/components/session/SessionItemRow.tsx` (display)
-- `src/components/editor/TemplateItemEditor.tsx` (edit)
-
-**Current State:** Items have only name and quantity.
-
-**Desired State:** Optional notes field for details.
-
-**Use Cases:**
-- "Brand: Kirkland"
-- "Check expiry date"
-- "Get the organic one"
-- "Ask John about this"
-
-**Schema Change:**
-```typescript
-// In TemplateItem type
-notes?: string; // Optional item notes
-```
+- `src/schemas/tree.ts` (notes field on TemplateItem and ItemState)
+- `src/components/session/NoteEditorDialog.tsx` (new modal editor)
+- `src/components/session/SessionItemRow.tsx` (display + edit icon)
+- `src/components/tree/TemplateItemView.tsx` (display + edit icon)
+- `src/services/templateService.ts` (updateItemNotes)
+- `src/services/sessionService.ts` (updateSessionItemNotes)
 
 **Implementation:**
-1. Add optional `notes` field to TemplateItem
-2. Show notes in smaller text below item name
-3. Add notes input in item editor
-4. Notes visible in both template editor and session view
+- Template notes: permanent notes on items (e.g., "Brand: Kirkland")
+- Session notes: ephemeral notes for current session (e.g., "Check if on sale")
+- Notes icon in Available Items zone → edits template notes
+- Notes icon in Selected/Checked zones → edits session notes
+- Template notes shown as reference when editing session notes
+- Responsive display: inline on desktop, wraps to new line on mobile
 
 **Acceptance Criteria:**
-- [ ] Items can have optional notes
-- [ ] Notes displayed below item name (muted text)
-- [ ] Notes editable in template editor
-- [ ] Notes visible in session view
-- [ ] Notes included in export
+- [x] Items can have optional template notes
+- [x] Items can have optional session notes
+- [x] Notes displayed inline (truncated first line)
+- [x] Notes editable via modal dialog
+- [x] Template notes visible in session view (muted)
+- [x] Session notes italic, template notes normal font
 
 ---
 

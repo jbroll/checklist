@@ -443,4 +443,112 @@ describe('templateService - item operations', () => {
       expect(updatedItems[1].sortOrder).toBe(1.00005);
     });
   });
+
+  describe('updateItemNotes', () => {
+    it('should add notes to an item', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Milk');
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(account, 'template-1', 'item-1', 'Get organic');
+
+      expect(template.$jazz.set).toHaveBeenCalledWith(
+        'items',
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'item-1',
+            notes: 'Get organic',
+          }),
+        ]),
+      );
+      expect(template.$jazz.set).toHaveBeenCalledWith('updatedAt', expect.any(Date));
+    });
+
+    it('should update existing notes', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Milk');
+      (item as any).notes = 'Old note';
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(account, 'template-1', 'item-1', 'New note');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].notes).toBe('New note');
+    });
+
+    it('should remove notes when empty string is provided', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Milk');
+      (item as any).notes = 'Some note';
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(account, 'template-1', 'item-1', '');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].notes).toBeUndefined();
+    });
+
+    it('should add notes to a category', () => {
+      const category = createMockItem('cat-1', 'Produce', 'category', 'Produce');
+      const template = createMockTemplate('template-1', [category]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(
+        account,
+        'template-1',
+        'cat-1',
+        'Fresh fruits and vegetables',
+      );
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].notes).toBe('Fresh fruits and vegetables');
+    });
+
+    it('should throw error if template not found', () => {
+      const account = createMockAccount([]);
+
+      expect(() => {
+        templateService.updateItemNotes(account, 'nonexistent', 'item-1', 'Note');
+      }).toThrow('Template nonexistent not found');
+    });
+
+    it('should throw error if item not found', () => {
+      const template = createMockTemplate('template-1', []);
+      const account = createMockAccount([template]);
+
+      expect(() => {
+        templateService.updateItemNotes(account, 'template-1', 'nonexistent', 'Note');
+      }).toThrow('Item nonexistent not found');
+    });
+
+    it('should preserve other item properties when updating notes', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Milk');
+      item.sortOrder = 5;
+      item.defaultQuantity = '2';
+      const template = createMockTemplate('template-1', [item]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(account, 'template-1', 'item-1', 'Brand: Kirkland');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].sortOrder).toBe(5);
+      expect(updatedItems[0].defaultQuantity).toBe('2');
+      expect(updatedItems[0].name).toBe('Milk');
+      expect(updatedItems[0].notes).toBe('Brand: Kirkland');
+    });
+
+    it('should not affect other items when updating notes', () => {
+      const item1 = createMockItem('item-1', 'Milk', 'item', 'Milk');
+      const item2 = createMockItem('item-2', 'Bread', 'item', 'Bread');
+      (item2 as any).notes = 'Whole wheat';
+      const template = createMockTemplate('template-1', [item1, item2]);
+      const account = createMockAccount([template]);
+
+      templateService.updateItemNotes(account, 'template-1', 'item-1', 'Organic');
+
+      const updatedItems = (template.$jazz.set as any).mock.calls[0][1];
+      expect(updatedItems[0].notes).toBe('Organic');
+      expect(updatedItems[1].notes).toBe('Whole wheat'); // unchanged
+    });
+  });
 });

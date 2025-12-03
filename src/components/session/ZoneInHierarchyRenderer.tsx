@@ -22,6 +22,8 @@ interface ZoneInHierarchyRendererProps {
   onExitEditMode: () => void;
   canEdit: (itemId: string) => boolean;
   canDrag: (itemId: string) => boolean;
+  // Notes
+  onEditNote?: (itemId: string) => void;
 }
 
 export function ZoneInHierarchyRenderer({
@@ -40,6 +42,7 @@ export function ZoneInHierarchyRenderer({
   onExitEditMode,
   canEdit,
   canDrag,
+  onEditNote,
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -150,6 +153,7 @@ export function ZoneInHierarchyRenderer({
           onExitItemEditMode={onExitEditMode}
           canEditItemFn={canEdit}
           canDragItemFn={canDrag}
+          onEditNote={onEditNote}
         >
           <div className="flex flex-col pl-4">
             {/* Show zones for items at this level */}
@@ -179,6 +183,7 @@ export function ZoneInHierarchyRenderer({
                     onExitItemEditMode={onExitEditMode}
                     canEditItemFn={canEdit}
                     canDragItemFn={canDrag}
+                    onEditNote={onEditNote}
                   />
                 )}
                 {catChecked.length > 0 && (
@@ -205,6 +210,7 @@ export function ZoneInHierarchyRenderer({
                     onExitItemEditMode={onExitEditMode}
                     canEditItemFn={canEdit}
                     canDragItemFn={canDrag}
+                    onEditNote={onEditNote}
                   />
                 )}
               </>
@@ -247,6 +253,7 @@ export function ZoneInHierarchyRenderer({
               onExitItemEditMode={onExitEditMode}
               canEditItemFn={canEdit}
               canDragItemFn={canDrag}
+              onEditNote={onEditNote}
             />
           )}
           {uncategorizedCheckedItems.length > 0 && (
@@ -273,6 +280,7 @@ export function ZoneInHierarchyRenderer({
               onExitItemEditMode={onExitEditMode}
               canEditItemFn={canEdit}
               canDragItemFn={canDrag}
+              onEditNote={onEditNote}
             />
           )}
         </>

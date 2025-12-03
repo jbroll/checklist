@@ -239,6 +239,34 @@ export function renameItem(
 }
 
 /**
+ * Update notes for an item or category
+ */
+export function updateItemNotes(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+  notes: string,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
+  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+
+  const item = template.items[itemIndex];
+  const updatedItems = [...template.items];
+
+  // Update item notes (empty string removes notes)
+  updatedItems[itemIndex] = {
+    ...item,
+    notes: notes || undefined,
+  };
+
+  template.$jazz.set('items', updatedItems);
+  template.$jazz.set('updatedAt', new Date());
+}
+
+/**
  * Archive (soft delete) an item or category
  * If it's a category, also archives all descendants
  */

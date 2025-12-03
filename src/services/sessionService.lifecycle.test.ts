@@ -6,6 +6,7 @@ import {
   deleteSession,
   toggleCategoryExpanded,
   unarchiveSession,
+  updateSessionItemNotes,
 } from './sessionService';
 
 // Mock Jazz CoValues
@@ -337,6 +338,125 @@ describe('Session Lifecycle Functions', () => {
 
       expect(template.sessions.length).toBe(1);
       expect(template.sessions[0].id).toBe('session-1');
+    });
+  });
+
+  describe('updateSessionItemNotes', () => {
+    it('should add notes to an item without existing state', () => {
+      template.sessions[0].itemStates = {};
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Check if on sale');
+
+      expect(template.sessions[0].itemStates['item-1']).toBeDefined();
+      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Check if on sale');
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
+      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
+    });
+
+    it('should add notes to an item with existing state', () => {
+      template.sessions[0].itemStates = {
+        'item-1': {
+          selected: true,
+          checked: false,
+          selectedAt: new Date(),
+        },
+      };
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Get the organic one');
+
+      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Get the organic one');
+      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true); // preserved
+      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false); // preserved
+    });
+
+    it('should update existing notes', () => {
+      template.sessions[0].itemStates = {
+        'item-1': {
+          selected: true,
+          checked: false,
+          notes: 'Old note',
+        },
+      };
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'New note');
+
+      expect(template.sessions[0].itemStates['item-1'].notes).toBe('New note');
+    });
+
+    it('should remove notes when empty string is provided', () => {
+      template.sessions[0].itemStates = {
+        'item-1': {
+          selected: true,
+          checked: false,
+          notes: 'Some note',
+        },
+      };
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', '');
+
+      expect(template.sessions[0].itemStates['item-1'].notes).toBeUndefined();
+    });
+
+    it('should update lastActivityAt when adding notes', () => {
+      const oldActivityTime = template.sessions[0].lastActivityAt;
+      template.sessions[0].itemStates = {};
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'A note');
+
+      expect(template.sessions[0].lastActivityAt.getTime()).toBeGreaterThanOrEqual(
+        oldActivityTime.getTime(),
+      );
+    });
+
+    it('should not affect other items when updating notes', () => {
+      template.sessions[0].itemStates = {
+        'item-1': { selected: true, checked: false, notes: 'Note 1' },
+        'item-2': { selected: false, checked: true, notes: 'Note 2' },
+      };
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Updated note');
+
+      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Updated note');
+      expect(template.sessions[0].itemStates['item-2'].notes).toBe('Note 2'); // unchanged
+    });
+
+    it('should throw error if session not found', () => {
+      expect(() => {
+        updateSessionItemNotes(account, 'template-1', 'non-existent', 'item-1', 'Note');
+      }).toThrow('Session non-existent not found');
+    });
+
+    it('should throw error if template not found', () => {
+      expect(() => {
+        updateSessionItemNotes(account, 'non-existent', 'session-1', 'item-1', 'Note');
+      }).toThrow();
+    });
+
+    it('should preserve selectedAt and checkedAt timestamps', () => {
+      const selectedAt = new Date('2024-01-01');
+      const checkedAt = new Date('2024-01-02');
+      template.sessions[0].itemStates = {
+        'item-1': {
+          selected: true,
+          checked: true,
+          selectedAt,
+          checkedAt,
+        },
+      };
+
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'A note');
+
+      expect(template.sessions[0].itemStates['item-1'].selectedAt).toEqual(selectedAt);
+      expect(template.sessions[0].itemStates['item-1'].checkedAt).toEqual(checkedAt);
+    });
+
+    it('should handle multiline notes', () => {
+      template.sessions[0].itemStates = {};
+
+      const multilineNote = 'Line 1\nLine 2\nLine 3';
+      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', multilineNote);
+
+      expect(template.sessions[0].itemStates['item-1'].notes).toBe(multilineNote);
     });
   });
 });

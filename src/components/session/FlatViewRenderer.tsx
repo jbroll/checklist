@@ -24,6 +24,8 @@ interface FlatViewRendererProps {
   onExitEditMode: () => void;
   canEdit: (itemId: string) => boolean;
   canDrag: (itemId: string) => boolean;
+  // Notes
+  onEditNote?: (itemId: string) => void;
 }
 
 export function FlatViewRenderer({
@@ -42,6 +44,7 @@ export function FlatViewRenderer({
   onExitEditMode,
   canEdit,
   canDrag,
+  onEditNote,
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
@@ -68,6 +71,7 @@ export function FlatViewRenderer({
         onExitItemEditMode={onExitEditMode}
         canEditItemFn={canEdit}
         canDragItemFn={canDrag}
+        onEditNote={onEditNote}
       />
       <SessionZone
         title="Checked"
@@ -90,6 +94,7 @@ export function FlatViewRenderer({
         onExitItemEditMode={onExitEditMode}
         canEditItemFn={canEdit}
         canDragItemFn={canDrag}
+        onEditNote={onEditNote}
       />
     </>
   );

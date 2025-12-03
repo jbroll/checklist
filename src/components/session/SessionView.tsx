@@ -23,6 +23,7 @@ import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
+import { NoteEditorDialog } from './NoteEditorDialog';
 import { SessionZone } from './SessionZone';
 import { useSessionItems } from './useSessionItems';
 import { useViewMode } from './useViewMode';
@@ -48,6 +49,12 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     selected: true,
     checked: false,
   });
+  // Note editor state
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+  const [noteEditingItemId, setNoteEditingItemId] = useState<string | null>(null);
+  const [noteEditingZone, setNoteEditingZone] = useState<'available' | 'selected' | 'checked'>(
+    'available',
+  );
 
   // Configure sensors for drag detection
   // Use MouseSensor + TouchSensor instead of PointerSensor for proper mobile support
@@ -323,6 +330,44 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     }
   };
 
+  // Note editing handlers
+  const handleEditNoteInZone = (zone: 'available' | 'selected' | 'checked') => (itemId: string) => {
+    setNoteEditingItemId(itemId);
+    setNoteEditingZone(zone);
+    setNoteEditorOpen(true);
+  };
+
+  const handleSaveNote = (note: string) => {
+    if (!me || !noteEditingItemId) return;
+
+    if (noteEditingZone === 'available') {
+      // Save template note
+      // @ts-expect-error Jazz TypeScript inference issue with Account root type
+      templateService.updateItemNotes(me, template.$jazz.id, noteEditingItemId, note);
+    } else {
+      // Save session note
+      SessionService.updateSessionItemNotes(
+        // @ts-expect-error Jazz TypeScript inference issue with Account root type
+        me,
+        template.$jazz.id,
+        sessionId,
+        noteEditingItemId,
+        note,
+      );
+    }
+  };
+
+  // Get current note values for the editor
+  const noteEditingItem = noteEditingItemId
+    ? activeItems.find((i) => i.id === noteEditingItemId)
+    : null;
+  const noteEditingCurrentNote =
+    noteEditingZone === 'available'
+      ? noteEditingItem?.notes || ''
+      : session?.itemStates?.[noteEditingItemId || '']?.notes || '';
+  const noteEditingTemplateNote =
+    noteEditingZone !== 'available' ? noteEditingItem?.notes : undefined;
+
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = newItemName.trim();
@@ -543,6 +588,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
             count={categoryItemIds.length}
             categoryItem={item}
             template={template}
+            onEditNote={handleEditNoteInZone('available')}
           >
             <div className="pl-4">
               {children.map((child, childIndex) =>
@@ -595,6 +641,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
           enableDrag={showAddForm}
           enableEdit={showAddForm}
           showCheckbox={!showAddForm}
+          onEditNote={!showAddForm ? handleEditNoteInZone('available') : undefined}
         />
         {/* Reorder zone after each sibling */}
         <ReorderDropZone
@@ -757,6 +804,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   onExitEditMode={() => {}}
                   canEdit={() => false}
                   canDrag={() => false}
+                  onEditNote={handleEditNoteInZone('selected')}
                 />
               )}
 
@@ -778,6 +826,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   onExitEditMode={() => {}}
                   canEdit={() => false}
                   canDrag={() => false}
+                  onEditNote={handleEditNoteInZone('selected')}
                 />
               )}
 
@@ -805,6 +854,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                     onBatchToggle={!showAddForm ? handleBatchToggle : undefined}
                     count={activeItems.length}
                     showHeading={!showAddForm}
+                    onEditNote={handleEditNoteInZone('available')}
                   >
                     <div className="divide-y divide-neutral-100">
                       {/* Invisible anchor element for scroll preservation */}
@@ -827,6 +877,17 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Note Editor Dialog */}
+      <NoteEditorDialog
+        open={noteEditorOpen}
+        onOpenChange={setNoteEditorOpen}
+        itemName={noteEditingItem?.name || ''}
+        note={noteEditingCurrentNote}
+        templateNote={noteEditingTemplateNote}
+        onSave={handleSaveNote}
+        noteType={noteEditingZone === 'available' ? 'template' : 'session'}
+      />
     </DndContext>
   );
 }
