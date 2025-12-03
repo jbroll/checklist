@@ -1,24 +1,12 @@
-#!/usr/bin/env node
-/**
- * Build script to convert markdown files to HTML pages
- * Run with: node website/build-legal.js
- */
-
-import { readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { marked } from 'marked';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Configure marked for GitHub-flavored markdown
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-});
-
-// Common styles
-const styles = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BubbleList - Terms of Service">
+    <title>Terms of Service - BubbleList</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
 
@@ -36,23 +24,7 @@ const styles = `
         .prose blockquote { background: #f0fdfa; border-left: 4px solid #14b8a6; padding: 1rem; margin: 1rem 0; color: #115e59; }
         .prose strong { font-weight: 600; }
         .prose em { font-style: italic; }
-`;
 
-// Generate HTML page from markdown
-function generatePage(mdFile, htmlFile, title) {
-  const mdPath = join(__dirname, mdFile);
-  const mdContent = readFileSync(mdPath, 'utf-8');
-  const contentHtml = marked.parse(mdContent);
-
-  const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="BubbleList - ${title}">
-    <title>${title} - BubbleList</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>${styles}
     </style>
 </head>
 <body class="bg-gray-50">
@@ -78,7 +50,21 @@ function generatePage(mdFile, htmlFile, title) {
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
-            ${contentHtml}
+            <h1>Terms of Service</h1>
+<p><em>Last Updated: December 2, 2025</em></p>
+<p><strong>By using BubbleList, you agree to these terms.</strong> If you don&#39;t agree, don&#39;t use the service.</p>
+<p><strong>To use BubbleList,</strong> you must be at least 13 years old, provide accurate information, and keep your credentials secure. You&#39;re responsible for activity on your account.</p>
+<p><strong>You agree not to</strong> violate laws, infringe others&#39; intellectual property, transmit malware, attempt to hack the service, harass others, scrape data, or reverse engineer the service.</p>
+<p><strong>You own your content.</strong> By using the service, you grant us a license to store and transmit your content to provide the service. This license ends when you delete your content. You&#39;re responsible for your content—keep backups using the export feature.</p>
+<p><strong>Our intellectual property.</strong> The service design, code, and branding belong to BubbleList. Don&#39;t copy, modify, or use our trademarks without permission.</p>
+<p><strong>This is a software service.</strong> It may be unstable, features may change, data may need to be reset, and there may be downtime. The service is provided &quot;as is&quot; without warranties. We&#39;re not liable for indirect, incidental, or consequential damages. Our total liability is limited to what you paid us.</p>
+<p><strong>Indemnification.</strong> You agree to indemnify us against claims arising from your use of the service, violation of these terms, or your content.</p>
+<p><strong>Third-party services.</strong> We use third-party services for data sync and authentication. Their terms apply to your use of those services.</p>
+<p><strong>Termination.</strong> You may delete your account anytime. We may terminate your account if you violate these terms, pose a security risk, or if required by law.</p>
+<p><strong>Changes to these terms.</strong> We may update these terms. Material changes will be posted here with an updated date. Continued use means acceptance.</p>
+<p><strong>General.</strong> These terms are governed by US law. These terms are the entire agreement. Invalid provisions don&#39;t affect the rest. Our failure to enforce a provision isn&#39;t a waiver.</p>
+<p>Contact: <a href="mailto:bubblelist@rkroll.com">bubblelist@rkroll.com</a></p>
+
         </div>
     </div>
 
@@ -96,16 +82,3 @@ function generatePage(mdFile, htmlFile, title) {
     </footer>
 </body>
 </html>
-`;
-
-  const htmlPath = join(__dirname, htmlFile);
-  writeFileSync(htmlPath, fullHtml);
-  console.log(`Generated ${htmlFile} from ${mdFile}`);
-}
-
-// Generate all pages
-generatePage('privacy.md', 'privacy.html', 'Privacy Policy');
-generatePage('terms.md', 'terms.html', 'Terms of Service');
-generatePage('about.md', 'about.html', 'About');
-
-console.log('All pages generated successfully');

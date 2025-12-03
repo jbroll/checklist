@@ -1,24 +1,12 @@
-#!/usr/bin/env node
-/**
- * Build script to convert markdown files to HTML pages
- * Run with: node website/build-legal.js
- */
-
-import { readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { marked } from 'marked';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Configure marked for GitHub-flavored markdown
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-});
-
-// Common styles
-const styles = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BubbleList - Privacy Policy">
+    <title>Privacy Policy - BubbleList</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
 
@@ -36,23 +24,7 @@ const styles = `
         .prose blockquote { background: #f0fdfa; border-left: 4px solid #14b8a6; padding: 1rem; margin: 1rem 0; color: #115e59; }
         .prose strong { font-weight: 600; }
         .prose em { font-style: italic; }
-`;
 
-// Generate HTML page from markdown
-function generatePage(mdFile, htmlFile, title) {
-  const mdPath = join(__dirname, mdFile);
-  const mdContent = readFileSync(mdPath, 'utf-8');
-  const contentHtml = marked.parse(mdContent);
-
-  const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="BubbleList - ${title}">
-    <title>${title} - BubbleList</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>${styles}
     </style>
 </head>
 <body class="bg-gray-50">
@@ -78,7 +50,20 @@ function generatePage(mdFile, htmlFile, title) {
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
-            ${contentHtml}
+            <h1>Privacy Policy</h1>
+<p><em>Last Updated: December 2, 2025</em></p>
+<p><strong>When you sign up,</strong> we collect your email address via your chosen sign-in provider.</p>
+<p><strong>Your list data</strong> includes everything you create in the app: lists, folders, categories, items, sessions, and their organization. Your list data is stored using Jazz.tools. Jazz account keys are stored server-side, which means we can technically access your data if required by law.</p>
+<p>You can export your lists anytime (JSON, CSV, TXT) or delete your account.</p>
+<p><strong>When you delete your account,</strong> your authentication data, list data, and encryption keys are deleted immediately. Any encrypted fragments on sync servers become cryptographically inaccessible. Local data is cleared immediately on the device that initiates account deletion, but may remain on other devices.</p>
+<p><strong>Tracking and cookies.</strong> No analytics, telemetry, advertising trackers, or fingerprinting. We only use cookies for authentication and session management.</p>
+<p><strong>How we operate the service.</strong> We use your email to authenticate your account and respond to support requests. Your list data is stored locally on your device first, encrypted during sync, and backed up via Jazz.tools. All communications use HTTPS/TLS encryption.</p>
+<p><strong>Third-party services.</strong> We use third-party services for data sync and OAuth authentication. Your data is encrypted before it reaches the sync service—they cannot read your lists. Your use of these services is subject to their respective privacy policies.</p>
+<p><strong>We share data only when</strong> required by law, necessary to protect our rights or users&#39; safety, or part of a business transfer (with notice). We don&#39;t sell your data.</p>
+<p><strong>Children.</strong> BubbleList is not for children under 13. We don&#39;t knowingly collect data from children under 13.</p>
+<p><strong>International users.</strong> BubbleList operates in the United States. Using the service means your data may be transferred to the US.</p>
+<p>Contact: <a href="mailto:bubblelist@rkroll.com">bubblelist@rkroll.com</a></p>
+
         </div>
     </div>
 
@@ -96,16 +81,3 @@ function generatePage(mdFile, htmlFile, title) {
     </footer>
 </body>
 </html>
-`;
-
-  const htmlPath = join(__dirname, htmlFile);
-  writeFileSync(htmlPath, fullHtml);
-  console.log(`Generated ${htmlFile} from ${mdFile}`);
-}
-
-// Generate all pages
-generatePage('privacy.md', 'privacy.html', 'Privacy Policy');
-generatePage('terms.md', 'terms.html', 'Terms of Service');
-generatePage('about.md', 'about.html', 'About');
-
-console.log('All pages generated successfully');

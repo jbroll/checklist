@@ -1,6 +1,6 @@
-# Market Comparison: Shopping List Apps
+# Market Comparison: List Apps
 
-A competitive analysis of the shopping/checklist app market and Bubblelist's positioning.
+A competitive analysis of the list/checklist app market and Bubblelist's positioning.
 
 *Last updated: December 2025*
 
@@ -207,6 +207,91 @@ Local lists only. No sync, no sharing, no templates.
 
 ---
 
+## Generalized List/Task Apps
+
+Beyond shopping-focused apps, these general-purpose tools compete for the same users.
+
+### Notion
+**Price**: Free / $10/month Pro / $15/month Business
+
+All-in-one workspace with lists, databases, wikis, and AI.
+
+**Key Features**:
+- Flexible databases with multiple views (list, kanban, calendar, gallery)
+- Real-time collaboration with comments and mentions
+- **Notion 3.0 Agents** (Sept 2025): AI that takes actions autonomously
+- Offline mode added August 2025
+- Infinite nesting and linking
+- Templates marketplace
+
+**Limitations**: Complex, can be overwhelming. Overkill for simple lists.
+
+---
+
+### Workflowy
+**Price**: Free / $4.99/month Pro
+
+Infinite nested bullet lists with a cult following.
+
+**Key Features**:
+- **Infinite nesting**—lists within lists within lists
+- Real-time sync across all platforms
+- Mirrors (same item in multiple places)
+- Search across everything
+- Minimal, distraction-free interface
+
+**Limitations**: One trick pony (but does it perfectly). No views beyond lists.
+
+---
+
+### TickTick
+**Price**: Free / $35.99/year Premium
+
+Task manager with calendar integration and habit tracking.
+
+**Key Features**:
+- Natural language input ("buy milk tomorrow")
+- Multiple views: list, kanban, calendar
+- Pomodoro timer built-in
+- Habit tracking
+- Shared lists with drag-and-drop scheduling
+
+**Limitations**: More task-focused than list-focused. Premium required for calendar view.
+
+---
+
+### ClickUp
+**Price**: Free / $7/month Unlimited
+
+Project management tool with powerful checklists.
+
+**Key Features**:
+- Real-time collaboration on checklists
+- Multiple views (15+ including list, board, Gantt, calendar)
+- Automations and integrations
+- Nested subtasks and checklists
+- Comments on any item
+
+**Limitations**: Enterprise complexity. Steep learning curve.
+
+---
+
+### Google Keep
+**Price**: Free
+
+Simple notes and checklists with Google integration.
+
+**Key Features**:
+- Color-coded notes and checklists
+- Syncs with Google ecosystem
+- Voice notes and image capture
+- Location and time reminders
+- Collaborative sharing
+
+**Limitations**: Basic organization. No hierarchy. Limited customization.
+
+---
+
 ## How Competitors Handle "Templates"
 
 | App | Template Approach | Reusability |
@@ -226,23 +311,40 @@ Local lists only. No sync, no sharing, no templates.
 
 ## Feature Comparison Matrix
 
-| Feature | AnyList | OurGroceries | Bring! | Cozi | Listonic | Out of Milk | Todoist | Bubblelist |
-|---------|:-------:|:------------:|:------:|:----:|:--------:|:-----------:|:-------:|:----------:|
-| **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Offline support** | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| **List sharing** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Auto-categorization** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| **Recipe integration** | ✅ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ | ❌ | ❌ |
-| **Meal planning** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Barcode scanning** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Voice assistant** | Siri | Alexa | Voice | ❌ | Voice | ❌ | Various | ❌ |
-| **Hierarchical folders** | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **Nested categories** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **True template reuse** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ✅ |
-| **Encrypted sync** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **No ads (free tier)** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
-| **Price tracking** | ⚠️ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Store ordering** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+### Shopping-Focused Apps
+
+| Feature | AnyList | OurGroceries | Bring! | Cozi | Listonic | Out of Milk | Bubblelist |
+|---------|:-------:|:------------:|:------:|:----:|:--------:|:-----------:|:----------:|
+| **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Offline support** | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| **List sharing** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Auto-categorization** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Recipe integration** | ✅ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
+| **Barcode scanning** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Hierarchical folders** | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Nested categories** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **True template reuse** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Encrypted sync** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **No ads (free tier)** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+
+### General List/Task Apps
+
+| Feature | Todoist | Notion | Workflowy | TickTick | ClickUp | Google Keep | Bubblelist |
+|---------|:-------:|:------:|:---------:|:--------:|:-------:|:-----------:|:----------:|
+| **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Offline support** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| **List sharing** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Infinite nesting** | ⚠️ | ✅ | ✅ | ⚠️ | ✅ | ❌ | ✅ |
+| **Multiple views** | ⚠️ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Natural language** | ✅ | ⚠️ | ❌ | ✅ | ⚠️ | ❌ | ❌ |
+| **AI assistance** | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Reminders** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Search/filters** | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| **Automations** | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
+| **Comments** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **True template reuse** | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
+| **Encrypted sync** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **No ads (free tier)** | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 
 **Legend**: ✅ = Full support | ⚠️ = Partial/Premium only | ❌ = Not available
 
@@ -343,20 +445,97 @@ Local lists only. No sync, no sharing, no templates.
 
 ---
 
-## Feature Gaps
+## Feature Priority Analysis
 
-Features competitors offer that Bubblelist currently lacks:
+Features ranked by user impact, regardless of implementation complexity.
 
-| Feature | Offered By | Notes |
-|---------|-----------|-------|
-| Barcode scanning | Out of Milk, OurGroceries, AnyList | Would require camera permission |
-| Recipe import | AnyList, Bring! | Web scraping complexity |
-| Voice assistant | AnyList (Siri), OurGroceries (Alexa) | Platform-specific integrations |
-| Meal planning | AnyList | Significant feature scope |
-| Auto-categorization | AnyList, Listonic, Bring! | AI/ML requirement |
-| Price tracking | Out of Milk, AnyList | Manual data entry burden |
-| Store ordering | AnyList | Third-party integrations |
-| Pantry inventory | Out of Milk | Different product focus |
+### Tier 1: Table Stakes
+These are expected by users. Missing any is a dealbreaker.
+
+| Feature | Status | Notes |
+|---------|:------:|-------|
+| Real-time sync | ✅ | Changes appear instantly across devices |
+| Offline-first | ✅ | Full functionality without internet |
+| Cross-platform | ✅ | Web app works everywhere |
+| Sharing/collaboration | ✅ | Invite others, work together |
+
+### Tier 2: High-Impact Differentiators
+
+| Feature | Status | Why It Matters |
+|---------|:------:|---------------|
+| Hierarchical nesting | ✅ | Workflowy's killer feature. Scales from simple to complex. |
+| True template reuse | ✅ **Unique** | No competitor separates template from session state. |
+| Encrypted sync | ✅ | Better than plaintext (most competitors). |
+| Item quantity | ✅ Schema | `defaultQuantity` field exists. Needs UI exposure. |
+| Item notes | ✅ Schema | Template + session-level notes. Needs UI exposure. |
+| Activity timestamps | ✅ Schema | `selectedAt`, `checkedAt`, `lastActivityAt`. Needs UI exposure. |
+| Multiple view modes | ✅ Partial | `zone-in-hierarchy` and `flat` modes exist. |
+| Search/filtering | ❌ | Filter items by name across templates. Zero schema changes needed. |
+| Smart input parsing | ❌ | Parse "milk 2 gal" → name + quantity. AI at input, nothing stored. |
+
+### What's in Schema vs Exposed in UI
+
+Bubblelist's data model is already richer than most competitors. The opportunity is **exposing existing features**, not adding schema complexity.
+
+| Schema Field | Location | Currently Exposed | Opportunity |
+|--------------|----------|:-----------------:|-------------|
+| `defaultQuantity` | TemplateItem | Partial | Show inline: "Milk (2 gal)" |
+| `notes` | TemplateItem | Partial | Expandable detail or tooltip |
+| `notes` | ItemState (session) | Partial | Quick inline edit while shopping |
+| `selectedAt` | ItemState | ❌ | Session analytics |
+| `checkedAt` | ItemState | ❌ | "Completed in 23 min" stats |
+| `lastActivityAt` | SessionData | ❌ | "Last used 3 days ago" |
+| `viewMode` | SessionData | ✅ | Already working |
+
+### Tier 3: Features Requiring New Schema
+
+These require schema additions. Most are project-management scope creep.
+
+| Feature | Schema Impact | Recommendation |
+|---------|---------------|----------------|
+| Tags/labels | New array field | Skip—hierarchy already provides organization |
+| Reminders | Date field + notification system | Skip—significant complexity |
+| Images | URL/blob storage | Skip—not core use case |
+| Flexible permissions | Role fields | Consider later for team features |
+| Automations | Trigger/action definitions | Skip—PM territory |
+
+### Tier 4: Skip Entirely
+
+These add complexity without proportional value for a list app:
+
+- Gamification (streaks, points)
+- Barcode scanning
+- Voice assistant integrations
+- Price tracking
+- Recipe import
+- Meal planning
+- Kanban/calendar views
+
+---
+
+## Strategic Approach: Simplicity Over Features
+
+Many "missing features" come from **project management apps** (Notion, ClickUp, Todoist), not list apps. Bubblelist should resist this scope creep.
+
+**Philosophy**: Do lists exceptionally well, not everything adequately.
+
+### High-Value, Zero-Schema Priorities
+
+1. **Search** - Filter items by name across all templates
+2. **Expose quantity inline** - Already stored, just show it
+3. **Quick notes access** - Tap to see/edit without modal
+4. **Session stats** - Use existing timestamps for completion time
+5. **Smart input** - AI parses text at entry time, stores in existing fields
+
+### What Makes Bubblelist Different
+
+The **template-session separation** remains genuinely unique. No competitor offers this. Combined with:
+- Encrypted sync (vs plaintext everywhere else)
+- True offline-first (vs cached-with-limitations)
+- Infinite nesting (vs flat lists)
+- No ads (vs ad-supported free tiers)
+
+The gap to close is **friction reduction** (search, smart input), not feature parity with PM tools.
 
 ---
 
@@ -423,6 +602,7 @@ Features competitors offer that Bubblelist currently lacks:
 
 ## Sources
 
+### Shopping List Apps
 - [AnyList - Compare Features](https://www.anylist.com/features)
 - [AnyList Complete](https://www.anylist.com/complete)
 - [OurGroceries - User Guide](https://www.ourgroceries.com/user-guide)
@@ -432,8 +612,17 @@ Features competitors offer that Bubblelist currently lacks:
 - [Todoist Grocery Template](https://www.todoist.com/templates/grocery-list)
 - [NerdWallet - Best Grocery List Apps of 2025](https://www.nerdwallet.com/article/finance/best-grocery-list-apps)
 - [Good Housekeeping - 10 Best Grocery Shopping List Apps](https://www.goodhousekeeping.com/food-recipes/g26255008/best-grocery-shopping-list-apps/)
-- [Chowhound - 12 Apps That Make Creating Grocery Lists Easier](https://www.chowhound.com/1852927/grocery-list-apps/)
 - [AnyList vs OurGroceries Comparison](https://www.daeken.com/blog/anylist-vs-ourgroceries-app/)
 - [Privacy Friendly Shopping List - F-Droid](https://f-droid.org/en/packages/privacyfriendlyshoppinglist.secuso.org.privacyfriendlyshoppinglist/)
+
+### General List/Task Apps
+- [Zapier - 7 Best To-Do List Apps 2025](https://zapier.com/blog/best-todo-list-apps/)
+- [ClickUp - Top 10 Shared To-Do List Apps](https://clickup.com/blog/shared-to-do-list-apps/)
+- [Akiflow - Best Checklist Apps 2025](https://akiflow.com/blog/best-checklist-apps-2025)
+- [Notion vs Todoist Comparison](https://efficient.app/compare/todoist-vs-notion)
+- [Top 10 Shared Task List Apps 2025](https://www.getduodo.com/blog/top-10-shared-task-list-apps-for-2025)
+- [ClickUp - Best Todoist Alternatives](https://clickup.com/blog/best-todoist-alternatives/)
+
+### Technology
 - [Jazz.tools Documentation](https://jazz.tools/docs)
 - [Jazz Authentication - Better Auth](https://jazz.tools/docs/svelte/key-features/authentication/better-auth)

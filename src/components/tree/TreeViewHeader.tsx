@@ -4,6 +4,7 @@ import {
   CheckSquare,
   Download,
   FolderPlus,
+  Info,
   LayoutGrid,
   ListPlus,
   LogIn,
@@ -57,6 +58,7 @@ interface TreeViewHeaderProps {
   onShowProfileDialogChange?: (show: boolean) => void;
   canInstallApp?: boolean;
   onInstallApp?: () => void;
+  onAbout?: () => void;
 }
 
 /**
@@ -95,6 +97,7 @@ export function TreeViewHeader({
   onShowProfileDialogChange,
   canInstallApp = false,
   onInstallApp,
+  onAbout,
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops (always called for hooks rules)
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -299,6 +302,15 @@ export function TreeViewHeader({
                         )}
                       </>
                     )}
+                  </>
+                )}
+                {onAbout && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onAbout}>
+                      <Info className="mr-2 h-4 w-4" />
+                      About
+                    </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>

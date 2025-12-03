@@ -1,24 +1,12 @@
-#!/usr/bin/env node
-/**
- * Build script to convert markdown files to HTML pages
- * Run with: node website/build-legal.js
- */
-
-import { readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { marked } from 'marked';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Configure marked for GitHub-flavored markdown
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-});
-
-// Common styles
-const styles = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BubbleList - About">
+    <title>About - BubbleList</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
 
@@ -36,23 +24,7 @@ const styles = `
         .prose blockquote { background: #f0fdfa; border-left: 4px solid #14b8a6; padding: 1rem; margin: 1rem 0; color: #115e59; }
         .prose strong { font-weight: 600; }
         .prose em { font-style: italic; }
-`;
 
-// Generate HTML page from markdown
-function generatePage(mdFile, htmlFile, title) {
-  const mdPath = join(__dirname, mdFile);
-  const mdContent = readFileSync(mdPath, 'utf-8');
-  const contentHtml = marked.parse(mdContent);
-
-  const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="BubbleList - ${title}">
-    <title>${title} - BubbleList</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>${styles}
     </style>
 </head>
 <body class="bg-gray-50">
@@ -78,7 +50,25 @@ function generatePage(mdFile, htmlFile, title) {
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
-            ${contentHtml}
+            <h1>About BubbleList</h1>
+<p>BubbleList is a checklist app designed for lists you use again and again. Unlike traditional checklist apps, checking items off doesn&#39;t modify your list—progress is tracked separately in sessions, so your list is always ready for the next use.</p>
+<p>Perfect for grocery shopping, packing lists, daily routines, and any recurring checklist.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Reusable lists</strong> — Your list stays the same; each use is a new session</li>
+<li><strong>Offline-first</strong> — Works without internet, syncs when connected</li>
+<li><strong>Encrypted sync</strong> — Your data is encrypted before leaving your device</li>
+<li><strong>Real-time collaboration</strong> — Share folders with family and friends</li>
+<li><strong>Import/Export</strong> — Your data is never locked in</li>
+</ul>
+<h2>Legal</h2>
+<ul>
+<li><a href="privacy.html">Privacy Policy</a></li>
+<li><a href="terms.html">Terms of Service</a></li>
+</ul>
+<hr>
+<p><strong>Published by</strong> <a href="https://rkroll.com">rkroll.com</a> — a tiny software company located in Schenectady, New York. You can contact us at <a href="mailto:bubblelist@rkroll.com">bubblelist@rkroll.com</a>.</p>
+
         </div>
     </div>
 
@@ -96,16 +86,3 @@ function generatePage(mdFile, htmlFile, title) {
     </footer>
 </body>
 </html>
-`;
-
-  const htmlPath = join(__dirname, htmlFile);
-  writeFileSync(htmlPath, fullHtml);
-  console.log(`Generated ${htmlFile} from ${mdFile}`);
-}
-
-// Generate all pages
-generatePage('privacy.md', 'privacy.html', 'Privacy Policy');
-generatePage('terms.md', 'terms.html', 'Terms of Service');
-generatePage('about.md', 'about.html', 'About');
-
-console.log('All pages generated successfully');

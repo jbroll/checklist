@@ -75,6 +75,9 @@ export function SimplifiedTemplateSelector({
             switchViewLabel="Classic View"
             canInstallApp={showInstallOption}
             onInstallApp={handleInstallApp}
+            onAbout={() => {
+              window.location.href = '/about.html';
+            }}
           />
 
           {/* Template list */}

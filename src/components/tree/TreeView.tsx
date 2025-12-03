@@ -569,6 +569,9 @@ export function TreeView({
           onShowProfileDialogChange={onShowProfileDialogChange}
           canInstallApp={showInstallOption}
           onInstallApp={handleInstallApp}
+          onAbout={() => {
+            window.location.href = '/about.html';
+          }}
         />
 
         {folderTree.length === 0 ? (
