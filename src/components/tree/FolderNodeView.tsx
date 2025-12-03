@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, FolderNode, TemplateItem } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as viewStateService from '@/services/viewStateService';
 import { IndentedRow } from './IndentedRow';
@@ -64,6 +64,9 @@ export const FolderNodeView = memo(function FolderNodeView({
 }: FolderNodeViewProps) {
   const isTemplate = folderService.isTemplateFolder(folder);
   const isOrganizational = folderService.isOrganizationalFolder(folder);
+  const itemCount = isTemplate
+    ? (folder.items?.filter((i: TemplateItem) => !i?.archived).length ?? 0)
+    : 0;
 
   const name = folder.name;
   const expanded = viewStateService.getFolderExpanded(account, folder.$jazz.id);
@@ -229,11 +232,18 @@ export const FolderNodeView = memo(function FolderNodeView({
                     className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 text-base focus:outline-none focus:ring-2 focus:ring-green-500/20"
                   />
                 ) : (
-                  <span
-                    className={`flex-1 min-w-0 truncate text-left text-base ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
-                  >
-                    {name}
-                  </span>
+                  <>
+                    <span
+                      className={`flex-1 min-w-0 truncate text-left text-base ${isTemplate ? 'font-semibold text-purple-900' : 'font-medium text-neutral-900'}`}
+                    >
+                      {name}
+                    </span>
+                    {itemCount > 0 && (
+                      <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-0.5 text-sm font-medium text-neutral-700">
+                        {itemCount}
+                      </span>
+                    )}
+                  </>
                 )}
               </button>
             </div>

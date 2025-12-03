@@ -310,7 +310,7 @@ These are larger features that could differentiate Bubblelist further but requir
 ### Sprint Execution Plan
 
 ### Phase 1: Quick Wins (Day 1)
-- [ ] 1.1 Item count on template folders
+- [x] 1.1 Item count on template folders
 
 ### Phase 2: Core Polish (Days 2-3)
 - [ ] 2.1 Duplicate template
