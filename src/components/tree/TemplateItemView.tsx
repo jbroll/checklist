@@ -327,6 +327,12 @@ export function TemplateItemView({
                   <Pencil className="mr-2 h-4 w-4" />
                   Rename
                 </DropdownMenuItem>
+                {!isCategory && onEditNote && (
+                  <DropdownMenuItem onClick={() => onEditNote(item.id)}>
+                    <StickyNote className="mr-2 h-4 w-4" />
+                    Edit Note
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete

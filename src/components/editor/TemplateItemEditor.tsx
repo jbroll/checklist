@@ -13,6 +13,7 @@ import {
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Folder } from 'lucide-react';
 import { useState } from 'react';
+import { NoteEditorDialog } from '@/components/session/NoteEditorDialog';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
 import { useDialog } from '@/lib/dialog-context';
@@ -36,6 +37,10 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [noteEditorState, setNoteEditorState] = useState<{
+    open: boolean;
+    itemId: string | null;
+  }>({ open: false, itemId: null });
   const { showConfirm } = useDialog();
 
   // Configure sensors for drag detection
@@ -99,6 +104,21 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, itemId);
     }
   };
+
+  const handleEditNote = (itemId: string) => {
+    setNoteEditorState({ open: true, itemId });
+  };
+
+  const handleSaveNote = (note: string) => {
+    if (!me || !noteEditorState.itemId) return;
+    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+    ItemService.updateItemNotes(me, template.$jazz.id, noteEditorState.itemId, note);
+  };
+
+  // Get the item being edited for the note dialog
+  const noteEditingItem = noteEditorState.itemId
+    ? items.find((i) => i?.id === noteEditorState.itemId)
+    : null;
 
   // Helper function to get all descendant IDs for an item (including the item itself)
   const getAllDescendantIds = (itemId: string): string[] => {
@@ -332,6 +352,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
           onRename={handleRenameItem}
           onDelete={handleDeleteItem}
           onToggleExpand={handleToggleExpand}
+          onEditNote={handleEditNote}
         />
         {/* Reorder zone after each sibling */}
         <ReorderDropZone
@@ -438,6 +459,16 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
             onAddItem={handleAddItem}
             onAddCategory={handleAddCategory}
             folderName={template.name}
+          />
+
+          {/* Note Editor Dialog */}
+          <NoteEditorDialog
+            open={noteEditorState.open}
+            onOpenChange={(open) => setNoteEditorState((prev) => ({ ...prev, open }))}
+            itemName={noteEditingItem?.name || ''}
+            note={noteEditingItem?.notes || ''}
+            onSave={handleSaveNote}
+            noteType="template"
           />
         </div>
       </div>
