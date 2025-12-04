@@ -14,6 +14,7 @@ import { Package, Pencil, Plus } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
+import { ItemInput, type ItemInputValue } from '@/components/ui/ItemInput';
 import { useAccount } from '@/lib/jazz';
 import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
@@ -40,10 +41,8 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const { me } = useAccount<typeof Account>();
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // Insertion point in ADDING mode
   const [currentItemId, setCurrentItemId] = useState<string | null>(null); // Current item in NORMAL mode
-  const [newItemType, setNewItemType] = useState<'item' | 'category'>('item'); // Type for new items
   const [zoneExpanded, setZoneExpanded] = useState({
     available: true,
     selected: true,
@@ -368,25 +367,21 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const noteEditingTemplateNote =
     noteEditingZone !== 'available' ? noteEditingItem?.notes : undefined;
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedName = newItemName.trim();
-    if (!trimmedName) return;
-
+  const handleAddItem = (value: ItemInputValue) => {
     // Calculate insertion point based on selected item
     const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
       template,
       selectedItemId,
     );
 
-    // Add item or category based on toggle
+    // Add item or category based on type
     const newItemId =
-      newItemType === 'category'
+      value.type === 'category'
         ? templateService.createCategory(
             // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
             me,
             template.$jazz.id,
-            trimmedName,
+            value.name,
             parentPath,
             sortOrder,
           )
@@ -394,13 +389,12 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
             // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
             me,
             template.$jazz.id,
-            trimmedName,
+            value.name,
             parentPath,
-            '',
+            value.defaultQuantity || '',
             sortOrder,
           );
 
-    setNewItemName('');
     // Select the newly created item for consecutive insertion
     setSelectedItemId(newItemId);
   };
@@ -734,48 +728,14 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
             {/* Add Item Form */}
             {showAddForm && (
               <div className="border-b border-divider-primary bg-surface-secondary px-3 py-3 sm:px-4">
-                <form onSubmit={handleAddItem} className="flex flex-col gap-2 sm:flex-row">
-                  <div className="flex gap-2 flex-1">
-                    <input
-                      type="text"
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      placeholder={newItemType === 'category' ? 'Category name...' : 'Item name...'}
-                      className="flex-1 min-w-0 rounded border border-divider-primary bg-surface-elevated px-3 py-2 text-base text-content-primary placeholder:text-content-disabled focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                    <button
-                      type="submit"
-                      className="flex items-center justify-center rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 shrink-0"
-                      aria-label="Add item"
-                    >
-                      <Plus className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3 rounded border border-divider-primary bg-surface-elevated px-3 py-2 sm:shrink-0">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="itemType"
-                        value="item"
-                        checked={newItemType === 'item'}
-                        onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
-                        className="h-4 w-4 border-divider-tertiary text-green-600 focus:ring-green-500"
-                      />
-                      <span className="text-base text-content-primary">Item</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="itemType"
-                        value="category"
-                        checked={newItemType === 'category'}
-                        onChange={(e) => setNewItemType(e.target.value as 'item' | 'category')}
-                        className="h-4 w-4 border-divider-tertiary text-green-600 focus:ring-green-500"
-                      />
-                      <span className="text-base text-content-primary">Category</span>
-                    </label>
-                  </div>
-                </form>
+                <ItemInput
+                  onSubmit={handleAddItem}
+                  onCancel={() => setShowAddForm(false)}
+                  showTypeToggle={true}
+                  showQuantityField={false}
+                  clearOnSubmit={true}
+                  autoFocus={true}
+                />
               </div>
             )}
 

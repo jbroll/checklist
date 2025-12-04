@@ -1,16 +1,11 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FormField } from '@/components/ui/form-field';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ItemInput, type ItemInputValue } from '@/components/ui/ItemInput';
 
 interface AddItemDialogProps {
   open: boolean;
@@ -27,31 +22,16 @@ export function AddItemDialog({
   onAddCategory,
   folderName,
 }: AddItemDialogProps) {
-  const [itemType, setItemType] = useState<'item' | 'category'>('item');
-  const [name, setName] = useState('');
-  const [defaultQuantity, setDefaultQuantity] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (name.trim()) {
-      if (itemType === 'item') {
-        onAddItem(name.trim(), defaultQuantity.trim() || undefined);
-      } else {
-        onAddCategory(name.trim());
-      }
-      handleReset();
-      onOpenChange(false);
+  const handleSubmit = (value: ItemInputValue) => {
+    if (value.type === 'item') {
+      onAddItem(value.name, value.defaultQuantity);
+    } else {
+      onAddCategory(value.name);
     }
-  };
-
-  const handleReset = () => {
-    setName('');
-    setDefaultQuantity('');
-    setItemType('item');
+    onOpenChange(false);
   };
 
   const handleCancel = () => {
-    handleReset();
     onOpenChange(false);
   };
 
@@ -59,81 +39,22 @@ export function AddItemDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add {itemType === 'item' ? 'Item' : 'Category'}</DialogTitle>
+          <DialogTitle>Add Item or Category</DialogTitle>
           <DialogDescription>
-            {folderName
-              ? `Add a ${itemType} to "${folderName}"`
-              : `Add a new ${itemType} to your template`}
+            {folderName ? `Add to "${folderName}"` : 'Add a new item or category to your template'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            {/* Type Toggle */}
-            <div className="grid gap-2">
-              <Label>Type</Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setItemType('item')}
-                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                    itemType === 'item'
-                      ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : 'border-divider-tertiary bg-surface-primary text-content-secondary hover:bg-interactive-hover'
-                  }`}
-                >
-                  Item
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setItemType('category')}
-                  className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                    itemType === 'category'
-                      ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : 'border-divider-tertiary bg-surface-primary text-content-secondary hover:bg-interactive-hover'
-                  }`}
-                >
-                  Category
-                </button>
-              </div>
-            </div>
-
-            {/* Name */}
-            <FormField label="Name" htmlFor="name" required>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={
-                  itemType === 'item' ? 'e.g., Apples, Milk, Bread' : 'e.g., Produce, Dairy'
-                }
-                autoFocus
-              />
-            </FormField>
-
-            {/* Item-specific: Default Quantity */}
-            {itemType === 'item' && (
-              <FormField label="Default Quantity (Optional)" htmlFor="default-quantity">
-                <Input
-                  id="default-quantity"
-                  type="text"
-                  value={defaultQuantity}
-                  onChange={(e) => setDefaultQuantity(e.target.value)}
-                  placeholder="e.g., 2 lbs, 1 gallon, 6 pack"
-                />
-              </FormField>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button type="button" onClick={handleCancel} variant="secondary">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim()} variant="primary">
-              Add {itemType === 'item' ? 'Item' : 'Category'}
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className="py-4">
+          <ItemInput
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            showTypeToggle={true}
+            showQuantityField={true}
+            clearOnSubmit={false}
+            autoFocus={true}
+            variant="stacked"
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

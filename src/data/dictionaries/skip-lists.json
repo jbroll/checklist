@@ -1,0 +1,256 @@
+{
+  "version": "1.0.0",
+  "units": [
+    {
+      "canonical": "pound",
+      "variations": ["lb", "lbs", "pound", "pounds"],
+      "category": "weight"
+    },
+    {
+      "canonical": "ounce",
+      "variations": ["oz", "ounce", "ounces"],
+      "category": "weight"
+    },
+    {
+      "canonical": "kilogram",
+      "variations": ["kg", "kilo", "kilos", "kilogram", "kilograms"],
+      "category": "weight"
+    },
+    {
+      "canonical": "gram",
+      "variations": ["g", "gram", "grams"],
+      "category": "weight"
+    },
+    {
+      "canonical": "gallon",
+      "variations": ["gal", "gallon", "gallons"],
+      "category": "volume"
+    },
+    {
+      "canonical": "quart",
+      "variations": ["qt", "quart", "quarts"],
+      "category": "volume"
+    },
+    {
+      "canonical": "pint",
+      "variations": ["pt", "pint", "pints"],
+      "category": "volume"
+    },
+    {
+      "canonical": "cup",
+      "variations": ["cup", "cups"],
+      "category": "volume"
+    },
+    {
+      "canonical": "liter",
+      "variations": ["l", "liter", "liters", "litre", "litres"],
+      "category": "volume"
+    },
+    {
+      "canonical": "milliliter",
+      "variations": ["ml", "milliliter", "milliliters"],
+      "category": "volume"
+    },
+    {
+      "canonical": "dozen",
+      "variations": ["dozen", "doz"],
+      "category": "count"
+    },
+    {
+      "canonical": "pack",
+      "variations": ["pack", "packs", "pk"],
+      "category": "count"
+    },
+    {
+      "canonical": "box",
+      "variations": ["box", "boxes"],
+      "category": "count"
+    },
+    {
+      "canonical": "bag",
+      "variations": ["bag", "bags"],
+      "category": "count"
+    },
+    {
+      "canonical": "can",
+      "variations": ["can", "cans"],
+      "category": "count"
+    },
+    {
+      "canonical": "jar",
+      "variations": ["jar", "jars"],
+      "category": "count"
+    },
+    {
+      "canonical": "bottle",
+      "variations": ["bottle", "bottles"],
+      "category": "count"
+    },
+    {
+      "canonical": "bunch",
+      "variations": ["bunch", "bunches"],
+      "category": "count"
+    },
+    {
+      "canonical": "head",
+      "variations": ["head", "heads"],
+      "category": "count"
+    },
+    {
+      "canonical": "piece",
+      "variations": ["piece", "pieces", "pc", "pcs"],
+      "category": "count"
+    },
+    {
+      "canonical": "inch",
+      "variations": ["in", "inch", "inches", "\""],
+      "category": "length"
+    },
+    {
+      "canonical": "foot",
+      "variations": ["ft", "foot", "feet", "'"],
+      "category": "length"
+    }
+  ],
+  "sizes": [
+    "small",
+    "medium",
+    "large",
+    "xl",
+    "extra-large",
+    "extra large",
+    "jumbo",
+    "mini",
+    "tiny",
+    "giant",
+    "family-size",
+    "family size",
+    "travel-size",
+    "travel size",
+    "snack-size",
+    "snack size",
+    "king-size",
+    "king size",
+    "regular",
+    "standard"
+  ],
+  "modifiers": [
+    "organic",
+    "natural",
+    "fresh",
+    "frozen",
+    "canned",
+    "dried",
+    "raw",
+    "cooked",
+    "uncooked",
+    "boneless",
+    "bone-in",
+    "skinless",
+    "skin-on",
+    "lean",
+    "extra-lean",
+    "low-fat",
+    "fat-free",
+    "nonfat",
+    "whole",
+    "skim",
+    "2%",
+    "1%",
+    "reduced-fat",
+    "low-sodium",
+    "no-salt",
+    "unsalted",
+    "salted",
+    "sugar-free",
+    "no-sugar",
+    "unsweetened",
+    "sweetened",
+    "gluten-free",
+    "dairy-free",
+    "lactose-free",
+    "vegan",
+    "vegetarian",
+    "kosher",
+    "halal",
+    "grass-fed",
+    "grain-fed",
+    "free-range",
+    "cage-free",
+    "wild-caught",
+    "farm-raised",
+    "smoked",
+    "cured",
+    "uncured",
+    "sliced",
+    "diced",
+    "chopped",
+    "minced",
+    "shredded",
+    "grated",
+    "whole",
+    "cut",
+    "peeled",
+    "unpeeled",
+    "pitted",
+    "seedless",
+    "ripe",
+    "unripe",
+    "green",
+    "yellow",
+    "red",
+    "white",
+    "brown",
+    "black",
+    "plain",
+    "flavored",
+    "original",
+    "classic",
+    "premium",
+    "value",
+    "generic",
+    "store-brand",
+    "name-brand"
+  ],
+  "brands": [
+    "kirkland",
+    "great value",
+    "market pantry",
+    "good & gather",
+    "simple truth",
+    "o organics",
+    "365",
+    "whole foods",
+    "trader joes",
+    "aldi",
+    "kroger",
+    "safeway",
+    "publix",
+    "wegmans",
+    "costco",
+    "sams",
+    "bjs"
+  ],
+  "quantityWords": [
+    "a",
+    "an",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "half",
+    "quarter",
+    "couple",
+    "few",
+    "several",
+    "some"
+  ]
+}
