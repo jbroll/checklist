@@ -588,9 +588,11 @@ The hardware dictionary now contains **1,362 unique items** across **16 categori
 5. ~~Iteration 4 - Deep dive on fasteners (entire aisle at HD/Lowe's)~~ ✅ Done
 6. ~~Iteration 5 - Expand to 1,500+ items based on inventory analysis~~ ✅ Done
 7. ~~Iteration 6 - Deduplication & size coverage audit~~ ✅ Done
-8. Review aliases and add common variations
-9. Test against real hardware shopping lists
-10. Integrate with domain loader and categorization system
+8. ~~Integrate with domain loader and categorization system~~ ✅ Done (December 2025)
+9. ~~Multi-domain autocomplete with LRU caching~~ ✅ Done (December 2025)
+10. ~~ProfileDialog domain selection (Off, Grocery, Hardware, All)~~ ✅ Done (December 2025)
+11. Review aliases and add common variations
+12. Test against real hardware shopping lists
 
 ---
 

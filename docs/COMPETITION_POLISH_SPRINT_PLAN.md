@@ -349,6 +349,8 @@ After sprint completion, Bubblelist should:
 | Dark mode | ❌ | ✅ Done | ✅ Most |
 | Keyboard shortcuts | ❌ | ⏳ Planned | ⚠️ Some |
 | PWA install | ✅ | ✅ Done | ⚠️ Few |
+| **Auto-categorization** | ❌ | ✅ Done | ✅ Some |
+| **Autocomplete suggestions** | ❌ | ✅ Done | ✅ Most |
 
 **Maintained Unique Advantages:**
 - ✅ Template-session separation (still unique)
@@ -356,6 +358,13 @@ After sprint completion, Bubblelist should:
 - ✅ Nested categories (unique)
 - ✅ Encrypted sync (rare)
 - ✅ True offline-first (rare)
+
+**New Competitive Features:**
+- ✅ Auto-categorization with 2,022 grocery items (matches AnyList, Bring!)
+- ✅ Hardware domain with 1,362 items across 16 categories
+- ✅ Multi-domain autocomplete (Grocery, Hardware, All) with LRU caching
+- ✅ Fuzzy autocomplete with quantity parsing
+- ✅ Global domain selection in ProfileDialog + per-template overrides
 
 ---
 

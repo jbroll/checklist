@@ -3,6 +3,7 @@
 A strategy for building a comprehensive grocery item categorization database for Bubblelist.
 
 *Created: December 2025*
+*Status: ✅ IMPLEMENTED - December 2025*
 
 ---
 
@@ -10,12 +11,25 @@ A strategy for building a comprehensive grocery item categorization database for
 
 **Goal:** Build a ~2,500 item grocery dictionary optimized for shopping list categorization.
 
+**Result:** ✅ **2,022 items across 18 store-layout categories**
+
 **Approach:** Hybrid strategy combining:
 1. USDA FoodData Central (public domain) for base item coverage
 2. Manual curation for store-aisle category mapping
 3. Alias generation for natural language variations
 
 **Key Insight:** USDA categories are *nutritional* (e.g., "Dairy and Egg Products"), not *store-layout* (e.g., separate "Dairy" and "Eggs" aisles). We need a mapping layer.
+
+### Implementation Summary
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| SR Legacy dictionary | ✅ Complete | `src/data/dictionaries/grocery.json` |
+| Category mapping | ✅ Complete | `scripts/grocery-dictionary/config/category-mapping.json` |
+| Generator script | ✅ Complete | `scripts/grocery-dictionary/generate-dictionary.cjs` |
+| Skip-lists | ✅ Complete | `src/data/dictionaries/skip-lists.json` |
+| Test suite | ✅ Complete | `src/lib/categorization/__tests__/` |
+| Branded foods | ⏳ Downloaded, not integrated | 452,998 items available |
 
 ---
 
@@ -387,17 +401,18 @@ const DEFAULT_UNITS: Record<string, string> = {
 
 ## Implementation Timeline
 
-| Phase | Description | Effort | Dependencies |
-|-------|-------------|--------|--------------|
-| 1 | USDA extraction script | 2-3 hours | API key |
-| 2 | Category mapping | 2-3 hours | Phase 1 |
-| 3 | Name normalization | 1-2 hours | Phase 2 |
-| 4 | Alias generation | 3-4 hours | Phase 3 + manual lists |
-| 5 | Manual curation | 4-6 hours | Phase 4 |
-| 6 | Subcategory assignment | 2-3 hours | Phase 5 |
-| 7 | Default units | 1-2 hours | Phase 6 |
-| Validation | Testing & fixes | 2-3 hours | All phases |
-| **Total** | | **18-26 hours** | |
+✅ **All phases completed - December 2025**
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | USDA extraction script | ✅ Complete |
+| 2 | Category mapping | ✅ Complete (352 USDA → 18 store categories) |
+| 3 | Name normalization | ✅ Complete |
+| 4 | Alias generation | ✅ Complete |
+| 5 | Manual curation | ✅ Complete |
+| 6 | Subcategory assignment | ✅ Complete |
+| 7 | Default units | ✅ Complete |
+| Validation | Testing & fixes | ✅ Complete (53 tests passing) |
 
 ---
 

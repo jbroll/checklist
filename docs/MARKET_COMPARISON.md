@@ -318,7 +318,7 @@ Simple notes and checklists with Google integration.
 | **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Offline support** | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
 | **List sharing** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Auto-categorization** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Auto-categorization** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ |
 | **Recipe integration** | ✅ | ⚠️ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
 | **Barcode scanning** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **Hierarchical folders** | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -466,12 +466,13 @@ These are expected by users. Missing any is a dealbreaker.
 | Hierarchical nesting | ✅ | Workflowy's killer feature. Scales from simple to complex. |
 | True template reuse | ✅ **Unique** | No competitor separates template from session state. |
 | Encrypted sync | ✅ | Better than plaintext (most competitors). |
-| Item quantity | ✅ Schema | `defaultQuantity` field exists. Needs UI exposure. |
-| Item notes | ✅ Schema | Template + session-level notes. Needs UI exposure. |
+| Item quantity | ✅ | `defaultQuantity` field with UI in ItemInput. |
+| Item notes | ✅ | Template + session-level notes with modal editor. |
 | Activity timestamps | ✅ Schema | `selectedAt`, `checkedAt`, `lastActivityAt`. Needs UI exposure. |
-| Multiple view modes | ✅ Partial | `zone-in-hierarchy` and `flat` modes exist. |
+| Multiple view modes | ✅ | `zone-in-hierarchy` and `flat` modes exist. |
+| **Auto-categorization** | ✅ | 2,022 grocery items, fuzzy matching, auto-creates categories. |
+| **Autocomplete suggestions** | ✅ | Debounced search with keyboard navigation. |
 | Search/filtering | ❌ | Filter items by name across templates. Zero schema changes needed. |
-| Smart input parsing | ❌ | Parse "milk 2 gal" → name + quantity. AI at input, nothing stored. |
 
 ### What's in Schema vs Exposed in UI
 
