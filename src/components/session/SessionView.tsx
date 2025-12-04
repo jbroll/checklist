@@ -19,6 +19,7 @@ import { useAccount } from '@/lib/jazz';
 import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
+import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -368,32 +369,75 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     noteEditingZone !== 'available' ? noteEditingItem?.notes : undefined;
 
   const handleAddItem = (value: ItemInputValue) => {
-    // Calculate insertion point based on selected item
-    const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
+    // For categories, use standard insertion point logic
+    if (value.type === 'category') {
+      const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
+        template,
+        selectedItemId,
+      );
+      const newItemId = templateService.createCategory(
+        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+        me,
+        template.$jazz.id,
+        value.name,
+        parentPath,
+        sortOrder,
+      );
+      setSelectedItemId(newItemId);
+      return;
+    }
+
+    // For items, check if auto-categorization is enabled
+    const autoCategorizeEnabled = userSettingsService.getTemplateAutoCategorizeEnabled(
+      me,
       template,
-      selectedItemId,
     );
 
-    // Add item or category based on type
-    const newItemId =
-      value.type === 'category'
-        ? templateService.createCategory(
-            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-            me,
-            template.$jazz.id,
-            value.name,
-            parentPath,
-            sortOrder,
-          )
-        : templateService.createItem(
-            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
-            me,
-            template.$jazz.id,
-            value.name,
-            parentPath,
-            value.defaultQuantity || '',
-            sortOrder,
-          );
+    let finalParentPath: string | undefined;
+    let finalSortOrder: number | undefined;
+
+    // If categoryInfo provided and auto-categorization is enabled, place item in category
+    if (value.categoryInfo && autoCategorizeEnabled) {
+      // Use the most specific category available (subcategory if exists, otherwise category)
+      const categoryName = value.categoryInfo.subcategoryName || value.categoryInfo.categoryName;
+
+      // Find existing category with this name at root level (path equals the name for root-level items)
+      const existingCategory = activeItems.find(
+        (item) =>
+          item.type === 'category' && item.name === categoryName && item.path === categoryName,
+      );
+
+      if (existingCategory) {
+        // Use existing category's path
+        finalParentPath = existingCategory.path;
+      } else {
+        // Create the category first
+        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+        templateService.createCategory(me, template.$jazz.id, categoryName, undefined);
+
+        // For root-level categories, path equals the category name (no sanitization)
+        finalParentPath = categoryName;
+      }
+      // Let sortOrder be computed automatically (append to end of category)
+    } else {
+      // No auto-categorization - use standard insertion point logic
+      const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
+        template,
+        selectedItemId,
+      );
+      finalParentPath = parentPath;
+      finalSortOrder = sortOrder;
+    }
+
+    const newItemId = templateService.createItem(
+      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
+      me,
+      template.$jazz.id,
+      value.name,
+      finalParentPath,
+      value.defaultQuantity || '',
+      finalSortOrder,
+    );
 
     // Select the newly created item for consecutive insertion
     setSelectedItemId(newItemId);

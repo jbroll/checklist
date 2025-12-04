@@ -20,6 +20,7 @@ import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import type { Account, Template, TemplateItem } from '@/schemas';
 import * as ItemService from '@/services/templateService';
+import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
@@ -77,9 +78,50 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
   // Build hierarchical tree structure
   const itemTree = buildItemTree(activeItems);
 
-  const handleAddItem = (name: string, defaultQuantity?: string) => {
+  const handleAddItem = (
+    name: string,
+    defaultQuantity?: string,
+    categoryInfo?: {
+      category: string;
+      categoryName: string;
+      subcategory?: string;
+      subcategoryName?: string;
+    },
+  ) => {
+    // Check if auto-categorization is enabled for this template
+    const autoCategorizeEnabled = userSettingsService.getTemplateAutoCategorizeEnabled(
+      me,
+      template,
+    );
+
+    let parentPath: string | undefined;
+
+    // If category info provided and auto-categorization is enabled, place item in category
+    if (categoryInfo && autoCategorizeEnabled) {
+      // Use the most specific category available (subcategory if exists, otherwise category)
+      const categoryName = categoryInfo.subcategoryName || categoryInfo.categoryName;
+
+      // Find existing category with this name at root level (path equals the name for root-level items)
+      const existingCategory = activeItems.find(
+        (item) =>
+          item.type === 'category' && item.name === categoryName && item.path === categoryName,
+      );
+
+      if (existingCategory) {
+        // Use existing category's path
+        parentPath = existingCategory.path;
+      } else {
+        // Create the category first
+        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
+        ItemService.createCategory(me, template.$jazz.id, categoryName, undefined);
+
+        // For root-level categories, path equals the category name (no sanitization)
+        parentPath = categoryName;
+      }
+    }
+
     // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
-    ItemService.createItem(me, template.$jazz.id, name, undefined, defaultQuantity);
+    ItemService.createItem(me, template.$jazz.id, name, parentPath, defaultQuantity);
   };
 
   const handleAddCategory = (name: string) => {

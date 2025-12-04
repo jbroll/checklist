@@ -13,6 +13,7 @@ import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import { exposeServicesToWindow } from '@/services/testHelpers';
+import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
@@ -131,6 +132,12 @@ export function AppContainer({
             onDeleteAccount={onDeleteAccount}
             onSwitchView={() => onViewModeChange('classic')}
             switchViewLabel={switchViewLabel}
+            enableAutocomplete={userSettingsService.getEnableAutocomplete(me)}
+            enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
+            onToggleAutocomplete={() => userSettingsService.toggleEnableAutocomplete(me)}
+            onToggleAutoCategorization={() =>
+              userSettingsService.toggleEnableAutoCategorization(me)
+            }
           />
         )}
       </>
@@ -352,6 +359,12 @@ export function AppContainer({
             onDeleteAccount={onDeleteAccount}
             onSwitchView={() => onViewModeChange('simplified')}
             switchViewLabel={switchViewLabel}
+            enableAutocomplete={userSettingsService.getEnableAutocomplete(me)}
+            enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
+            onToggleAutocomplete={() => userSettingsService.toggleEnableAutocomplete(me)}
+            onToggleAutoCategorization={() =>
+              userSettingsService.toggleEnableAutoCategorization(me)
+            }
           />
         )}
       </main>

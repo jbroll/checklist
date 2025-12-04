@@ -85,8 +85,8 @@ export function createCategory(
   // Generate path from name (no normalization)
   const path = createChildPath(parentPath, name);
 
-  // Check for duplicates at the same level
-  const existingItem = template.items.find((i: TemplateItem) => i.path === path);
+  // Check for duplicates at the same level (excluding archived items)
+  const existingItem = template.items.find((i: TemplateItem) => i.path === path && !i.archived);
   if (existingItem) {
     throw new Error(`Category already exists at path: ${path}`);
   }
@@ -126,8 +126,8 @@ export function createItem(
   // Generate path from name (no normalization)
   const path = createChildPath(parentPath, name);
 
-  // Check for duplicates at the same level
-  const existingItem = template.items.find((i: TemplateItem) => i.path === path);
+  // Check for duplicates at the same level (excluding archived items)
+  const existingItem = template.items.find((i: TemplateItem) => i.path === path && !i.archived);
   if (existingItem) {
     throw new Error(`Item already exists at path: ${path}`);
   }

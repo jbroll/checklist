@@ -11,11 +11,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCategorization } from '@/lib/categorization';
+import type { Suggestion } from '@/lib/categorization/types';
 
 export interface ItemInputValue {
   name: string;
   type: 'item' | 'category';
   defaultQuantity?: string;
+  /** Category info from autocomplete suggestion (for auto-categorization) */
+  categoryInfo?: {
+    category: string;
+    categoryName: string;
+    subcategory?: string;
+    subcategoryName?: string;
+  };
 }
 
 export interface ItemInputProps {
@@ -58,6 +66,13 @@ export function ItemInput({
   const [defaultQuantity, setDefaultQuantity] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  // Store category info from selected suggestion for auto-categorization
+  const [selectedCategoryInfo, setSelectedCategoryInfo] = useState<{
+    category: string;
+    categoryName: string;
+    subcategory?: string;
+    subcategoryName?: string;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { suggestions, setInput, clearSuggestions, getCategoryDisplay } = useCategorization({
@@ -82,6 +97,7 @@ export function ItemInput({
     clearSuggestions();
     setSelectedIndex(-1);
     setShowSuggestions(true);
+    setSelectedCategoryInfo(null);
   }, [clearSuggestions]);
 
   const handleSubmit = useCallback(
@@ -94,6 +110,7 @@ export function ItemInput({
         name: trimmedName,
         type,
         defaultQuantity: defaultQuantity.trim() || undefined,
+        categoryInfo: selectedCategoryInfo ?? undefined,
       });
 
       if (clearOnSubmit) {
@@ -101,7 +118,7 @@ export function ItemInput({
         inputRef.current?.focus();
       }
     },
-    [name, type, defaultQuantity, onSubmit, clearOnSubmit, handleReset],
+    [name, type, defaultQuantity, selectedCategoryInfo, onSubmit, clearOnSubmit, handleReset],
   );
 
   const handleNameChange = useCallback(
@@ -113,16 +130,25 @@ export function ItemInput({
       }
       setSelectedIndex(-1);
       setShowSuggestions(true);
+      // Clear category info when user manually types (no longer using autocomplete)
+      setSelectedCategoryInfo(null);
     },
     [type, setInput],
   );
 
   const handleSelectSuggestion = useCallback(
-    (text: string) => {
-      setName(text);
+    (suggestion: Suggestion) => {
+      setName(suggestion.text);
       setShowSuggestions(false);
       clearSuggestions();
       setSelectedIndex(-1);
+      // Store category info for auto-categorization
+      setSelectedCategoryInfo({
+        category: suggestion.category,
+        categoryName: suggestion.categoryName,
+        subcategory: suggestion.subcategory,
+        subcategoryName: suggestion.subcategoryName,
+      });
       inputRef.current?.focus();
     },
     [clearSuggestions],
@@ -152,7 +178,7 @@ export function ItemInput({
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
         } else if ((e.key === 'Tab' || e.key === 'Enter') && selectedIndex >= 0) {
           e.preventDefault();
-          handleSelectSuggestion(visibleSuggestions[selectedIndex].text);
+          handleSelectSuggestion(visibleSuggestions[selectedIndex]);
         }
       }
     },
@@ -234,7 +260,7 @@ export function ItemInput({
                 <li key={suggestion.text}>
                   <button
                     type="button"
-                    onClick={() => handleSelectSuggestion(suggestion.text)}
+                    onClick={() => handleSelectSuggestion(suggestion)}
                     className={`w-full px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center justify-between ${
                       index === selectedIndex ? 'bg-green-100 dark:bg-green-900/50' : ''
                     }`}

@@ -1,4 +1,14 @@
-import { LayoutGrid, LogOut, Moon, Sun, User, UserX, X } from 'lucide-react';
+import {
+  FolderSearch,
+  LayoutGrid,
+  LogOut,
+  Moon,
+  Sparkles,
+  Sun,
+  User,
+  UserX,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +27,11 @@ interface ProfileDialogProps {
   onDeleteAccount: () => void;
   onSwitchView?: () => void;
   switchViewLabel?: string;
+  // User settings
+  enableAutocomplete?: boolean;
+  enableAutoCategorization?: boolean;
+  onToggleAutocomplete?: () => void;
+  onToggleAutoCategorization?: () => void;
 }
 
 export function ProfileDialog({
@@ -26,6 +41,10 @@ export function ProfileDialog({
   onDeleteAccount,
   onSwitchView,
   switchViewLabel = 'Basic View',
+  enableAutocomplete = true,
+  enableAutoCategorization = true,
+  onToggleAutocomplete,
+  onToggleAutoCategorization,
 }: ProfileDialogProps) {
   const { isDark, toggleTheme } = useTheme();
 
@@ -85,6 +104,53 @@ export function ProfileDialog({
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             {isDark ? 'Light Mode' : 'Dark Mode'}
           </Button>
+
+          {/* Autocomplete and Auto-categorization settings */}
+          {onToggleAutocomplete && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between gap-2"
+              onClick={onToggleAutocomplete}
+            >
+              <span className="flex items-center gap-2">
+                <FolderSearch className="h-4 w-4" />
+                Autocomplete
+              </span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded ${
+                  enableAutocomplete
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                    : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                }`}
+              >
+                {enableAutocomplete ? 'On' : 'Off'}
+              </span>
+            </Button>
+          )}
+          {onToggleAutoCategorization && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between gap-2"
+              onClick={onToggleAutoCategorization}
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Auto-categorize
+              </span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded ${
+                  enableAutoCategorization
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                    : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                }`}
+              >
+                {enableAutoCategorization ? 'On' : 'Off'}
+              </span>
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="outline"

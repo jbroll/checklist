@@ -19,6 +19,7 @@ import { ShareDialog } from '@/components/sharing/ShareDialog';
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -27,6 +28,7 @@ import {
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, FolderNode, TemplateItem } from '@/schemas';
 import * as folderService from '@/services/folderService';
+import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { IndentedRow } from './IndentedRow';
 
@@ -309,6 +311,29 @@ export const FolderNodeView = memo(function FolderNodeView({
                   </DropdownMenuItem>
                   {isTemplate && (
                     <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem
+                        checked={userSettingsService.getTemplateAutocompleteEnabled(
+                          account,
+                          folder,
+                        )}
+                        onCheckedChange={() =>
+                          userSettingsService.toggleTemplateAutocomplete(account, folder)
+                        }
+                      >
+                        Autocomplete
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={userSettingsService.getTemplateAutoCategorizeEnabled(
+                          account,
+                          folder,
+                        )}
+                        onCheckedChange={() =>
+                          userSettingsService.toggleTemplateAutoCategorize(account, folder)
+                        }
+                      >
+                        Auto-categorize
+                      </DropdownMenuCheckboxItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                         <Upload className="mr-2 h-4 w-4" />

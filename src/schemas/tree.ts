@@ -134,6 +134,11 @@ export const FolderNode: any = co.map({
   ),
   showZoneHeadings: z.optional(z.boolean()),
 
+  // Per-template autocomplete/categorization settings (override global user settings)
+  // undefined = inherit from global user settings
+  autocompleteEnabled: z.optional(z.boolean()),
+  autoCategorizeEnabled: z.optional(z.boolean()),
+
   // Parent back-reference for breadcrumbs and path computation
   get parent() {
     return co.optional(FolderNode);

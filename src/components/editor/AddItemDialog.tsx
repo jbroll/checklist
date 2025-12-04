@@ -10,7 +10,16 @@ import { ItemInput, type ItemInputValue } from '@/components/ui/ItemInput';
 interface AddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddItem: (name: string, defaultQuantity?: string) => void;
+  onAddItem: (
+    name: string,
+    defaultQuantity?: string,
+    categoryInfo?: {
+      category: string;
+      categoryName: string;
+      subcategory?: string;
+      subcategoryName?: string;
+    },
+  ) => void;
   onAddCategory: (name: string) => void;
   folderName?: string;
 }
@@ -24,7 +33,7 @@ export function AddItemDialog({
 }: AddItemDialogProps) {
   const handleSubmit = (value: ItemInputValue) => {
     if (value.type === 'item') {
-      onAddItem(value.name, value.defaultQuantity);
+      onAddItem(value.name, value.defaultQuantity, value.categoryInfo);
     } else {
       onAddCategory(value.name);
     }

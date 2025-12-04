@@ -26,11 +26,26 @@ export const ViewState = co.map({
 });
 
 /**
+ * UserSettings - Global user preferences
+ *
+ * Controls autocomplete and auto-categorization behavior.
+ * These are defaults that can be overridden per-template.
+ */
+export const UserSettings = co.map({
+  // Enable autocomplete suggestions when adding items (default: true)
+  enableAutocomplete: z.boolean(),
+
+  // Enable auto-categorization when selecting from autocomplete (default: true)
+  enableAutoCategorization: z.boolean(),
+});
+
+/**
  * ListsRoot - Root schema with hierarchical folder tree
  *
  * Structure:
  * - folders: Hierarchical tree of FolderNode CoValues
  * - viewState: Per-user UI state (expand/collapse preferences)
+ * - userSettings: Global user preferences (autocomplete, auto-categorization)
  */
 export const ListsRoot = co.map({
   // Hierarchical folder tree - each FolderNode is a CoValue
@@ -38,6 +53,9 @@ export const ListsRoot = co.map({
 
   // Per-user view state (not shared with collaborators)
   viewState: co.optional(ViewState),
+
+  // Global user preferences
+  userSettings: co.optional(UserSettings),
 });
 
 /**
@@ -69,13 +87,23 @@ export const Account = co
         },
         { owner: account },
       );
-      account.$jazz.set('root', ListsRoot.create({ folders, viewState }, { owner: account }));
+      const userSettings = UserSettings.create(
+        {
+          enableAutocomplete: true,
+          enableAutoCategorization: true,
+        },
+        { owner: account },
+      );
+      account.$jazz.set(
+        'root',
+        ListsRoot.create({ folders, viewState, userSettings }, { owner: account }),
+      );
     }
 
     // Step 2: Load from cloud - this will replace the placeholder if cloud data exists
     // ensureLoaded() updates the account reference to point to cloud version when available
     const { root } = await account.$jazz.ensureLoaded({
-      resolve: { root: { folders: true, viewState: true } },
+      resolve: { root: { folders: true, viewState: true, userSettings: true } },
     });
 
     // Step 3: Fix structure if needed (for broken existing accounts)
@@ -95,6 +123,18 @@ export const Account = co
         { owner: account },
       );
       root.$jazz.set('viewState', viewState);
+    }
+
+    // Step 5: Initialize userSettings for existing accounts that don't have it
+    if (!root.$jazz.has('userSettings')) {
+      const userSettings = UserSettings.create(
+        {
+          enableAutocomplete: true,
+          enableAutoCategorization: true,
+        },
+        { owner: account },
+      );
+      root.$jazz.set('userSettings', userSettings);
     }
   });
 
