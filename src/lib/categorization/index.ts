@@ -24,23 +24,30 @@
 
 // Re-export from categorizer
 export type { CategorizeOptions } from './categorizer';
-
+export type { DomainCatalog, SearchResult } from './domainLoader';
 // Re-export from domain loader
 export {
+  clearAllCaches,
   clearDomainCache,
   getAvailableDomains,
   getCategory,
-  getDomain,
+  getCategorySync,
+  getDomainCatalog,
+  getDomainDisplayName,
   getDomainInfo,
+  getImplementedDomains,
   isDomainLoaded,
   loadDomain,
   loadDomainFromData,
   searchDomain,
+  searchDomainSync,
+  searchWithDomain,
 } from './domainLoader';
 // Re-export preprocessor
 export { createPreprocessor, Preprocessor } from './preprocessor';
 // Re-export types
 export type {
+  AutocompleteDomain,
   CategorizationResult,
   Category,
   DictionaryFile,

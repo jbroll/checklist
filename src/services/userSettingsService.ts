@@ -6,6 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import type { AutocompleteDomain } from '../lib/categorization/types';
 import { type Account, type FolderNode, UserSettings } from '../schemas';
 
 // ============================================================================
@@ -121,35 +122,94 @@ function ensureUserSettings(
 // ============================================================================
 
 /**
- * Get effective autocomplete setting for a template.
- * Returns template override if set, otherwise falls back to global setting.
+ * Default autocomplete domain when not explicitly set
  */
-export function getTemplateAutocompleteEnabled(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+const DEFAULT_AUTOCOMPLETE_DOMAIN: AutocompleteDomain = 'grocery';
+
+/**
+ * Get effective autocomplete domain for a template.
+ * Returns template override if set, otherwise falls back to default.
+ *
+ * @returns AutocompleteDomain - 'none' | 'grocery' | 'hardware' | 'all'
+ */
+export function getTemplateAutocompleteDomain(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   folder: InstanceOfSchema<typeof FolderNode> | any,
-): boolean {
-  // Template-level override takes precedence
-  if (folder?.autocompleteEnabled !== undefined) {
-    return folder.autocompleteEnabled;
+): AutocompleteDomain {
+  // Template-level setting takes precedence
+  if (folder?.autocompleteDomain !== undefined) {
+    return folder.autocompleteDomain as AutocompleteDomain;
   }
-  // Fall back to global setting
-  return getEnableAutocomplete(account);
+  // Fall back to default
+  return DEFAULT_AUTOCOMPLETE_DOMAIN;
 }
 
 /**
- * Get whether template has an explicit autocomplete override (not inherited)
+ * Get whether template has an explicit autocomplete domain set (not default)
+ */
+export function hasTemplateAutocompleteDomainSet(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  folder: InstanceOfSchema<typeof FolderNode> | any,
+): boolean {
+  return folder?.autocompleteDomain !== undefined;
+}
+
+/**
+ * Set template autocomplete domain
+ *
+ * @param domain - 'none' | 'grocery' | 'hardware' | 'all' | undefined (to reset to default)
+ */
+export function setTemplateAutocompleteDomain(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  folder: InstanceOfSchema<typeof FolderNode> | any,
+  domain: AutocompleteDomain | undefined,
+): void {
+  if (domain === undefined) {
+    // Clear setting - use default
+    folder.$jazz.set('autocompleteDomain', undefined);
+  } else {
+    folder.$jazz.set('autocompleteDomain', domain);
+  }
+}
+
+/**
+ * Check if autocomplete is effectively enabled for a template
+ * (domain is not 'none')
+ */
+export function isTemplateAutocompleteEnabled(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  folder: InstanceOfSchema<typeof FolderNode> | any,
+): boolean {
+  return getTemplateAutocompleteDomain(folder) !== 'none';
+}
+
+// Legacy compatibility functions - kept for backward compatibility during migration
+
+/**
+ * @deprecated Use getTemplateAutocompleteDomain instead
+ * Get effective autocomplete setting for a template (boolean compatibility).
+ */
+export function getTemplateAutocompleteEnabled(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  _account: InstanceOfSchema<typeof Account> | any,
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  folder: InstanceOfSchema<typeof FolderNode> | any,
+): boolean {
+  return isTemplateAutocompleteEnabled(folder);
+}
+
+/**
+ * @deprecated Use hasTemplateAutocompleteDomainSet instead
  */
 export function hasTemplateAutocompleteOverride(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   folder: InstanceOfSchema<typeof FolderNode> | any,
 ): boolean {
-  return folder?.autocompleteEnabled !== undefined;
+  return hasTemplateAutocompleteDomainSet(folder);
 }
 
 /**
- * Set template autocomplete override
+ * @deprecated Use setTemplateAutocompleteDomain instead
  */
 export function setTemplateAutocompleteEnabled(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
@@ -157,26 +217,24 @@ export function setTemplateAutocompleteEnabled(
   enabled: boolean | undefined,
 ): void {
   if (enabled === undefined) {
-    // Clear override - inherit from global
-    folder.$jazz.set('autocompleteEnabled', undefined);
+    setTemplateAutocompleteDomain(folder, undefined);
   } else {
-    folder.$jazz.set('autocompleteEnabled', enabled);
+    // Map boolean to domain: true -> default domain, false -> 'none'
+    setTemplateAutocompleteDomain(folder, enabled ? DEFAULT_AUTOCOMPLETE_DOMAIN : 'none');
   }
 }
 
 /**
- * Toggle template autocomplete setting.
- * If currently inherited, sets explicit override to opposite of inherited value.
- * If currently overridden, toggles the override value.
+ * @deprecated Use setTemplateAutocompleteDomain instead
  */
 export function toggleTemplateAutocomplete(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  _account: InstanceOfSchema<typeof Account> | any,
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   folder: InstanceOfSchema<typeof FolderNode> | any,
 ): void {
-  const current = getTemplateAutocompleteEnabled(account, folder);
-  setTemplateAutocompleteEnabled(folder, !current);
+  const current = isTemplateAutocompleteEnabled(folder);
+  setTemplateAutocompleteDomain(folder, current ? 'none' : DEFAULT_AUTOCOMPLETE_DOMAIN);
 }
 
 /**

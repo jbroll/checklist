@@ -1,21 +1,53 @@
 /**
  * Domain loader for auto-categorization
  *
- * Handles:
- * - Loading dictionary JSON files
- * - Creating fast-fuzzy Searcher instances
- * - Caching loaded domains
+ * Architecture:
+ * - DomainCatalog: Raw domain data (items, categories) loaded from JSON
+ * - CachedSearcher: A fast-fuzzy Searcher built from one or more catalogs
+ * - LRU Cache: Holds up to 3 searchers, evicting least recently used
+ *
+ * Keys in the cache:
+ * - Single domain: 'grocery', 'hardware', etc.
+ * - Combined domains: 'grocery+hardware' (sorted alphabetically)
  */
 
 import { Searcher } from 'fast-fuzzy';
-import type { Category, DictionaryFile, DictionaryItem, DomainConfig, DomainId } from './types';
+import type {
+  AutocompleteDomain,
+  Category,
+  DictionaryFile,
+  DictionaryItem,
+  DomainId,
+} from './types';
 
-// Cached domain configurations
-const domainCache = new Map<DomainId, LoadedDomain>();
+// =============================================================================
+// Types
+// =============================================================================
 
-// Searcher options type for our use case
+/**
+ * Raw catalog data loaded from a domain's JSON file
+ */
+export interface DomainCatalog {
+  domainId: DomainId;
+  displayName: string;
+  items: DictionaryItem[];
+  categories: Category[];
+  categoryMap: Map<string, Category>;
+}
+
+/**
+ * Item with search metadata, ready for indexing
+ */
+interface IndexedItem extends DictionaryItem {
+  domain: DomainId;
+  searchTerms: string;
+}
+
+/**
+ * Searcher options type for fast-fuzzy
+ */
 type SearcherOptions = {
-  keySelector: (item: DictionaryItem & { searchTerms: string }) => string;
+  keySelector: (item: IndexedItem) => string;
   threshold: number;
   ignoreCase: boolean;
   ignoreSymbols: boolean;
@@ -24,64 +56,154 @@ type SearcherOptions = {
 };
 
 /**
- * Internal representation of a loaded domain with Searcher
+ * Cached searcher with metadata
  */
-interface LoadedDomain extends DomainConfig {
-  searcher: Searcher<DictionaryItem & { searchTerms: string }, SearcherOptions>;
-  items: DictionaryItem[];
+interface CachedSearcher {
+  searcher: Searcher<IndexedItem, SearcherOptions>;
+  domainIds: DomainId[];
+  catalogs: DomainCatalog[];
 }
 
 /**
  * Search result from fast-fuzzy with match data
  */
 export interface SearchResult {
-  item: DictionaryItem;
+  item: DictionaryItem & { domain: DomainId };
   original: string;
   score: number;
 }
 
-/**
- * Load a domain from its dictionary file
- */
-export async function loadDomain(domainId: DomainId): Promise<void> {
-  if (domainCache.has(domainId)) {
-    return; // Already loaded
-  }
+// =============================================================================
+// State
+// =============================================================================
 
-  const dictionary = await loadDictionaryFile(domainId);
-  const domain = createDomainFromDictionary(dictionary);
-  domainCache.set(domainId, domain);
+// Raw catalog data cache (never evicted - small footprint)
+const catalogCache = new Map<DomainId, DomainCatalog>();
+
+// LRU cache for searchers (max 3 entries)
+const LRU_MAX_SIZE = 3;
+const searcherCache = new Map<string, CachedSearcher>();
+const searcherAccessOrder: string[] = []; // Most recent at end
+
+// =============================================================================
+// Domain Display Names
+// =============================================================================
+
+const DOMAIN_DISPLAY_NAMES: Record<DomainId, string> = {
+  grocery: 'Grocery',
+  hardware: 'Hardware',
+  packing: 'Packing',
+  moving: 'Moving',
+  camping: 'Camping',
+};
+
+/**
+ * Get display name for a domain ID
+ */
+export function getDomainDisplayName(domainId: DomainId): string {
+  return DOMAIN_DISPLAY_NAMES[domainId] || domainId;
+}
+
+// =============================================================================
+// Catalog Loading
+// =============================================================================
+
+/**
+ * Get list of domains that have dictionary files implemented
+ */
+export function getImplementedDomains(): DomainId[] {
+  return ['grocery', 'hardware'];
 }
 
 /**
- * Load dictionary JSON file for a domain
+ * Load a domain catalog from its JSON file
  */
-async function loadDictionaryFile(domainId: DomainId): Promise<DictionaryFile> {
+async function loadCatalog(domainId: DomainId): Promise<DomainCatalog> {
+  // Check cache first
+  const cached = catalogCache.get(domainId);
+  if (cached) return cached;
+
   // Dynamic import of JSON file
-  // In production, these would be in src/data/dictionaries/
   const dictionaryModule = await import(`../../data/dictionaries/${domainId}.json`);
-  return dictionaryModule.default as DictionaryFile;
-}
+  const dictionary = dictionaryModule.default as DictionaryFile;
 
-/**
- * Create domain configuration from dictionary data
- */
-function createDomainFromDictionary(dictionary: DictionaryFile): LoadedDomain {
   // Build category map for quick lookup
   const categoryMap = new Map<string, Category>();
   for (const category of dictionary.categories) {
     categoryMap.set(category.id, category);
   }
 
-  // Prepare items for fast-fuzzy
-  // Add searchTerms field combining name and aliases
-  const itemsWithSearchTerms = dictionary.items.map((item) => ({
-    ...item,
-    searchTerms: [item.name, ...(item.aliases || [])].join(' '),
-  }));
+  const catalog: DomainCatalog = {
+    domainId: dictionary.domain,
+    displayName: getDomainDisplayName(dictionary.domain),
+    items: dictionary.items,
+    categories: dictionary.categories,
+    categoryMap,
+  };
 
-  // Create fast-fuzzy Searcher
-  const searcher = new Searcher(itemsWithSearchTerms, {
+  catalogCache.set(domainId, catalog);
+  return catalog;
+}
+
+/**
+ * Load multiple domain catalogs
+ */
+async function loadCatalogs(domainIds: DomainId[]): Promise<DomainCatalog[]> {
+  return Promise.all(domainIds.map(loadCatalog));
+}
+
+// =============================================================================
+// LRU Cache Management
+// =============================================================================
+
+/**
+ * Generate cache key from domain IDs (sorted for consistency)
+ */
+function getCacheKey(domainIds: DomainId[]): string {
+  return [...domainIds].sort().join('+');
+}
+
+/**
+ * Touch a cache entry (move to most recently used)
+ */
+function touchCacheEntry(key: string): void {
+  const index = searcherAccessOrder.indexOf(key);
+  if (index !== -1) {
+    searcherAccessOrder.splice(index, 1);
+  }
+  searcherAccessOrder.push(key);
+}
+
+/**
+ * Evict least recently used entry if over capacity
+ */
+function evictIfNeeded(): void {
+  while (searcherCache.size >= LRU_MAX_SIZE && searcherAccessOrder.length > 0) {
+    const lruKey = searcherAccessOrder.shift();
+    if (lruKey) {
+      searcherCache.delete(lruKey);
+    }
+  }
+}
+
+// =============================================================================
+// Searcher Building
+// =============================================================================
+
+/**
+ * Build a searcher from an array of domain catalogs
+ */
+function buildSearcher(catalogs: DomainCatalog[]): Searcher<IndexedItem, SearcherOptions> {
+  // Flatten items from all catalogs, tagging each with its source domain
+  const allItems: IndexedItem[] = catalogs.flatMap((catalog) =>
+    catalog.items.map((item) => ({
+      ...item,
+      domain: catalog.domainId,
+      searchTerms: [item.name, ...(item.aliases || [])].join(' '),
+    })),
+  );
+
+  return new Searcher(allItems, {
     keySelector: (item) => item.searchTerms,
     threshold: 0.6,
     ignoreCase: true,
@@ -89,83 +211,77 @@ function createDomainFromDictionary(dictionary: DictionaryFile): LoadedDomain {
     normalizeWhitespace: true,
     returnMatchData: true,
   });
-
-  return {
-    id: dictionary.domain,
-    name: getDomainDisplayName(dictionary.domain),
-    categories: dictionary.categories,
-    categoryMap,
-    searcher,
-    items: dictionary.items,
-  };
 }
 
 /**
- * Get display name for a domain ID
+ * Get or create a cached searcher for the specified domains
  */
-function getDomainDisplayName(domainId: DomainId): string {
-  const names: Record<DomainId, string> = {
-    grocery: 'Grocery Store',
-    hardware: 'Hardware Store',
-    packing: 'Packing / Travel',
-    moving: 'Moving',
-    camping: 'Camping',
-  };
-  return names[domainId] || domainId;
-}
+async function getSearcher(domainIds: DomainId[]): Promise<CachedSearcher> {
+  const key = getCacheKey(domainIds);
 
-/**
- * Get a loaded domain by ID
- * Throws if domain not loaded
- */
-export function getDomain(domainId: DomainId): LoadedDomain {
-  const domain = domainCache.get(domainId);
-  if (!domain) {
-    throw new Error(`Domain "${domainId}" not loaded. Call loadDomain() first.`);
+  // Check cache
+  const cached = searcherCache.get(key);
+  if (cached) {
+    touchCacheEntry(key);
+    return cached;
   }
-  return domain;
+
+  // Load catalogs and build searcher
+  const catalogs = await loadCatalogs(domainIds);
+  const searcher = buildSearcher(catalogs);
+
+  const entry: CachedSearcher = {
+    searcher,
+    domainIds,
+    catalogs,
+  };
+
+  // Evict LRU if needed, then cache
+  evictIfNeeded();
+  searcherCache.set(key, entry);
+  touchCacheEntry(key);
+
+  return entry;
+}
+
+// =============================================================================
+// Search Functions
+// =============================================================================
+
+/**
+ * Search with a specific autocomplete domain setting
+ * Handles 'none', single domains, and 'all'
+ */
+export async function searchWithDomain(
+  autocompleteDomain: AutocompleteDomain,
+  query: string,
+  limit = 10,
+): Promise<SearchResult[]> {
+  // Handle 'none' - no autocomplete
+  if (autocompleteDomain === 'none') {
+    return [];
+  }
+
+  // Determine which domains to search
+  const domainIds: DomainId[] =
+    autocompleteDomain === 'all' ? getImplementedDomains() : [autocompleteDomain];
+
+  const { searcher } = await getSearcher(domainIds);
+  return executeSearch(searcher, query, limit);
 }
 
 /**
- * Check if a domain is loaded
+ * Execute a search with exact match boosting and length-based tiebreaking
  */
-export function isDomainLoaded(domainId: DomainId): boolean {
-  return domainCache.has(domainId);
-}
-
-/**
- * Get all available domain IDs
- */
-export function getAvailableDomains(): DomainId[] {
-  return ['grocery', 'hardware', 'packing', 'moving', 'camping'];
-}
-
-/**
- * Get domain info for all domains (loaded or not)
- */
-export function getDomainInfo(): Array<{
-  id: DomainId;
-  name: string;
-  loaded: boolean;
-}> {
-  return getAvailableDomains().map((id) => ({
-    id,
-    name: getDomainDisplayName(id),
-    loaded: isDomainLoaded(id),
-  }));
-}
-
-/**
- * Search for items in a loaded domain
- * Uses exact match boosting and length-based tiebreaking for better results
- */
-export function searchDomain(domainId: DomainId, query: string, limit = 10): SearchResult[] {
-  const domain = getDomain(domainId);
+function executeSearch(
+  searcher: Searcher<IndexedItem, SearcherOptions>,
+  query: string,
+  limit: number,
+): SearchResult[] {
   const queryLower = query.toLowerCase().trim();
 
-  // fast-fuzzy returns results with match data when returnMatchData is true
-  const results = domain.searcher.search(query) as unknown as Array<{
-    item: DictionaryItem & { searchTerms: string; allTerms?: string[] };
+  const results = searcher.search(query) as unknown as Array<{
+    item: IndexedItem;
     original: string;
     score: number;
   }>;
@@ -184,7 +300,7 @@ export function searchDomain(domainId: DomainId, query: string, limit = 10): Sea
         boostedScore = 1.0; // Exact alias match - second priority
       }
 
-      // O(1) tiebreaker: prefer items whose name length is closest to query length
+      // Tiebreaker: prefer items whose name length is closest to query length
       const lengthDiff = Math.abs(result.item.name.length - queryLower.length);
 
       return {
@@ -201,28 +317,180 @@ export function searchDomain(domainId: DomainId, query: string, limit = 10): Sea
       return a.lengthDiff - b.lengthDiff;
     })
     .slice(0, limit)
-    .map(({ item, original, score }) => ({ item, original, score }));
+    .map(({ item, original, score }) => ({
+      item: { ...item, domain: item.domain },
+      original,
+      score,
+    }));
 }
 
+// =============================================================================
+// Synchronous API (for pre-loaded domains)
+// =============================================================================
+
 /**
- * Get category by ID from a loaded domain
+ * Search a single domain synchronously (requires domain to be pre-loaded)
+ * Used by categorizer.ts which expects synchronous operation
  */
-export function getCategory(domainId: DomainId, categoryId: string): Category | undefined {
-  const domain = getDomain(domainId);
-  return domain.categoryMap.get(categoryId);
+export function searchDomainSync(domainId: DomainId, query: string, limit = 10): SearchResult[] {
+  const catalog = catalogCache.get(domainId);
+  if (!catalog) {
+    throw new Error(`Domain "${domainId}" not loaded. Call loadDomain() first.`);
+  }
+
+  // Check if we have a cached searcher for this domain
+  const key = getCacheKey([domainId]);
+  let cached = searcherCache.get(key);
+
+  if (!cached) {
+    // Build searcher synchronously (catalog already loaded)
+    const searcher = buildSearcher([catalog]);
+    cached = { searcher, domainIds: [domainId], catalogs: [catalog] };
+    evictIfNeeded();
+    searcherCache.set(key, cached);
+  }
+
+  touchCacheEntry(key);
+  return executeSearch(cached.searcher, query, limit);
 }
 
 /**
- * Clear cached domains (useful for testing)
+ * Get category by ID from a pre-loaded domain synchronously
+ */
+export function getCategorySync(domainId: DomainId, categoryId: string): Category | undefined {
+  const catalog = catalogCache.get(domainId);
+  if (!catalog) {
+    throw new Error(`Domain "${domainId}" not loaded. Call loadDomain() first.`);
+  }
+  return catalog.categoryMap.get(categoryId);
+}
+
+// =============================================================================
+// Legacy API (for backward compatibility)
+// =============================================================================
+
+/**
+ * Load a domain (ensures catalog is cached)
+ */
+export async function loadDomain(domainId: DomainId): Promise<void> {
+  await loadCatalog(domainId);
+}
+
+/**
+ * Check if a domain catalog is loaded
+ */
+export function isDomainLoaded(domainId: DomainId): boolean {
+  return catalogCache.has(domainId);
+}
+
+/**
+ * Search a single domain (async version)
+ * For sync usage with pre-loaded domains, use searchDomainSync
+ */
+export async function searchDomain(
+  domainId: DomainId,
+  query: string,
+  limit = 10,
+): Promise<SearchResult[]> {
+  return searchWithDomain(domainId, query, limit);
+}
+
+/**
+ * Get a loaded domain's catalog
+ */
+export function getDomainCatalog(domainId: DomainId): DomainCatalog | undefined {
+  return catalogCache.get(domainId);
+}
+
+/**
+ * Get category by ID from a domain (async version)
+ * For sync usage with pre-loaded domains, use getCategorySync
+ */
+export async function getCategory(
+  domainId: DomainId,
+  categoryId: string,
+): Promise<Category | undefined> {
+  const catalog = await loadCatalog(domainId);
+  return catalog.categoryMap.get(categoryId);
+}
+
+/**
+ * Get all available domain IDs (including unimplemented)
+ */
+export function getAvailableDomains(): DomainId[] {
+  return ['grocery', 'hardware', 'packing', 'moving', 'camping'];
+}
+
+/**
+ * Get domain info for all domains
+ */
+export function getDomainInfo(): Array<{
+  id: DomainId;
+  name: string;
+  implemented: boolean;
+  loaded: boolean;
+}> {
+  const implemented = new Set(getImplementedDomains());
+  return getAvailableDomains().map((id) => ({
+    id,
+    name: getDomainDisplayName(id),
+    implemented: implemented.has(id),
+    loaded: catalogCache.has(id),
+  }));
+}
+
+// =============================================================================
+// Cache Management (for testing)
+// =============================================================================
+
+/**
+ * Clear all caches
+ */
+export function clearAllCaches(): void {
+  catalogCache.clear();
+  searcherCache.clear();
+  searcherAccessOrder.length = 0;
+}
+
+/**
+ * Clear domain cache (alias for clearAllCaches for backward compatibility)
  */
 export function clearDomainCache(): void {
-  domainCache.clear();
+  clearAllCaches();
 }
 
 /**
- * Load domain directly from dictionary data (for testing)
+ * Load domain data directly from a dictionary object (for testing)
  */
 export function loadDomainFromData(dictionary: DictionaryFile): void {
-  const domain = createDomainFromDictionary(dictionary);
-  domainCache.set(dictionary.domain, domain);
+  // Build category map
+  const categoryMap = new Map<string, Category>();
+  for (const category of dictionary.categories) {
+    categoryMap.set(category.id, category);
+  }
+
+  const catalog: DomainCatalog = {
+    domainId: dictionary.domain,
+    displayName: getDomainDisplayName(dictionary.domain),
+    items: dictionary.items,
+    categories: dictionary.categories,
+    categoryMap,
+  };
+
+  catalogCache.set(dictionary.domain, catalog);
+}
+
+/**
+ * Get current cache stats (for debugging)
+ */
+export function getCacheStats(): {
+  catalogCount: number;
+  searcherCount: number;
+  searcherKeys: string[];
+} {
+  return {
+    catalogCount: catalogCache.size,
+    searcherCount: searcherCache.size,
+    searcherKeys: [...searcherCache.keys()],
+  };
 }

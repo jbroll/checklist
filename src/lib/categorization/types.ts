@@ -26,7 +26,11 @@ export interface DictionaryItem {
   subcategory?: string; // Subcategory ID: "beef"
   aliases?: string[]; // Alternative names: ["hamburger meat", "minced beef"]
   unit?: string; // Default unit: "lb"
+  domain?: DomainId; // Source domain (set when building unified index)
 }
+
+// Autocomplete domain selection for templates
+export type AutocompleteDomain = 'none' | DomainId | 'all';
 
 // Dictionary file format (JSON)
 export interface DictionaryFile {
@@ -103,6 +107,7 @@ export interface Suggestion {
   subcategory?: string;
   subcategoryName?: string;
   score: number;
+  domain?: DomainId; // Source domain (for multi-domain search results)
 }
 
 // Domain configuration (runtime)

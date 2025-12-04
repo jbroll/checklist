@@ -200,14 +200,15 @@ describe('Domain Loader', () => {
     const info = getDomainInfo();
     expect(info).toContainEqual({
       id: 'grocery',
-      name: 'Grocery Store',
+      name: 'Grocery',
+      implemented: true,
       loaded: false,
     });
   });
 
   it('should get category from loaded domain', async () => {
     await loadDomain('grocery');
-    const category = getCategory('grocery', 'dairy');
+    const category = await getCategory('grocery', 'dairy');
     expect(category).toBeDefined();
     expect(category?.name).toBe('Dairy');
     // Subcategories may or may not be defined depending on the dictionary

@@ -136,7 +136,8 @@ export const FolderNode: any = co.map({
 
   // Per-template autocomplete/categorization settings (override global user settings)
   // undefined = inherit from global user settings
-  autocompleteEnabled: z.optional(z.boolean()),
+  // autocompleteDomain: 'none' | 'grocery' | 'hardware' | 'all' (or undefined to inherit)
+  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
   autoCategorizeEnabled: z.optional(z.boolean()),
 
   // Parent back-reference for breadcrumbs and path computation

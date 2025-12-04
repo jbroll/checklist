@@ -4,7 +4,7 @@
  * Combines preprocessing and domain search to categorize items
  */
 
-import { getCategory, type SearchResult, searchDomain } from './domainLoader';
+import { getCategorySync, type SearchResult, searchDomainSync } from './domainLoader';
 import type { Preprocessor } from './preprocessor';
 import type { CategorizationResult, DomainId, PreprocessedInput, Suggestion } from './types';
 
@@ -44,7 +44,7 @@ export function categorize(
   }
 
   // 4. Search the domain dictionary
-  const searchResults = searchDomain(domainId, processed.searchTerms, 5);
+  const searchResults = searchDomainSync(domainId, processed.searchTerms, 5);
 
   // 5. No matches found
   if (searchResults.length === 0) {
@@ -73,11 +73,11 @@ export function suggest(
   }
 
   // Search domain
-  const searchResults = searchDomain(domainId, processed.searchTerms, limit);
+  const searchResults = searchDomainSync(domainId, processed.searchTerms, limit);
 
   // Format as suggestions
   return searchResults.map((result) => {
-    const category = getCategory(domainId, result.item.category);
+    const category = getCategorySync(domainId, result.item.category);
     const subcategory = result.item.subcategory
       ? category?.subcategories?.find((s) => s.id === result.item.subcategory)
       : undefined;
@@ -113,7 +113,7 @@ function createResultFromOverride(
   domainId: DomainId,
   override: { categoryId: string; subcategoryId?: string },
 ): CategorizationResult {
-  const category = getCategory(domainId, override.categoryId);
+  const category = getCategorySync(domainId, override.categoryId);
   const subcategory = override.subcategoryId
     ? category?.subcategories?.find((s) => s.id === override.subcategoryId)
     : undefined;
@@ -140,7 +140,7 @@ function createResultFromMatch(
   domainId: DomainId,
   match: SearchResult,
 ): CategorizationResult {
-  const category = getCategory(domainId, match.item.category);
+  const category = getCategorySync(domainId, match.item.category);
   const subcategory = match.item.subcategory
     ? category?.subcategories?.find((s) => s.id === match.item.subcategory)
     : undefined;

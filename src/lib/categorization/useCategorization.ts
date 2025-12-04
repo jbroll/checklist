@@ -6,15 +6,15 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { initCategorization, isDomainLoaded, suggest } from './index';
-import type { DomainId, Suggestion } from './types';
+import { getCategorySync, getImplementedDomains, searchWithDomain } from './domainLoader';
+import type { AutocompleteDomain, Suggestion } from './types';
 
 /**
  * Hook options
  */
 interface UseCategorization {
-  /** Domain to use for categorization (default: 'grocery') */
-  domain?: DomainId;
+  /** Autocomplete domain setting: 'none', 'grocery', 'hardware', 'all' (default: 'grocery') */
+  autocompleteDomain?: AutocompleteDomain;
   /** Debounce delay in ms (default: 150) */
   debounceMs?: number;
   /** Minimum characters before suggesting (default: 2) */
@@ -48,7 +48,9 @@ interface UseCategorizeResult {
  * ```tsx
  * function ItemInput() {
  *   const [name, setName] = useState('');
- *   const { suggestions, setInput, isReady } = useCategorization();
+ *   const { suggestions, setInput, isReady } = useCategorization({
+ *     autocompleteDomain: 'grocery' // or 'hardware', 'all', 'none'
+ *   });
  *
  *   const handleChange = (e) => {
  *     setName(e.target.value);
@@ -67,53 +69,49 @@ interface UseCategorizeResult {
  * ```
  */
 export function useCategorization(options: UseCategorization = {}): UseCategorizeResult {
-  const { domain = 'grocery', debounceMs = 150, minChars = 2, maxSuggestions = 5 } = options;
+  const {
+    autocompleteDomain = 'grocery',
+    debounceMs = 150,
+    minChars = 2,
+    maxSuggestions = 5,
+  } = options;
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(autocompleteDomain === 'none');
   const [isLoading, setIsLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const lastInputRef = useRef<string>('');
 
-  // Initialize categorization system on mount
+  // Initialize when domain changes (domains are loaded on-demand)
   useEffect(() => {
-    let cancelled = false;
-
-    async function init() {
-      try {
-        console.log('[useCategorization] Initializing domain:', domain);
-        await initCategorization(domain);
-        if (!cancelled) {
-          console.log('[useCategorization] Domain ready:', domain);
-          setIsReady(true);
-        }
-      } catch (error) {
-        console.error('[useCategorization] Failed to initialize categorization:', error);
-      }
-    }
-
-    if (!isDomainLoaded(domain)) {
-      init();
-    } else {
-      console.log('[useCategorization] Domain already loaded:', domain);
+    // If 'none', we're always ready (but won't do anything)
+    if (autocompleteDomain === 'none') {
       setIsReady(true);
+      return;
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [domain]);
+    // For 'all', we use the implemented domains list
+    // The searchWithDomain function handles loading on demand
+    // We just set ready to true and let the async search handle loading
+    setIsReady(true);
+  }, [autocompleteDomain]);
 
   // Update suggestions based on input
   const setInput = useCallback(
     (input: string) => {
-      console.log('[useCategorization] setInput called:', input, 'isReady:', isReady);
       lastInputRef.current = input;
 
       // Clear any pending debounce
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+
+      // Autocomplete disabled
+      if (autocompleteDomain === 'none') {
+        setSuggestions([]);
+        setIsLoading(false);
+        return;
       }
 
       // Clear suggestions for short input
@@ -123,23 +121,35 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
         return;
       }
 
-      // Not ready yet
-      if (!isReady) {
-        console.log('[useCategorization] Not ready yet, skipping search');
-        return;
-      }
-
       setIsLoading(true);
 
       // Debounce the search
-      debounceRef.current = setTimeout(() => {
+      debounceRef.current = setTimeout(async () => {
         try {
-          console.log('[useCategorization] Searching for:', input);
-          const results = suggest(input, domain, maxSuggestions);
-          console.log('[useCategorization] Results:', results.length);
+          const results = await searchWithDomain(autocompleteDomain, input, maxSuggestions);
+
+          // Convert SearchResult to Suggestion format
+          const formattedResults: Suggestion[] = results.map((result) => {
+            const domainId = result.item.domain || getImplementedDomains()[0];
+            const category = getCategorySync(domainId, result.item.category);
+            const subcategory = result.item.subcategory
+              ? category?.subcategories?.find((s) => s.id === result.item.subcategory)
+              : undefined;
+
+            return {
+              text: result.item.name,
+              category: result.item.category,
+              categoryName: category?.name || result.item.category,
+              subcategory: result.item.subcategory,
+              subcategoryName: subcategory?.name,
+              score: result.score,
+              domain: domainId,
+            };
+          });
+
           // Only update if input hasn't changed
           if (lastInputRef.current === input) {
-            setSuggestions(results);
+            setSuggestions(formattedResults);
           }
         } catch (error) {
           console.error('[useCategorization] Suggestion error:', error);
@@ -149,7 +159,7 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
         }
       }, debounceMs);
     },
-    [domain, isReady, debounceMs, minChars, maxSuggestions],
+    [autocompleteDomain, debounceMs, minChars, maxSuggestions],
   );
 
   // Clear suggestions

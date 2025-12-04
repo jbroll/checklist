@@ -22,9 +22,16 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, FolderNode, TemplateItem } from '@/schemas';
 import * as folderService from '@/services/folderService';
@@ -312,17 +319,30 @@ export const FolderNodeView = memo(function FolderNodeView({
                   {isTemplate && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuCheckboxItem
-                        checked={userSettingsService.getTemplateAutocompleteEnabled(
-                          account,
-                          folder,
-                        )}
-                        onCheckedChange={() =>
-                          userSettingsService.toggleTemplateAutocomplete(account, folder)
-                        }
-                      >
-                        Autocomplete
-                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>Autocomplete</DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuRadioGroup
+                              value={userSettingsService.getTemplateAutocompleteDomain(folder)}
+                              onValueChange={(value) =>
+                                userSettingsService.setTemplateAutocompleteDomain(
+                                  folder,
+                                  value as 'none' | 'grocery' | 'hardware' | 'all',
+                                )
+                              }
+                            >
+                              <DropdownMenuRadioItem value="none">Off</DropdownMenuRadioItem>
+                              {getImplementedDomains().map((domainId) => (
+                                <DropdownMenuRadioItem key={domainId} value={domainId}>
+                                  {getDomainDisplayName(domainId)}
+                                </DropdownMenuRadioItem>
+                              ))}
+                              <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
                       <DropdownMenuCheckboxItem
                         checked={userSettingsService.getTemplateAutoCategorizeEnabled(
                           account,

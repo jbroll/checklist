@@ -11,9 +11,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   clearDomainCache,
-  getCategory,
+  getCategorySync,
   loadDomainFromData,
-  searchDomain,
+  searchDomainSync,
 } from '@/lib/categorization/domainLoader';
 import type { DictionaryFile } from '@/lib/categorization/types';
 import { createChildPath, PATH_SEPARATOR } from '@/utils/pathUtils';
@@ -46,8 +46,8 @@ describe('Auto-categorization flow', () => {
 
   describe('1. Domain lookup provides correct category info', () => {
     it('should return correct category info for babyfood', () => {
-      // searchDomain is the underlying search without preprocessing
-      const results = searchDomain('grocery', 'babyfood', 5);
+      // searchDomainSync is the underlying search without preprocessing
+      const results = searchDomainSync('grocery', 'babyfood', 5);
 
       expect(results.length).toBeGreaterThan(0);
       const result = results[0];
@@ -57,12 +57,12 @@ describe('Auto-categorization flow', () => {
       expect(result.item.category).toBe('baby'); // Category ID
 
       // Verify category lookup
-      const category = getCategory('grocery', result.item.category);
+      const category = getCategorySync('grocery', result.item.category);
       expect(category?.name).toBe('Baby'); // Category display name
     });
 
     it('should return correct category info for apple', () => {
-      const results = searchDomain('grocery', 'apple', 5);
+      const results = searchDomainSync('grocery', 'apple', 5);
 
       expect(results.length).toBeGreaterThan(0);
       const result = results[0];
@@ -70,16 +70,16 @@ describe('Auto-categorization flow', () => {
       expect(result.item.name).toBe('apple');
       expect(result.item.category).toBe('produce');
 
-      const category = getCategory('grocery', result.item.category);
+      const category = getCategorySync('grocery', result.item.category);
       expect(category?.name).toBe('Produce');
     });
   });
 
   describe('2. Suggestion structure for ItemInputValue', () => {
     it('should build correct categoryInfo from search result', () => {
-      const results = searchDomain('grocery', 'babyfood', 5);
+      const results = searchDomainSync('grocery', 'babyfood', 5);
       const result = results[0];
-      const category = getCategory('grocery', result.item.category);
+      const category = getCategorySync('grocery', result.item.category);
 
       // This is what ItemInput builds from a Suggestion
       const categoryInfo = {
