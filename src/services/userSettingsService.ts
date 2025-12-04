@@ -14,31 +14,61 @@ import { type Account, type FolderNode, UserSettings } from '../schemas';
 // ============================================================================
 
 /**
- * Get whether autocomplete is enabled globally
+ * Get the default autocomplete domain for new templates
+ */
+export function getDefaultAutocompleteDomain(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  account: InstanceOfSchema<typeof Account> | any,
+): AutocompleteDomain {
+  const userSettings = account?.root?.userSettings;
+  if (!userSettings) return DEFAULT_AUTOCOMPLETE_DOMAIN;
+  return (
+    (userSettings.defaultAutocompleteDomain as AutocompleteDomain) ?? DEFAULT_AUTOCOMPLETE_DOMAIN
+  );
+}
+
+/**
+ * Set the default autocomplete domain for new templates
+ */
+export function setDefaultAutocompleteDomain(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  account: InstanceOfSchema<typeof Account> | any,
+  domain: AutocompleteDomain,
+): void {
+  const userSettings = ensureUserSettings(account);
+  // Cast to schema type - only implemented domains are valid at runtime
+  userSettings.$jazz.set(
+    'defaultAutocompleteDomain',
+    domain as 'none' | 'grocery' | 'hardware' | 'all',
+  );
+}
+
+/**
+ * @deprecated Use getDefaultAutocompleteDomain instead
+ * Get whether autocomplete is enabled globally (legacy boolean)
  */
 export function getEnableAutocomplete(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   account: InstanceOfSchema<typeof Account> | any,
 ): boolean {
-  const userSettings = account?.root?.userSettings;
-  if (!userSettings) return true; // Default to enabled
-  return userSettings.enableAutocomplete ?? true;
+  return getDefaultAutocompleteDomain(account) !== 'none';
 }
 
 /**
- * Set whether autocomplete is enabled globally
+ * @deprecated Use setDefaultAutocompleteDomain instead
+ * Set whether autocomplete is enabled globally (legacy boolean)
  */
 export function setEnableAutocomplete(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   account: InstanceOfSchema<typeof Account> | any,
   enabled: boolean,
 ): void {
-  const userSettings = ensureUserSettings(account);
-  userSettings.$jazz.set('enableAutocomplete', enabled);
+  setDefaultAutocompleteDomain(account, enabled ? DEFAULT_AUTOCOMPLETE_DOMAIN : 'none');
 }
 
 /**
- * Toggle autocomplete enabled state
+ * @deprecated Use setDefaultAutocompleteDomain instead
+ * Toggle autocomplete enabled state (legacy toggle)
  */
 export function toggleEnableAutocomplete(
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue

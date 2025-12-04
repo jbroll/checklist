@@ -132,9 +132,11 @@ export function AppContainer({
             onDeleteAccount={onDeleteAccount}
             onSwitchView={() => onViewModeChange('classic')}
             switchViewLabel={switchViewLabel}
-            enableAutocomplete={userSettingsService.getEnableAutocomplete(me)}
+            defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
             enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-            onToggleAutocomplete={() => userSettingsService.toggleEnableAutocomplete(me)}
+            onChangeDefaultAutocompleteDomain={(domain) =>
+              userSettingsService.setDefaultAutocompleteDomain(me, domain)
+            }
             onToggleAutoCategorization={() =>
               userSettingsService.toggleEnableAutoCategorization(me)
             }
@@ -359,9 +361,11 @@ export function AppContainer({
             onDeleteAccount={onDeleteAccount}
             onSwitchView={() => onViewModeChange('simplified')}
             switchViewLabel={switchViewLabel}
-            enableAutocomplete={userSettingsService.getEnableAutocomplete(me)}
+            defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
             enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-            onToggleAutocomplete={() => userSettingsService.toggleEnableAutocomplete(me)}
+            onChangeDefaultAutocompleteDomain={(domain) =>
+              userSettingsService.setDefaultAutocompleteDomain(me, domain)
+            }
             onToggleAutoCategorization={() =>
               userSettingsService.toggleEnableAutoCategorization(me)
             }

@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   FolderSearch,
   LayoutGrid,
   LogOut,
@@ -18,6 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
+import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
 
 interface ProfileDialogProps {
@@ -28,9 +38,9 @@ interface ProfileDialogProps {
   onSwitchView?: () => void;
   switchViewLabel?: string;
   // User settings
-  enableAutocomplete?: boolean;
+  defaultAutocompleteDomain?: AutocompleteDomain;
   enableAutoCategorization?: boolean;
-  onToggleAutocomplete?: () => void;
+  onChangeDefaultAutocompleteDomain?: (domain: AutocompleteDomain) => void;
   onToggleAutoCategorization?: () => void;
 }
 
@@ -41,9 +51,9 @@ export function ProfileDialog({
   onDeleteAccount,
   onSwitchView,
   switchViewLabel = 'Basic View',
-  enableAutocomplete = true,
+  defaultAutocompleteDomain = 'grocery',
   enableAutoCategorization = true,
-  onToggleAutocomplete,
+  onChangeDefaultAutocompleteDomain,
   onToggleAutoCategorization,
 }: ProfileDialogProps) {
   const { isDark, toggleTheme } = useTheme();
@@ -106,27 +116,49 @@ export function ProfileDialog({
           </Button>
 
           {/* Autocomplete and Auto-categorization settings */}
-          {onToggleAutocomplete && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-between gap-2"
-              onClick={onToggleAutocomplete}
-            >
-              <span className="flex items-center gap-2">
-                <FolderSearch className="h-4 w-4" />
-                Autocomplete
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded ${
-                  enableAutocomplete
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
-                }`}
-              >
-                {enableAutocomplete ? 'On' : 'Off'}
-              </span>
-            </Button>
+          {onChangeDefaultAutocompleteDomain && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="w-full justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <FolderSearch className="h-4 w-4" />
+                    Autocomplete
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${
+                        defaultAutocompleteDomain !== 'none'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                      }`}
+                    >
+                      {defaultAutocompleteDomain === 'none'
+                        ? 'Off'
+                        : defaultAutocompleteDomain === 'all'
+                          ? 'All'
+                          : getDomainDisplayName(defaultAutocompleteDomain)}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-content-secondary" />
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={defaultAutocompleteDomain}
+                  onValueChange={(value) =>
+                    onChangeDefaultAutocompleteDomain(value as AutocompleteDomain)
+                  }
+                >
+                  <DropdownMenuRadioItem value="none">Off</DropdownMenuRadioItem>
+                  {getImplementedDomains().map((domainId) => (
+                    <DropdownMenuRadioItem key={domainId} value={domainId}>
+                      {getDomainDisplayName(domainId)}
+                    </DropdownMenuRadioItem>
+                  ))}
+                  <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {onToggleAutoCategorization && (
             <Button

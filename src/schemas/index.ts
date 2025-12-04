@@ -32,11 +32,14 @@ export const ViewState = co.map({
  * These are defaults that can be overridden per-template.
  */
 export const UserSettings = co.map({
-  // Enable autocomplete suggestions when adding items (default: true)
-  enableAutocomplete: z.boolean(),
+  // Default autocomplete domain for new templates: 'none' | 'grocery' | 'hardware' | 'all'
+  defaultAutocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
+
+  // @deprecated - use defaultAutocompleteDomain instead
+  enableAutocomplete: z.optional(z.boolean()),
 
   // Enable auto-categorization when selecting from autocomplete (default: true)
-  enableAutoCategorization: z.boolean(),
+  enableAutoCategorization: z.optional(z.boolean()),
 });
 
 /**
