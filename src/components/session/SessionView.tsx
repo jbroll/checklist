@@ -779,6 +779,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   showQuantityField={false}
                   clearOnSubmit={true}
                   autoFocus={true}
+                  autocompleteDomain={template.autocompleteDomain ?? 'grocery'}
                 />
               </div>
             )}

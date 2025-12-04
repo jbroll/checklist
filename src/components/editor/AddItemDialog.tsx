@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ItemInput, type ItemInputValue } from '@/components/ui/ItemInput';
+import type { AutocompleteDomain } from '@/lib/categorization/types';
 
 interface AddItemDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface AddItemDialogProps {
   ) => void;
   onAddCategory: (name: string) => void;
   folderName?: string;
+  autocompleteDomain?: AutocompleteDomain;
 }
 
 export function AddItemDialog({
@@ -30,6 +32,7 @@ export function AddItemDialog({
   onAddItem,
   onAddCategory,
   folderName,
+  autocompleteDomain = 'grocery',
 }: AddItemDialogProps) {
   const handleSubmit = (value: ItemInputValue) => {
     if (value.type === 'item') {
@@ -62,6 +65,7 @@ export function AddItemDialog({
             clearOnSubmit={false}
             autoFocus={true}
             variant="stacked"
+            autocompleteDomain={autocompleteDomain}
           />
         </div>
       </DialogContent>

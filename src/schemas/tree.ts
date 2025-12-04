@@ -207,6 +207,11 @@ export const Template = co.map({
   // Template-specific settings
   showZoneHeadings: z.boolean(),
 
+  // Per-template autocomplete/categorization settings (override global user settings)
+  // undefined = inherit from global user settings
+  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
+  autoCategorizeEnabled: z.optional(z.boolean()),
+
   // Ownership and timestamps
   get owner() {
     return Account;

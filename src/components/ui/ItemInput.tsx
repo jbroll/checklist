@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCategorization } from '@/lib/categorization';
-import type { Suggestion } from '@/lib/categorization/types';
+import type { AutocompleteDomain, Suggestion } from '@/lib/categorization/types';
 
 export interface ItemInputValue {
   name: string;
@@ -47,6 +47,8 @@ export interface ItemInputProps {
   className?: string;
   /** Layout variant */
   variant?: 'inline' | 'stacked';
+  /** Autocomplete domain to use (default: 'grocery') */
+  autocompleteDomain?: AutocompleteDomain;
 }
 
 export function ItemInput({
@@ -60,6 +62,7 @@ export function ItemInput({
   clearOnSubmit = true,
   className = '',
   variant = 'inline',
+  autocompleteDomain = 'grocery',
 }: ItemInputProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'item' | 'category'>(defaultType);
@@ -79,6 +82,7 @@ export function ItemInput({
     minChars: 2,
     maxSuggestions: 5,
     debounceMs: 100,
+    autocompleteDomain,
   });
 
   // Auto-focus on mount

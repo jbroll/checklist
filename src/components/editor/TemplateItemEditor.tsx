@@ -501,6 +501,7 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
             onAddItem={handleAddItem}
             onAddCategory={handleAddCategory}
             folderName={template.name}
+            autocompleteDomain={template.autocompleteDomain ?? 'grocery'}
           />
 
           {/* Note Editor Dialog */}
