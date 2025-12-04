@@ -35,7 +35,7 @@ export function setDefaultAutocompleteDomain(
   account: InstanceOfSchema<typeof Account> | any,
   domain: AutocompleteDomain,
 ): void {
-  const userSettings = ensureUserSettings(account);
+  const userSettings = ensureUserSettingsWithDomain(account);
   // Cast to schema type - only implemented domains are valid at runtime
   userSettings.$jazz.set(
     'defaultAutocompleteDomain',
@@ -145,6 +145,62 @@ function ensureUserSettings(
   }
 
   return account.root.userSettings;
+}
+
+/**
+ * Ensure userSettings exists with defaultAutocompleteDomain field.
+ * If the existing UserSettings was created before the field was added,
+ * recreate it with the new schema to support the new field.
+ */
+function ensureUserSettingsWithDomain(
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+  account: InstanceOfSchema<typeof Account> | any,
+): InstanceOfSchema<typeof UserSettings> {
+  if (!account?.root) {
+    throw new Error('Account root not initialized');
+  }
+
+  const existing = account.root.userSettings;
+
+  // Check if we need to migrate: existing settings but can't set the new field
+  if (existing) {
+    // Check if the schema supports defaultAutocompleteDomain by checking if $jazz.has works
+    // If the CoMap was created with the old schema, the key won't be registered
+    if (
+      existing.$jazz.has('defaultAutocompleteDomain') ||
+      existing.defaultAutocompleteDomain !== undefined
+    ) {
+      // Field is registered in schema, can use existing
+      return existing;
+    }
+
+    // Try to set - if it fails, we need to migrate
+    try {
+      existing.$jazz.set(
+        'defaultAutocompleteDomain',
+        DEFAULT_AUTOCOMPLETE_DOMAIN as 'none' | 'grocery' | 'hardware' | 'all',
+      );
+      return existing;
+    } catch {
+      // Old schema - need to recreate
+    }
+  }
+
+  // Create new UserSettings with all fields including defaultAutocompleteDomain
+  const newSettings = UserSettings.create(
+    {
+      enableAutocomplete: existing?.enableAutocomplete ?? true,
+      enableAutoCategorization: existing?.enableAutoCategorization ?? true,
+      defaultAutocompleteDomain: DEFAULT_AUTOCOMPLETE_DOMAIN as
+        | 'none'
+        | 'grocery'
+        | 'hardware'
+        | 'all',
+    },
+    { owner: account },
+  );
+  account.root.$jazz.set('userSettings', newSettings);
+  return newSettings;
 }
 
 // ============================================================================
