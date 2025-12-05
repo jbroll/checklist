@@ -10,12 +10,12 @@ function getSystemTheme(): 'light' | 'dark' {
 }
 
 function getStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return 'light';
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;
   }
-  return 'system';
+  return 'light';
 }
 
 function applyTheme(theme: Theme) {
