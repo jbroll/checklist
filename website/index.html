@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Reusable checklist app for shopping lists, packing, and routines. Your list stays unchanged when you check items off. Offline-first, encrypted sync.">
-    <title>BubbleList - Reusable Checklist App | Shopping List Templates</title>
+    <title>BubbleList</title>
+    <link rel="icon" type="image/svg+xml" href="bubblelist.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -79,6 +80,7 @@
             --illustration-text-muted: var(--neutral-500);
             --illustration-text-faint: var(--neutral-400);
             --illustration-highlight: var(--primary-50);
+            --illustration-accent: var(--primary-600);
         }
 
         /* Dark theme */
@@ -107,6 +109,7 @@
             --illustration-text-muted: var(--neutral-300);
             --illustration-text-faint: var(--neutral-400);
             --illustration-highlight: var(--primary-700);
+            --illustration-accent: var(--primary-100);
         }
 
         /* Alternative accent: Coral (Option A) */
@@ -154,6 +157,7 @@
                 --illustration-text-muted: var(--neutral-300);
                 --illustration-text-faint: var(--neutral-400);
                 --illustration-highlight: var(--primary-700);
+                --illustration-accent: var(--primary-100);
             }
         }
 
@@ -260,7 +264,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h1 class="text-3xl md:text-5xl font-bold mb-6">
-                    Lists You Use Again and Again
+                    A Simple Checklist App
                 </h1>
                 <!-- Use cases + CTA -->
                 <div class="flex flex-wrap justify-center items-center gap-3 max-w-4xl mx-auto text-sm">
@@ -288,9 +292,9 @@
                         <span class="text-lg">🚀</span>
                         <div class="text-cyan-100">Launches</div>
                     </div>
-                    <a href="https://bubblelist-app.rkroll.com" class="bg-white/10 rounded-lg px-3 py-2 hover:bg-white/20 transition">
+                    <a href="https://bubblelist-app.rkroll.com" class="rounded-lg px-3 py-2 transition" style="background-color: var(--primary-50);" onmouseover="this.style.backgroundColor='var(--primary-100)'" onmouseout="this.style.backgroundColor='var(--primary-50)'">
                         <span class="text-lg">✨</span>
-                        <div class="text-cyan-100">Try Free</div>
+                        <div class="text-teal-600 font-medium">Try Free</div>
                     </a>
                 </div>
             </div>
@@ -300,12 +304,6 @@
     <!-- Features Section -->
     <section id="features" class="py-12" style="background-color: var(--bg-page);">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-8">
-                <h2 class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary);">
-                    What You Get
-                </h2>
-            </div>
-
             <div id="how-it-works" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Feature 0: Lists + Sessions - with mini illustration -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
@@ -672,13 +670,13 @@
                     <div class="illustration-area rounded-lg p-3 mt-2">
                         <div class="flex items-center justify-center gap-2">
                             <div class="illustration-card rounded-lg px-3 py-2 shadow-sm border text-center">
-                                <div class="text-sm font-mono text-teal-600">.json</div>
+                                <div class="text-sm font-mono" style="color: var(--illustration-accent);">.json</div>
                             </div>
                             <div class="illustration-card rounded-lg px-3 py-2 shadow-sm border text-center">
-                                <div class="text-sm font-mono text-teal-600">.csv</div>
+                                <div class="text-sm font-mono" style="color: var(--illustration-accent);">.csv</div>
                             </div>
                             <div class="illustration-card rounded-lg px-3 py-2 shadow-sm border text-center">
-                                <div class="text-sm font-mono text-teal-600">.txt</div>
+                                <div class="text-sm font-mono" style="color: var(--illustration-accent);">.txt</div>
                             </div>
                         </div>
                     </div>
