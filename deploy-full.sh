@@ -13,8 +13,14 @@ DEPLOY_SH="../deploy.sh/deploy.sh"
 echo "=== BubbleList Full Deployment (mode: $MODE) ==="
 echo ""
 
+# Build website pages from markdown
+echo "[1/4] Building Website Pages..."
+npm run build:website
+echo "✓ Website pages built"
+echo ""
+
 # Deploy marketing website
-echo "[1/3] Deploying Marketing Website..."
+echo "[2/4] Deploying Marketing Website..."
 cd website
 "../../deploy.sh/deploy.sh" "$MODE" .
 cd ..
@@ -22,13 +28,13 @@ echo "✓ Marketing website deployed (bubblelist.rkroll.com)"
 echo ""
 
 # Deploy app frontend
-echo "[2/3] Deploying App Frontend..."
+echo "[3/4] Deploying App Frontend..."
 "$DEPLOY_SH" "$MODE" .
 echo "✓ App frontend deployed (bubblelist-app.rkroll.com)"
 echo ""
 
 # Deploy backend
-echo "[3/3] Deploying Backend..."
+echo "[4/4] Deploying Backend..."
 cd backend
 "../../deploy.sh/deploy.sh" "$MODE" .
 cd ..
