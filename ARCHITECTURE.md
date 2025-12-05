@@ -18,7 +18,7 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 ## Key Design Decisions
 
 1. **Templates Stay Clean**: Shopping state (checked/purchased) lives in sessions, never in template items
-2. **Hierarchical Items**: Templates use a category/item tree structure (see `src/schemas/tree.ts:26-49`)
+2. **Hierarchical Items**: Templates use a category/item tree structure (see `TemplateItem` in `src/schemas/tree.ts`)
 3. **Path-Based Organization**: Folders and items use path strings for hierarchy (e.g., "stores/wegmans")
 4. **Soft Deletes**: Items marked `archived: true`, never hard deleted
 5. **Jazz CoValues**: Real-time sync, offline-first, encrypted data storage
@@ -26,11 +26,11 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 ## Data Model
 
 **Schemas** (see `src/schemas/`):
-- `FolderNode` - Organizational folder or template folder (`tree.ts:151-177`)
-- `TemplateItem` - Hierarchical category or item (`tree.ts:26-49`)
-- `ShoppingSession` - Shopping trip state tracker (`tree.ts:78-110`)
-- `ItemState` - Per-item shopping state (`tree.ts:56-71`)
-- `GroceriesAccount` - User account with root folder list (`index.ts:19-31`)
+- `FolderNode` - Organizational folder or template folder (`tree.ts`)
+- `TemplateItem` - Hierarchical category or item (`tree.ts`)
+- `SessionData` - Shopping trip state tracker (`tree.ts`)
+- `ItemState` - Per-item shopping state (`tree.ts`)
+- `Account` - User account with root folder list (`index.ts`)
 
 **Discriminated Unions**:
 - FolderNode has `type: "folder" | "template-folder"`
@@ -139,5 +139,4 @@ backend/src/
 
 ## Development Workflow
 
-See `AUTONOMOUS_EXECUTION_PLAN.md` for quality gates and commit workflow.
 See `CLAUDE.md` for Jazz-specific patterns and coding standards.

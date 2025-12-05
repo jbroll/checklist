@@ -8,7 +8,15 @@ A systematic, iterative approach to building categorization dictionaries for non
 
 ## Overview
 
-This document describes the methodology for building domain-specific dictionaries (hardware, packing, moving, camping) by analyzing real-world retailer category structures and iteratively populating items.
+This document describes the methodology for building domain-specific dictionaries (hardware, outdoor, packing, moving, camping) by analyzing real-world retailer category structures and iteratively populating items.
+
+**Implemented Domains:**
+- ✅ **Grocery** (2,276 items) - See GROCERY_DATABASE_STRATEGY.md
+- ✅ **Hardware** (1,362 items) - See HARDWARE_DICTIONARY_PROGRESS.md
+- ✅ **Outdoor Recreation** (984 items) - See OUTDOOR_DICTIONARY_PROGRESS.md
+- ⏳ **Packing/Travel** - Not yet implemented
+- ⏳ **Moving** - Not yet implemented
+- ⏳ **Camping** - Not yet implemented (use Outdoor domain for camping gear)
 
 **Key Principles:**
 1. **Retailer-driven categories** - Base structure on how major retailers organize products
@@ -339,6 +347,24 @@ Common alias patterns:
 3. Reddit r/moving
 4. Storage unit companies
 
+### Outdoor Recreation Domain ✅ IMPLEMENTED
+
+**Unique considerations:**
+- Multi-activity coverage (camping, hiking, paddling, cycling, climbing, snow sports)
+- Technical terminology varies by activity (belay devices, PFDs, derailleurs)
+- Size-critical items (rope lengths, tent capacities, wheel sizes)
+- Brand-as-generic patterns (JetBoil, CamelBak, GriGri)
+- Safety equipment critical (avalanche gear, climbing hardware, PFDs)
+
+**Key sources:**
+1. REI (all activities)
+2. Bass Pro Shops (camping, paddling)
+3. EMS (climbing, hiking)
+4. Camping World (camping, RV)
+5. Reddit r/camping, r/kayaking, r/climbing, r/MTB
+
+**Implementation:** See OUTDOOR_DICTIONARY_PROGRESS.md for full details.
+
 ### Camping Domain
 
 **Unique considerations:**
@@ -352,6 +378,8 @@ Common alias patterns:
 2. Cabela's / Bass Pro
 3. Backcountry
 4. Reddit r/camping, r/CampingGear
+
+**Note:** For camping gear, consider using the Outdoor Recreation domain which includes comprehensive camping coverage.
 
 ---
 

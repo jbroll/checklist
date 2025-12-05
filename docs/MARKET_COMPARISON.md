@@ -341,7 +341,7 @@ Simple notes and checklists with Google integration.
 | **Reminders** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
 | **Search/filters** | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
 | **Automations** | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ❌ | ❌ |
-| **Comments** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Comments** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ⚠️ |
 | **True template reuse** | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ✅ |
 | **Encrypted sync** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **No ads (free tier)** | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
@@ -470,8 +470,8 @@ These are expected by users. Missing any is a dealbreaker.
 | Item notes | ✅ | Template + session-level notes with modal editor. |
 | Activity timestamps | ✅ Schema | `selectedAt`, `checkedAt`, `lastActivityAt`. Needs UI exposure. |
 | Multiple view modes | ✅ | `zone-in-hierarchy` and `flat` modes exist. |
-| **Auto-categorization** | ✅ | 2,022 grocery items, fuzzy matching, auto-creates categories. |
-| **Autocomplete suggestions** | ✅ | Debounced search with keyboard navigation. |
+| **Auto-categorization** | ✅ | 4,368 items (grocery, hardware, outdoor), fuzzy matching, auto-creates categories. |
+| **Autocomplete suggestions** | ✅ | Multi-domain search with keyboard navigation. |
 | Search/filtering | ❌ | Filter items by name across templates. Zero schema changes needed. |
 
 ### What's in Schema vs Exposed in UI

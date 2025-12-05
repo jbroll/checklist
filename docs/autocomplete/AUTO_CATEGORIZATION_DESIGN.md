@@ -1,6 +1,6 @@
 # Auto-Categorization System Design
 
-A local-first, dictionary-based categorization system for Bubblelist supporting grocery, hardware, packing, moving, and camping/travel domains.
+A local-first, dictionary-based categorization system for Bubblelist supporting grocery, hardware, outdoor recreation, packing, moving, and camping/travel domains.
 
 *Created: December 2025*
 
@@ -12,7 +12,7 @@ A local-first, dictionary-based categorization system for Bubblelist supporting 
 
 1. **Instant categorization** - suggest category as user types
 2. **Offline-first** - no network calls required
-3. **Multi-domain** - grocery, hardware, packing, moving, camping
+3. **Multi-domain** - grocery, hardware, outdoor, packing, moving, camping
 4. **Fuzzy matching** - handle typos and variations
 5. **Smart parsing** - extract quantity, modifiers, and core item from natural input
 6. **Learnable** - remember user corrections and custom items
@@ -557,6 +557,43 @@ function suggest(
 | outdoor | Outdoor | 30 |
 | supplies | Moving Supplies | 30 |
 
+### Outdoor Recreation Domain (984 items) ✅ IMPLEMENTED
+
+| ID | Name | Est. Items |
+|----|------|------------|
+| **CAMPING & HIKING** |
+| camp-kitchen | Camp Kitchen | 50 |
+| sleep-system | Sleep System | 46 |
+| shelter | Shelter | 41 |
+| backpacks | Packs & Bags | 41 |
+| tools | Tools & Knives | 40 |
+| safety | Safety & First Aid | 39 |
+| lighting | Lighting | 38 |
+| power | Power & Electronics | 37 |
+| furniture | Camp Furniture | 34 |
+| protection | Protection | 34 |
+| navigation | Navigation | 34 |
+| hydration | Hydration | 33 |
+| fire | Fire & Fuel | 33 |
+| coolers | Coolers | 30 |
+| **PADDLING** |
+| paddle-gear | Paddle Gear | 46 |
+| paddlecraft | Paddlecraft | 39 |
+| **CYCLING** |
+| bike-accessories | Bike Accessories | 62 |
+| bike-maintenance | Bike Maintenance | 40 |
+| bikes | Bikes | 34 |
+| **CLIMBING** |
+| climbing-hardware | Climbing Hardware | 44 |
+| ropes-harnesses | Ropes & Harnesses | 40 |
+| **SNOW SPORTS** |
+| snow-gear | Snow Gear | 50 |
+| avalanche-safety | Avalanche Safety | 12 |
+| **CLOTHING & FOOTWEAR** |
+| clothing | Clothing | 43 |
+| footwear | Footwear | 22 |
+| accessories | Accessories | 22 |
+
 ### Camping Domain (~400 items)
 
 | ID | Name | Est. Items |
@@ -612,13 +649,14 @@ interface ItemDefinition {
 
 | Domain | Items | JSON Size | Gzipped | Memory (Searcher) |
 |--------|-------|-----------|---------|-------------------|
-| Grocery | 2,500 | ~200 KB | ~40 KB | ~500 KB |
-| Hardware | 1,500 | ~120 KB | ~25 KB | ~300 KB |
+| Grocery | 2,276 | ~180 KB | ~35 KB | ~450 KB |
+| Hardware | 1,362 | ~110 KB | ~22 KB | ~270 KB |
+| Outdoor | 984 | ~80 KB | ~16 KB | ~200 KB |
 | Packing | 300 | ~25 KB | ~5 KB | ~60 KB |
 | Moving | 400 | ~30 KB | ~6 KB | ~80 KB |
 | Camping | 400 | ~30 KB | ~6 KB | ~80 KB |
 | Skip-lists | ~550 | ~15 KB | ~3 KB | ~20 KB |
-| **Total** | **5,150** | **~420 KB** | **~85 KB** | **~1 MB** |
+| **Total** | **~6,000** | **~450 KB** | **~90 KB** | **~1.1 MB** |
 
 ### Loading Strategy
 
@@ -657,6 +695,7 @@ src/
 │   └── dictionaries/
 │       ├── grocery.json
 │       ├── hardware.json
+│       ├── outdoor.json
 │       ├── packing.json
 │       ├── moving.json
 │       ├── camping.json
@@ -778,6 +817,7 @@ New dialog component for configuring auto-categorization per template:
 | `undefined` | None | Manual organization (no auto-categorization) |
 | `"grocery"` | Grocery Store | Store aisle categories (Produce, Dairy, Meat, etc.) |
 | `"hardware"` | Hardware Store | Hardware categories (Electrical, Plumbing, Tools, etc.) |
+| `"outdoor"` | Outdoor Recreation | Outdoor activity categories (Camping, Paddling, Cycling, Climbing, Snow Sports, etc.) |
 | `"packing"` | Packing / Travel | Travel categories (Clothing, Toiletries, Electronics, etc.) |
 | `"moving"` | Moving | Room-based categories (Kitchen, Bedroom, Garage, etc.) |
 | `"camping"` | Camping | Outdoor categories (Shelter, Cooking, Safety, etc.) |
@@ -962,7 +1002,7 @@ function onCategoryOverride(
 - [x] Generate `src/data/dictionaries/grocery.json`
 - [x] Validate with comprehensive test suite
 
-**Deliverable:** 2,022 grocery items across 18 categories ✅
+**Deliverable:** 2,276 grocery items across 18 categories ✅
 
 **Categories implemented:**
 produce, meat, seafood, dairy, deli, bakery, frozen, canned, pasta, breakfast, snacks, beverages, condiments, baking, international, baby, health, household
@@ -1008,20 +1048,21 @@ produce, meat, seafood, dairy, deli, bakery, frozen, canned, pasta, breakfast, s
 
 **Status:** Deferred. Current implementation works well without user overrides.
 
-### Phase 6: Additional Domains ✅ HARDWARE COMPLETE
+### Phase 6: Additional Domains ✅ HARDWARE + OUTDOOR COMPLETE
 
 **Goal:** Support non-grocery use cases
 
 - [x] Hardware dictionary (1,362 items across 16 categories)
+- [x] Outdoor recreation dictionary (984 items across 26 categories)
 - [ ] Packing dictionary
 - [ ] Moving dictionary
 - [ ] Camping dictionary
-- [x] Type definitions ready (`type DomainId = 'grocery' | 'hardware' | 'packing' | 'moving' | 'camping'`)
+- [x] Type definitions ready (`type DomainId = 'grocery' | 'hardware' | 'outdoor' | 'packing' | 'moving' | 'camping'`)
 - [x] Multi-domain support with LRU-cached searchers (max 3 domains in memory)
-- [x] Domain selection UI in ProfileDialog (Off, Grocery, Hardware, All)
+- [x] Domain selection UI in ProfileDialog (Off, Grocery, Hardware, Outdoor, All)
 - [x] Per-template domain override in FolderNodeView
 
-**Status:** Hardware domain implemented with full size coverage for plumbing, lumber, and electrical. Grocery remains the default domain.
+**Status:** Hardware and Outdoor domains implemented. Outdoor covers camping, hiking, paddling, cycling, climbing, and snow sports with comprehensive gear coverage. Grocery remains the default domain.
 
 ### Phase 7: Validation & Polish ✅ COMPLETE
 
