@@ -136,8 +136,8 @@ export const FolderNode: any = co.map({
 
   // Per-template autocomplete/categorization settings (override global user settings)
   // undefined = inherit from global user settings
-  // autocompleteDomain: 'none' | 'grocery' | 'hardware' | 'all' (or undefined to inherit)
-  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
+  // autocompleteDomain: 'none' | 'grocery' | 'hardware' | 'outdoor' | 'all' (or undefined to inherit)
+  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'outdoor', 'all'])),
   autoCategorizeEnabled: z.optional(z.boolean()),
 
   // Parent back-reference for breadcrumbs and path computation
@@ -209,7 +209,7 @@ export const Template = co.map({
 
   // Per-template autocomplete/categorization settings (override global user settings)
   // undefined = inherit from global user settings
-  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
+  autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'outdoor', 'all'])),
   autoCategorizeEnabled: z.optional(z.boolean()),
 
   // Ownership and timestamps

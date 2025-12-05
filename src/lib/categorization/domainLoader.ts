@@ -92,6 +92,7 @@ const searcherAccessOrder: string[] = []; // Most recent at end
 const DOMAIN_DISPLAY_NAMES: Record<DomainId, string> = {
   grocery: 'Grocery',
   hardware: 'Hardware',
+  outdoor: 'Outdoor',
   packing: 'Packing',
   moving: 'Moving',
   camping: 'Camping',
@@ -112,7 +113,7 @@ export function getDomainDisplayName(domainId: DomainId): string {
  * Get list of domains that have dictionary files implemented
  */
 export function getImplementedDomains(): DomainId[] {
-  return ['grocery', 'hardware'];
+  return ['grocery', 'hardware', 'outdoor'];
 }
 
 /**
@@ -418,7 +419,7 @@ export async function getCategory(
  * Get all available domain IDs (including unimplemented)
  */
 export function getAvailableDomains(): DomainId[] {
-  return ['grocery', 'hardware', 'packing', 'moving', 'camping'];
+  return ['grocery', 'hardware', 'outdoor', 'packing', 'moving', 'camping'];
 }
 
 /**

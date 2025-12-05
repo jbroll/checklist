@@ -32,8 +32,8 @@ export const ViewState = co.map({
  * These are defaults that can be overridden per-template.
  */
 export const UserSettings = co.map({
-  // Default autocomplete domain for new templates: 'none' | 'grocery' | 'hardware' | 'all'
-  defaultAutocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'all'])),
+  // Default autocomplete domain for new templates: 'none' | 'grocery' | 'hardware' | 'outdoor' | 'all'
+  defaultAutocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'outdoor', 'all'])),
 
   // @deprecated - use defaultAutocompleteDomain instead
   enableAutocomplete: z.optional(z.boolean()),

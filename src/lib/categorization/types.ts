@@ -3,7 +3,7 @@
  */
 
 // Domain identifiers
-export type DomainId = 'grocery' | 'hardware' | 'packing' | 'moving' | 'camping';
+export type DomainId = 'grocery' | 'hardware' | 'outdoor' | 'packing' | 'moving' | 'camping';
 
 // Category definition from dictionary
 export interface Category {
