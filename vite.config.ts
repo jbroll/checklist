@@ -87,7 +87,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['bubblelist.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'BubbleList - Collaborative Shopping Lists',
+        name: 'BubbleList - Collaborative Lists',
         short_name: 'BubbleList',
         description: 'Collaborative list app with real-time sync across devices',
         theme_color: '#76daDA',
