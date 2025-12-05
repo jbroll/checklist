@@ -11,7 +11,7 @@ A strategy for building a comprehensive grocery item categorization database for
 
 **Goal:** Build a ~2,500 item grocery dictionary optimized for shopping list categorization.
 
-**Result:** ✅ **2,022 items across 18 store-layout categories**
+**Result:** ✅ **2,276 items across 18 store-layout categories** (expanded via branded data integration)
 
 **Approach:** Hybrid strategy combining:
 1. USDA FoodData Central (public domain) for base item coverage
@@ -29,7 +29,162 @@ A strategy for building a comprehensive grocery item categorization database for
 | Generator script | ✅ Complete | `scripts/grocery-dictionary/generate-dictionary.cjs` |
 | Skip-lists | ✅ Complete | `src/data/dictionaries/skip-lists.json` |
 | Test suite | ✅ Complete | `src/lib/categorization/__tests__/` |
-| Branded foods | ⏳ Downloaded, not integrated | 452,998 items available |
+| **SQLite Database** | ✅ Complete | `scripts/grocery-dictionary/data/usda_foods.db` |
+| Branded foods | ✅ Loaded in DB | 452,998 items, 352 categories |
+| **Branded integration scripts** | ✅ Complete | `scripts/grocery-dictionary/add-*.cjs` |
+
+---
+
+## Branded Data Integration Strategy
+
+The USDA Branded Foods database (452,998 items) supplements the SR Legacy base with:
+1. **Brand names as aliases** - Popular brands mapped to generic items
+2. **Common product variations** - Items people actually buy (e.g., "sparkling water", "2% milk")
+3. **Store staples** - Everyday items with common shopping terms
+
+### Integration Scripts
+
+| Script | Purpose | Items Added |
+|--------|---------|-------------|
+| `add-branded-items.cjs` | Brand aliases + missing products | 135 items |
+| `add-staples.cjs` | Pantry, frozen, deli staples | 119 items |
+
+**Total added from branded analysis: 254 items**
+
+### Brand Alias Strategy
+
+Rather than adding every branded product, we add brand names as **aliases** to generic items:
+
+```json
+{
+  "name": "cereal",
+  "category": "breakfast",
+  "aliases": ["cheerios", "frosted flakes", "corn flakes", "froot loops", "lucky charms"]
+}
+```
+
+This allows users to type "cheerios" and match to the generic "cereal" category.
+
+### Categories Enhanced
+
+| Category | Enhancement |
+|----------|-------------|
+| **beverages** | Sparkling water, energy drinks, sodas, teas |
+| **snacks** | Brand chips (Doritos, Cheetos, Lays), candy brands |
+| **breakfast** | Cereal brands, frozen breakfast items |
+| **dairy** | Milk varieties (2%, 1%, skim), cheese types, yogurt brands |
+| **frozen** | Frozen vegetables, pizza, meals, breakfast items |
+| **pantry** | Canned goods, broths, beans, nut butters, jams |
+| **baking** | Flour types, sugars, mixes |
+| **spices** | Common seasonings and spice blends |
+
+### Analysis Document
+
+See `docs/BRANDED_DATA_INTEGRATION.md` for:
+- Top national brand aliases to add
+- Missing product types by category
+- SQL queries for further analysis
+
+---
+
+## SQLite Database
+
+All USDA food data is stored in a local SQLite database for fast querying.
+
+**Path:** `scripts/grocery-dictionary/data/usda_foods.db`
+
+### Schema
+
+```sql
+-- SR Legacy foods (basis for current grocery.json dictionary)
+CREATE TABLE sr_legacy (
+  fdc_id INTEGER PRIMARY KEY,
+  description TEXT,
+  food_category TEXT,        -- 25 USDA nutritional categories
+  ndb_number INTEGER,
+  data_type TEXT,
+  publication_date TEXT
+);
+
+-- Foundation foods (high-quality nutrient data)
+CREATE TABLE foundation (
+  fdc_id INTEGER PRIMARY KEY,
+  description TEXT,
+  food_category TEXT,
+  data_type TEXT,
+  publication_date TEXT
+);
+
+-- Branded foods (452,998 items from manufacturers)
+CREATE TABLE branded (
+  fdc_id INTEGER PRIMARY KEY,
+  description TEXT,           -- Product name
+  brand_owner TEXT,           -- Manufacturer/brand
+  branded_food_category TEXT, -- 352 store-layout categories
+  ingredients TEXT,
+  serving_size REAL,
+  serving_size_unit TEXT,
+  household_serving_text TEXT,
+  data_type TEXT,
+  publication_date TEXT
+);
+```
+
+### Useful Queries
+
+```bash
+# Open database
+sqlite3 scripts/grocery-dictionary/data/usda_foods.db
+
+# Count items per table
+SELECT 'sr_legacy' as tbl, COUNT(*) FROM sr_legacy
+UNION SELECT 'foundation', COUNT(*) FROM foundation
+UNION SELECT 'branded', COUNT(*) FROM branded;
+
+# List branded categories with counts
+SELECT branded_food_category, COUNT(*) as cnt
+FROM branded GROUP BY branded_food_category ORDER BY cnt DESC;
+
+# Find brands for a category
+SELECT DISTINCT brand_owner FROM branded
+WHERE branded_food_category = 'Cereal' ORDER BY brand_owner;
+
+# Search product descriptions
+SELECT description, brand_owner, branded_food_category
+FROM branded WHERE description LIKE '%granola%' LIMIT 20;
+```
+
+### Branded Categories (352 total)
+
+The branded database uses store-layout categories that are more practical than SR Legacy's nutritional categories.
+
+**Category Mapping File:** `scripts/grocery-dictionary/config/category-mapping.json`
+
+This file maps all 352 USDA branded categories to our 18 store aisle categories:
+- **321 categories mapped** to store aisles
+- **29 categories unmapped** (prepared meals, variety packs, non-grocery)
+- **2 empty/null** categories
+
+| Store Category | # Branded Categories | Example Mappings |
+|----------------|---------------------|------------------|
+| snacks | 42 | Candy, Chips, Cookies, Chocolate, Popcorn |
+| beverages | 32 | Soda, Water, Coffee, Tea, Sport Drinks |
+| frozen | 35 | Frozen Dinners, Ice Cream, Frozen Vegetables |
+| condiments | 32 | Ketchup, Salad Dressing, Pickles, Sauces |
+| baking | 26 | Flour, Sugar, Baking Mixes, Desserts |
+| dairy | 25 | Cheese, Milk, Yogurt, Butter, Eggs |
+| meat | 23 | Bacon, Sausages, Cold Cuts, Poultry |
+| bakery | 17 | Breads, Cakes, Croissants, Pastries |
+| seafood | 17 | Frozen Fish, Canned Tuna, Shellfish |
+| canned | 13 | Canned Vegetables, Soup, Beans |
+| pasta | 14 | Pasta, Noodles, Rice, Grains |
+| deli | 10 | Deli Salads, Sandwiches, Sushi |
+| breakfast | 9 | Cereal, Breakfast Foods |
+| health | 17 | Vitamins, Supplements, Weight Control |
+| produce | 7 | Pre-Packaged Fruit & Vegetables |
+| international | 6 | Mexican, Pizza, Tofu |
+| baby | 4 | Baby Foods, Infant Formula |
+| household | 0 | (non-food, not in USDA data) |
 
 ---
 

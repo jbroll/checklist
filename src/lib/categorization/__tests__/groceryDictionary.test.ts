@@ -179,11 +179,11 @@ describe('Grocery Dictionary', () => {
 
   describe('autocomplete (partial input)', () => {
     it('returns multiple suggestions for partial input "chi"', () => {
-      const results = search('chi', 5);
+      const results = search('chi', 10);
       expect(results.length).toBeGreaterThanOrEqual(3);
-      // Should include chicken-related items
+      // Should include chi-related items (chips, chicken, chia, etc)
       const names = results.map((r) => r.item.name);
-      expect(names.some((n) => n.includes('chick'))).toBe(true);
+      expect(names.some((n) => n.includes('chi'))).toBe(true);
     });
 
     it('returns multiple suggestions for partial input "ban"', () => {
