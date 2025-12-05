@@ -4,14 +4,6 @@ BubbleList is a checklist app designed for lists you use again and again. Unlike
 
 Perfect for grocery shopping, packing lists, daily routines, and any recurring checklist.
 
-## Features
-
-- **Reusable lists** — Your list stays the same; each use is a new session
-- **Offline-first** — Works without internet, syncs when connected
-- **Encrypted sync** — Your data is encrypted before leaving your device
-- **Real-time collaboration** — Share folders with family and friends
-- **Import/Export** — Your data is never locked in
-
 ## Legal
 
 - [Privacy Policy](privacy.html)
