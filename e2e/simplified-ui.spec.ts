@@ -4,7 +4,7 @@
  * Tests for the new simplified shopping interface with dual-view mode.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/base';
 
 test.describe('Simplified UI - View Mode Toggle', () => {
   test('should show Advanced View option in More menu (default is simplified)', async ({ page }) => {

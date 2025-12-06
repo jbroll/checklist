@@ -7,7 +7,6 @@ import { useAccount } from '@/lib/jazz';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
-import { exposeServicesToWindow } from '@/services/testHelpers';
 import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
@@ -54,10 +53,12 @@ export function AppContainer({
 }: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
 
-  // Expose services to window for E2E tests (development only)
+  // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)
   useEffect(() => {
-    if (me && import.meta.env.DEV) {
-      exposeServicesToWindow(() => me as InstanceOfSchema<typeof Account> | null);
+    if (me && (window as { __PLAYWRIGHT__?: boolean }).__PLAYWRIGHT__) {
+      import('@/services/testHelpers').then(({ exposeServicesToWindow }) => {
+        exposeServicesToWindow(() => me as InstanceOfSchema<typeof Account> | null);
+      });
     }
   }, [me]);
 

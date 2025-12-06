@@ -24,8 +24,9 @@ import * as ItemService from './templateService';
 export function exposeServicesToWindow(
   getAccount: () => InstanceOfSchema<typeof Account> | null,
 ): void {
-  // Only expose in development/test
-  if (import.meta.env.PROD) return;
+  // Only expose when running under Playwright E2E tests
+  // The __PLAYWRIGHT__ flag is injected by e2e/fixtures/base.ts
+  if (!(window as { __PLAYWRIGHT__?: boolean }).__PLAYWRIGHT__) return;
 
   // Helper to get account with error handling
   const withAccount = <T>(fn: (account: InstanceOfSchema<typeof Account>) => T): T => {
@@ -470,8 +471,6 @@ export function exposeServicesToWindow(
   // Expose to both window properties
   window.testExports = services;
   window.__testServices = services;
-
-  console.log('[Test Helpers] Services exposed to window.testExports and window.__testServices');
 }
 
 /**

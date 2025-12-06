@@ -5,7 +5,7 @@
  * UI-independent - tests interact directly with services exposed to window.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/base';
 
 test.describe('Jazz Services - Folder Operations', () => {
   test.beforeEach(async ({ page }) => {

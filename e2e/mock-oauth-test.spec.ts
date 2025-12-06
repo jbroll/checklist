@@ -168,36 +168,3 @@ test.describe('Mock OAuth Server', () => {
     console.log('✅ Deterministic user assignment working');
   });
 });
-
-test.describe('Mock OAuth Integration', () => {
-  test.skip('demonstrates how to use mock OAuth in tests', async () => {
-    // This test is documentation only
-
-    console.log('\n📝 USING MOCK OAUTH IN TESTS');
-    console.log('============================\n');
-
-    console.log('The mock OAuth server is automatically started by Playwright global setup.');
-    console.log('It runs on http://localhost:9999\n');
-
-    console.log('To use it in your tests:\n');
-
-    console.log('1. Configure BetterAuth to use mock endpoints:');
-    console.log('   - GOOGLE_AUTHORIZATION_URL=http://localhost:9999/oauth/authorize');
-    console.log('   - GOOGLE_TOKEN_URL=http://localhost:9999/oauth/token');
-    console.log('   - GOOGLE_USERINFO_URL=http://localhost:9999/oauth/userinfo\n');
-
-    console.log('2. In tests, clicking "Continue with Google" will:');
-    console.log('   - Redirect to mock OAuth server');
-    console.log('   - Auto-approve (no password needed)');
-    console.log('   - Return to app with valid credentials\n');
-
-    console.log('3. Available test users:');
-    console.log('   - test@example.com (Test User)');
-    console.log('   - test2@example.com (Test User 2)\n');
-
-    console.log('4. All tests using same mock user will share same account ID');
-    console.log('   - Perfect for testing cross-device sync!\n');
-
-    expect(true).toBe(true);
-  });
-});

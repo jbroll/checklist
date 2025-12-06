@@ -12,21 +12,13 @@ interface UseViewModeParams {
 
 export function useViewMode({ template, session, sessionId, me }: UseViewModeParams) {
   const currentViewMode = session?.viewMode || 'zone-in-hierarchy';
-  console.log(
-    '[useViewMode] Current view mode:',
-    currentViewMode,
-    'session.viewMode:',
-    session?.viewMode,
-  );
 
   const cycleViewMode = () => {
     if (!session || !me) {
-      console.log('[useViewMode] Cannot cycle - session or me is null');
       return;
     }
     const current = session.viewMode || 'zone-in-hierarchy';
     const next = current === 'flat' ? 'zone-in-hierarchy' : 'flat';
-    console.log('[useViewMode] Cycling view mode from', current, 'to', next);
     SessionService.updateViewMode(me, template.$jazz.id, sessionId, next);
   };
 

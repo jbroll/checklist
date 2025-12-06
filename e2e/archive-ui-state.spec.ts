@@ -9,7 +9,7 @@
  * since testing selection state would require complex UI interactions.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/base';
 
 test.describe('Archive UI State Management', () => {
   test.beforeEach(async ({ page }) => {
