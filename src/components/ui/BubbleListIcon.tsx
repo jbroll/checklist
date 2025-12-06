@@ -7,7 +7,8 @@ export function BubbleListIcon({ className = '', size = 16 }: BubbleListIconProp
   return (
     <img
       src="/bubblelist.svg"
-      alt="BubbleList"
+      alt=""
+      aria-hidden="true"
       className={className}
       style={{ width: size, height: size }}
     />

@@ -57,6 +57,8 @@ function serveWebsiteFiles(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   build: {
+    // Enable source maps in production for better debugging
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks: {

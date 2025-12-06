@@ -1,0 +1,6 @@
+# BubbleList - Collaborative list app
+User-agent: *
+Allow: /
+
+# Sitemap (if added later)
+# Sitemap: https://bubblelist-app.rkroll.com/sitemap.xml

@@ -12,10 +12,10 @@ const buttonVariants = cva(
         secondary:
           'border border-divider-primary bg-surface-elevated text-content-primary hover:bg-interactive-hover',
         outline:
-          'border border-green-600 bg-surface-elevated text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30',
+          'border border-green-700 bg-surface-elevated text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-900/30',
         ghost: 'hover:bg-interactive-hover text-content-primary',
         danger: 'bg-red-600 text-white hover:bg-red-700',
-        link: 'text-green-600 underline-offset-4 hover:underline',
+        link: 'text-green-700 dark:text-green-500 underline-offset-4 hover:underline',
         dark: 'border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800',
       },
       size: {

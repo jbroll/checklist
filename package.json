@@ -29,7 +29,10 @@
     "format": "biome format . --write",
     "type-check": "tsc --noEmit",
     "check": "npm run type-check && npm run lint && npm run test:run",
-    "check:staged": "lint-staged"
+    "check:staged": "lint-staged",
+    "lighthouse": "lhci autorun",
+    "lighthouse:collect": "lhci collect",
+    "lighthouse:assert": "lhci assert"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -66,6 +69,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.2",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
