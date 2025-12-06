@@ -66,13 +66,16 @@ import { type Account, FolderNode } from '../schemas';
 import {
   archiveFolder,
   createFolder,
+  deleteAllUserData,
   deleteFolder,
   duplicateTemplate,
+  emptyTrash,
   expandAncestorFolders,
   findFolderByPath,
   folderNameExists,
   generateUniqueFolderName,
   getAllTemplateFolders,
+  getArchivedFolders,
   getChildFolders,
   getFolderDisplayPath,
   getFolderPath,
@@ -80,6 +83,7 @@ import {
   isOrganizationalFolder,
   isTemplateFolder,
   moveFolder,
+  moveFolderToIndex,
   renameFolder,
   reorderFolder,
   setFolderExpanded,
@@ -979,6 +983,226 @@ describe('FolderService', () => {
       const duplicate = duplicateTemplate(account, template);
 
       expect(isTemplateFolder(duplicate)).toBe(true);
+    });
+  });
+
+  describe('moveFolderToIndex', () => {
+    it('should move folder to specific index in root', () => {
+      const folder1 = createFolder(account, 'Folder 1', false);
+      const folder2 = createFolder(account, 'Folder 2', false);
+      const folder3 = createFolder(account, 'Folder 3', false);
+
+      // Move folder3 to index 0
+      moveFolderToIndex(account, folder3, null, 0);
+
+      expect(account.root.folders[0]).toBe(folder3);
+      expect(account.root.folders[1]).toBe(folder1);
+      expect(account.root.folders[2]).toBe(folder2);
+    });
+
+    it('should move folder from root to parent at specific index', () => {
+      const folder = createFolder(account, 'Folder', false);
+      const parent = createFolder(account, 'Parent', false);
+      const child1 = createFolder(account, 'Child 1', false, parent);
+      const child2 = createFolder(account, 'Child 2', false, parent);
+
+      // Move folder to parent at index 1 (between child1 and child2)
+      moveFolderToIndex(account, folder, parent, 1);
+
+      expect(account.root.folders).not.toContain(folder);
+      expect(parent.children?.[0]).toBe(child1);
+      expect(parent.children?.[1]).toBe(folder);
+      expect(parent.children?.[2]).toBe(child2);
+      expect(folder.parent).toBe(parent);
+    });
+
+    it('should move folder from parent to root at specific index', () => {
+      const folder1 = createFolder(account, 'Folder 1', false);
+      const parent = createFolder(account, 'Parent', false);
+      const child = createFolder(account, 'Child', false, parent);
+
+      // Move child to root at index 0
+      moveFolderToIndex(account, child, null, 0);
+
+      expect(parent.children).not.toContain(child);
+      expect(account.root.folders[0]).toBe(child);
+      expect(account.root.folders[1]).toBe(folder1);
+      expect(child.parent).toBeUndefined();
+    });
+
+    it('should reorder within same parent', () => {
+      const parent = createFolder(account, 'Parent', false);
+      const child1 = createFolder(account, 'Child 1', false, parent);
+      const child2 = createFolder(account, 'Child 2', false, parent);
+      const child3 = createFolder(account, 'Child 3', false, parent);
+
+      // Move child3 to index 0 (same parent)
+      moveFolderToIndex(account, child3, parent, 0);
+
+      expect(parent.children?.[0]).toBe(child3);
+      expect(parent.children?.[1]).toBe(child1);
+      expect(parent.children?.[2]).toBe(child2);
+    });
+
+    it('should handle moving down within same parent', () => {
+      const folder1 = createFolder(account, 'Folder 1', false);
+      const folder2 = createFolder(account, 'Folder 2', false);
+      const folder3 = createFolder(account, 'Folder 3', false);
+
+      // Move folder1 to index 2 (moving down)
+      moveFolderToIndex(account, folder1, null, 2);
+
+      expect(account.root.folders[0]).toBe(folder2);
+      expect(account.root.folders[1]).toBe(folder1);
+      expect(account.root.folders[2]).toBe(folder3);
+    });
+
+    it('should prevent moving folder into itself', () => {
+      const folder = createFolder(account, 'Folder', false);
+
+      expect(() => moveFolderToIndex(account, folder, folder, 0)).toThrow(
+        'Cannot move folder into itself or its descendants',
+      );
+    });
+
+    it('should prevent moving folder into its descendant', () => {
+      const parent = createFolder(account, 'Parent', false);
+      const child = createFolder(account, 'Child', false, parent);
+      const grandchild = createFolder(account, 'Grandchild', false, child);
+
+      expect(() => moveFolderToIndex(account, parent, grandchild, 0)).toThrow(
+        'Cannot move folder into itself or its descendants',
+      );
+    });
+  });
+
+  describe('getArchivedFolders', () => {
+    it('should return empty array when no archived folders', () => {
+      createFolder(account, 'Folder 1', false);
+      createFolder(account, 'Folder 2', true);
+
+      const archived = getArchivedFolders(account);
+
+      expect(archived).toEqual([]);
+    });
+
+    it('should return archived root folders', () => {
+      const folder1 = createFolder(account, 'Folder 1', false);
+      createFolder(account, 'Folder 2', false);
+      archiveFolder(folder1);
+
+      const archived = getArchivedFolders(account);
+
+      expect(archived).toHaveLength(1);
+      expect(archived[0]).toBe(folder1);
+    });
+
+    it('should return archived nested folders', () => {
+      const parent = createFolder(account, 'Parent', false);
+      const child = createFolder(account, 'Child', true, parent);
+      archiveFolder(child);
+
+      const archived = getArchivedFolders(account);
+
+      expect(archived).toHaveLength(1);
+      expect(archived[0]).toBe(child);
+    });
+
+    it('should only return top-level archived folders (not children of archived)', () => {
+      const parent = createFolder(account, 'Parent', false);
+      createFolder(account, 'Child 1', false, parent);
+      createFolder(account, 'Child 2', true, parent);
+      archiveFolder(parent); // Archives parent and all children
+
+      const archived = getArchivedFolders(account);
+
+      // Should only return the parent, not the children
+      expect(archived).toHaveLength(1);
+      expect(archived[0]).toBe(parent);
+    });
+
+    it('should find archived folders in non-archived parents', () => {
+      const parent = createFolder(account, 'Parent', false);
+      const child1 = createFolder(account, 'Child 1', true, parent);
+      createFolder(account, 'Child 2', true, parent);
+      archiveFolder(child1);
+
+      const archived = getArchivedFolders(account);
+
+      expect(archived).toHaveLength(1);
+      expect(archived[0]).toBe(child1);
+    });
+  });
+
+  describe('emptyTrash', () => {
+    it('should return 0 when no archived folders', () => {
+      createFolder(account, 'Folder 1', false);
+      createFolder(account, 'Folder 2', true);
+
+      const count = emptyTrash(account);
+
+      expect(count).toBe(0);
+    });
+
+    it('should delete all archived folders and return count', () => {
+      const folder1 = createFolder(account, 'Folder 1', false);
+      const folder2 = createFolder(account, 'Folder 2', true);
+      archiveFolder(folder1);
+      archiveFolder(folder2);
+
+      const count = emptyTrash(account);
+
+      expect(count).toBe(2);
+      expect(account.root.folders).toHaveLength(0);
+    });
+
+    it('should handle nested archived folders', () => {
+      const parent = createFolder(account, 'Parent', false);
+      createFolder(account, 'Child', true, parent);
+      archiveFolder(parent);
+
+      const count = emptyTrash(account);
+
+      expect(count).toBe(1); // Only parent is top-level archived
+      expect(account.root.folders).toHaveLength(0);
+    });
+
+    it('should only delete archived folders, keep active ones', () => {
+      const activeFolder = createFolder(account, 'Active', false);
+      const archivedFolder = createFolder(account, 'Archived', true);
+      archiveFolder(archivedFolder);
+
+      const count = emptyTrash(account);
+
+      expect(count).toBe(1);
+      expect(account.root.folders).toContain(activeFolder);
+      expect(account.root.folders).not.toContain(archivedFolder);
+    });
+  });
+
+  describe('deleteAllUserData', () => {
+    it('should delete all folders', () => {
+      createFolder(account, 'Folder 1', false);
+      createFolder(account, 'Folder 2', true);
+      const parent = createFolder(account, 'Parent', false);
+      createFolder(account, 'Child', true, parent);
+
+      deleteAllUserData(account);
+
+      expect(account.root.folders).toHaveLength(0);
+    });
+
+    it('should handle empty account', () => {
+      deleteAllUserData(account);
+
+      expect(account.root.folders).toHaveLength(0);
+    });
+
+    it('should handle account with no root', () => {
+      const noRootAccount: any = { $jazz: { id: 'account-2' } };
+
+      // Should not throw
+      expect(() => deleteAllUserData(noRootAccount)).not.toThrow();
     });
   });
 });

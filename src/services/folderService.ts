@@ -2,120 +2,436 @@
  * Folder Service
  *
  * Manages hierarchical folder tree using FolderNode CoValues.
- * Replaces the old path-based directory service.
  */
 
 import { co, Group, type InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
 
+type FolderType = InstanceOfSchema<typeof FolderNode>;
+type AccountType = InstanceOfSchema<typeof Account>;
+// Jazz CoList has $jazz methods for mutations
+type FolderList = FolderType[] & {
+  $jazz: {
+    push: (folder: FolderType) => void;
+    splice: (start: number, deleteCount: number, ...items: FolderType[]) => void;
+  };
+};
+
+// =============================================================================
+// Internal Helpers
+// =============================================================================
+
 /**
- * Helper to determine if a FolderNode is a template folder
+ * Get the list containing a folder (either parent's children or root folders)
  */
-export function isTemplateFolder(folder: InstanceOfSchema<typeof FolderNode>): boolean {
-  return folder.items !== undefined;
+function getContainingList(account: AccountType, folder: FolderType): FolderList {
+  return (folder.parent?.children || account.root?.folders) as FolderList;
 }
 
 /**
- * Helper to determine if a FolderNode is an organizational folder
+ * Find folder index in a list by ID
  */
-export function isOrganizationalFolder(folder: InstanceOfSchema<typeof FolderNode>): boolean {
-  return folder.children !== undefined;
+function findFolderIndex(list: FolderList, folder: FolderType): number {
+  return list.findIndex((f: FolderType | null) => f?.$jazz.id === folder.$jazz.id);
 }
 
 /**
- * Create a new folder (organizational or template)
+ * Remove folder from its current location
  */
-export function createFolder(
-  account: InstanceOfSchema<typeof Account>,
-  name: string,
-  isTemplate: boolean,
-  parent?: InstanceOfSchema<typeof FolderNode> | null,
-): InstanceOfSchema<typeof FolderNode> {
-  if (!account.root) throw new Error('Account root not initialized');
+function removeFromCurrentLocation(account: AccountType, folder: FolderType): void {
+  const list = getContainingList(account, folder);
+  const index = findFolderIndex(list, folder);
+  if (index !== -1) {
+    list.$jazz.splice(index, 1);
+  }
+}
 
-  const now = new Date();
+/**
+ * Validate that target is not the folder itself or a descendant
+ */
+function validateNotCircular(folder: FolderType, target: FolderType | null | undefined): void {
+  if (!target) return;
+  let current: FolderType | undefined = target;
+  while (current) {
+    if (current.$jazz.id === folder.$jazz.id) {
+      throw new Error('Cannot move folder into itself or its descendants');
+    }
+    current = current.parent;
+  }
+}
 
-  // Create a new group for this folder to enable sharing
+/**
+ * Update group permissions when moving between parents
+ */
+function updateGroupPermissions(
+  folder: FolderType,
+  oldParent: FolderType | undefined,
+  newParent: FolderType | null | undefined,
+): void {
+  const folderGroup = folder.$jazz.owner as Group;
+
+  if (oldParent) {
+    const oldParentGroup = oldParent.$jazz.owner as Group;
+    folderGroup.removeMember(oldParentGroup);
+  }
+
+  if (newParent) {
+    const newParentGroup = newParent.$jazz.owner as Group;
+    folderGroup.addMember(newParentGroup);
+  }
+}
+
+/**
+ * Create a group for a new folder with proper permissions
+ */
+function createFolderGroup(account: AccountType, parent: FolderType | null | undefined): Group {
   const folderGroup = Group.create({ owner: account });
-
-  // Add creator explicitly to members for consistency
-  // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
   folderGroup.addMember(account, 'admin');
 
-  // Add parent's group as member for cascading permissions
-  // Anyone with access to parent will also have access to this folder
   if (parent) {
     const parentGroup = parent.$jazz.owner as Group;
     folderGroup.addMember(parentGroup);
   }
 
-  if (isTemplate) {
-    // Create template folder
-    const folder = FolderNode.create(
-      {
-        name,
-        expanded: false,
-        archived: false,
-        items: [],
-        sessions: [], // Plain JavaScript array
-        showZoneHeadings: false,
-        parent: parent || undefined,
-        owner: account,
-        createdAt: now,
-        updatedAt: now,
-      },
-      { owner: folderGroup },
-    );
+  return folderGroup;
+}
 
-    // Add to parent or root
-    if (parent?.children) {
-      parent.children.$jazz.push(folder);
-    } else {
-      account.root.folders.$jazz.push(folder);
-    }
+/**
+ * Add folder to target location
+ */
+function addToLocation(
+  account: AccountType,
+  folder: FolderType,
+  parent: FolderType | null | undefined,
+  index?: number,
+): void {
+  const targetList = parent?.children || account.root?.folders;
+  if (!targetList) return;
 
-    return folder;
+  if (index !== undefined) {
+    targetList.$jazz.splice(index, 0, folder);
   } else {
-    // Create organizational folder
-    const children = co.list(FolderNode).create([], { owner: folderGroup });
-
-    const folder = FolderNode.create(
-      {
-        name,
-        expanded: true,
-        archived: false,
-        children,
-        parent: parent || undefined,
-        owner: account,
-        createdAt: now,
-        updatedAt: now,
-      },
-      { owner: folderGroup },
-    );
-
-    // Add to parent or root
-    if (parent?.children) {
-      parent.children.$jazz.push(folder);
-    } else {
-      account.root.folders.$jazz.push(folder);
-    }
-
-    return folder;
+    targetList.$jazz.push(folder);
   }
 }
 
 /**
- * Check if a folder name exists in the target location (case-insensitive)
- *
- * @param name - Folder name to check
- * @param account - User's Account
- * @param parentFolder - Optional parent folder (checks parent's children, or root if not provided)
- * @returns True if name already exists
+ * Format archive timestamp for folder name suffix
  */
+function formatArchiveTimestamp(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+export function isTemplateFolder(folder: FolderType): boolean {
+  return folder.items !== undefined;
+}
+
+export function isOrganizationalFolder(folder: FolderType): boolean {
+  return folder.children !== undefined;
+}
+
+// =============================================================================
+// CRUD Operations
+// =============================================================================
+
+export function createFolder(
+  account: AccountType,
+  name: string,
+  isTemplate: boolean,
+  parent?: FolderType | null,
+): FolderType {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  const now = new Date();
+  const folderGroup = createFolderGroup(account, parent);
+
+  const baseData = {
+    name,
+    expanded: !isTemplate,
+    archived: false,
+    parent: parent || undefined,
+    owner: account,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const folder = isTemplate
+    ? FolderNode.create(
+        { ...baseData, items: [], sessions: [], showZoneHeadings: false },
+        { owner: folderGroup },
+      )
+    : FolderNode.create(
+        { ...baseData, children: co.list(FolderNode).create([], { owner: folderGroup }) },
+        { owner: folderGroup },
+      );
+
+  addToLocation(account, folder, parent);
+  return folder;
+}
+
+export function renameFolder(folder: FolderType, newName: string): void {
+  folder.$jazz.set('name', newName);
+  folder.$jazz.set('updatedAt', new Date());
+}
+
+export function archiveFolder(folder: FolderType): void {
+  const now = new Date();
+  const archiveSuffix = ` (archived ${formatArchiveTimestamp(now)})`;
+
+  folder.$jazz.set('name', folder.name + archiveSuffix);
+  folder.$jazz.set('archived', true);
+  folder.$jazz.set('archivedAt', now);
+  folder.$jazz.set('updatedAt', now);
+
+  // Recursively archive children
+  if (folder.children) {
+    for (const child of folder.children) {
+      if (child && !child.archived) {
+        archiveFolder(child);
+      }
+    }
+  }
+}
+
+export function unarchiveFolder(folder: FolderType): void {
+  const now = new Date();
+  const archivePattern = / \(archived \d{4}-\d{2}-\d{2} \d{2}:\d{2}\)$/;
+  const cleanedName = folder.name.replace(archivePattern, '');
+
+  if (cleanedName !== folder.name) {
+    folder.$jazz.set('name', cleanedName);
+  }
+
+  folder.$jazz.set('archived', false);
+  folder.$jazz.set('archivedAt', undefined);
+  folder.$jazz.set('updatedAt', now);
+
+  // Recursively unarchive children
+  if (folder.children) {
+    for (const child of folder.children) {
+      if (child?.archived) {
+        unarchiveFolder(child);
+      }
+    }
+  }
+}
+
+export function deleteFolder(account: AccountType, folder: FolderType): void {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  // Recursively delete children first
+  if (folder.children) {
+    while (folder.children.length > 0) {
+      const child = folder.children[0];
+      if (child) {
+        deleteFolder(account, child);
+      }
+    }
+  }
+
+  // Clear sessions for template folders
+  if (folder.sessions) {
+    folder.$jazz.set('sessions', []);
+  }
+
+  removeFromCurrentLocation(account, folder);
+}
+
+// =============================================================================
+// Expansion State
+// =============================================================================
+
+export function toggleFolderExpanded(folder: FolderType): void {
+  folder.$jazz.set('expanded', !folder.expanded);
+  folder.$jazz.set('updatedAt', new Date());
+}
+
+export function setFolderExpanded(folder: FolderType, expanded: boolean): void {
+  folder.$jazz.set('expanded', expanded);
+  folder.$jazz.set('updatedAt', new Date());
+}
+
+export function expandAncestorFolders(folder: FolderType): void {
+  let current = folder.parent;
+  while (current) {
+    current.$jazz.set('expanded', true);
+    current.$jazz.set('updatedAt', new Date());
+    current = current.parent;
+  }
+}
+
+// =============================================================================
+// Movement & Reordering
+// =============================================================================
+
+/**
+ * Move a folder to a new parent and optionally insert at a specific position.
+ * This is the unified move function - use this for all move operations.
+ */
+export function moveFolderToIndex(
+  account: AccountType,
+  folder: FolderType,
+  newParent: FolderType | null | undefined,
+  newIndex: number,
+): void {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  validateNotCircular(folder, newParent);
+
+  const currentParentId = folder.parent?.$jazz.id;
+  const newParentId = newParent?.$jazz.id;
+  const isChangingParent = currentParentId !== newParentId;
+
+  if (isChangingParent) {
+    updateGroupPermissions(folder, folder.parent, newParent);
+    removeFromCurrentLocation(account, folder);
+    addToLocation(account, folder, newParent, newIndex);
+    folder.$jazz.set('parent', newParent || undefined);
+  } else {
+    // Same parent - reorder
+    const parentList = getContainingList(account, folder);
+    const oldIndex = findFolderIndex(parentList, folder);
+
+    if (oldIndex === -1) {
+      throw new Error('Folder not found in parent');
+    }
+
+    parentList.$jazz.splice(oldIndex, 1);
+    const adjustedIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
+    parentList.$jazz.splice(adjustedIndex, 0, folder);
+  }
+
+  folder.$jazz.set('updatedAt', new Date());
+}
+
+/**
+ * Move a folder to a new parent (appends to end of target list)
+ */
+export function moveFolder(
+  account: AccountType,
+  folder: FolderType,
+  newParent?: FolderType | null,
+): void {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  validateNotCircular(folder, newParent);
+
+  const targetList = newParent?.children || account.root.folders;
+  moveFolderToIndex(account, folder, newParent, targetList.length);
+}
+
+/**
+ * Reorder a folder within its current parent
+ */
+export function reorderFolder(account: AccountType, folder: FolderType, newIndex: number): void {
+  moveFolderToIndex(account, folder, folder.parent, newIndex);
+}
+
+// =============================================================================
+// Query Functions
+// =============================================================================
+
+export function getRootFolders(account: AccountType, showArchived = false): FolderType[] {
+  if (!account.root?.folders) return [];
+  return account.root.folders.filter((f) => showArchived || !f.archived);
+}
+
+export function getChildFolders(folder: FolderType, showArchived = false): FolderType[] {
+  if (!folder.children) return [];
+  return folder.children.filter((f: FolderType | null) => f && (showArchived || !f.archived));
+}
+
+export function getFolderPath(folder: FolderType): string[] {
+  const segments: string[] = [];
+  let current: FolderType | undefined = folder;
+
+  while (current) {
+    segments.unshift(current.name);
+    current = current.parent;
+  }
+
+  return segments;
+}
+
+export function getFolderDisplayPath(folder: FolderType): string {
+  return getFolderPath(folder).join('/');
+}
+
+export function findFolderByPath(account: AccountType, pathSegments: string[]): FolderType | null {
+  if (!account.root?.folders || pathSegments.length === 0) return null;
+
+  let current: FolderType | undefined;
+  let searchList = account.root.folders;
+
+  for (const segment of pathSegments) {
+    current = searchList.find((f) => f?.name === segment);
+    if (!current) return null;
+    searchList = current.children || [];
+  }
+
+  return current || null;
+}
+
+export function getAllTemplateFolders(account: AccountType, showArchived = false): FolderType[] {
+  if (!account.root?.folders) return [];
+
+  const templates: FolderType[] = [];
+
+  function collect(folders: FolderType[]) {
+    for (const folder of folders) {
+      if (!folder || (!showArchived && folder.archived)) continue;
+
+      if (isTemplateFolder(folder)) {
+        templates.push(folder);
+      } else if (folder.children) {
+        collect(folder.children);
+      }
+    }
+  }
+
+  collect(Array.from(account.root.folders));
+  return templates;
+}
+
+export function getArchivedFolders(account: AccountType): FolderType[] {
+  if (!account.root?.folders) return [];
+
+  const archived: FolderType[] = [];
+
+  function collect(folders: FolderType[]) {
+    for (const folder of folders) {
+      if (!folder) continue;
+
+      if (folder.archived) {
+        archived.push(folder);
+        // Don't recurse into archived folders' children
+      } else if (folder.children) {
+        collect(folder.children);
+      }
+    }
+  }
+
+  collect(Array.from(account.root.folders));
+  return archived;
+}
+
+// =============================================================================
+// Name Utilities
+// =============================================================================
+
 export function folderNameExists(
   name: string,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
+  account: AccountType,
+  parentFolder?: FolderType | null,
 ): boolean {
   const normalizedName = name.toLowerCase();
   const foldersToCheck = parentFolder?.children ?? account.root?.folders ?? [];
@@ -129,508 +445,33 @@ export function folderNameExists(
   return false;
 }
 
-/**
- * Generate a unique folder name by adding a numeric suffix if needed
- *
- * @param baseName - Desired folder name
- * @param account - User's Account
- * @param parentFolder - Optional parent folder
- * @returns Unique name (original or with suffix like "Name (2)")
- */
 export function generateUniqueFolderName(
   baseName: string,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
+  account: AccountType,
+  parentFolder?: FolderType | null,
 ): string {
   if (!folderNameExists(baseName, account, parentFolder)) {
     return baseName;
   }
 
-  // Try adding numeric suffixes
-  let suffix = 2;
-  while (suffix <= 100) {
+  for (let suffix = 2; suffix <= 100; suffix++) {
     const candidateName = `${baseName} (${suffix})`;
     if (!folderNameExists(candidateName, account, parentFolder)) {
       return candidateName;
     }
-    suffix++;
   }
 
-  // Fallback: add timestamp
   return `${baseName} (${Date.now()})`;
 }
 
-/**
- * Get all root folders
- */
-export function getRootFolders(
-  account: InstanceOfSchema<typeof Account>,
-  showArchived = false,
-): InstanceOfSchema<typeof FolderNode>[] {
-  if (!account.root?.folders) return [];
-  return account.root.folders.filter((f) => showArchived || !f.archived);
-}
+// =============================================================================
+// Bulk Operations
+// =============================================================================
 
-/**
- * Get children of a folder (for organizational folders only)
- */
-export function getChildFolders(
-  folder: InstanceOfSchema<typeof FolderNode>,
-  showArchived = false,
-): InstanceOfSchema<typeof FolderNode>[] {
-  if (!folder.children) return [];
-  return folder.children.filter(
-    (f: InstanceOfSchema<typeof FolderNode> | null) => f && (showArchived || !f.archived),
-  );
-}
-
-/**
- * Rename a folder
- */
-export function renameFolder(folder: InstanceOfSchema<typeof FolderNode>, newName: string): void {
-  folder.$jazz.set('name', newName);
-  folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Format archive timestamp for folder name suffix
- * Format: "YYYY-MM-DD HH:MM" (24-hour, local time)
- */
-function formatArchiveTimestamp(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
-
-/**
- * Archive (soft delete) a folder
- * Recursively archives all children
- * Appends archive timestamp to name to avoid collisions with active folders
- */
-export function archiveFolder(folder: InstanceOfSchema<typeof FolderNode>): void {
-  const now = new Date();
-
-  // Append archive timestamp to name to differentiate from active folders
-  const archiveSuffix = ` (archived ${formatArchiveTimestamp(now)})`;
-  folder.$jazz.set('name', folder.name + archiveSuffix);
-  folder.$jazz.set('archived', true);
-  folder.$jazz.set('archivedAt', now);
-  folder.$jazz.set('updatedAt', now);
-
-  // Recursively archive children (for organizational folders)
-  if (folder.children) {
-    for (const child of folder.children) {
-      if (child && !child.archived) {
-        archiveFolder(child);
-      }
-    }
-  }
-}
-
-/**
- * Unarchive (restore) a folder
- * Recursively unarchives all children
- * Removes the archive timestamp suffix from the name
- */
-export function unarchiveFolder(folder: InstanceOfSchema<typeof FolderNode>): void {
-  const now = new Date();
-
-  // Remove the archive timestamp suffix from the name if present
-  const archivePattern = / \(archived \d{4}-\d{2}-\d{2} \d{2}:\d{2}\)$/;
-  const cleanedName = folder.name.replace(archivePattern, '');
-  if (cleanedName !== folder.name) {
-    folder.$jazz.set('name', cleanedName);
-  }
-
-  folder.$jazz.set('archived', false);
-  folder.$jazz.set('archivedAt', undefined);
-  folder.$jazz.set('updatedAt', now);
-
-  // Recursively unarchive children (for organizational folders)
-  if (folder.children) {
-    for (const child of folder.children) {
-      if (child?.archived) {
-        unarchiveFolder(child);
-      }
-    }
-  }
-}
-
-/**
- * Permanently delete a folder and all its children
- *
- * WARNING: This permanently removes the folder CoValue.
- * Jazz handles cascading cleanup of nested CoValues.
- */
-export function deleteFolder(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-): void {
-  if (!account.root) throw new Error('Account root not initialized');
-
-  // Recursively delete children first (for organizational folders)
-  if (folder.children) {
-    while (folder.children.length > 0) {
-      const child = folder.children[0];
-      if (child) {
-        deleteFolder(account, child);
-      }
-    }
-  }
-
-  // For template folders, clear sessions (plain array, not CoList)
-  if (folder.sessions) {
-    folder.$jazz.set('sessions', []);
-  }
-
-  // Remove from parent or root
-  if (folder.parent?.children) {
-    const index = folder.parent.children.findIndex(
-      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-    );
-    if (index !== -1) {
-      folder.parent.children.$jazz.splice(index, 1);
-    }
-  } else {
-    const index = account.root.folders.findIndex(
-      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-    );
-    if (index !== -1) {
-      account.root.folders.$jazz.splice(index, 1);
-    }
-  }
-}
-
-/**
- * Toggle expanded state of a folder
- */
-export function toggleFolderExpanded(folder: InstanceOfSchema<typeof FolderNode>): void {
-  folder.$jazz.set('expanded', !folder.expanded);
-  folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Set expanded state of a folder explicitly
- */
-export function setFolderExpanded(
-  folder: InstanceOfSchema<typeof FolderNode>,
-  expanded: boolean,
-): void {
-  folder.$jazz.set('expanded', expanded);
-  folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Expand all ancestor folders to make this folder visible
- */
-export function expandAncestorFolders(folder: InstanceOfSchema<typeof FolderNode>): void {
-  let current = folder.parent;
-  while (current) {
-    current.$jazz.set('expanded', true);
-    current.$jazz.set('updatedAt', new Date());
-    current = current.parent;
-  }
-}
-
-/**
- * Move a folder to a new parent location
- *
- * Updates group membership to maintain cascading permissions hierarchy.
- */
-export function moveFolder(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-  newParent?: InstanceOfSchema<typeof FolderNode> | null,
-): void {
-  if (!account.root) throw new Error('Account root not initialized');
-
-  // Prevent moving a folder into itself or its descendants
-  if (newParent) {
-    let current = newParent;
-    while (current) {
-      if (current.$jazz.id === folder.$jazz.id) {
-        throw new Error('Cannot move folder into itself or its descendants');
-      }
-      current = current.parent;
-    }
-  }
-
-  const folderGroup = folder.$jazz.owner as Group;
-
-  // Update group membership for cascading permissions
-  // Remove old parent's group from folder's group membership
-  if (folder.parent) {
-    const oldParentGroup = folder.parent.$jazz.owner as Group;
-    folderGroup.removeMember(oldParentGroup);
-  }
-
-  // Add new parent's group to folder's group membership
-  if (newParent) {
-    const newParentGroup = newParent.$jazz.owner as Group;
-    folderGroup.addMember(newParentGroup);
-  }
-
-  // Remove from old parent
-  if (folder.parent?.children) {
-    const index = folder.parent.children.findIndex(
-      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-    );
-    if (index !== -1) {
-      folder.parent.children.$jazz.splice(index, 1);
-    }
-  } else {
-    const index = account.root.folders.findIndex(
-      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-    );
-    if (index !== -1) {
-      account.root.folders.$jazz.splice(index, 1);
-    }
-  }
-
-  // Add to new parent
-  if (newParent?.children) {
-    newParent.children.$jazz.push(folder);
-  } else {
-    account.root.folders.$jazz.push(folder);
-  }
-
-  // Update parent reference
-  folder.$jazz.set('parent', newParent || undefined);
-  folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Get the path of a folder (computed from hierarchy)
- */
-export function getFolderPath(folder: InstanceOfSchema<typeof FolderNode>): string[] {
-  const segments: string[] = [];
-  let current: InstanceOfSchema<typeof FolderNode> | undefined = folder;
-
-  while (current) {
-    segments.unshift(current.name);
-    current = current.parent;
-  }
-
-  return segments;
-}
-
-/**
- * Get display path as string (for UI)
- */
-export function getFolderDisplayPath(folder: InstanceOfSchema<typeof FolderNode>): string {
-  return getFolderPath(folder).join('/');
-}
-
-/**
- * Find a folder by path segments
- */
-export function findFolderByPath(
-  account: InstanceOfSchema<typeof Account>,
-  pathSegments: string[],
-): InstanceOfSchema<typeof FolderNode> | null {
-  if (!account.root?.folders || pathSegments.length === 0) return null;
-
-  let current: InstanceOfSchema<typeof FolderNode> | undefined;
-  let searchList = account.root.folders;
-
-  for (const segment of pathSegments) {
-    current = searchList.find((f) => f?.name === segment);
-    if (!current) return null;
-    searchList = current.children || [];
-  }
-
-  return current || null;
-}
-
-/**
- * Reorder a folder within its parent
- */
-export function reorderFolder(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-  newIndex: number,
-): void {
-  if (!account.root) throw new Error('Account root not initialized');
-
-  const parentList = folder.parent?.children || account.root.folders;
-  const oldIndex = parentList.findIndex(
-    (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-  );
-
-  if (oldIndex === -1) {
-    throw new Error('Folder not found in parent');
-  }
-
-  // Remove from old position
-  parentList.$jazz.splice(oldIndex, 1);
-
-  // Insert at new position
-  parentList.$jazz.splice(newIndex, 0, folder);
-}
-
-/**
- * Move a folder to a new parent and insert at a specific position.
- * Combines move + reorder in one operation for cross-folder drag-and-drop.
- */
-export function moveFolderToIndex(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-  newParent: InstanceOfSchema<typeof FolderNode> | null | undefined,
-  newIndex: number,
-): void {
-  if (!account.root) throw new Error('Account root not initialized');
-
-  // Prevent moving a folder into itself or its descendants
-  if (newParent) {
-    let current = newParent;
-    while (current) {
-      if (current.$jazz.id === folder.$jazz.id) {
-        throw new Error('Cannot move folder into itself or its descendants');
-      }
-      current = current.parent;
-    }
-  }
-
-  const folderGroup = folder.$jazz.owner as Group;
-  const currentParentId = folder.parent?.$jazz.id;
-  const newParentId = newParent?.$jazz.id;
-
-  // Check if actually changing parents
-  const isChangingParent = currentParentId !== newParentId;
-
-  if (isChangingParent) {
-    // Update group membership for cascading permissions
-    if (folder.parent) {
-      const oldParentGroup = folder.parent.$jazz.owner as Group;
-      folderGroup.removeMember(oldParentGroup);
-    }
-    if (newParent) {
-      const newParentGroup = newParent.$jazz.owner as Group;
-      folderGroup.addMember(newParentGroup);
-    }
-
-    // Remove from old parent
-    if (folder.parent?.children) {
-      const index = folder.parent.children.findIndex(
-        (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-      );
-      if (index !== -1) {
-        folder.parent.children.$jazz.splice(index, 1);
-      }
-    } else {
-      const index = account.root.folders.findIndex(
-        (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-      );
-      if (index !== -1) {
-        account.root.folders.$jazz.splice(index, 1);
-      }
-    }
-
-    // Insert at new position in new parent
-    if (newParent?.children) {
-      newParent.children.$jazz.splice(newIndex, 0, folder);
-    } else {
-      account.root.folders.$jazz.splice(newIndex, 0, folder);
-    }
-
-    // Update parent reference
-    folder.$jazz.set('parent', newParent || undefined);
-  } else {
-    // Same parent - just reorder
-    const parentList = folder.parent?.children || account.root.folders;
-    const oldIndex = parentList.findIndex(
-      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
-    );
-
-    if (oldIndex === -1) {
-      throw new Error('Folder not found in parent');
-    }
-
-    // Remove from old position
-    parentList.$jazz.splice(oldIndex, 1);
-
-    // Adjust index if moving down (since we removed an item before the target position)
-    const adjustedIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
-
-    // Insert at new position
-    parentList.$jazz.splice(adjustedIndex, 0, folder);
-  }
-
-  folder.$jazz.set('updatedAt', new Date());
-}
-
-/**
- * Get all template folders (recursively)
- */
-export function getAllTemplateFolders(
-  account: InstanceOfSchema<typeof Account>,
-  showArchived = false,
-): InstanceOfSchema<typeof FolderNode>[] {
-  if (!account.root?.folders) return [];
-
-  const templates: InstanceOfSchema<typeof FolderNode>[] = [];
-
-  function collectTemplates(folders: InstanceOfSchema<typeof FolderNode>[]) {
-    for (const folder of folders) {
-      if (!folder) continue;
-      if (!showArchived && folder.archived) continue;
-
-      if (isTemplateFolder(folder)) {
-        templates.push(folder);
-      } else if (folder.children) {
-        collectTemplates(folder.children);
-      }
-    }
-  }
-
-  collectTemplates(Array.from(account.root.folders));
-  return templates;
-}
-
-/**
- * Get top-level archived folders (not children of other archived folders)
- * This returns only the root-level archived folders to avoid double-deletion
- */
-export function getArchivedFolders(
-  account: InstanceOfSchema<typeof Account>,
-): InstanceOfSchema<typeof FolderNode>[] {
-  if (!account.root?.folders) return [];
-
-  const archived: InstanceOfSchema<typeof FolderNode>[] = [];
-
-  function collectArchived(folders: InstanceOfSchema<typeof FolderNode>[]) {
-    for (const folder of folders) {
-      if (!folder) continue;
-
-      if (folder.archived) {
-        // Only add archived folders - don't recurse into their children
-        // since deleting the parent will delete children too
-        archived.push(folder);
-      } else if (folder.children) {
-        // Only recurse into non-archived folders to find nested archived ones
-        collectArchived(folder.children);
-      }
-    }
-  }
-
-  collectArchived(Array.from(account.root.folders));
-  return archived;
-}
-
-/**
- * Empty trash - permanently delete all archived folders
- *
- * @param account - User's Account
- * @returns Number of folders permanently deleted
- */
-export function emptyTrash(account: InstanceOfSchema<typeof Account>): number {
+export function emptyTrash(account: AccountType): number {
   const archivedFolders = getArchivedFolders(account);
   let deletedCount = 0;
 
-  // Delete each archived folder (in reverse to handle nested folders properly)
   for (const folder of archivedFolders.reverse()) {
     try {
       deleteFolder(account, folder);
@@ -643,38 +484,41 @@ export function emptyTrash(account: InstanceOfSchema<typeof Account>): number {
   return deletedCount;
 }
 
-/**
- * Duplicate a template folder with all its items.
- * Creates a deep copy with new IDs, fresh sessions, and " (Copy)" suffix.
- *
- * @param account - User's Account
- * @param folder - Template folder to duplicate
- * @returns The duplicated template folder
- */
-export function duplicateTemplate(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-): InstanceOfSchema<typeof FolderNode> {
+export function deleteAllUserData(account: AccountType): void {
+  if (!account.root?.folders) return;
+
+  while (account.root.folders.length > 0) {
+    const folder = account.root.folders[0];
+    if (folder) {
+      try {
+        deleteFolder(account, folder);
+      } catch {
+        try {
+          account.root.folders.$jazz.splice(0, 1);
+        } catch {
+          break;
+        }
+      }
+    } else {
+      try {
+        account.root.folders.$jazz.splice(0, 1);
+      } catch {
+        break;
+      }
+    }
+  }
+}
+
+export function duplicateTemplate(account: AccountType, folder: FolderType): FolderType {
   if (!account.root) throw new Error('Account root not initialized');
   if (!isTemplateFolder(folder)) throw new Error('Can only duplicate template folders');
 
-  // Generate unique name with " (Copy)" suffix
   const baseName = `${folder.name} (Copy)`;
   const uniqueName = generateUniqueFolderName(baseName, account, folder.parent);
-
   const now = new Date();
+  const folderGroup = createFolderGroup(account, folder.parent);
 
-  // Create a new group for the duplicated folder
-  const folderGroup = Group.create({ owner: account });
-  folderGroup.addMember(account, 'admin');
-
-  // Add parent's group for cascading permissions
-  if (folder.parent) {
-    const parentGroup = folder.parent.$jazz.owner as Group;
-    folderGroup.addMember(parentGroup);
-  }
-
-  // Deep copy items with new IDs
+  // Deep copy non-archived items with new IDs
   const copiedItems = (folder.items || [])
     .filter((item: { archived?: boolean } | null) => item && !item.archived)
     .map((item: NonNullable<(typeof folder.items)[number]>) => ({
@@ -683,14 +527,13 @@ export function duplicateTemplate(
       createdAt: now,
     }));
 
-  // Create the duplicated template folder (no sessions - start fresh)
   const duplicatedFolder = FolderNode.create(
     {
       name: uniqueName,
       expanded: false,
       archived: false,
       items: copiedItems,
-      sessions: [], // Fresh start - no sessions copied
+      sessions: [],
       showZoneHeadings: folder.showZoneHeadings ?? false,
       parent: folder.parent || undefined,
       owner: account,
@@ -700,47 +543,6 @@ export function duplicateTemplate(
     { owner: folderGroup },
   );
 
-  // Add to same parent location as original
-  if (folder.parent?.children) {
-    folder.parent.children.$jazz.push(duplicatedFolder);
-  } else {
-    account.root.folders.$jazz.push(duplicatedFolder);
-  }
-
+  addToLocation(account, duplicatedFolder, folder.parent);
   return duplicatedFolder;
-}
-
-/**
- * Delete all user data - used for account deletion.
- * Removes all folders (and their nested items/sessions) from the account.
- * This ensures Jazz data is cleaned up before account keys are deleted.
- * @param account - User's Account
- */
-export function deleteAllUserData(account: InstanceOfSchema<typeof Account>): void {
-  if (!account.root?.folders) return;
-
-  // Delete all root folders (which recursively deletes children)
-  while (account.root.folders.length > 0) {
-    const folder = account.root.folders[0];
-    if (folder) {
-      try {
-        deleteFolder(account, folder);
-      } catch {
-        // If deletion fails, try to remove from list to avoid infinite loop
-        try {
-          account.root.folders.$jazz.splice(0, 1);
-        } catch {
-          // If that also fails, break to avoid infinite loop
-          break;
-        }
-      }
-    } else {
-      // Remove null entry
-      try {
-        account.root.folders.$jazz.splice(0, 1);
-      } catch {
-        break;
-      }
-    }
-  }
 }
