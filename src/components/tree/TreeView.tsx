@@ -309,25 +309,38 @@ export function TreeView({
       const beforeItemId = overData.beforeItemId as string | undefined;
       const targetParentId = overData.parentId as string | undefined;
 
-      // Get current parent ID
-      const currentParentId = draggedFolder.parent?.$jazz.id;
-
-      // Only allow reordering within the same parent
-      if (currentParentId !== targetParentId) {
-        return;
+      // Find target parent folder (undefined means root level)
+      let targetParent: InstanceOfSchema<typeof FolderNode> | null = null;
+      if (targetParentId) {
+        const findParent = (
+          folders: typeof account.root.folders,
+        ): InstanceOfSchema<typeof FolderNode> | null => {
+          for (const f of folders) {
+            if (!f) continue;
+            if (f.$jazz.id === targetParentId) return f;
+            if (f.children) {
+              const found = findParent(f.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        targetParent = findParent(account.root.folders);
       }
 
-      // Find target index
-      const parentList = draggedFolder.parent?.children || account.root.folders;
+      // Get the target list (either parent's children or root folders)
+      const targetList = targetParent?.children || account.root.folders;
+
+      // Find target index in the new parent's list
       let newIndex: number;
 
       if (afterItemId) {
-        const afterIndex = parentList.findIndex(
+        const afterIndex = targetList.findIndex(
           (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === afterItemId,
         );
         newIndex = afterIndex + 1;
       } else if (beforeItemId) {
-        newIndex = parentList.findIndex(
+        newIndex = targetList.findIndex(
           (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === beforeItemId,
         );
       } else {
@@ -335,7 +348,8 @@ export function TreeView({
       }
 
       try {
-        folderService.reorderFolder(account, draggedFolder, newIndex);
+        // Use moveFolderToIndex which handles both cross-parent moves and same-parent reorders
+        folderService.moveFolderToIndex(account, draggedFolder, targetParent, newIndex);
       } catch {
         // Silently ignore errors
       }

@@ -472,6 +472,97 @@ export function reorderFolder(
 }
 
 /**
+ * Move a folder to a new parent and insert at a specific position.
+ * Combines move + reorder in one operation for cross-folder drag-and-drop.
+ */
+export function moveFolderToIndex(
+  account: InstanceOfSchema<typeof Account>,
+  folder: InstanceOfSchema<typeof FolderNode>,
+  newParent: InstanceOfSchema<typeof FolderNode> | null | undefined,
+  newIndex: number,
+): void {
+  if (!account.root) throw new Error('Account root not initialized');
+
+  // Prevent moving a folder into itself or its descendants
+  if (newParent) {
+    let current = newParent;
+    while (current) {
+      if (current.$jazz.id === folder.$jazz.id) {
+        throw new Error('Cannot move folder into itself or its descendants');
+      }
+      current = current.parent;
+    }
+  }
+
+  const folderGroup = folder.$jazz.owner as Group;
+  const currentParentId = folder.parent?.$jazz.id;
+  const newParentId = newParent?.$jazz.id;
+
+  // Check if actually changing parents
+  const isChangingParent = currentParentId !== newParentId;
+
+  if (isChangingParent) {
+    // Update group membership for cascading permissions
+    if (folder.parent) {
+      const oldParentGroup = folder.parent.$jazz.owner as Group;
+      folderGroup.removeMember(oldParentGroup);
+    }
+    if (newParent) {
+      const newParentGroup = newParent.$jazz.owner as Group;
+      folderGroup.addMember(newParentGroup);
+    }
+
+    // Remove from old parent
+    if (folder.parent?.children) {
+      const index = folder.parent.children.findIndex(
+        (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+      );
+      if (index !== -1) {
+        folder.parent.children.$jazz.splice(index, 1);
+      }
+    } else {
+      const index = account.root.folders.findIndex(
+        (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+      );
+      if (index !== -1) {
+        account.root.folders.$jazz.splice(index, 1);
+      }
+    }
+
+    // Insert at new position in new parent
+    if (newParent?.children) {
+      newParent.children.$jazz.splice(newIndex, 0, folder);
+    } else {
+      account.root.folders.$jazz.splice(newIndex, 0, folder);
+    }
+
+    // Update parent reference
+    folder.$jazz.set('parent', newParent || undefined);
+  } else {
+    // Same parent - just reorder
+    const parentList = folder.parent?.children || account.root.folders;
+    const oldIndex = parentList.findIndex(
+      (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === folder.$jazz.id,
+    );
+
+    if (oldIndex === -1) {
+      throw new Error('Folder not found in parent');
+    }
+
+    // Remove from old position
+    parentList.$jazz.splice(oldIndex, 1);
+
+    // Adjust index if moving down (since we removed an item before the target position)
+    const adjustedIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
+
+    // Insert at new position
+    parentList.$jazz.splice(adjustedIndex, 0, folder);
+  }
+
+  folder.$jazz.set('updatedAt', new Date());
+}
+
+/**
  * Get all template folders (recursively)
  */
 export function getAllTemplateFolders(
