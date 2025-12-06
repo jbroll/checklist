@@ -10,6 +10,58 @@ import { generateId } from '../lib/utils';
 import type { Account, ItemState, SessionData, TemplateItem } from '../schemas';
 import { getTemplate } from './templateService';
 
+// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+type SessionsLike = SessionData[] | { [Symbol.iterator](): Iterator<SessionData> };
+
+/**
+ * Convert sessions (which may be CoList or array) to a plain array
+ */
+function getSessionsArray(sessions: SessionsLike | undefined | null): SessionData[] {
+  if (!sessions) return [];
+  return Array.isArray(sessions) ? sessions : Array.from(sessions as Iterable<SessionData>);
+}
+
+/**
+ * Get session by ID, throwing if not found
+ */
+function getSessionOrThrow(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  sessionId: string,
+): SessionData {
+  const template = getTemplate(account, templateId);
+  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
+
+  const sessions = getSessionsArray(template.sessions);
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+  return session;
+}
+
+/**
+ * Create or update an item state with selection/check changes
+ */
+function createOrUpdateItemState(
+  currentState: ItemState | undefined,
+  selected: boolean,
+  now: Date,
+): ItemState {
+  if (!currentState) {
+    return {
+      selected,
+      checked: false,
+      selectedAt: selected ? now : undefined,
+    };
+  }
+  return {
+    ...currentState,
+    selected,
+    selectedAt: selected ? now : currentState.selectedAt,
+    checked: selected ? currentState.checked : false,
+    checkedAt: selected ? currentState.checkedAt : undefined,
+  };
+}
+
 /**
  * Helper to update a session in the template's sessions array
  * Since sessions are plain objects, we need to replace the entire array to trigger Jazz update
@@ -23,11 +75,8 @@ function updateSession(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
 
-  const sessions = Array.isArray(template.sessions)
-    ? template.sessions
-    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-      Array.from(template.sessions as any);
-  const sessionIndex = sessions.findIndex((s: SessionData) => s.id === sessionId);
+  const sessions = getSessionsArray(template.sessions);
+  const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
   if (sessionIndex === -1) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
@@ -102,11 +151,8 @@ export function getSession(
 ): SessionData | null {
   const template = getTemplate(account, templateId);
   if (!template?.sessions) return null;
-  const sessions = Array.isArray(template.sessions)
-    ? template.sessions
-    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-      Array.from(template.sessions as any);
-  return sessions.find((s: SessionData) => s.id === sessionId) || null;
+  const sessions = getSessionsArray(template.sessions);
+  return sessions.find((s) => s.id === sessionId) || null;
 }
 
 /**
@@ -118,12 +164,7 @@ export function getSessions(
 ): SessionData[] {
   const template = getTemplate(account, templateId);
   if (!template?.sessions) return [];
-
-  const sessions = Array.isArray(template.sessions)
-    ? template.sessions
-    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-      Array.from(template.sessions as any);
-  return sessions.filter((s: SessionData) => s != null);
+  return getSessionsArray(template.sessions).filter((s) => s != null);
 }
 
 /**
@@ -135,11 +176,8 @@ export function getItemSelected(
   sessionId: string,
   itemId: string,
 ): boolean {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  const itemStates = session.itemStates || {};
-  return itemStates[itemId]?.selected || false;
+  const session = getSessionOrThrow(account, templateId, sessionId);
+  return session.itemStates?.[itemId]?.selected || false;
 }
 
 /**
@@ -152,50 +190,27 @@ export function setItemSelected(
   itemId: string,
   selected: boolean,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
   const currentState = itemStates[itemId];
 
-  let newItemStates: Record<string, ItemState>;
+  // No change needed if item doesn't exist and we're deselecting
+  if (!currentState && !selected) return;
 
-  if (!currentState && selected) {
-    // Create new plain object state
-    newItemStates = {
-      ...itemStates,
-      [itemId]: {
-        selected: true,
-        checked: false,
-        selectedAt: new Date(),
-      },
-    };
-  } else if (currentState) {
-    // Update selected state
-    newItemStates = {
-      ...itemStates,
-      [itemId]: {
-        ...currentState,
-        selected,
-        selectedAt: selected ? new Date() : currentState.selectedAt,
-        checked: selected ? currentState.checked : false,
-        checkedAt: selected ? currentState.checkedAt : undefined,
-      },
-    };
-  } else {
-    return; // No change needed
-  }
+  const now = new Date();
+  const newItemStates: Record<string, ItemState> = {
+    ...itemStates,
+    [itemId]: createOrUpdateItemState(currentState, selected, now),
+  };
 
   // Check if this is the first item being selected
   const hasAnySelectedItems = Object.values(itemStates).some((state) => state.selected);
   const isFirstSelection = selected && !hasAnySelectedItems;
 
-  // Update session with new item states and activity timestamp
-  // If this is the first selection, also update createdAt
   updateSession(account, templateId, sessionId, {
     itemStates: newItemStates,
-    lastActivityAt: new Date(),
-    ...(isFirstSelection ? { createdAt: new Date() } : {}),
+    lastActivityAt: now,
+    ...(isFirstSelection ? { createdAt: now } : {}),
   });
 }
 
@@ -221,11 +236,8 @@ export function getItemChecked(
   sessionId: string,
   itemId: string,
 ): boolean {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  const itemStates = session.itemStates || {};
-  return itemStates[itemId]?.checked || false;
+  const session = getSessionOrThrow(account, templateId, sessionId);
+  return session.itemStates?.[itemId]?.checked || false;
 }
 
 /**
@@ -238,25 +250,24 @@ export function setItemChecked(
   itemId: string,
   checked: boolean,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
   const currentState = itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
+  const now = new Date();
   const newItemStates = {
     ...itemStates,
     [itemId]: {
       ...currentState,
       checked,
-      checkedAt: checked ? new Date() : undefined,
+      checkedAt: checked ? now : undefined,
     },
   };
 
   updateSession(account, templateId, sessionId, {
     itemStates: newItemStates,
-    lastActivityAt: new Date(),
+    lastActivityAt: now,
   });
 }
 
@@ -283,13 +294,10 @@ export function updateSessionItemNotes(
   itemId: string,
   notes: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
   const currentState = itemStates[itemId];
 
-  // Create or update item state with notes
   const newItemStates: Record<string, ItemState> = {
     ...itemStates,
     [itemId]: {
@@ -297,7 +305,7 @@ export function updateSessionItemNotes(
       checked: currentState?.checked || false,
       selectedAt: currentState?.selectedAt,
       checkedAt: currentState?.checkedAt,
-      notes: notes || undefined, // Empty string removes notes
+      notes: notes || undefined,
     },
   };
 
@@ -315,9 +323,7 @@ export function updateSessionCounts(
   templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const template = getTemplate(account, templateId);
   if (!template?.items) return;
 
@@ -373,32 +379,17 @@ export function batchSelectItems(
   itemIds: string[],
   selected: boolean,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
   const updatedStates = { ...itemStates };
   const now = new Date();
 
-  itemIds.forEach((itemId) => {
+  for (const itemId of itemIds) {
     const currentState = updatedStates[itemId];
-
-    if (!currentState && selected) {
-      updatedStates[itemId] = {
-        selected: true,
-        checked: false,
-        selectedAt: now,
-      };
-    } else if (currentState) {
-      updatedStates[itemId] = {
-        ...currentState,
-        selected,
-        selectedAt: selected ? now : currentState.selectedAt,
-        checked: selected ? currentState.checked : false,
-        checkedAt: selected ? currentState.checkedAt : undefined,
-      };
-    }
-  });
+    // Skip if deselecting and item has no state
+    if (!currentState && !selected) continue;
+    updatedStates[itemId] = createOrUpdateItemState(currentState, selected, now);
+  }
 
   updateSession(account, templateId, sessionId, {
     itemStates: updatedStates,
@@ -415,32 +406,10 @@ export function toggleSelectAllItems(
   sessionId: string,
   itemIds: string[],
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
-
-  // Check if all items are selected
   const allSelected = itemIds.every((id) => itemStates[id]?.selected);
-
-  console.log('[toggleSelectAllItems] BEFORE:', {
-    itemIds,
-    allSelected,
-    willSelect: !allSelected,
-    itemStates: itemIds.map((id) => ({ id, selected: itemStates[id]?.selected })),
-  });
-
-  // Toggle: if all selected, deselect all; otherwise select all
   batchSelectItems(account, templateId, sessionId, itemIds, !allSelected);
-
-  // Log after
-  const newSession = getSession(account, templateId, sessionId);
-  const newItemStates = newSession?.itemStates || {};
-  console.log('[toggleSelectAllItems] AFTER:', {
-    itemIds,
-    newAllSelected: itemIds.every((id) => newItemStates[id]?.selected),
-    newItemStates: itemIds.map((id) => ({ id, selected: newItemStates[id]?.selected })),
-  });
 }
 
 /**
@@ -452,52 +421,20 @@ export function invertItemSelection(
   sessionId: string,
   itemIds: string[],
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const itemStates = session.itemStates || {};
   const updatedStates = { ...itemStates };
   const now = new Date();
 
-  console.log('[invertItemSelection] BEFORE:', {
-    itemIds,
-    itemStates: itemIds.map((id) => ({ id, selected: itemStates[id]?.selected })),
-  });
-
-  itemIds.forEach((itemId) => {
+  for (const itemId of itemIds) {
     const currentState = updatedStates[itemId];
     const currentlySelected = currentState?.selected || false;
-
-    if (!currentState) {
-      // Item has no state, so it's unselected - invert to selected
-      updatedStates[itemId] = {
-        selected: true,
-        checked: false,
-        selectedAt: now,
-      };
-    } else {
-      // Invert the current selection state
-      updatedStates[itemId] = {
-        ...currentState,
-        selected: !currentlySelected,
-        selectedAt: !currentlySelected ? now : currentState.selectedAt,
-        checked: !currentlySelected ? currentState.checked : false,
-        checkedAt: !currentlySelected ? currentState.checkedAt : undefined,
-      };
-    }
-  });
+    updatedStates[itemId] = createOrUpdateItemState(currentState, !currentlySelected, now);
+  }
 
   updateSession(account, templateId, sessionId, {
     itemStates: updatedStates,
     lastActivityAt: now,
-  });
-
-  // Log after
-  const newSession = getSession(account, templateId, sessionId);
-  const newItemStates = newSession?.itemStates || {};
-  console.log('[invertItemSelection] AFTER:', {
-    itemIds,
-    newItemStates: itemIds.map((id) => ({ id, selected: newItemStates[id]?.selected })),
   });
 }
 
@@ -540,17 +477,13 @@ export function deleteSession(
   const template = getTemplate(account, templateId);
   if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
 
-  const sessions = Array.isArray(template.sessions)
-    ? template.sessions
-    : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-      Array.from(template.sessions as any);
-  const sessionIndex = sessions.findIndex((s: SessionData) => s.id === sessionId);
-  if (sessionIndex === -1) {
+  const sessions = getSessionsArray(template.sessions);
+  const sessionExists = sessions.some((s) => s.id === sessionId);
+  if (!sessionExists) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
-  // Hard delete by creating new array without the session
-  const updatedSessions = sessions.filter((s: SessionData) => s.id !== sessionId);
+  const updatedSessions = sessions.filter((s) => s.id !== sessionId);
   template.$jazz.set('sessions', updatedSessions);
   template.$jazz.set('updatedAt', new Date());
 }
@@ -564,11 +497,8 @@ export function getCategoryExpanded(
   sessionId: string,
   categoryKey: string,
 ): boolean {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  const categoryExpanded = session.categoryExpanded || {};
-  return categoryExpanded[categoryKey] ?? true;
+  const session = getSessionOrThrow(account, templateId, sessionId);
+  return session.categoryExpanded?.[categoryKey] ?? true;
 }
 
 /**
@@ -581,14 +511,10 @@ export function setCategoryExpanded(
   categoryKey: string,
   expanded: boolean,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  const categoryExpanded = session.categoryExpanded || {};
-
+  const session = getSessionOrThrow(account, templateId, sessionId);
   updateSession(account, templateId, sessionId, {
     categoryExpanded: {
-      ...categoryExpanded,
+      ...session.categoryExpanded,
       [categoryKey]: expanded,
     },
   });
@@ -615,18 +541,11 @@ export function clearSessionState(
   templateId: string,
   sessionId: string,
 ): void {
-  const session = getSession(account, templateId, sessionId);
-  if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-
-  // Reset all item states
+  const session = getSessionOrThrow(account, templateId, sessionId);
   const newItemStates: Record<string, { selected: boolean; checked: boolean }> = {};
 
-  // Keep the structure but reset flags
   for (const itemId of Object.keys(session.itemStates || {})) {
-    newItemStates[itemId] = {
-      selected: false,
-      checked: false,
-    };
+    newItemStates[itemId] = { selected: false, checked: false };
   }
 
   updateSession(account, templateId, sessionId, {
@@ -634,6 +553,5 @@ export function clearSessionState(
     lastActivityAt: new Date(),
   });
 
-  // Update counts
   updateSessionCounts(account, templateId, sessionId);
 }
