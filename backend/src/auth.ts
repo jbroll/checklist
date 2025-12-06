@@ -36,9 +36,10 @@ export const auth = betterAuth({
   // This tells BetterAuth where OAuth providers should redirect back to
   baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}/api/auth` : 'http://localhost:5173/api/auth',
 
-  // Trust the frontend origin
+  // Trust the frontend origin and Apple's domain for Sign In with Apple
   trustedOrigins: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
+    "https://appleid.apple.com",
   ],
 
   // Session configuration
@@ -56,11 +57,14 @@ export const auth = betterAuth({
     // Disable CSRF check for development only
     disableCSRFCheck: process.env.NODE_ENV !== 'production',
     // Configure cookie attributes for OAuth redirects
+    // Note: Apple OAuth uses POST callbacks which require sameSite: "none"
+    // See: https://github.com/better-auth/better-auth/issues/5227
     defaultCookieAttributes: {
-      // Use 'lax' for both dev and production (frontend/backend on same origin via proxy)
-      sameSite: "lax",
+      // Must use 'none' for Apple OAuth (POST-based callbacks don't receive 'lax' cookies)
+      sameSite: "none",
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // secure: true is required when sameSite is "none"
+      secure: true,
       path: "/",
     },
   },
@@ -81,6 +85,10 @@ export const auth = betterAuth({
       // Only request email, not profile data (name/image)
       scope: ["openid", "email"],
       disableDefaultScopes: true,
+    },
+    apple: {
+      clientId: process.env.APPLE_CLIENT_ID!,
+      clientSecret: process.env.APPLE_CLIENT_SECRET!,
     },
   },
 

@@ -57,6 +57,7 @@ const allowedOrigins = [
   'http://localhost:8766',
   'http://localhost:5173',
   process.env.FRONTEND_URL,
+  'https://appleid.apple.com',  // Apple OAuth callback
 ].filter(Boolean);
 
 app.use(

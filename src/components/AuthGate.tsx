@@ -71,10 +71,14 @@ export function AuthGate() {
     });
   };
 
-  const handleAppleSignIn = async () => {
-    await showAlert({
-      title: 'Not Available',
-      message: 'Apple sign-in not available.',
+  const handleAppleSignIn = () => {
+    // Clear the signed-out flag when user signs in
+    localStorage.removeItem('user-signed-out');
+    setUserSignedOut(false);
+
+    // BetterAuth handles OAuth redirect automatically
+    betterAuthClient.signIn.social({
+      provider: 'apple',
     });
   };
 

@@ -16,6 +16,7 @@
     "generate-icons": "node scripts/generate-icons.js",
     "generate-screenshots": "node scripts/generate-screenshots.js",
     "generate-pwa-assets": "npm run generate-icons && npm run generate-screenshots",
+    "generate-apple-secret": "node scripts/generate-apple-secret.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
