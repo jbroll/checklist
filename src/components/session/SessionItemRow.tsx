@@ -5,7 +5,6 @@ import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-// import { useLongPressIndicator } from '@/lib/useLongPressIndicator';
 import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
 import * as templateService from '@/services/templateService';
 

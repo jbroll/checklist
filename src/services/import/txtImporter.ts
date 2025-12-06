@@ -19,7 +19,6 @@ import {
   type ListMetadata,
   parseIndentedListWithMetadata,
 } from '../../utils/indentedListParser';
-import { normalizePathSegment } from '../../utils/pathUtils';
 import { type BaseImportResult, importItems } from './baseImporter';
 
 export interface TxtImportResult extends BaseImportResult {
@@ -89,7 +88,7 @@ export function importItemsFromText(
   // Convert names to items with paths
   const itemsToImport = itemNames.map((name) => ({
     name,
-    path: normalizePathSegment(name),
+    path: name.trim(),
   }));
 
   // Use base importer to handle the actual import

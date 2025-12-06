@@ -35,9 +35,6 @@ export const UserSettings = co.map({
   // Default autocomplete domain for new templates: 'none' | 'grocery' | 'hardware' | 'outdoor' | 'all'
   defaultAutocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'outdoor', 'all'])),
 
-  // @deprecated - use defaultAutocompleteDomain instead
-  enableAutocomplete: z.optional(z.boolean()),
-
   // Enable auto-categorization when selecting from autocomplete (default: true)
   enableAutoCategorization: z.optional(z.boolean()),
 });
@@ -92,7 +89,6 @@ export const Account = co
       );
       const userSettings = UserSettings.create(
         {
-          enableAutocomplete: true,
           enableAutoCategorization: true,
         },
         { owner: account },
@@ -132,7 +128,6 @@ export const Account = co
     if (!root.$jazz.has('userSettings')) {
       const userSettings = UserSettings.create(
         {
-          enableAutocomplete: true,
           enableAutoCategorization: true,
         },
         { owner: account },

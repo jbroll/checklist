@@ -2,39 +2,10 @@
  * Unit tests for conflict resolution
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  itemNameConflicts,
-  resolveItemNameConflict,
-  resolvePathConflict,
-} from './conflictResolver';
+import { describe, expect, it } from 'vitest';
+import { itemNameConflicts, resolveItemNameConflict } from './conflictResolver';
 
 describe('conflictResolver', () => {
-  describe('resolvePathConflict (deprecated)', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('should return original path and name unchanged (no-op)', () => {
-      const account = {} as any;
-      const result = resolvePathConflict('/grocery-list', 'Grocery List', account);
-
-      expect(result.path).toBe('/grocery-list');
-      expect(result.name).toBe('Grocery List');
-    });
-
-    it('should not modify any input values', () => {
-      const account = {} as any;
-      const originalPath = '/my-path';
-      const originalName = 'My Name';
-
-      const result = resolvePathConflict(originalPath, originalName, account);
-
-      expect(result.path).toBe(originalPath);
-      expect(result.name).toBe(originalName);
-    });
-  });
-
   describe('itemNameConflicts', () => {
     it('should return true for exact match', () => {
       const existingNames = ['Apples', 'Bananas', 'Oranges'];

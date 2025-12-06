@@ -4,9 +4,6 @@
  * Handles name conflicts when importing folders and items.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account } from '../../schemas';
-
 /**
  * Generic helper to resolve naming conflicts by appending numbered suffixes
  *
@@ -37,24 +34,6 @@ function resolveNameConflict(
   }
 
   return candidate;
-}
-
-/**
- * Resolve path conflict (DEPRECATED - no longer used with FolderNode hierarchy)
- *
- * @deprecated Use name-based conflict resolution instead
- * @param originalPath - Original path that conflicts
- * @param originalName - Original name
- * @param _account - User's account (unused)
- * @returns Original values (no-op)
- */
-export function resolvePathConflict(
-  originalPath: string,
-  originalName: string,
-  _account: InstanceOfSchema<typeof Account>,
-): { path: string; name: string } {
-  // No-op: path conflicts are handled by name conflicts in FolderNode hierarchy
-  return { path: originalPath, name: originalName };
 }
 
 /**

@@ -65,20 +65,6 @@ export function isDescendantPath(descendantPath: string, ancestorPath: string): 
 }
 
 /**
- * @deprecated No longer needed - path segments are used as-is without normalization
- */
-export function normalizePathSegment(name: string): string {
-  return name.trim();
-}
-
-/**
- * @deprecated No longer needed - path segments are used as-is without normalization
- */
-export function normalizeNameForPath(name: string): string {
-  return name.trim();
-}
-
-/**
  * Calculate what the new path should be when moving a node
  * Simple: target path + PATH_SEPARATOR + folder name (or just folder name if no target)
  */

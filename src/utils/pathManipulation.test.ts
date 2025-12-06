@@ -4,7 +4,6 @@ import {
   calculateNewPath,
   getNameFromPath,
   getParentPath,
-  normalizeNameForPath,
   PATH_SEPARATOR,
 } from './pathUtils';
 
@@ -111,17 +110,6 @@ describe('pathManipulation', () => {
 
     it('should return whole string for root level', () => {
       expect(getNameFromPath('root')).toBe('root');
-    });
-  });
-
-  describe('normalizeNameForPath', () => {
-    it('should NOT replace spaces with hyphens (deprecated)', () => {
-      expect(normalizeNameForPath('My Folder')).toBe('My Folder');
-      expect(normalizeNameForPath('  Multiple  Spaces  ')).toBe('Multiple  Spaces'); // Only trims outer whitespace
-    });
-
-    it('should only trim outer whitespace', () => {
-      expect(normalizeNameForPath('  folder  ')).toBe('folder');
     });
   });
 });
