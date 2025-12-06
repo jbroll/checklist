@@ -1,5 +1,4 @@
 import { useDraggable } from '@dnd-kit/core';
-import { motion } from 'framer-motion';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
@@ -189,10 +188,6 @@ export const SessionItemRow = memo(function SessionItemRow({
       : 'border-divider-tertiary hover:border-blue-400';
   };
 
-  // Enable animations within selected/checked zones (smooth movement when checking/unchecking)
-  // Disable when in available zone and during drag
-  const shouldAnimate = (zone === 'selected' || zone === 'checked') && !isDragging;
-
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger selection if clicking on checkbox or delete button
     if ((e.target as HTMLElement).closest('button')) {
@@ -209,15 +204,12 @@ export const SessionItemRow = memo(function SessionItemRow({
   const canActuallyDrag = enableDrag && canDragItem;
 
   return (
-    <motion.div
+    <div
       ref={canActuallyDrag ? setDragRef : undefined}
       data-item-id={item.id}
       {...(canActuallyDrag ? dragAttributes : {})}
       {...(canActuallyDrag ? dragListeners : {})}
       {...(canActuallyDrag ? longPressHandlers : {})}
-      layout={shouldAnimate}
-      layoutId={shouldAnimate ? item.id : undefined}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
         isInsertionPointSelected ? 'bg-interactive-active' : 'hover:bg-interactive-hover'
       } ${onSelectItem ? 'cursor-pointer' : ''} ${canActuallyDrag && !isDragging ? 'cursor-grab' : ''} ${isDragging ? 'opacity-50 cursor-grabbing' : ''} ${
@@ -382,6 +374,6 @@ export const SessionItemRow = memo(function SessionItemRow({
           </svg>
         </button>
       )}
-    </motion.div>
+    </div>
   );
 });

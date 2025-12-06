@@ -1,3 +1,4 @@
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
 import { ListChecks, ListMinus, ListX } from 'lucide-react';
@@ -95,6 +96,10 @@ export function SessionZone({
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // AutoAnimate for smooth item transitions (only for selected/checked zones)
+  const shouldAnimate = zone === 'selected' || zone === 'checked';
+  const [animateRef] = useAutoAnimate({ duration: 200 });
+
   // Use centralized editing state instead of local state
   const isEditing = isEditingThisItem;
 
@@ -187,7 +192,7 @@ export function SessionZone({
   const content = children ? (
     children
   ) : (
-    <div className="flex flex-col">
+    <div ref={shouldAnimate ? animateRef : undefined} className="flex flex-col">
       {items.map((item) => (
         <SessionItemRow
           key={item.id}

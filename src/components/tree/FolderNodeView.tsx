@@ -12,10 +12,19 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
-import { ExportDialog } from '@/components/export/ExportDialog';
-import { ImportDialog } from '@/components/import/ImportDialog';
-import { ShareDialog } from '@/components/sharing/ShareDialog';
+import { lazy, memo, Suspense, useEffect, useState } from 'react';
+
+// Lazy load dialogs
+const ExportDialog = lazy(() =>
+  import('@/components/export/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+);
+const ImportDialog = lazy(() =>
+  import('@/components/import/ImportDialog').then((m) => ({ default: m.ImportDialog })),
+);
+const ShareDialog = lazy(() =>
+  import('@/components/sharing/ShareDialog').then((m) => ({ default: m.ShareDialog })),
+);
+
 import { BubbleListIcon } from '@/components/ui/BubbleListIcon';
 import {
   DropdownMenu,
@@ -400,26 +409,32 @@ export const FolderNodeView = memo(function FolderNodeView({
 
       {/* Unified Export Dialog - only for templates */}
       {isTemplate && (
-        <ExportDialog
-          open={showExportDialog}
-          onOpenChange={setShowExportDialog}
-          account={account}
-          folder={folder}
-        />
+        <Suspense fallback={null}>
+          <ExportDialog
+            open={showExportDialog}
+            onOpenChange={setShowExportDialog}
+            account={account}
+            folder={folder}
+          />
+        </Suspense>
       )}
 
       {/* Unified Import Dialog - only for templates */}
       {isTemplate && (
-        <ImportDialog
-          open={showImportDialog}
-          onOpenChange={setShowImportDialog}
-          account={account}
-          folder={folder}
-        />
+        <Suspense fallback={null}>
+          <ImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            account={account}
+            folder={folder}
+          />
+        </Suspense>
       )}
 
       {/* Share Dialog - for all folders */}
-      <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} folder={folder} />
+      <Suspense fallback={null}>
+        <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} folder={folder} />
+      </Suspense>
     </div>
   );
 });

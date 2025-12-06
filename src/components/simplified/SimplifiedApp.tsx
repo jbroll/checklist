@@ -1,14 +1,23 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
-import { ExportDialog } from '@/components/export/ExportDialog';
-import { ImportDialog } from '@/components/import/ImportDialog';
-import { SessionView } from '@/components/session/SessionView';
 import { TreeView } from '@/components/tree/TreeView';
+import { LoadingScreen } from '@/components/ui/loading';
 import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
+
+// Lazy load heavy components
+const ExportDialog = lazy(() =>
+  import('@/components/export/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+);
+const ImportDialog = lazy(() =>
+  import('@/components/import/ImportDialog').then((m) => ({ default: m.ImportDialog })),
+);
+const SessionView = lazy(() =>
+  import('@/components/session/SessionView').then((m) => ({ default: m.SessionView })),
+);
 
 interface SimplifiedAppProps {
   account: InstanceOfSchema<typeof Account>;
@@ -96,18 +105,20 @@ export function SimplifiedApp({
   // If a template is selected, show session view
   if (selectedTemplateId && currentSessionId && selectedFolder) {
     return (
-      <SessionView
-        template={selectedFolder}
-        sessionId={currentSessionId}
-        onBack={() => {
-          setSelectedTemplateId(null);
-          setSelectedFolderId(null);
-          setCurrentSessionId(null);
-        }}
-        onSwitchSession={(newSessionId) => {
-          setCurrentSessionId(newSessionId);
-        }}
-      />
+      <Suspense fallback={<LoadingScreen />}>
+        <SessionView
+          template={selectedFolder}
+          sessionId={currentSessionId}
+          onBack={() => {
+            setSelectedTemplateId(null);
+            setSelectedFolderId(null);
+            setCurrentSessionId(null);
+          }}
+          onSwitchSession={(newSessionId) => {
+            setCurrentSessionId(newSessionId);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -233,18 +244,22 @@ export function SimplifiedApp({
           description="Create a new list folder for frequently purchased items."
         />
 
-        <ExportDialog
-          open={showExportDialog}
-          onOpenChange={setShowExportDialog}
-          account={account}
-        />
+        <Suspense fallback={null}>
+          <ExportDialog
+            open={showExportDialog}
+            onOpenChange={setShowExportDialog}
+            account={account}
+          />
+        </Suspense>
 
-        <ImportDialog
-          open={showImportDialog}
-          onOpenChange={setShowImportDialog}
-          account={account}
-          parentFolder={importParentFolder}
-        />
+        <Suspense fallback={null}>
+          <ImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            account={account}
+            parentFolder={importParentFolder}
+          />
+        </Suspense>
       </main>
     </div>
   );

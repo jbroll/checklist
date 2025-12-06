@@ -65,7 +65,6 @@ export default defineConfig({
           // Vendor chunks - separate large libraries
           'vendor-jazz': ['jazz-tools'],
           'vendor-react': ['react', 'react-dom', 'react/jsx-runtime'],
-          'vendor-animation': ['framer-motion'],
           'vendor-radix': [
             '@radix-ui/react-checkbox',
             '@radix-ui/react-dialog',

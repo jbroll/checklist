@@ -1,13 +1,8 @@
 import type { InstanceOfSchema } from 'jazz-tools';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
-import { ProfileDialog } from '@/components/auth/ProfileDialog';
-import { ExportDialog } from '@/components/export/ExportDialog';
-import { SessionExportDialog } from '@/components/export/SessionExportDialog';
-import { ImportDialog } from '@/components/import/ImportDialog';
-import { SessionView } from '@/components/session/SessionView';
-import { SimplifiedApp } from '@/components/simplified/SimplifiedApp';
 import { TreeView } from '@/components/tree';
+import { LoadingScreen } from '@/components/ui/loading';
 import { useAccount } from '@/lib/jazz';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
@@ -17,6 +12,28 @@ import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
 import { TemplateItemEditor } from './TemplateItemEditor';
+
+// Lazy load heavy components to reduce initial bundle
+const SessionView = lazy(() =>
+  import('@/components/session/SessionView').then((m) => ({ default: m.SessionView })),
+);
+const SimplifiedApp = lazy(() =>
+  import('@/components/simplified/SimplifiedApp').then((m) => ({ default: m.SimplifiedApp })),
+);
+const ProfileDialog = lazy(() =>
+  import('@/components/auth/ProfileDialog').then((m) => ({ default: m.ProfileDialog })),
+);
+const ExportDialog = lazy(() =>
+  import('@/components/export/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+);
+const SessionExportDialog = lazy(() =>
+  import('@/components/export/SessionExportDialog').then((m) => ({
+    default: m.SessionExportDialog,
+  })),
+);
+const ImportDialog = lazy(() =>
+  import('@/components/import/ImportDialog').then((m) => ({ default: m.ImportDialog })),
+);
 
 interface AppContainerProps {
   onSignOut?: () => void;
@@ -112,7 +129,7 @@ export function AppContainer({
   // If view mode is simplified, render SimplifiedApp instead of classic UI
   if (viewMode === 'simplified') {
     return (
-      <>
+      <Suspense fallback={<LoadingScreen />}>
         <SimplifiedApp
           // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
           account={me as any}
@@ -125,24 +142,26 @@ export function AppContainer({
           onShowProfileDialogChange={setShowProfileDialog}
         />
         {onSignOut && onDeleteAccount && (
-          <ProfileDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            onSignOut={onSignOut}
-            onDeleteAccount={onDeleteAccount}
-            onSwitchView={() => onViewModeChange('classic')}
-            switchViewLabel={switchViewLabel}
-            defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
-            enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-            onChangeDefaultAutocompleteDomain={(domain) =>
-              userSettingsService.setDefaultAutocompleteDomain(me, domain)
-            }
-            onToggleAutoCategorization={() =>
-              userSettingsService.toggleEnableAutoCategorization(me)
-            }
-          />
+          <Suspense fallback={null}>
+            <ProfileDialog
+              open={showProfileDialog}
+              onOpenChange={setShowProfileDialog}
+              onSignOut={onSignOut}
+              onDeleteAccount={onDeleteAccount}
+              onSwitchView={() => onViewModeChange('classic')}
+              switchViewLabel={switchViewLabel}
+              defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
+              enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
+              onChangeDefaultAutocompleteDomain={(domain) =>
+                userSettingsService.setDefaultAutocompleteDomain(me, domain)
+              }
+              onToggleAutoCategorization={() =>
+                userSettingsService.toggleEnableAutoCategorization(me)
+              }
+            />
+          </Suspense>
         )}
-      </>
+      </Suspense>
     );
   }
 
@@ -244,13 +263,15 @@ export function AppContainer({
     const sessionTemplate = templates.find((t) => t?.$jazz.id === activeSessionTemplateId);
     if (sessionTemplate) {
       return (
-        <SessionView
-          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-          template={sessionTemplate as any}
-          sessionId={activeSessionId}
-          onBack={handleBackToTemplates}
-          onSwitchSession={handleSwitchSession}
-        />
+        <Suspense fallback={<LoadingScreen />}>
+          <SessionView
+            // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+            template={sessionTemplate as any}
+            sessionId={activeSessionId}
+            onBack={handleBackToTemplates}
+            onSwitchSession={handleSwitchSession}
+          />
+        </Suspense>
       );
     }
   }
@@ -308,18 +329,22 @@ export function AppContainer({
           description="Create a new list folder for frequently purchased items."
         />
 
-        <ExportDialog
-          open={showExportDialog}
-          onOpenChange={setShowExportDialog}
-          account={accountAsAny}
-        />
+        <Suspense fallback={null}>
+          <ExportDialog
+            open={showExportDialog}
+            onOpenChange={setShowExportDialog}
+            account={accountAsAny}
+          />
+        </Suspense>
 
-        <ImportDialog
-          open={showImportDialog}
-          onOpenChange={setShowImportDialog}
-          account={accountAsAny}
-          parentFolder={importParentFolder}
-        />
+        <Suspense fallback={null}>
+          <ImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            account={accountAsAny}
+            parentFolder={importParentFolder}
+          />
+        </Suspense>
 
         {/* Session Export Dialog */}
         {sessionExportData &&
@@ -338,15 +363,17 @@ export function AppContainer({
               // Generate session name from createdAt
               const sessionName = new Date(session.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
               return (
-                <SessionExportDialog
-                  open={showSessionExportDialog}
-                  onOpenChange={setShowSessionExportDialog}
-                  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-                  template={template as any}
-                  sessionId={sessionExportData.sessionId}
-                  sessionName={sessionName}
-                  account={accountAsAny}
-                />
+                <Suspense fallback={null}>
+                  <SessionExportDialog
+                    open={showSessionExportDialog}
+                    onOpenChange={setShowSessionExportDialog}
+                    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+                    template={template as any}
+                    sessionId={sessionExportData.sessionId}
+                    sessionName={sessionName}
+                    account={accountAsAny}
+                  />
+                </Suspense>
               );
             }
             return null;
@@ -354,22 +381,24 @@ export function AppContainer({
 
         {/* Profile Dialog */}
         {onSignOut && onDeleteAccount && (
-          <ProfileDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            onSignOut={onSignOut}
-            onDeleteAccount={onDeleteAccount}
-            onSwitchView={() => onViewModeChange('simplified')}
-            switchViewLabel={switchViewLabel}
-            defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
-            enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-            onChangeDefaultAutocompleteDomain={(domain) =>
-              userSettingsService.setDefaultAutocompleteDomain(me, domain)
-            }
-            onToggleAutoCategorization={() =>
-              userSettingsService.toggleEnableAutoCategorization(me)
-            }
-          />
+          <Suspense fallback={null}>
+            <ProfileDialog
+              open={showProfileDialog}
+              onOpenChange={setShowProfileDialog}
+              onSignOut={onSignOut}
+              onDeleteAccount={onDeleteAccount}
+              onSwitchView={() => onViewModeChange('simplified')}
+              switchViewLabel={switchViewLabel}
+              defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
+              enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
+              onChangeDefaultAutocompleteDomain={(domain) =>
+                userSettingsService.setDefaultAutocompleteDomain(me, domain)
+              }
+              onToggleAutoCategorization={() =>
+                userSettingsService.toggleEnableAutoCategorization(me)
+              }
+            />
+          </Suspense>
         )}
       </main>
     </div>
