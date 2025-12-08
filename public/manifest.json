@@ -1,7 +1,7 @@
 {
-  "name": "BubbleList - Collaborative Lists",
-  "short_name": "BubbleList",
-  "description": "Collaborative list app with real-time sync across devices",
+  "name": "Kjekit - Nicely Shared Checklists",
+  "short_name": "Kjekit",
+  "description": "Nicely Shared Checklists",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

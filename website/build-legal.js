@@ -92,8 +92,8 @@ function generatePage(mdFile, htmlFile, title) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="BubbleList - ${title}">
-    <title>${title} - BubbleList</title>
+    <meta name="description" content="Kjekit - ${title}">
+    <title>${title} - Kjekit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>${styles}
     </style>
@@ -105,13 +105,13 @@ function generatePage(mdFile, htmlFile, title) {
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="bubblelist.svg" alt="BubbleList" class="w-8 h-8">
-                        <span class="ml-2 text-xl font-bold text-gray-900">BubbleList</span>
+                        <img src="kjekit.svg" alt="Kjekit" class="w-8 h-8">
+                        <span class="ml-2 text-xl font-bold text-gray-900">Kjekit</span>
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">
                     ${navLinks}
-                    <a href="https://bubblelist-app.rkroll.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                    <a href="https://app.kjekit.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
                 </div>
             </div>
         </div>
@@ -132,7 +132,7 @@ function generatePage(mdFile, htmlFile, title) {
                     <p class="text-xs">&copy; 2025 rkroll.com</p>
                     ${footerLinks}
                 </div>
-                <a href="https://bubblelist-app.rkroll.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                <a href="https://app.kjekit.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
             </div>
         </div>
     </footer>

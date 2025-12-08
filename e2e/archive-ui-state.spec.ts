@@ -19,7 +19,7 @@ test.describe('Archive UI State Management', () => {
     });
 
     // Wait for the main UI to be visible
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
   });

@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Export Functionality', () => {
   test('should open export dialog and show options', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -26,7 +26,7 @@ test.describe('Export Functionality', () => {
 
   test('should close export dialog on cancel', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -43,7 +43,7 @@ test.describe('Export Functionality', () => {
 
   test('should have export button enabled', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -59,7 +59,7 @@ test.describe('Export Functionality', () => {
 test.describe('Import Functionality', () => {
   test('should open import dialog and show upload area', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -80,7 +80,7 @@ test.describe('Import Functionality', () => {
 
   test('should show file size and type restrictions', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -93,7 +93,7 @@ test.describe('Import Functionality', () => {
 
   test('should close import dialog on cancel', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -110,7 +110,7 @@ test.describe('Import Functionality', () => {
 
   test('should have import button disabled when no file is selected', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -126,7 +126,7 @@ test.describe('Import Functionality', () => {
 test.describe('Export/Import Dialog Interactions', () => {
   test('should close export dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -143,7 +143,7 @@ test.describe('Export/Import Dialog Interactions', () => {
 
   test('should close import dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -160,7 +160,7 @@ test.describe('Export/Import Dialog Interactions', () => {
 
   test('should not open both dialogs at the same time', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 

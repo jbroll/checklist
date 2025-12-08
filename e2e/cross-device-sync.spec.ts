@@ -62,7 +62,7 @@ test.describe('Cross-Device Sync', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -97,7 +97,7 @@ test.describe('Cross-Device Sync', () => {
     await page.reload();
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -110,7 +110,7 @@ test.describe('Cross-Device Sync', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -153,7 +153,7 @@ test.describe('Cross-Device Sync', () => {
     });
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -187,7 +187,7 @@ test.describe('Cross-Device Sync', () => {
     });
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -219,7 +219,7 @@ test.describe('Cross-Device Sync', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -249,7 +249,7 @@ test.describe('Cross-Device Sync', () => {
     await page.reload();
 
     // Wait for page to load again
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -274,7 +274,7 @@ test.describe('Cross-Device Sync', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -318,7 +318,7 @@ test.describe('Cross-Device Sync', () => {
     });
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 
@@ -337,7 +337,7 @@ test.describe('Cross-Device Sync', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });
 

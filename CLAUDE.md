@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A collaborative list application built with Jazz.tools and BetterAuth.
+Kjekit - Nicely Shared Checklists. Built with Jazz.tools and BetterAuth.
 
 **Key Features**:
 - Hierarchical template organization
@@ -60,7 +60,7 @@ npm run check           # Run type-check + lint + tests
 ## Project Structure
 
 ```
-bubblelist/
+kjekit/
 ├── src/
 │   ├── schemas/
 │   │   ├── index.ts       # Account and root schemas

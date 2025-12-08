@@ -240,7 +240,7 @@ export function AppContainer({
   };
 
   const handleHeaderClick = () => {
-    // Clicking on BubbleList header deselects everything
+    // Clicking on header deselects everything
     setSelectedTemplateId(null);
     setSelectedFolderId(null);
   };

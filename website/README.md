@@ -1,13 +1,13 @@
-# BubbleList Marketing Website
+# Kjekit Marketing Website
 
-This directory contains the static marketing website for BubbleList.
+This directory contains the static marketing website for Kjekit.
 
 ## Contents
 
 - **index.html** - Main landing page with features, FAQ, and CTAs
 - **legal.md** - Privacy Policy and Terms of Service (source)
 - **legal.html** - Generated from legal.md
-- **bubblelist.svg** - App icon
+- **kjekit.svg** - App icon
 - **build-legal.js** - Script to generate legal.html from legal.md
 
 ## Development
@@ -34,7 +34,7 @@ This is a static website. Deploy all files except `*.md` and `build-legal.js`:
 # Files to deploy:
 # - index.html
 # - legal.html
-# - bubblelist.svg
+# - kjekit.svg
 ```
 
 ### Hosting options
@@ -56,9 +56,9 @@ This is a static website. Deploy all files except `*.md` and `build-legal.js`:
 ### Update CTA links
 
 Update the app URL in `index.html`:
-- CTA buttons point to `https://bubblelist-app.rkroll.com`
+- CTA buttons point to `https://app.kjekit.com`
 
 ### Update contact info
 
 Edit `legal.md` and regenerate:
-- Email: `legal@bubblelist.com`
+- Email: `legal@kjekit.com`

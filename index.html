@@ -2,16 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/bubblelist.svg" />
+    <link rel="icon" type="image/svg+xml" href="/kjekit.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-    <meta name="description" content="Collaborative list app with real-time sync" />
+    <meta name="description" content="Nicely Shared Checklists" />
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#76daDA" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="BubbleList" />
+    <meta name="apple-mobile-web-app-title" content="Kjekit" />
 
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -20,11 +20,11 @@
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <title>BubbleList</title>
+    <title>Kjekit</title>
     <!-- Prevent flash of wrong theme -->
     <script>
       (function() {
-        const stored = localStorage.getItem('bubblelist-theme');
+        const stored = localStorage.getItem('kjekit-theme');
         const theme = stored === 'light' || stored === 'dark' ? stored : 'system';
         const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (isDark) document.documentElement.classList.add('dark');

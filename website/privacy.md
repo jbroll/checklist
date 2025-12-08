@@ -18,8 +18,8 @@ You can export your lists anytime (JSON, CSV, TXT) or delete your account.
 
 **We share data only when** required by law, necessary to protect our rights or users' safety, or part of a business transfer (with notice). We don't sell your data.
 
-**Children.** BubbleList is not for children under 13. We don't knowingly collect data from children under 13.
+**Children.** Kjekit is not for children under 13. We don't knowingly collect data from children under 13.
 
-**International users.** BubbleList operates in the United States. Using the service means your data may be transferred to the US.
+**International users.** Kjekit operates in the United States. Using the service means your data may be transferred to the US.
 
-Contact: bubblelist@rkroll.com
+Contact: support@kjekit.com

@@ -82,7 +82,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
       await deviceA.goto('/');
 
       // Wait for app to load
-      await expect(deviceA.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+      await expect(deviceA.getByRole('heading', { name: /kjekit/i })).toBeVisible({
         timeout: 10000,
       });
 
@@ -112,7 +112,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
       await deviceA.goto('/');
 
       // Wait for app to load
-      await expect(deviceA.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+      await expect(deviceA.getByRole('heading', { name: /kjekit/i })).toBeVisible({
         timeout: 10000,
       });
 
@@ -127,7 +127,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
       await deviceA.reload();
 
       // Wait for app to load again
-      await expect(deviceA.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+      await expect(deviceA.getByRole('heading', { name: /kjekit/i })).toBeVisible({
         timeout: 10000,
       });
 
@@ -153,7 +153,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
       await deviceB.goto('/');
 
       // Wait for app to load
-      await expect(deviceB.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+      await expect(deviceB.getByRole('heading', { name: /kjekit/i })).toBeVisible({
         timeout: 10000,
       });
 
@@ -224,10 +224,10 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
 
       // Wait for both to load
       await Promise.all([
-        expect(deviceA.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+        expect(deviceA.getByRole('heading', { name: /kjekit/i })).toBeVisible({
           timeout: 10000,
         }),
-        expect(deviceB.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+        expect(deviceB.getByRole('heading', { name: /kjekit/i })).toBeVisible({
           timeout: 10000,
         }),
       ]);
@@ -273,7 +273,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
       await page.goto('/');
 
       // Wait for app to load
-      await expect(page.getByRole('heading', { name: /bubblelist/i })).toBeVisible({
+      await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
         timeout: 10000,
       });
 

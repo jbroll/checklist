@@ -1,12 +1,12 @@
-interface BubbleListIconProps {
+interface KjekitIconProps {
   className?: string;
   size?: number;
 }
 
-export function BubbleListIcon({ className = '', size = 16 }: BubbleListIconProps) {
+export function KjekitIcon({ className = '', size = 16 }: KjekitIconProps) {
   return (
     <img
-      src="/bubblelist.svg"
+      src="/kjekit.svg"
       alt=""
       aria-hidden="true"
       className={className}

@@ -10,7 +10,6 @@ import { generateId } from '../lib/utils';
 import type { Account, ItemState, SessionData, TemplateItem } from '../schemas';
 import { getTemplate } from './templateService';
 
-// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
 type SessionsLike = SessionData[] | { [Symbol.iterator](): Iterator<SessionData> };
 
 /**

@@ -137,11 +137,11 @@ export function TreeView({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
-    const stored = localStorage.getItem('bubblelist-show-archived-templates');
+    const stored = localStorage.getItem('kjekit-show-archived-templates');
     return stored === 'true';
   });
   const [showArchivedSessions, setShowArchivedSessions] = useState(() => {
-    const stored = localStorage.getItem('bubblelist-show-archived-sessions');
+    const stored = localStorage.getItem('kjekit-show-archived-sessions');
     return stored === 'true';
   });
 
@@ -159,11 +159,11 @@ export function TreeView({
 
   // Persist archived view preferences
   useEffect(() => {
-    localStorage.setItem('bubblelist-show-archived-templates', String(showArchivedTemplates));
+    localStorage.setItem('kjekit-show-archived-templates', String(showArchivedTemplates));
   }, [showArchivedTemplates]);
 
   useEffect(() => {
-    localStorage.setItem('bubblelist-show-archived-sessions', String(showArchivedSessions));
+    localStorage.setItem('kjekit-show-archived-sessions', String(showArchivedSessions));
   }, [showArchivedSessions]);
 
   // Get selected folder by ID

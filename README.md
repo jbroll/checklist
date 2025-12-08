@@ -1,6 +1,6 @@
-# BubbleList
+# Kjekit
 
-A real-time collaborative list app built with Jazz.tools and BetterAuth.
+Nicely Shared Checklists - built with Jazz.tools and BetterAuth.
 
 ## Features
 
