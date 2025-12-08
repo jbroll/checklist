@@ -19,6 +19,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jazz-tools": "^0.18.33",
+    "nodemailer": "^7.0.11",
     "ws": "^8.18.3"
   },
   "devDependencies": {
@@ -26,6 +27,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.5",
     "@types/node": "^22.10.5",
+    "@types/nodemailer": "^7.0.4",
     "@types/supertest": "^6.0.3",
     "supertest": "^7.1.4",
     "tsx": "^4.19.2",

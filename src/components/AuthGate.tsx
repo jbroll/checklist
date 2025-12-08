@@ -5,6 +5,7 @@ import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
 import { Account } from '@/schemas';
 import * as folderService from '@/services/folderService';
+import { EmailAuthDialog } from './auth/EmailAuthDialog';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
 import { LoadingScreen } from './ui/loading';
@@ -12,6 +13,27 @@ import { LoadingScreen } from './ui/loading';
 export type ViewMode = 'classic' | 'simplified';
 
 export function AuthGate() {
+  // Check if user just verified their email
+  // Use sessionStorage to persist across remounts (Jazz can cause remounts during init)
+  const [showEmailAuthDialog, setShowEmailAuthDialog] = useState(() => {
+    // Check sessionStorage first (survives remounts)
+    const stored = sessionStorage.getItem('show-signin-after-verify');
+    if (stored === 'true') {
+      sessionStorage.removeItem('show-signin-after-verify');
+      return true;
+    }
+
+    // Check URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const justVerified = urlParams.get('verified') === 'true';
+    if (justVerified) {
+      // Store in sessionStorage before cleaning URL (in case of remount)
+      sessionStorage.setItem('show-signin-after-verify', 'true');
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    return justVerified;
+  });
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { me, logOut } = useAccount(Account);
   const { showAlert, showConfirm } = useDialog();
@@ -195,6 +217,7 @@ export function AuthGate() {
   // Allow local mode - show app without authentication (Jazz creates anonymous account)
   return (
     <>
+      <EmailAuthDialog open={showEmailAuthDialog} onOpenChange={setShowEmailAuthDialog} />
       <SignInDialog
         open={showSignInDialog}
         onOpenChange={setShowSignInDialog}

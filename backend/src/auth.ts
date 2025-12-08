@@ -4,8 +4,39 @@ import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
+
+// Configure SMTP transporter for sending emails
+const smtpTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.purelymail.com',
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// Email sending helper
+async function sendEmail(to: string, subject: string, text: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('[Email] SMTP credentials not configured, skipping email send');
+    return;
+  }
+
+  try {
+    await smtpTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'Kjekit <invite@kjekit.com>',
+      to,
+      subject,
+      text,
+    });
+  } catch (error) {
+    console.error('[Email] Failed to send email:', error);
+  }
+}
 
 // Create SQLite database instance
 // Store in data directory to persist across deployments
@@ -67,6 +98,66 @@ export const auth = betterAuth({
       secure: true,
       path: "/",
     },
+  },
+
+  // Email verification for resending verification emails
+  emailVerification: {
+    // Don't auto-sign in - user must sign in manually after verification
+    autoSignInAfterVerification: false,
+    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+      await sendEmail(
+        user.email,
+        'Verify your Kjekit email',
+        `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to verify your email: ${url}
+
+This link expires in 24 hours.
+
+- Kjekit`
+      );
+    },
+  },
+
+  // Email/Password authentication
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+      await sendEmail(
+        user.email,
+        'Verify your Kjekit email',
+        `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to verify your email: ${url}
+
+This link expires in 24 hours.
+
+- Kjekit`
+      );
+    },
+    sendResetPassword: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+      await sendEmail(
+        user.email,
+        'Reset your Kjekit password',
+        `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to reset your password: ${url}
+
+This link expires in 1 hour.
+If you didn't request this, you can ignore this email.
+
+- Kjekit`
+      );
+    },
+  },
+
+  // Account linking - auto-link when same email used across providers
+  accountLinking: {
+    enabled: true,
+    trustedProviders: ["google", "apple"],
   },
 
   // Jazz plugin to store Jazz account keys with users

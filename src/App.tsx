@@ -15,6 +15,13 @@ const InviteAcceptPage = lazy(() =>
   })),
 );
 
+// Lazy load ResetPasswordPage for password reset flow
+const ResetPasswordPage = lazy(() =>
+  import('./components/auth/ResetPasswordPage').then((module) => ({
+    default: module.ResetPasswordPage,
+  })),
+);
+
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
   import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
@@ -43,6 +50,7 @@ function App() {
   // Parse current route
   const pathname = window.location.pathname;
   const isTestPage = pathname === '/test';
+  const isResetPasswordPage = pathname === '/reset-password';
   const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
   const inviteToken = inviteMatch ? inviteMatch[1] : null;
 
@@ -80,6 +88,10 @@ function App() {
           {inviteToken ? (
             <Suspense fallback={<LoadingScreen />}>
               <InviteAcceptPage token={inviteToken} />
+            </Suspense>
+          ) : isResetPasswordPage ? (
+            <Suspense fallback={<LoadingScreen />}>
+              <ResetPasswordPage />
             </Suspense>
           ) : isTestPage ? (
             <Suspense fallback={<LoadingScreen />}>
