@@ -76,11 +76,19 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     const now = Math.floor(Date.now() / 1000);
     if (invite.expires_at < now) return res.status(400).json({ error: 'expired' });
 
-    // Validate: logged-in email matches invite
-    if (session.user.email !== invite.recipient_email) {
+    // Validate: logged-in email matches invite (check primary + verified emails)
+    const emailMatches =
+      session.user.email.toLowerCase() === invite.recipient_email.toLowerCase() ||
+      db.prepare(`
+        SELECT 1 FROM verified_email
+        WHERE user_id = ? AND LOWER(email) = LOWER(?)
+      `).get(session.user.id, invite.recipient_email);
+
+    if (!emailMatches) {
       return res.status(403).json({
         error: 'email_mismatch',
-        message: `This invite is for ${invite.recipient_email}`
+        message: `This invite is for ${invite.recipient_email}`,
+        recipientEmail: invite.recipient_email,
       });
     }
 

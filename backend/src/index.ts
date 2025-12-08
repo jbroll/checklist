@@ -17,6 +17,7 @@ import { auth, sqliteDb } from './auth.js';
 import { initDb } from './db.js';
 import { initAgent } from './agent.js';
 import { setupSharingRoutes } from './shares.js';
+import { setupVerifiedEmailRoutes } from './verified-emails.js';
 
 // Load environment variables from both root .env and backend .env
 // Root .env first (shared config like JAZZ_API_KEY)
@@ -94,6 +95,9 @@ app.use(express.urlencoded({ extended: true }));
 // Sharing routes
 setupSharingRoutes(app, sqliteDb);
 
+// Verified emails routes
+setupVerifiedEmailRoutes(app, sqliteDb);
+
 // Account deletion endpoint
 // Deletes the user's BetterAuth account and all associated data
 // Jazz data becomes inaccessible since account keys are deleted with the user
@@ -115,6 +119,9 @@ app.delete('/api/account', async (req, res) => {
 
     // Delete any share invites sent by or to this user
     sqliteDb.prepare('DELETE FROM share_invites WHERE sender_email = ? OR recipient_email = ?').run(userEmail, userEmail);
+
+    // Delete verified emails (should cascade, but be explicit)
+    sqliteDb.prepare('DELETE FROM verified_email WHERE user_id = ?').run(userId);
 
     // Delete the user - this cascades to sessions and OAuth accounts
     // The Jazz account keys (stored in user.accountID) are also deleted,

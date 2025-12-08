@@ -22,6 +22,13 @@ const ResetPasswordPage = lazy(() =>
   })),
 );
 
+// Lazy load VerifyEmailPage for additional email verification
+const VerifyEmailPage = lazy(() =>
+  import('./components/auth/VerifyEmailPage').then((module) => ({
+    default: module.VerifyEmailPage,
+  })),
+);
+
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
   import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
@@ -51,6 +58,7 @@ function App() {
   const pathname = window.location.pathname;
   const isTestPage = pathname === '/test';
   const isResetPasswordPage = pathname === '/reset-password';
+  const isVerifyEmailPage = pathname === '/verify-email';
   const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
   const inviteToken = inviteMatch ? inviteMatch[1] : null;
 
@@ -92,6 +100,10 @@ function App() {
           ) : isResetPasswordPage ? (
             <Suspense fallback={<LoadingScreen />}>
               <ResetPasswordPage />
+            </Suspense>
+          ) : isVerifyEmailPage ? (
+            <Suspense fallback={<LoadingScreen />}>
+              <VerifyEmailPage />
             </Suspense>
           ) : isTestPage ? (
             <Suspense fallback={<LoadingScreen />}>

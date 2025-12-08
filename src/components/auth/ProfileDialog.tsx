@@ -29,6 +29,7 @@ import {
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
+import { LinkedEmailsSection } from './LinkedEmailsSection';
 
 interface ProfileDialogProps {
   open: boolean;
@@ -182,6 +183,11 @@ export function ProfileDialog({
               </span>
             </Button>
           )}
+
+          {/* Linked Emails Section */}
+          <div className="border-t border-border-default pt-3">
+            <LinkedEmailsSection />
+          </div>
 
           <Button
             type="button"
