@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
 import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
+import { canUserAccessShareEmail } from './lib/email-matching.js';
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
@@ -77,12 +78,12 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     if (invite.expires_at < now) return res.status(400).json({ error: 'expired' });
 
     // Validate: logged-in email matches invite (check primary + verified emails)
-    const emailMatches =
-      session.user.email.toLowerCase() === invite.recipient_email.toLowerCase() ||
-      db.prepare(`
-        SELECT 1 FROM verified_email
-        WHERE user_id = ? AND LOWER(email) = LOWER(?)
-      `).get(session.user.id, invite.recipient_email);
+    const emailMatches = canUserAccessShareEmail(
+      db,
+      session.user.id,
+      session.user.email,
+      invite.recipient_email
+    );
 
     if (!emailMatches) {
       return res.status(403).json({

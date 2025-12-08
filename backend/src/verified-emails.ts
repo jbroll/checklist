@@ -8,6 +8,7 @@ import {
   verifyToken,
   TOKEN_EXPIRY_HOURS,
 } from './lib/verification-token.js';
+import { emailVerificationLimiter } from './lib/rate-limiter.js';
 
 // Configure SMTP transporter (same as auth.ts)
 const smtpTransporter = nodemailer.createTransport({
@@ -59,25 +60,6 @@ If you didn't request this, you can ignore this email.
   }
 }
 
-// Rate limiting: track requests per user (in-memory, resets on server restart)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const limit = rateLimitMap.get(userId);
-
-  if (!limit || limit.resetAt < now) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 }); // 1 hour window
-    return true;
-  }
-
-  if (limit.count >= 3) {
-    return false;
-  }
-
-  limit.count++;
-  return true;
-}
 
 export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
   // Request email verification
@@ -96,7 +78,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       const normalizedEmail = email.toLowerCase().trim();
 
       // Check rate limit
-      if (!checkRateLimit(session.user.id)) {
+      if (!emailVerificationLimiter.check(session.user.id)) {
         return res.status(429).json({ error: 'Too many requests. Please try again later.' });
       }
 
