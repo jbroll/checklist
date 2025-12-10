@@ -1,6 +1,6 @@
-# About Kjekit
+# About kjekit
 
-Kjekit (pronounced check-it) is a checklist app designed for lists you use every day. 
+kjekit (pronounced "check it") is a checklist app designed for lists you use every day. 
 
 Perfect for grocery shopping, packing lists, daily routines, and any recurring checklist.
 

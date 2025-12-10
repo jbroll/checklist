@@ -43,16 +43,16 @@ async function sendVerificationEmail(to: string, token: string) {
 
   try {
     await smtpTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Kjekit <invite@kjekit.com>',
+      from: process.env.EMAIL_FROM || 'kjekit <invite@kjekit.com>',
       to,
-      subject: 'Verify your additional email for Kjekit',
+      subject: 'Verify your additional email for kjekit',
       text: `Click to verify this email address: ${verifyUrl}
 
 This link expires in ${TOKEN_EXPIRY_HOURS} hours.
 
 If you didn't request this, you can ignore this email.
 
-- Kjekit`,
+- kjekit`,
     });
   } catch (error) {
     console.error('[Email] Failed to send verification email:', error);

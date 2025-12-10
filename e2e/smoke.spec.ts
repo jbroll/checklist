@@ -14,10 +14,10 @@ test.describe('Application Smoke Tests', () => {
     await expect(page.locator('h1')).toBeVisible();
   });
 
-  test('should display Kjekit after loading', async ({ page }) => {
+  test('should display kjekit after loading', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the Kjekit heading
+    // Wait for the kjekit heading
     await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
       timeout: 10000,
     });

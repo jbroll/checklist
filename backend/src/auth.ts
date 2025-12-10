@@ -28,7 +28,7 @@ async function sendEmail(to: string, subject: string, text: string) {
 
   try {
     await smtpTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Kjekit <invite@kjekit.com>',
+      from: process.env.EMAIL_FROM || 'kjekit <invite@kjekit.com>',
       to,
       subject,
       text,
@@ -107,14 +107,14 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
       await sendEmail(
         user.email,
-        'Verify your Kjekit email',
+        'Verify your kjekit email',
         `Hi${user.name ? ` ${user.name}` : ''},
 
 Click to verify your email: ${url}
 
 This link expires in 24 hours.
 
-- Kjekit`
+- kjekit`
       );
     },
   },
@@ -128,20 +128,20 @@ This link expires in 24 hours.
     sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
       await sendEmail(
         user.email,
-        'Verify your Kjekit email',
+        'Verify your kjekit email',
         `Hi${user.name ? ` ${user.name}` : ''},
 
 Click to verify your email: ${url}
 
 This link expires in 24 hours.
 
-- Kjekit`
+- kjekit`
       );
     },
     sendResetPassword: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
       await sendEmail(
         user.email,
-        'Reset your Kjekit password',
+        'Reset your kjekit password',
         `Hi${user.name ? ` ${user.name}` : ''},
 
 Click to reset your password: ${url}
@@ -149,7 +149,7 @@ Click to reset your password: ${url}
 This link expires in 1 hour.
 If you didn't request this, you can ignore this email.
 
-- Kjekit`
+- kjekit`
       );
     },
   },

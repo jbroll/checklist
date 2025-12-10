@@ -1,6 +1,6 @@
 {
-  "name": "Kjekit - Nicely Shared Checklists",
-  "short_name": "Kjekit",
+  "name": "kjekit - Nicely Shared Checklists",
+  "short_name": "kjekit",
   "description": "Nicely Shared Checklists",
   "start_url": "/",
   "display": "standalone",

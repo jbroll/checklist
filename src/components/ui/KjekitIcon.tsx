@@ -25,6 +25,6 @@ interface KjekitTextProps {
 
 export function KjekitText({ className = '', height = 30 }: KjekitTextProps) {
   return (
-    <img src={kjekitPathUrl} alt="Kjekit" className={className} style={{ height, width: 'auto' }} />
+    <img src={kjekitPathUrl} alt="kjekit" className={className} style={{ height, width: 'auto' }} />
   );
 }

@@ -125,7 +125,7 @@ export function TreeViewHeader({
           type="button"
           onClick={onHeaderClick}
           className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-h-[44px]"
-          aria-label="Kjekit - Return to main view"
+          aria-label="kjekit - Return to main view"
         >
           <KjekitIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
           <h1 className="flex items-center gap-1">

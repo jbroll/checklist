@@ -92,8 +92,8 @@ function generatePage(mdFile, htmlFile, title) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Kjekit - ${title}">
-    <title>${title} - Kjekit</title>
+    <meta name="description" content="kjekit - ${title}">
+    <title>${title} - kjekit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>${styles}
     </style>
@@ -105,7 +105,7 @@ function generatePage(mdFile, htmlFile, title) {
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="kjekit-path.svg" alt="Kjekit" class="h-10">
+                        <img src="kjekit-path.svg" alt="kjekit" class="h-10">
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">
