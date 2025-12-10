@@ -4,6 +4,7 @@ import type { ViewMode } from '@/components/AuthGate';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
 import { TreeView } from '@/components/tree/TreeView';
 import { LoadingScreen } from '@/components/ui/loading';
+import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
@@ -45,24 +46,29 @@ export function SimplifiedApp({
   showProfileDialog,
   onShowProfileDialogChange,
 }: SimplifiedAppProps) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const { navState, navigateTo, goBack } = useNavigationHistory();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  // Find selected folder for import
+  // Derive navigation state from history hook
+  const selectedTemplateId = navState.view === 'session' ? navState.templateId : null;
+  const currentSessionId = navState.view === 'session' ? navState.sessionId : null;
+
+  // Find selected folder for import or session view
+  // Uses selectedTemplateId (from URL) or selectedFolderId (from UI selection)
   const selectedFolder = useMemo(() => {
-    if (!account?.root?.folders || !selectedFolderId) return null;
+    const targetId = selectedTemplateId || selectedFolderId;
+    if (!account?.root?.folders || !targetId) return null;
 
     const findFolder = (
       folders: InstanceOfSchema<typeof FolderNode>[],
     ): InstanceOfSchema<typeof FolderNode> | null => {
       for (const f of folders) {
         if (!f) continue;
-        if (f.$jazz.id === selectedFolderId) return f;
+        if (f.$jazz.id === targetId) return f;
         if (f.children) {
           const found = findFolder(f.children);
           if (found) return found;
@@ -72,7 +78,7 @@ export function SimplifiedApp({
     };
 
     return findFolder(Array.from(account.root.folders));
-  }, [selectedFolderId, account?.root?.folders]);
+  }, [selectedTemplateId, selectedFolderId, account?.root?.folders]);
 
   // Compute parent folder for import based on selected folder
   const importParentFolder = useMemo(() => {
@@ -110,12 +116,15 @@ export function SimplifiedApp({
           template={selectedFolder}
           sessionId={currentSessionId}
           onBack={() => {
-            setSelectedTemplateId(null);
             setSelectedFolderId(null);
-            setCurrentSessionId(null);
+            goBack();
           }}
           onSwitchSession={(newSessionId) => {
-            setCurrentSessionId(newSessionId);
+            navigateTo({
+              view: 'session',
+              templateId: selectedTemplateId,
+              sessionId: newSessionId,
+            });
           }}
         />
       </Suspense>
@@ -147,10 +156,9 @@ export function SimplifiedApp({
         sessionId = sessionService.createSession(account, template.$jazz.id);
       }
 
-      // Set all state together to avoid intermediate renders
-      setSelectedTemplateId(templateId);
+      // Navigate to session view (with browser history)
       setSelectedFolderId(templateId);
-      setCurrentSessionId(sessionId);
+      navigateTo({ view: 'session', templateId, sessionId });
     }
   };
 
@@ -179,9 +187,11 @@ export function SimplifiedApp({
   };
 
   const handleHeaderClick = () => {
-    // Clicking on BubbleList header deselects everything
-    setSelectedTemplateId(null);
+    // Clicking on header deselects everything and returns to main view
     setSelectedFolderId(null);
+    if (navState.view !== 'main') {
+      navigateTo({ view: 'main' });
+    }
   };
 
   const handleUseTemplate = () => {

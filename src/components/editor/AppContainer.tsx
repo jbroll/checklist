@@ -4,6 +4,7 @@ import type { ViewMode } from '@/components/AuthGate';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
 import { useAccount } from '@/lib/jazz';
+import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
@@ -52,6 +53,7 @@ export function AppContainer({
   isAuthenticated,
 }: AppContainerProps) {
   const { me } = useAccount<typeof Account>();
+  const { navState, navigateTo, goBack } = useNavigationHistory();
 
   // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)
   useEffect(() => {
@@ -78,12 +80,10 @@ export function AppContainer({
   // Selection state - tracks currently selected folder (organizational or template)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
-  // Navigation state for shopping session view
-  const [activeSessionTemplateId, setActiveSessionTemplateId] = useState<string | null>(null);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-  // Navigation state for template editing view
-  const [activeEditTemplateId, setActiveEditTemplateId] = useState<string | null>(null);
+  // Derive navigation state from history hook
+  const activeSessionTemplateId = navState.view === 'session' ? navState.templateId : null;
+  const activeSessionId = navState.view === 'session' ? navState.sessionId : null;
+  const activeEditTemplateId = navState.view === 'edit' ? navState.templateId : null;
 
   // Find selected folder for import (must be before early return)
   const selectedFolder = useMemo(() => {
@@ -206,29 +206,30 @@ export function AppContainer({
     // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
     const sessionId = SessionService.createSession(me as any, selectedTemplateId);
 
-    // Navigate to shopping session view
-    setActiveSessionTemplateId(selectedTemplateId);
-    setActiveSessionId(sessionId);
+    // Navigate to shopping session view (with browser history)
+    navigateTo({ view: 'session', templateId: selectedTemplateId, sessionId });
   };
 
   const handleEditTemplate = () => {
     if (!selectedTemplateId) return;
 
-    // Navigate to template editing view
-    setActiveEditTemplateId(selectedTemplateId);
+    // Navigate to template editing view (with browser history)
+    navigateTo({ view: 'edit', templateId: selectedTemplateId });
   };
 
   const handleBackToTemplates = () => {
-    setActiveSessionTemplateId(null);
-    setActiveSessionId(null);
+    goBack();
   };
 
   const handleSwitchSession = (newSessionId: string) => {
-    setActiveSessionId(newSessionId);
+    // Replace current history entry with new session (don't add to stack)
+    if (activeSessionTemplateId) {
+      navigateTo({ view: 'session', templateId: activeSessionTemplateId, sessionId: newSessionId });
+    }
   };
 
   const handleBackFromEdit = () => {
-    setActiveEditTemplateId(null);
+    goBack();
   };
 
   const handleTemplateSelect = (templateId: string) => {
@@ -295,8 +296,7 @@ export function AppContainer({
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
           onOpenSession={(templateId, sessionId) => {
-            setActiveSessionTemplateId(templateId);
-            setActiveSessionId(sessionId);
+            navigateTo({ view: 'session', templateId, sessionId });
           }}
           onExportSession={handleExportSession}
           onHeaderClick={handleHeaderClick}

@@ -1,9 +1,10 @@
 import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
 import { useAccount } from '@/lib/jazz';
+import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, SessionData, Template } from '@/schemas';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
@@ -28,7 +29,7 @@ interface SessionViewProps {
 
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
   const { me } = useAccount<typeof Account>();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { navState, navigateTo } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const [zoneExpanded, setZoneExpanded] = useState({
@@ -36,6 +37,23 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     selected: true,
     checked: false,
   });
+
+  // Derive edit mode from navigation state
+  const showAddForm = navState.view === 'session' && navState.editing === true;
+  const templateId = template.$jazz.id;
+
+  // Toggle edit mode with browser history
+  const setShowAddForm = useCallback(
+    (show: boolean) => {
+      navigateTo({
+        view: 'session',
+        templateId,
+        sessionId,
+        editing: show,
+      });
+    },
+    [navigateTo, templateId, sessionId],
+  );
 
   // Get session early (before hooks)
   const sessions = template.sessions || [];
