@@ -21,6 +21,7 @@
     "helmet": "^8.1.0",
     "jazz-tools": "^0.18.33",
     "nodemailer": "^7.0.11",
+    "stripe": "^20.0.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {

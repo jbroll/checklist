@@ -6,6 +6,20 @@
 
 import { co, Group, type InstanceOfSchema } from 'jazz-tools';
 import { type Account, FolderNode } from '../schemas';
+import { canCreateList, getMaxLists } from './subscriptionService';
+
+/**
+ * Error thrown when user tries to create a list but has reached their tier limit
+ */
+export class ListLimitExceededError extends Error {
+  maxLists: number;
+
+  constructor(maxLists: number) {
+    super(`You've reached your limit of ${maxLists} lists. Upgrade to create more.`);
+    this.name = 'ListLimitExceededError';
+    this.maxLists = maxLists;
+  }
+}
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;
@@ -160,6 +174,11 @@ export function createFolder(
   parent?: FolderType | null,
 ): FolderType {
   if (!account.root) throw new Error('Account root not initialized');
+
+  // Check subscription limit when creating a template (list)
+  if (isTemplate && !canCreateList(account)) {
+    throw new ListLimitExceededError(getMaxLists(account));
+  }
 
   const now = new Date();
   const folderGroup = createFolderGroup(account, parent);

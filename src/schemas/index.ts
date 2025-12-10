@@ -26,9 +26,15 @@ export const ViewState = co.map({
 });
 
 /**
+ * Subscription tier type
+ */
+export type SubscriptionTier = 'free' | 'premium' | 'team' | 'enterprise';
+export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled' | 'trialing';
+
+/**
  * UserSettings - Global user preferences
  *
- * Controls autocomplete and auto-categorization behavior.
+ * Controls autocomplete, auto-categorization behavior, and cached subscription status.
  * These are defaults that can be overridden per-template.
  */
 export const UserSettings = co.map({
@@ -37,6 +43,24 @@ export const UserSettings = co.map({
 
   // Enable auto-categorization when selecting from autocomplete (default: true)
   enableAutoCategorization: z.optional(z.boolean()),
+
+  // === Subscription fields (cached from backend, source of truth is server) ===
+
+  // Current subscription tier
+  subscriptionTier: z.optional(z.enum(['free', 'premium', 'team', 'enterprise'])),
+
+  // Subscription status
+  subscriptionStatus: z.optional(z.enum(['active', 'past_due', 'cancelled', 'trialing'])),
+
+  // When the current subscription period ends (Unix timestamp)
+  subscriptionEndsAt: z.optional(z.number()),
+
+  // Cached limits for offline display
+  maxLists: z.optional(z.number()),
+  sessionRetentionDays: z.optional(z.number()),
+
+  // Last time subscription was synced from backend
+  subscriptionSyncedAt: z.optional(z.number()),
 });
 
 /**

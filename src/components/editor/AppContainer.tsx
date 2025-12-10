@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
+import { UpgradeBanner, UpgradeDialog } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
 import { useAccount } from '@/lib/jazz';
@@ -8,6 +9,7 @@ import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
+import * as subscriptionService from '@/services/subscriptionService';
 import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
@@ -70,6 +72,8 @@ export function AppContainer({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState<string | undefined>(undefined);
   const [sessionExportData, setSessionExportData] = useState<{
     templateId: string;
     sessionId: string;
@@ -159,6 +163,14 @@ export function AppContainer({
               onToggleAutoCategorization={() =>
                 userSettingsService.toggleEnableAutoCategorization(me)
               }
+              subscriptionTier={subscriptionService.getSubscriptionTier(me)}
+              listCount={subscriptionService.countUserLists(me)}
+              maxLists={subscriptionService.getMaxLists(me)}
+              onUpgradeClick={() => {
+                setShowProfileDialog(false);
+                setShowUpgradeDialog(true);
+              }}
+              onManageBillingClick={() => subscriptionService.redirectToPortal()}
             />
           </Suspense>
         )}
@@ -282,10 +294,12 @@ export function AppContainer({
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const accountAsAny = me as any;
   return (
-    <div className="h-screen bg-neutral-50 dark:bg-neutral-900 p-3 sm:p-4 lg:p-6 flex flex-col">
+    <div className="h-screen bg-neutral-50 dark:bg-neutral-900 flex flex-col">
+      {/* Upgrade banner - shows when approaching list limit */}
+      <UpgradeBanner account={me} onUpgradeClick={() => setShowUpgradeDialog(true)} />
       <main
         id="main-content"
-        className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0"
+        className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0 p-3 sm:p-4 lg:p-6"
       >
         <TreeView
           account={accountAsAny}
@@ -301,7 +315,15 @@ export function AppContainer({
           onExportSession={handleExportSession}
           onHeaderClick={handleHeaderClick}
           onAddFolder={() => setShowAddFolder(true)}
-          onAddTemplate={() => setShowAddTemplate(true)}
+          onAddTemplate={() => {
+            // Check if at list limit before showing add template dialog
+            if (subscriptionService.isAtListLimit(me)) {
+              setUpgradeMessage("You've reached your list limit.");
+              setShowUpgradeDialog(true);
+            } else {
+              setShowAddTemplate(true);
+            }
+          }}
           onExport={() => setShowExportDialog(true)}
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
@@ -346,6 +368,14 @@ export function AppContainer({
             parentFolder={importParentFolder}
           />
         </Suspense>
+
+        {/* Upgrade Dialog */}
+        <UpgradeDialog
+          open={showUpgradeDialog}
+          onOpenChange={setShowUpgradeDialog}
+          account={me}
+          message={upgradeMessage}
+        />
 
         {/* Session Export Dialog */}
         {sessionExportData &&

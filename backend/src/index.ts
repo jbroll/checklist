@@ -19,6 +19,7 @@ import { initDb } from './db.js';
 import { initAgent } from './agent.js';
 import { setupSharingRoutes } from './shares.js';
 import { setupVerifiedEmailRoutes } from './verified-emails.js';
+import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
 
 // Load environment variables from both root .env and backend .env
 // Root .env first (shared config like JAZZ_API_KEY)
@@ -125,7 +126,10 @@ app.use((req, res, next) => {
 // BetterAuth handler - MUST come before express.json()
 app.use('/api/auth', toNodeHandler(auth));
 
-// Parse JSON bodies (AFTER Better Auth handler)
+// Stripe webhook - MUST come before express.json() for raw body access
+setupStripeWebhook(app, sqliteDb);
+
+// Parse JSON bodies (AFTER Better Auth handler and Stripe webhook)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -134,6 +138,9 @@ setupSharingRoutes(app, sqliteDb);
 
 // Verified emails routes
 setupVerifiedEmailRoutes(app, sqliteDb);
+
+// Billing routes
+setupBillingRoutes(app, sqliteDb, auth);
 
 // Account deletion endpoint
 // Deletes the user's BetterAuth account and all associated data
@@ -159,6 +166,10 @@ app.delete('/api/account', async (req, res) => {
 
     // Delete verified emails (should cascade, but be explicit)
     sqliteDb.prepare('DELETE FROM verified_email WHERE user_id = ?').run(userId);
+
+    // Delete subscription and usage data (should cascade, but be explicit)
+    sqliteDb.prepare('DELETE FROM usage_snapshot WHERE user_id = ?').run(userId);
+    sqliteDb.prepare('DELETE FROM user_subscription WHERE user_id = ?').run(userId);
 
     // Delete the user - this cascades to sessions and OAuth accounts
     // The Jazz account keys (stored in user.accountID) are also deleted,

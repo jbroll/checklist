@@ -16,5 +16,9 @@ export function initDb(sqliteDb: Database.Database) {
   const verifiedEmailsSql = readFileSync(join(__dirname, 'migrations/verified-emails.sql'), 'utf-8');
   sqliteDb.exec(verifiedEmailsSql);
 
+  // Subscription tables
+  const subscriptionsSql = readFileSync(join(__dirname, 'migrations/subscriptions.sql'), 'utf-8');
+  sqliteDb.exec(subscriptionsSql);
+
   return sqliteDb;
 }

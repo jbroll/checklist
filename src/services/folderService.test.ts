@@ -82,6 +82,7 @@ import {
   getRootFolders,
   isOrganizationalFolder,
   isTemplateFolder,
+  ListLimitExceededError,
   moveFolder,
   moveFolderToIndex,
   renameFolder,
@@ -90,6 +91,14 @@ import {
   toggleFolderExpanded,
   unarchiveFolder,
 } from './folderService';
+
+// Mock subscription service for limit checking tests
+vi.mock('./subscriptionService', () => ({
+  canCreateList: vi.fn(() => true),
+  getMaxLists: vi.fn(() => 5),
+}));
+
+import { canCreateList, getMaxLists } from './subscriptionService';
 
 // Spy on FolderNode.create
 let folderIdCounter = 0;
@@ -1203,6 +1212,69 @@ describe('FolderService', () => {
 
       // Should not throw
       expect(() => deleteAllUserData(noRootAccount)).not.toThrow();
+    });
+  });
+
+  describe('ListLimitExceededError', () => {
+    it('should create error with correct message', () => {
+      const error = new ListLimitExceededError(5);
+
+      expect(error.message).toBe("You've reached your limit of 5 lists. Upgrade to create more.");
+      expect(error.name).toBe('ListLimitExceededError');
+      expect(error.maxLists).toBe(5);
+    });
+
+    it('should be instanceof Error', () => {
+      const error = new ListLimitExceededError(10);
+
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+
+  describe('createFolder - subscription limits', () => {
+    beforeEach(() => {
+      // Reset mocks before each test
+      vi.mocked(canCreateList).mockReturnValue(true);
+      vi.mocked(getMaxLists).mockReturnValue(5);
+    });
+
+    it('should allow creating template when under limit', () => {
+      vi.mocked(canCreateList).mockReturnValue(true);
+
+      const template = createFolder(account, 'My Template', true);
+
+      expect(template.name).toBe('My Template');
+    });
+
+    it('should throw ListLimitExceededError when at limit for templates', () => {
+      vi.mocked(canCreateList).mockReturnValue(false);
+      vi.mocked(getMaxLists).mockReturnValue(5);
+
+      expect(() => createFolder(account, 'Over Limit', true)).toThrow(ListLimitExceededError);
+      expect(() => createFolder(account, 'Over Limit', true)).toThrow(
+        "You've reached your limit of 5 lists. Upgrade to create more.",
+      );
+    });
+
+    it('should allow creating organizational folder even when at template limit', () => {
+      vi.mocked(canCreateList).mockReturnValue(false);
+
+      // Organizational folders should not be limited
+      const folder = createFolder(account, 'Org Folder', false);
+
+      expect(folder.name).toBe('Org Folder');
+    });
+
+    it('should include maxLists in thrown error', () => {
+      vi.mocked(canCreateList).mockReturnValue(false);
+      vi.mocked(getMaxLists).mockReturnValue(100);
+
+      try {
+        createFolder(account, 'Over Limit', true);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect((error as ListLimitExceededError).maxLists).toBe(100);
+      }
     });
   });
 });

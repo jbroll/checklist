@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  CreditCard,
   FolderSearch,
   LayoutGrid,
   LogOut,
@@ -9,6 +10,7 @@ import {
   User,
   UserX,
   X,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +31,7 @@ import {
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
+import type { SubscriptionTier } from '@/schemas';
 import { LinkedEmailsSection } from './LinkedEmailsSection';
 
 interface ProfileDialogProps {
@@ -43,6 +46,12 @@ interface ProfileDialogProps {
   enableAutoCategorization?: boolean;
   onChangeDefaultAutocompleteDomain?: (domain: AutocompleteDomain) => void;
   onToggleAutoCategorization?: () => void;
+  // Subscription info
+  subscriptionTier?: SubscriptionTier;
+  listCount?: number;
+  maxLists?: number;
+  onUpgradeClick?: () => void;
+  onManageBillingClick?: () => void;
 }
 
 export function ProfileDialog({
@@ -56,6 +65,11 @@ export function ProfileDialog({
   enableAutoCategorization = true,
   onChangeDefaultAutocompleteDomain,
   onToggleAutoCategorization,
+  subscriptionTier = 'free',
+  listCount = 0,
+  maxLists = 5,
+  onUpgradeClick,
+  onManageBillingClick,
 }: ProfileDialogProps) {
   const { isDark, toggleTheme } = useTheme();
 
@@ -187,6 +201,52 @@ export function ProfileDialog({
           {/* Linked Emails Section */}
           <div className="border-t border-border-default pt-3">
             <LinkedEmailsSection />
+          </div>
+
+          {/* Subscription Section */}
+          <div className="border-t border-border-default pt-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-content-primary">Subscription</span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded ${
+                  subscriptionTier === 'free'
+                    ? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                }`}
+              >
+                {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}
+              </span>
+            </div>
+            <div className="mb-3 text-sm text-content-secondary">
+              {maxLists === -1 ? (
+                <span>Unlimited lists</span>
+              ) : (
+                <span>
+                  {listCount} of {maxLists} lists used
+                </span>
+              )}
+            </div>
+            {subscriptionTier === 'free' && onUpgradeClick ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-500 dark:hover:bg-green-900/30"
+                onClick={onUpgradeClick}
+              >
+                <Zap className="h-4 w-4" />
+                Upgrade Plan
+              </Button>
+            ) : onManageBillingClick ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={onManageBillingClick}
+              >
+                <CreditCard className="h-4 w-4" />
+                Manage Billing
+              </Button>
+            ) : null}
           </div>
 
           <Button
