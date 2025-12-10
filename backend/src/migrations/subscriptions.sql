@@ -11,9 +11,13 @@ CREATE TABLE IF NOT EXISTS subscription_tier (
 -- Insert default tiers (use INSERT OR IGNORE to avoid duplicates on restart)
 INSERT OR IGNORE INTO subscription_tier (slug, name, price_cents, max_lists, session_retention_days, stripe_price_id) VALUES
   ('free', 'Free', 0, 5, 30, NULL),
-  ('premium', 'Premium', 999, 100, 365, NULL),
-  ('team', 'Team', 2999, 500, -1, NULL),
+  ('premium', 'Premium', 999, 50, 365, NULL),
+  ('team', 'Team', 1999, 250, 1825, NULL),
   ('enterprise', 'Enterprise', 0, -1, -1, NULL);
+
+-- Update existing tiers if limits changed
+UPDATE subscription_tier SET max_lists = 50 WHERE slug = 'premium';
+UPDATE subscription_tier SET max_lists = 250, session_retention_days = 1825, price_cents = 1999 WHERE slug = 'team';
 
 -- User subscriptions (links user to their current tier)
 CREATE TABLE IF NOT EXISTS user_subscription (

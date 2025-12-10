@@ -40,9 +40,9 @@ export interface SubscriptionInfo {
 // Default limits per tier (fallback when not synced from backend)
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   free: { maxLists: 5, sessionRetentionDays: 30 },
-  premium: { maxLists: 100, sessionRetentionDays: 365 },
-  team: { maxLists: 500, sessionRetentionDays: -1 }, // -1 = unlimited
-  enterprise: { maxLists: -1, sessionRetentionDays: -1 },
+  premium: { maxLists: 50, sessionRetentionDays: 365 },
+  team: { maxLists: 250, sessionRetentionDays: 1825 }, // 5 years
+  enterprise: { maxLists: -1, sessionRetentionDays: -1 }, // -1 = unlimited
 };
 
 // Sync interval: 1 hour
@@ -369,7 +369,7 @@ export function getTierPrice(tier: SubscriptionTier): string {
   const prices: Record<SubscriptionTier, string> = {
     free: 'Free',
     premium: '$9.99/year',
-    team: '$29.99/year',
+    team: '$19.99/year',
     enterprise: 'Contact sales',
   };
   return prices[tier];

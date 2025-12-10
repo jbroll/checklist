@@ -27,8 +27,8 @@ interface TierFeature {
 }
 
 const FEATURES: TierFeature[] = [
-  { name: 'Lists', free: '5', premium: '100', team: '500' },
-  { name: 'Session history', free: '30 days', premium: '1 year', team: 'Unlimited' },
+  { name: 'Lists', free: '5', premium: '50', team: '250' },
+  { name: 'Session history', free: '30 days', premium: '1 year', team: '5 years' },
   { name: 'Real-time sync', free: true, premium: true, team: true },
   { name: 'Offline support', free: true, premium: true, team: true },
   { name: 'Sharing', free: true, premium: true, team: true },
@@ -38,7 +38,7 @@ const FEATURES: TierFeature[] = [
 const TIER_PRICES: Record<Exclude<SubscriptionTier, 'enterprise'>, string> = {
   free: '$0',
   premium: '$9.99/year',
-  team: '$29.99/year',
+  team: '$19.99/year',
 };
 
 export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeDialogProps) {

@@ -63,13 +63,13 @@ describe('SubscriptionService', () => {
     });
 
     it('should have correct limits for premium tier', () => {
-      expect(TIER_LIMITS.premium.maxLists).toBe(100);
+      expect(TIER_LIMITS.premium.maxLists).toBe(50);
       expect(TIER_LIMITS.premium.sessionRetentionDays).toBe(365);
     });
 
     it('should have correct limits for team tier', () => {
-      expect(TIER_LIMITS.team.maxLists).toBe(500);
-      expect(TIER_LIMITS.team.sessionRetentionDays).toBe(-1); // Unlimited
+      expect(TIER_LIMITS.team.maxLists).toBe(250);
+      expect(TIER_LIMITS.team.sessionRetentionDays).toBe(1825); // 5 years
     });
 
     it('should have correct limits for enterprise tier', () => {
@@ -106,7 +106,7 @@ describe('SubscriptionService', () => {
     it('should fall back to tier defaults when not cached', () => {
       const account = createMockAccount({ subscriptionTier: 'team' });
 
-      expect(getMaxLists(account)).toBe(500);
+      expect(getMaxLists(account)).toBe(250);
     });
 
     it('should return free tier limit as default', () => {
@@ -271,7 +271,7 @@ describe('SubscriptionService', () => {
     it('should return prices for all tiers', () => {
       expect(getTierPrice('free')).toBe('Free');
       expect(getTierPrice('premium')).toBe('$9.99/year');
-      expect(getTierPrice('team')).toBe('$29.99/year');
+      expect(getTierPrice('team')).toBe('$19.99/year');
       expect(getTierPrice('enterprise')).toBe('Contact sales');
     });
   });
