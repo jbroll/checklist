@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { KjekitIcon } from '@/components/ui/KjekitIcon';
+import { KjekitIcon, KjekitText } from '@/components/ui/KjekitIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TreeViewHeaderProps {
@@ -128,8 +128,11 @@ export function TreeViewHeader({
           aria-label="Kjekit - Return to main view"
         >
           <KjekitIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
-          <h1 className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
-            Kjekit Lists
+          <h1 className="flex items-center gap-1">
+            <KjekitText className="h-8 sm:h-9 lg:h-10" height={36} />
+            <span className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
+              Lists
+            </span>
           </h1>
         </button>
         <TooltipProvider>
