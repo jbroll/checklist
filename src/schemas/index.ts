@@ -1,4 +1,4 @@
-import { co, z } from 'jazz-tools';
+import { co, type InstanceOfSchema, z } from 'jazz-tools';
 import {
   FolderNode,
   type ItemState,
@@ -144,3 +144,22 @@ export { FolderNode, Template, type SessionData, type TemplateItem, type ItemSta
 
 // Alias for backwards compatibility
 export type Session = SessionData;
+
+/**
+ * Type alias for Account instances used in service functions.
+ *
+ * Jazz v0.18.x has TypeScript inference issues where:
+ * - useAccount<typeof Account>() returns a slightly different type
+ * - InstanceOfSchema<typeof Account> doesn't match the runtime type
+ *
+ * This alias allows service functions to accept the account from useAccount()
+ * without requiring `as any` casts at every call site.
+ *
+ * Usage in services:
+ *   function myService(account: AccountParam, ...) { ... }
+ *
+ * The `any` is isolated here rather than scattered across the codebase.
+ * When Jazz fixes these inference issues, we can update this single type.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference workaround - isolated here
+export type AccountParam = InstanceOfSchema<typeof Account> | any;

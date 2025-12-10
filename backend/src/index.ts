@@ -8,6 +8,7 @@ if (typeof globalThis.WebSocket === 'undefined') {
 import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -51,6 +52,36 @@ initAgent().catch((error) => {
 // Express server
 const app = express();
 
+// Security headers (helmet.js)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: [
+          "'self'",
+          'wss://cloud.jazz.tools',
+          'https://cloud.jazz.tools',
+          process.env.FRONTEND_URL || 'http://localhost:5173',
+        ].filter(Boolean) as string[],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'data:'],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    crossOriginEmbedderPolicy: false, // Required for some OAuth flows
+  }),
+);
+
 // CORS configuration (MUST come before Better Auth handler)
 // Allow multiple localhost ports for development
 const allowedOrigins = [
@@ -64,10 +95,17 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
+      // In production, require origin header for security
+      // In development, allow requests without origin (mobile apps, curl, Postman)
+      if (!origin) {
+        if (process.env.NODE_ENV === 'production') {
+          return callback(new Error('Origin header required'));
+        }
+        return callback(null, true);
+      }
 
-      if (allowedOrigins.some(allowed => origin.startsWith(allowed as string))) {
+      // Use exact match instead of startsWith to prevent subdomain attacks
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));

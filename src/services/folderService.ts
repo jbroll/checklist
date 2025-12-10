@@ -131,10 +131,20 @@ function formatArchiveTimestamp(date: Date): string {
 // Type Guards
 // =============================================================================
 
+/**
+ * Check if folder is a template folder (has items array).
+ * Note: Returns boolean (not type predicate) because FolderNode schema
+ * uses optional fields rather than a true discriminated union.
+ */
 export function isTemplateFolder(folder: FolderType): boolean {
   return folder.items !== undefined;
 }
 
+/**
+ * Check if folder is an organizational folder (has children array).
+ * Note: Returns boolean (not type predicate) because FolderNode schema
+ * uses optional fields rather than a true discriminated union.
+ */
 export function isOrganizationalFolder(folder: FolderType): boolean {
   return folder.children !== undefined;
 }

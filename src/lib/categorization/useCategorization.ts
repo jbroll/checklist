@@ -82,6 +82,7 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const lastInputRef = useRef<string>('');
+  const mountedRef = useRef(true);
 
   // Initialize when domain changes (domains are loaded on-demand)
   useEffect(() => {
@@ -147,15 +148,19 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
             };
           });
 
-          // Only update if input hasn't changed
-          if (lastInputRef.current === input) {
+          // Only update if input hasn't changed and component is still mounted
+          if (mountedRef.current && lastInputRef.current === input) {
             setSuggestions(formattedResults);
           }
         } catch (error) {
           console.error('[useCategorization] Suggestion error:', error);
-          setSuggestions([]);
+          if (mountedRef.current) {
+            setSuggestions([]);
+          }
         } finally {
-          setIsLoading(false);
+          if (mountedRef.current) {
+            setIsLoading(false);
+          }
         }
       }, debounceMs);
     },
@@ -181,7 +186,9 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
 
   // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }

@@ -211,184 +211,196 @@ export function TreeView({
     }),
   );
 
-  const handleToggleFolderExpand = (folder: InstanceOfSchema<typeof FolderNode>) => {
-    viewStateService.toggleFolderExpanded(account, folder.$jazz.id);
-  };
+  const handleToggleFolderExpand = useCallback(
+    (folder: InstanceOfSchema<typeof FolderNode>) => {
+      viewStateService.toggleFolderExpanded(account, folder.$jazz.id);
+    },
+    [account],
+  );
 
-  const handleRenameFolder = (folder: InstanceOfSchema<typeof FolderNode>, newName: string) => {
-    folderService.renameFolder(folder, newName);
-  };
+  const handleRenameFolder = useCallback(
+    (folder: InstanceOfSchema<typeof FolderNode>, newName: string) => {
+      folderService.renameFolder(folder, newName);
+    },
+    [],
+  );
 
-  const handleToggleArchiveFolder = (folder: InstanceOfSchema<typeof FolderNode>) => {
+  const handleToggleArchiveFolder = useCallback((folder: InstanceOfSchema<typeof FolderNode>) => {
     if (folder.archived) {
       folderService.unarchiveFolder(folder);
     } else {
       folderService.archiveFolder(folder);
     }
-  };
+  }, []);
 
-  const handleDeleteFolder = (folder: InstanceOfSchema<typeof FolderNode>) => {
-    folderService.deleteFolder(account, folder);
-  };
+  const handleDeleteFolder = useCallback(
+    (folder: InstanceOfSchema<typeof FolderNode>) => {
+      folderService.deleteFolder(account, folder);
+    },
+    [account],
+  );
 
-  const handleFolderDuplicated = (newFolder: InstanceOfSchema<typeof FolderNode>) => {
+  const handleFolderDuplicated = useCallback((newFolder: InstanceOfSchema<typeof FolderNode>) => {
     // Trigger inline rename mode on the new folder (don't select/navigate)
     setEditingFolderId(newFolder.$jazz.id);
-  };
+  }, []);
 
-  const handleToggleArchiveSession = (
-    templateFolder: InstanceOfSchema<typeof FolderNode>,
-    sessionId: string,
-  ) => {
-    const sessions = templateFolder.sessions
-      ? Array.isArray(templateFolder.sessions)
-        ? templateFolder.sessions
-        : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-          Array.from(templateFolder.sessions as any)
-      : [];
-    const session = sessions.find((s: SessionData) => s?.id === sessionId);
-    if (session) {
-      if (session.archived) {
-        sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
-      } else {
-        sessionService.archiveSession(account, templateFolder.$jazz.id, sessionId);
-      }
-    }
-  };
-
-  const handleDeleteSession = (
-    templateFolder: InstanceOfSchema<typeof FolderNode>,
-    sessionId: string,
-  ) => {
-    sessionService.deleteSession(account, templateFolder.$jazz.id, sessionId);
-  };
-
-  // Drag and drop handlers
-  const handleDragStart = (event: DragStartEvent) => {
-    const folderId = event.active.data.current?.folderId as string;
-    setActiveFolderId(folderId);
-  };
-
-  const handleDragOver = (_event: DragOverEvent) => {
-    // Optional: Add visual feedback during drag
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    setActiveFolderId(null);
-
-    if (!over || !active.data.current || !account.root?.folders) {
-      return;
-    }
-
-    const draggedFolderId = active.data.current.folderId as string;
-    const overData = over.data.current;
-
-    // Find dragged folder
-    const findFolder = (
-      folders: typeof account.root.folders,
-    ): InstanceOfSchema<typeof FolderNode> | null => {
-      for (const f of folders) {
-        if (!f) continue;
-        if (f.$jazz.id === draggedFolderId) return f;
-        if (f.children) {
-          const found = findFolder(f.children);
-          if (found) return found;
+  const handleToggleArchiveSession = useCallback(
+    (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
+      const sessions = templateFolder.sessions
+        ? Array.isArray(templateFolder.sessions)
+          ? templateFolder.sessions
+          : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
+            Array.from(templateFolder.sessions as any)
+        : [];
+      const session = sessions.find((s: SessionData) => s?.id === sessionId);
+      if (session) {
+        if (session.archived) {
+          sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
+        } else {
+          sessionService.archiveSession(account, templateFolder.$jazz.id, sessionId);
         }
       }
-      return null;
-    };
+    },
+    [account],
+  );
 
-    const draggedFolder = findFolder(account.root.folders);
-    if (!draggedFolder) return;
+  const handleDeleteSession = useCallback(
+    (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
+      sessionService.deleteSession(account, templateFolder.$jazz.id, sessionId);
+    },
+    [account],
+  );
 
-    // Check if dropped on a reorder zone
-    if (overData?.type === 'reorder-zone') {
-      const afterItemId = overData.afterItemId as string | undefined;
-      const beforeItemId = overData.beforeItemId as string | undefined;
-      const targetParentId = overData.parentId as string | undefined;
+  // Drag and drop handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const folderId = event.active.data.current?.folderId as string;
+    setActiveFolderId(folderId);
+  }, []);
 
-      // Find target parent folder (undefined means root level)
-      let targetParent: InstanceOfSchema<typeof FolderNode> | null = null;
-      if (targetParentId) {
-        const findParent = (
-          folders: typeof account.root.folders,
-        ): InstanceOfSchema<typeof FolderNode> | null => {
-          for (const f of folders) {
-            if (!f) continue;
-            if (f.$jazz.id === targetParentId) return f;
-            if (f.children) {
-              const found = findParent(f.children);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        targetParent = findParent(account.root.folders);
+  const handleDragOver = useCallback((_event: DragOverEvent) => {
+    // Optional: Add visual feedback during drag
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      setActiveFolderId(null);
+
+      if (!over || !active.data.current || !account.root?.folders) {
+        return;
       }
 
-      // Get the target list (either parent's children or root folders)
-      const targetList = targetParent?.children || account.root.folders;
+      const draggedFolderId = active.data.current.folderId as string;
+      const overData = over.data.current;
 
-      // Find target index in the new parent's list
-      let newIndex: number;
-
-      if (afterItemId) {
-        const afterIndex = targetList.findIndex(
-          (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === afterItemId,
-        );
-        newIndex = afterIndex + 1;
-      } else if (beforeItemId) {
-        newIndex = targetList.findIndex(
-          (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === beforeItemId,
-        );
-      } else {
-        newIndex = 0;
-      }
-
-      try {
-        // Use moveFolderToIndex which handles both cross-parent moves and same-parent reorders
-        folderService.moveFolderToIndex(account, draggedFolder, targetParent, newIndex);
-      } catch {
-        // Silently ignore errors
-      }
-      return;
-    }
-
-    // Handle hierarchy changes (move into folders)
-    let newParent: InstanceOfSchema<typeof FolderNode> | null = null;
-
-    if (overData?.path === '__ROOT_DROP_ZONE__') {
-      newParent = null; // Move to root level
-    } else if (overData?.isFolder && overData?.folderId) {
-      // Find the target folder
-      const findTargetFolder = (
+      // Find dragged folder
+      const findFolder = (
         folders: typeof account.root.folders,
       ): InstanceOfSchema<typeof FolderNode> | null => {
         for (const f of folders) {
           if (!f) continue;
-          if (f.$jazz.id === overData.folderId) return f;
+          if (f.$jazz.id === draggedFolderId) return f;
           if (f.children) {
-            const found = findTargetFolder(f.children);
+            const found = findFolder(f.children);
             if (found) return found;
           }
         }
         return null;
       };
-      newParent = findTargetFolder(account.root.folders);
-    }
 
-    try {
-      folderService.moveFolder(account, draggedFolder, newParent);
-    } catch {
-      // Silently ignore expected validation errors
-    }
-  };
+      const draggedFolder = findFolder(account.root.folders);
+      if (!draggedFolder) return;
 
-  const handleDragCancel = () => {
+      // Check if dropped on a reorder zone
+      if (overData?.type === 'reorder-zone') {
+        const afterItemId = overData.afterItemId as string | undefined;
+        const beforeItemId = overData.beforeItemId as string | undefined;
+        const targetParentId = overData.parentId as string | undefined;
+
+        // Find target parent folder (undefined means root level)
+        let targetParent: InstanceOfSchema<typeof FolderNode> | null = null;
+        if (targetParentId) {
+          const findParent = (
+            folders: typeof account.root.folders,
+          ): InstanceOfSchema<typeof FolderNode> | null => {
+            for (const f of folders) {
+              if (!f) continue;
+              if (f.$jazz.id === targetParentId) return f;
+              if (f.children) {
+                const found = findParent(f.children);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          targetParent = findParent(account.root.folders);
+        }
+
+        // Get the target list (either parent's children or root folders)
+        const targetList = targetParent?.children || account.root.folders;
+
+        // Find target index in the new parent's list
+        let newIndex: number;
+
+        if (afterItemId) {
+          const afterIndex = targetList.findIndex(
+            (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === afterItemId,
+          );
+          newIndex = afterIndex + 1;
+        } else if (beforeItemId) {
+          newIndex = targetList.findIndex(
+            (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === beforeItemId,
+          );
+        } else {
+          newIndex = 0;
+        }
+
+        try {
+          // Use moveFolderToIndex which handles both cross-parent moves and same-parent reorders
+          folderService.moveFolderToIndex(account, draggedFolder, targetParent, newIndex);
+        } catch {
+          // Silently ignore errors
+        }
+        return;
+      }
+
+      // Handle hierarchy changes (move into folders)
+      let newParent: InstanceOfSchema<typeof FolderNode> | null = null;
+
+      if (overData?.path === '__ROOT_DROP_ZONE__') {
+        newParent = null; // Move to root level
+      } else if (overData?.isFolder && overData?.folderId) {
+        // Find the target folder
+        const findTargetFolder = (
+          folders: typeof account.root.folders,
+        ): InstanceOfSchema<typeof FolderNode> | null => {
+          for (const f of folders) {
+            if (!f) continue;
+            if (f.$jazz.id === overData.folderId) return f;
+            if (f.children) {
+              const found = findTargetFolder(f.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        newParent = findTargetFolder(account.root.folders);
+      }
+
+      try {
+        folderService.moveFolder(account, draggedFolder, newParent);
+      } catch {
+        // Silently ignore expected validation errors
+      }
+    },
+    [account],
+  );
+
+  const handleDragCancel = useCallback(() => {
     setActiveFolderId(null);
-  };
+  }, []);
 
   // Build hierarchical tree structure
   const folderTree = useMemo(
@@ -402,7 +414,7 @@ export function TreeView({
   }, [account.root?.folders, account]);
 
   // Handle empty trash
-  const handleEmptyTrash = async () => {
+  const handleEmptyTrash = useCallback(async () => {
     const count = folderService.getArchivedFolders(account).length;
     if (count === 0) return;
 
@@ -414,7 +426,7 @@ export function TreeView({
     if (confirmed) {
       folderService.emptyTrash(account);
     }
-  };
+  }, [account]);
 
   const renderNode = (node: TreeNode): React.ReactNode => {
     const { folder, children } = node;

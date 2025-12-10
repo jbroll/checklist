@@ -7,7 +7,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { type Account, ViewState } from '../schemas';
+import { type AccountParam, ViewState } from '../schemas';
 
 // ============================================================================
 // Folder Expanded State
@@ -16,11 +16,7 @@ import { type Account, ViewState } from '../schemas';
 /**
  * Get whether a folder is expanded in the tree view
  */
-export function getFolderExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-  folderId: string,
-): boolean {
+export function getFolderExpanded(account: AccountParam, folderId: string): boolean {
   const viewState = account?.root?.viewState;
   if (!viewState?.folderExpanded) return true; // Default to expanded
   return viewState.folderExpanded[folderId] ?? true;
@@ -30,8 +26,7 @@ export function getFolderExpanded(
  * Set whether a folder is expanded in the tree view
  */
 export function setFolderExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   folderId: string,
   expanded: boolean,
 ): void {
@@ -45,11 +40,7 @@ export function setFolderExpanded(
 /**
  * Toggle folder expanded state
  */
-export function toggleFolderExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-  folderId: string,
-): void {
+export function toggleFolderExpanded(account: AccountParam, folderId: string): void {
   const current = getFolderExpanded(account, folderId);
   setFolderExpanded(account, folderId, !current);
 }
@@ -62,8 +53,7 @@ export function toggleFolderExpanded(
  * Get whether a category is expanded in the template editor
  */
 export function getTemplateCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   templateId: string,
   categoryId: string,
 ): boolean {
@@ -78,8 +68,7 @@ export function getTemplateCategoryExpanded(
  * Set whether a category is expanded in the template editor
  */
 export function setTemplateCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   templateId: string,
   categoryId: string,
   expanded: boolean,
@@ -99,8 +88,7 @@ export function setTemplateCategoryExpanded(
  * Toggle category expanded state in template editor
  */
 export function toggleTemplateCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   templateId: string,
   categoryId: string,
 ): void {
@@ -116,8 +104,7 @@ export function toggleTemplateCategoryExpanded(
  * Get whether a category is expanded in a session
  */
 export function getSessionCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   sessionId: string,
   categoryKey: string,
 ): boolean {
@@ -132,8 +119,7 @@ export function getSessionCategoryExpanded(
  * Set whether a category is expanded in a session
  */
 export function setSessionCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   sessionId: string,
   categoryKey: string,
   expanded: boolean,
@@ -153,8 +139,7 @@ export function setSessionCategoryExpanded(
  * Toggle category expanded state in session
  */
 export function toggleSessionCategoryExpanded(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   sessionId: string,
   categoryKey: string,
 ): void {
@@ -166,8 +151,7 @@ export function toggleSessionCategoryExpanded(
  * Expand all categories in a session
  */
 export function expandAllSessionCategories(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   sessionId: string,
   categoryKeys: string[],
 ): void {
@@ -186,8 +170,7 @@ export function expandAllSessionCategories(
  * Collapse all categories in a session
  */
 export function collapseAllSessionCategories(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   sessionId: string,
   categoryKeys: string[],
 ): void {
@@ -209,10 +192,7 @@ export function collapseAllSessionCategories(
 /**
  * Ensure viewState exists on account root, creating it if necessary
  */
-function ensureViewState(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-): InstanceOfSchema<typeof ViewState> {
+function ensureViewState(account: AccountParam): InstanceOfSchema<typeof ViewState> {
   if (!account?.root) {
     throw new Error('Account root not initialized');
   }
@@ -242,8 +222,7 @@ function ensureViewState(
  * This should be run in the background after app startup.
  */
 export function cleanupViewState(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   validFolderIds: Set<string>,
   validTemplateIds: Set<string>,
   validSessionIds: Set<string>,

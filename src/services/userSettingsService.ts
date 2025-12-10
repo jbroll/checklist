@@ -7,7 +7,13 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { AutocompleteDomain } from '../lib/categorization/types';
-import { type Account, type FolderNode, UserSettings } from '../schemas';
+import { type AccountParam, type FolderNode, UserSettings } from '../schemas';
+
+/**
+ * Type alias for FolderNode instances (same Jazz inference issue as Account)
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference workaround
+type FolderParam = InstanceOfSchema<typeof FolderNode> | any;
 
 // ============================================================================
 // Autocomplete Settings
@@ -16,10 +22,7 @@ import { type Account, type FolderNode, UserSettings } from '../schemas';
 /**
  * Get the default autocomplete domain for new templates
  */
-export function getDefaultAutocompleteDomain(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-): AutocompleteDomain {
+export function getDefaultAutocompleteDomain(account: AccountParam): AutocompleteDomain {
   const userSettings = account?.root?.userSettings;
   if (!userSettings) return DEFAULT_AUTOCOMPLETE_DOMAIN;
   return (
@@ -31,8 +34,7 @@ export function getDefaultAutocompleteDomain(
  * Set the default autocomplete domain for new templates
  */
 export function setDefaultAutocompleteDomain(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
   domain: AutocompleteDomain,
 ): void {
   const userSettings = ensureUserSettingsWithDomain(account);
@@ -50,10 +52,7 @@ export function setDefaultAutocompleteDomain(
 /**
  * Get whether auto-categorization is enabled globally
  */
-export function getEnableAutoCategorization(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-): boolean {
+export function getEnableAutoCategorization(account: AccountParam): boolean {
   const userSettings = account?.root?.userSettings;
   if (!userSettings) return true; // Default to enabled
   return userSettings.enableAutoCategorization ?? true;
@@ -62,11 +61,7 @@ export function getEnableAutoCategorization(
 /**
  * Set whether auto-categorization is enabled globally
  */
-export function setEnableAutoCategorization(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-  enabled: boolean,
-): void {
+export function setEnableAutoCategorization(account: AccountParam, enabled: boolean): void {
   const userSettings = ensureUserSettings(account);
   userSettings.$jazz.set('enableAutoCategorization', enabled);
 }
@@ -74,10 +69,7 @@ export function setEnableAutoCategorization(
 /**
  * Toggle auto-categorization enabled state
  */
-export function toggleEnableAutoCategorization(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-): void {
+export function toggleEnableAutoCategorization(account: AccountParam): void {
   const current = getEnableAutoCategorization(account);
   setEnableAutoCategorization(account, !current);
 }
@@ -89,10 +81,7 @@ export function toggleEnableAutoCategorization(
 /**
  * Ensure userSettings exists on the account, creating it if needed
  */
-function ensureUserSettings(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-): InstanceOfSchema<typeof UserSettings> {
+function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof UserSettings> {
   if (!account?.root) {
     throw new Error('Account root not initialized');
   }
@@ -115,8 +104,7 @@ function ensureUserSettings(
  * Ensure userSettings exists with defaultAutocompleteDomain field.
  */
 function ensureUserSettingsWithDomain(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
+  account: AccountParam,
 ): InstanceOfSchema<typeof UserSettings> {
   if (!account?.root) {
     throw new Error('Account root not initialized');
@@ -157,10 +145,7 @@ const DEFAULT_AUTOCOMPLETE_DOMAIN: AutocompleteDomain = 'grocery';
  *
  * @returns AutocompleteDomain - 'none' | 'grocery' | 'hardware' | 'all'
  */
-export function getTemplateAutocompleteDomain(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
-): AutocompleteDomain {
+export function getTemplateAutocompleteDomain(folder: FolderParam): AutocompleteDomain {
   // Template-level setting takes precedence
   if (folder?.autocompleteDomain !== undefined) {
     return folder.autocompleteDomain as AutocompleteDomain;
@@ -172,10 +157,7 @@ export function getTemplateAutocompleteDomain(
 /**
  * Get whether template has an explicit autocomplete domain set (not default)
  */
-export function hasTemplateAutocompleteDomainSet(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
-): boolean {
+export function hasTemplateAutocompleteDomainSet(folder: FolderParam): boolean {
   return folder?.autocompleteDomain !== undefined;
 }
 
@@ -185,8 +167,7 @@ export function hasTemplateAutocompleteDomainSet(
  * @param domain - 'none' | 'grocery' | 'hardware' | 'all' | undefined (to reset to default)
  */
 export function setTemplateAutocompleteDomain(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
+  folder: FolderParam,
   domain: AutocompleteDomain | undefined,
 ): void {
   if (domain === undefined) {
@@ -201,10 +182,7 @@ export function setTemplateAutocompleteDomain(
  * Check if autocomplete is effectively enabled for a template
  * (domain is not 'none')
  */
-export function isTemplateAutocompleteEnabled(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
-): boolean {
+export function isTemplateAutocompleteEnabled(folder: FolderParam): boolean {
   return getTemplateAutocompleteDomain(folder) !== 'none';
 }
 
@@ -213,10 +191,8 @@ export function isTemplateAutocompleteEnabled(
  * Returns template override if set, otherwise falls back to global setting.
  */
 export function getTemplateAutoCategorizeEnabled(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
+  account: AccountParam,
+  folder: FolderParam,
 ): boolean {
   // Template-level override takes precedence
   if (folder?.autoCategorizeEnabled !== undefined) {
@@ -229,10 +205,7 @@ export function getTemplateAutoCategorizeEnabled(
 /**
  * Get whether template has an explicit auto-categorize override (not inherited)
  */
-export function hasTemplateAutoCategorizeOverride(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
-): boolean {
+export function hasTemplateAutoCategorizeOverride(folder: FolderParam): boolean {
   return folder?.autoCategorizeEnabled !== undefined;
 }
 
@@ -240,8 +213,7 @@ export function hasTemplateAutoCategorizeOverride(
  * Set template auto-categorize override
  */
 export function setTemplateAutoCategorizeEnabled(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
+  folder: FolderParam,
   enabled: boolean | undefined,
 ): void {
   if (enabled === undefined) {
@@ -257,12 +229,7 @@ export function setTemplateAutoCategorizeEnabled(
  * If currently inherited, sets explicit override to opposite of inherited value.
  * If currently overridden, toggles the override value.
  */
-export function toggleTemplateAutoCategorize(
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  account: InstanceOfSchema<typeof Account> | any,
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  folder: InstanceOfSchema<typeof FolderNode> | any,
-): void {
+export function toggleTemplateAutoCategorize(account: AccountParam, folder: FolderParam): void {
   const current = getTemplateAutoCategorizeEnabled(account, folder);
   setTemplateAutoCategorizeEnabled(folder, !current);
 }

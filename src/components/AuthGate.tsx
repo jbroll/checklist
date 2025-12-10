@@ -19,22 +19,29 @@ export function AuthGate() {
     // Check sessionStorage first (survives remounts)
     const stored = sessionStorage.getItem('show-signin-after-verify');
     if (stored === 'true') {
-      sessionStorage.removeItem('show-signin-after-verify');
       return true;
     }
 
     // Check URL params
     const urlParams = new URLSearchParams(window.location.search);
-    const justVerified = urlParams.get('verified') === 'true';
-    if (justVerified) {
-      // Store in sessionStorage before cleaning URL (in case of remount)
-      sessionStorage.setItem('show-signin-after-verify', 'true');
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    return justVerified;
+    return urlParams.get('verified') === 'true';
   });
   const [showSignInDialog, setShowSignInDialog] = useState(false);
+
+  // Handle side effects for email verification dialog (moved from useState initializer)
+  useEffect(() => {
+    if (showEmailAuthDialog) {
+      // Clean up sessionStorage flag
+      sessionStorage.removeItem('show-signin-after-verify');
+      // Clean up URL if it has the verified param
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('verified') === 'true') {
+        // Store in sessionStorage in case of remount before cleanup
+        sessionStorage.setItem('show-signin-after-verify', 'true');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [showEmailAuthDialog]);
   const { me, logOut } = useAccount(Account);
   const { showAlert, showConfirm } = useDialog();
   const isAuthenticated = useIsAuthenticated();
