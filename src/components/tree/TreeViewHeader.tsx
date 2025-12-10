@@ -129,7 +129,7 @@ export function TreeViewHeader({
         >
           <KjekitIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
           <h1 className="flex items-center gap-1">
-            <KjekitText className="h-8 sm:h-9 lg:h-10" height={36} />
+            <KjekitText className="h-10 sm:h-11 lg:h-12" height={40} />
             <span className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
               Lists
             </span>

@@ -83,11 +83,13 @@ app.use(
 );
 
 // CORS configuration (MUST come before Better Auth handler)
-// Allow multiple localhost ports for development
+// Allow multiple localhost ports for development + production domains
 const allowedOrigins = [
   'http://localhost:8765',
   'http://localhost:8766',
   'http://localhost:5173',
+  'https://app.kjekit.com',
+  'https://kjekit.com',
   process.env.FRONTEND_URL,
   'https://appleid.apple.com',  // Apple OAuth callback
 ].filter(Boolean);
@@ -95,12 +97,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // In production, require origin header for security
-      // In development, allow requests without origin (mobile apps, curl, Postman)
+      // Allow requests without origin header (mobile apps, server-to-server, curl)
       if (!origin) {
-        if (process.env.NODE_ENV === 'production') {
-          return callback(new Error('Origin header required'));
-        }
         return callback(null, true);
       }
 
@@ -108,7 +106,8 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.warn(`[CORS] Rejected origin: ${origin}`);
+        callback(null, false);
       }
     },
     credentials: true,

@@ -105,8 +105,7 @@ function generatePage(mdFile, htmlFile, title) {
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="kjekit.svg" alt="Kjekit" class="w-8 h-8">
-                        <span class="ml-2 text-xl font-bold text-gray-900">Kjekit</span>
+                        <img src="kjekit-path.svg" alt="Kjekit" class="h-10">
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">

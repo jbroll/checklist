@@ -1,5 +1,5 @@
 import kjekitIconUrl from '/kjekit-icon.svg?url';
-import kjekitTextUrl from '/kjekit-text.svg?url';
+import kjekitPathUrl from '/kjekit-path.svg?url';
 
 interface KjekitIconProps {
   className?: string;
@@ -23,8 +23,8 @@ interface KjekitTextProps {
   height?: number;
 }
 
-export function KjekitText({ className = '', height = 24 }: KjekitTextProps) {
+export function KjekitText({ className = '', height = 30 }: KjekitTextProps) {
   return (
-    <img src={kjekitTextUrl} alt="Kjekit" className={className} style={{ height, width: 'auto' }} />
+    <img src={kjekitPathUrl} alt="Kjekit" className={className} style={{ height, width: 'auto' }} />
   );
 }
