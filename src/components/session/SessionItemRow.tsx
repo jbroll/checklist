@@ -238,6 +238,16 @@ export const SessionItemRow = memo(function SessionItemRow({
           }
         }}
         disabled={isAnyItemBeingEditedOrDragged}
+        aria-label={
+          leftCheckboxControlsChecked
+            ? isChecked
+              ? `Mark ${item.name} as not checked`
+              : `Mark ${item.name} as checked`
+            : isSelected
+              ? `Remove ${item.name} from list`
+              : `Add ${item.name} to list`
+        }
+        aria-pressed={leftCheckboxChecked}
         className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${getCheckboxClassName()} ${isAnyItemBeingEditedOrDragged ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {leftCheckboxChecked && (

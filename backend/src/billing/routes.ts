@@ -103,7 +103,7 @@ export function setupBillingRoutes(
       }
 
       const { listCount } = req.body;
-      if (typeof listCount !== 'number' || listCount < 0) {
+      if (typeof listCount !== 'number' || listCount < 0 || listCount > 10000) {
         return res.status(400).json({ error: 'Invalid listCount' });
       }
 

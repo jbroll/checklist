@@ -4,12 +4,18 @@ import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
 import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
+import { shareInviteLimiter } from './lib/rate-limiter.js';
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
   app.post('/api/shares/invite', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+
+    // Rate limit by user email
+    if (!shareInviteLimiter.check(session.user.email)) {
+      return res.status(429).json({ error: 'rate_limited', message: 'Too many invite requests. Please try again later.' });
+    }
 
     const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
 

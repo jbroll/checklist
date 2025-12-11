@@ -147,14 +147,8 @@ export function AuthGate() {
     if (!confirmed) return;
 
     try {
-      // First, delete all Jazz data while we still have access to the account keys
-      // This ensures the data is actually deleted from Jazz, not just orphaned
-      if (me) {
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-        folderService.deleteAllUserData(me as any);
-      }
-
-      // Call the delete account API to remove BetterAuth user
+      // Call the delete account API FIRST to remove BetterAuth user
+      // This order ensures we don't lose Jazz data if the API call fails
       const response = await fetch('/api/account', {
         method: 'DELETE',
         credentials: 'include',
@@ -163,6 +157,13 @@ export function AuthGate() {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete account');
+      }
+
+      // Only delete Jazz data AFTER API call succeeds
+      // This ensures data is actually deleted from Jazz, not just orphaned
+      if (me) {
+        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
+        folderService.deleteAllUserData(me as any);
       }
 
       // Sign out after successful deletion

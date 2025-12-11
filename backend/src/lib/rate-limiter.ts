@@ -67,3 +67,6 @@ export class RateLimiter {
 
 // Default instance for email verification (3 requests per hour)
 export const emailVerificationLimiter = new RateLimiter(3, 60 * 60 * 1000);
+
+// Rate limiter for share invites (prevents spam to random emails)
+export const shareInviteLimiter = new RateLimiter(30, 60 * 60 * 1000); // 30 invites per hour

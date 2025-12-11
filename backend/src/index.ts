@@ -161,20 +161,25 @@ app.delete('/api/account', async (req, res) => {
 
     console.log(`[account-deletion] Deleting account for user ${userId} (${userEmail})`);
 
-    // Delete any share invites sent by or to this user
-    sqliteDb.prepare('DELETE FROM share_invites WHERE sender_email = ? OR recipient_email = ?').run(userEmail, userEmail);
+    // Use a transaction to ensure atomic deletion
+    const deleteAccount = sqliteDb.transaction(() => {
+      // Delete any share invites sent by or to this user
+      sqliteDb.prepare('DELETE FROM share_invites WHERE sender_email = ? OR recipient_email = ?').run(userEmail, userEmail);
 
-    // Delete verified emails (should cascade, but be explicit)
-    sqliteDb.prepare('DELETE FROM verified_email WHERE user_id = ?').run(userId);
+      // Delete verified emails (should cascade, but be explicit)
+      sqliteDb.prepare('DELETE FROM verified_email WHERE user_id = ?').run(userId);
 
-    // Delete subscription and usage data (should cascade, but be explicit)
-    sqliteDb.prepare('DELETE FROM usage_snapshot WHERE user_id = ?').run(userId);
-    sqliteDb.prepare('DELETE FROM user_subscription WHERE user_id = ?').run(userId);
+      // Delete subscription and usage data (should cascade, but be explicit)
+      sqliteDb.prepare('DELETE FROM usage_snapshot WHERE user_id = ?').run(userId);
+      sqliteDb.prepare('DELETE FROM user_subscription WHERE user_id = ?').run(userId);
 
-    // Delete the user - this cascades to sessions and OAuth accounts
-    // The Jazz account keys (stored in user.accountID) are also deleted,
-    // making the user's Jazz data inaccessible
-    sqliteDb.prepare('DELETE FROM user WHERE id = ?').run(userId);
+      // Delete the user - this cascades to sessions and OAuth accounts
+      // The Jazz account keys (stored in user.accountID) are also deleted,
+      // making the user's Jazz data inaccessible
+      sqliteDb.prepare('DELETE FROM user WHERE id = ?').run(userId);
+    });
+
+    deleteAccount();
 
     console.log(`[account-deletion] Successfully deleted account for user ${userId}`);
 

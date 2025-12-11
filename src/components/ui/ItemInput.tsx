@@ -230,6 +230,11 @@ export function ItemInput({
               onKeyDown={handleKeyDown}
               placeholder={defaultPlaceholder}
               autoComplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={visibleSuggestions.length > 0}
+              aria-controls={visibleSuggestions.length > 0 ? 'item-suggestions-list' : undefined}
+              aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
               className="flex-1 min-w-0 rounded border border-divider-primary bg-surface-elevated px-3 py-2 text-base text-content-primary placeholder:text-content-disabled focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             />
             {!isStacked && (
@@ -259,12 +264,24 @@ export function ItemInput({
 
           {/* Suggestions dropdown */}
           {visibleSuggestions.length > 0 && (
-            <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md shadow-lg max-h-48 overflow-auto">
+            <div
+              id="item-suggestions-list"
+              role="listbox"
+              aria-label="Item suggestions"
+              className="absolute z-50 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md shadow-lg max-h-48 overflow-auto"
+            >
               {visibleSuggestions.map((suggestion, index) => (
-                <li key={suggestion.text}>
+                <div
+                  key={suggestion.text}
+                  id={`suggestion-${index}`}
+                  role="option"
+                  aria-selected={index === selectedIndex}
+                  tabIndex={-1}
+                >
                   <button
                     type="button"
                     onClick={() => handleSelectSuggestion(suggestion)}
+                    tabIndex={-1}
                     className={`w-full px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center justify-between ${
                       index === selectedIndex ? 'bg-green-100 dark:bg-green-900/50' : ''
                     }`}
@@ -276,9 +293,9 @@ export function ItemInput({
                       {getCategoryDisplay(suggestion)}
                     </span>
                   </button>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
 

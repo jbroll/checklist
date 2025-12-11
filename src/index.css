@@ -36,9 +36,11 @@
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Smoother scrolling on all scrollable elements */
-  * {
-    scroll-behavior: smooth;
+  /* Smoother scrolling on all scrollable elements - respects user preferences */
+  @media (prefers-reduced-motion: no-preference) {
+    * {
+      scroll-behavior: smooth;
+    }
   }
 }
 
