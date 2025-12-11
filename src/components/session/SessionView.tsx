@@ -1,7 +1,7 @@
 import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
 import { useAccount } from '@/lib/jazz';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
@@ -120,6 +120,10 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     activeItems,
   });
 
+  // Build hierarchical tree structure (memoized for performance)
+  // Must be called before early returns to satisfy hooks rules
+  const itemTree = useMemo(() => buildItemTree(activeItems), [activeItems]);
+
   // Early returns after all hooks
   if (!me || !me.root) {
     return (
@@ -156,9 +160,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const isCategoryExpanded = (itemId: string): boolean => {
     return templateCategoryExpanded[itemId] ?? true;
   };
-
-  // Build hierarchical tree structure
-  const itemTree = buildItemTree(activeItems);
 
   return (
     <DndContext

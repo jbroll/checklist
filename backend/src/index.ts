@@ -130,8 +130,9 @@ app.use('/api/auth', toNodeHandler(auth));
 setupStripeWebhook(app, sqliteDb);
 
 // Parse JSON bodies (AFTER Better Auth handler and Stripe webhook)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Limit body size to prevent DoS attacks via large payloads
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Sharing routes
 setupSharingRoutes(app, sqliteDb);

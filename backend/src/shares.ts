@@ -19,11 +19,17 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
 
+    // Validate sender has access to the folder before creating invite
+    const senderJazzAccountId = (session.user as any).accountID;
+    if (senderJazzAccountId) {
+      const hasAccess = await validateSenderAccess(folderCoValueId, senderJazzAccountId);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to share this folder' });
+      }
+    }
+
     const token = randomBytes(32).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + (expiresInDays * 24 * 60 * 60);
-
-    // Note: We store sender_jazz_account_id for audit purposes
-    const senderJazzAccountId = (session.user as any).accountID || null;
 
     db.prepare(`
       INSERT INTO share_invites (token, sender_email, sender_jazz_account_id,
@@ -250,6 +256,16 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     const { folderId, accountId } = req.params;
 
     try {
+      // Verify the requesting user has admin permission on this folder
+      const requesterJazzAccountId = (session.user as any).accountID;
+      if (requesterJazzAccountId) {
+        const members = await getFolderGroupMembers(folderId);
+        const requesterMember = members.find(m => m.id === requesterJazzAccountId);
+        if (!requesterMember || requesterMember.role !== 'admin') {
+          return res.status(403).json({ error: 'forbidden', message: 'Only admins can remove collaborators' });
+        }
+      }
+
       // Remove from Jazz group
       await removeFromFolderGroup(folderId, accountId);
 

@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -57,7 +57,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     resolve: null,
   });
 
-  const showAlert = (options: AlertOptions): Promise<void> => {
+  const showAlert = useCallback((options: AlertOptions): Promise<void> => {
     return new Promise((resolve) => {
       setDialogState({
         type: 'alert',
@@ -65,9 +65,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         resolve,
       });
     });
-  };
+  }, []);
 
-  const showConfirm = (options: ConfirmOptions): Promise<boolean> => {
+  const showConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
       setDialogState({
         type: 'confirm',
@@ -75,7 +75,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         resolve,
       });
     });
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({ showAlert, showConfirm }), [showAlert, showConfirm]);
 
   const handleAlertClose = () => {
     if (dialogState.resolve) {
@@ -92,7 +94,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DialogContext.Provider value={{ showAlert, showConfirm }}>
+    <DialogContext.Provider value={contextValue}>
       {children}
 
       {dialogState.type === 'alert' && dialogState.options && (
