@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">kjekit</string>
+    <string name="title_activity_main">kjekit</string>
+    <string name="package_name">com.kjekit.app</string>
+    <string name="custom_url_scheme">com.kjekit.app</string>
+</resources>

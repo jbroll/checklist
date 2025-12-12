@@ -33,7 +33,14 @@
     "check:staged": "lint-staged",
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect",
-    "lighthouse:assert": "lhci assert"
+    "lighthouse:assert": "lhci assert",
+    "cap:sync": "npx cap sync",
+    "cap:build": "npm run build && npx cap sync",
+    "cap:assets": "npx capacitor-assets generate --iconBackgroundColor '#76daDA' --splashBackgroundColor '#76daDA'",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:run:android": "npx cap run android",
+    "cap:run:ios": "npx cap run ios"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -44,6 +51,10 @@
     ]
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@dnd-kit/core": "^6.3.1",
     "@formkit/auto-animate": "^0.9.0",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -70,6 +81,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.2",
+    "@capacitor/assets": "^3.0.5",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
