@@ -229,7 +229,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <img src="kjekit-path.svg" alt="kjekit" class="h-10">
+                    <img src="kjekit-path.svg" alt="kjekit" class="h-10" id="nav-logo">
+                    <span id="nav-brand-text" class="hidden ml-2 text-xl font-bold" style="color: var(--text-primary);"></span>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="about.html" class="hover:opacity-80" style="color: var(--text-secondary);">About</a>
@@ -711,6 +712,54 @@
         // Usage: setTheme('dark') or setTheme('light')
         // Usage: setAccent('coral') or setAccent('amber') or setAccent('indigo')
         console.log('Theme controls: setTheme("dark"|"light"), setAccent("indigo"|"coral"|"amber")');
+    </script>
+
+    <!-- Brand Detection Script -->
+    <script>
+        (function() {
+            const hostname = window.location.hostname;
+            const isCheckList = hostname.includes('checklist');
+
+            if (isCheckList) {
+                // Update page title
+                document.title = 'CheckList';
+
+                // Update favicon
+                const favicon = document.querySelector('link[rel="icon"]');
+                if (favicon) favicon.href = 'kjekit-icon.svg';
+
+                // Update nav logo to icon + text
+                const navLogo = document.getElementById('nav-logo');
+                const navBrandText = document.getElementById('nav-brand-text');
+                if (navLogo) {
+                    navLogo.src = 'kjekit-icon.svg';
+                    navLogo.alt = 'CheckList';
+                    navLogo.style.height = '2.5rem';
+                }
+                if (navBrandText) {
+                    navBrandText.textContent = 'CheckList';
+                    navBrandText.classList.remove('hidden');
+                }
+
+                // Update other logo images
+                document.querySelectorAll('img[src*="kjekit-path"]:not(#nav-logo)').forEach(img => {
+                    img.src = 'kjekit-icon.svg';
+                    img.alt = 'CheckList';
+                    img.style.height = '2.5rem';
+                });
+
+                // Update app links to point to checklist-app.rkroll.com
+                document.querySelectorAll('a[href*="app.kjekit.com"]').forEach(link => {
+                    link.href = link.href.replace('app.kjekit.com', 'checklist-app.rkroll.com');
+                });
+
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    metaDesc.content = metaDesc.content.replace('kjekit', 'CheckList');
+                }
+            }
+        })();
     </script>
 </body>
 </html>
