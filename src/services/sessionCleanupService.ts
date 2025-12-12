@@ -10,12 +10,13 @@
  * - Team/Enterprise: Unlimited (-1)
  */
 
+import { storageKey } from '../lib/brand';
 import type { AccountParam, SessionData } from '../schemas';
 import { getAllTemplateFolders } from './folderService';
 import { getSessionRetentionDays } from './subscriptionService';
 
 // Key for localStorage to track last cleanup time
-const CLEANUP_KEY = 'kjekit_session_cleanup_last';
+const CLEANUP_KEY = storageKey('session_cleanup_last');
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**

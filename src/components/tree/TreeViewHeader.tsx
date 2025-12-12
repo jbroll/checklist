@@ -16,6 +16,7 @@ import {
   Upload,
   User,
 } from 'lucide-react';
+import { BrandIcon } from '@/components/ui/BrandIcon';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,8 +26,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { KjekitIcon, KjekitText } from '@/components/ui/KjekitIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { brand } from '@/lib/brand';
 
 interface TreeViewHeaderProps {
   isDragging?: boolean;
@@ -125,14 +126,11 @@ export function TreeViewHeader({
           type="button"
           onClick={onHeaderClick}
           className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-h-[44px]"
-          aria-label="kjekit - Return to main view"
+          aria-label={brand.headerAriaLabel}
         >
-          <KjekitIcon className="h-7 w-7 sm:h-8 sm:w-8" size={32} />
-          <h1 className="flex items-center gap-1">
-            <KjekitText className="h-10 sm:h-11 lg:h-12" height={40} />
-            <span className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
-              Lists
-            </span>
+          <BrandIcon className="h-8 sm:h-9 lg:h-10" height={40} />
+          <h1 className="text-xl font-bold text-content-primary sm:text-2xl lg:text-3xl">
+            {brand.headerText}
           </h1>
         </button>
         <TooltipProvider>

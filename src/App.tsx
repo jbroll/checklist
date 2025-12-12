@@ -1,7 +1,8 @@
 import { XCircle } from 'lucide-react';
-import { Component, type ErrorInfo, lazy, type ReactNode, Suspense } from 'react';
+import { Component, type ErrorInfo, lazy, type ReactNode, Suspense, useEffect } from 'react';
 import { AuthGate } from './components/AuthGate';
 import { LoadingScreen } from './components/ui/loading';
+import { brand } from './lib/brand';
 import { DialogProvider } from './lib/dialog-context';
 import { JazzProvider } from './lib/jazz';
 
@@ -103,6 +104,38 @@ function ConditionalJazzInspector() {
 }
 
 function App() {
+  // Update document head based on brand
+  useEffect(() => {
+    // Update title
+    document.title = brand.name;
+
+    // Update favicon
+    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (favicon) {
+      favicon.href = brand.logos.favicon;
+    }
+
+    // Update theme color
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (themeColor) {
+      themeColor.content = brand.themeColor;
+    }
+
+    // Update description
+    const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (description) {
+      description.content = brand.tagline;
+    }
+
+    // Update apple-mobile-web-app-title
+    const appleTitle = document.querySelector<HTMLMetaElement>(
+      'meta[name="apple-mobile-web-app-title"]',
+    );
+    if (appleTitle) {
+      appleTitle.content = brand.name;
+    }
+  }, []);
+
   // Parse current route
   const pathname = window.location.pathname;
   const isTestPage = pathname === '/test';

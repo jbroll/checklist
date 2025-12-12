@@ -6,6 +6,7 @@
 
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { brand } from '../../lib/brand';
 import type { AccountParam, SubscriptionTier } from '../../schemas';
 import { getSubscriptionTier, redirectToCheckout } from '../../services/subscriptionService';
 import { Button } from '../ui/button';
@@ -179,7 +180,7 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
                 </div>
               </div>
               <a
-                href="mailto:sales@kjekit.com"
+                href={`mailto:${brand.salesEmail}`}
                 className="text-sm font-medium text-green-600 hover:text-green-700"
               >
                 Contact sales

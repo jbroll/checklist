@@ -95,6 +95,7 @@ export function AuthGate() {
     setUserSignedOut(false);
 
     // BetterAuth handles OAuth redirect automatically
+    // Each domain (app.kjekit.com, checklist.rkroll.com) uses its own origin
     betterAuthClient.signIn.social({
       provider: 'google',
     });

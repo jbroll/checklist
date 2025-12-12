@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { brand } from '@/lib/brand';
 import { detectPlatform, type PlatformInfo } from '@/lib/platformDetect';
 
 interface InstallInstructionsDialogProps {
@@ -50,9 +51,9 @@ export function InstallInstructionsDialog({ open, onOpenChange }: InstallInstruc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Install BubbleList</DialogTitle>
+          <DialogTitle>Install {brand.name}</DialogTitle>
           <DialogDescription>
-            Install BubbleList on your device for the best experience with offline support.
+            Install {brand.name} on your device for the best experience with offline support.
           </DialogDescription>
         </DialogHeader>
 
@@ -190,8 +191,8 @@ function InstructionsContent({ platformInfo, onCopyLink, copied }: InstructionsC
           </p>
         </div>
         <p className="text-sm text-content-secondary">
-          For the best experience, open BubbleList in Chrome or Edge, then click the install icon in
-          the address bar.
+          For the best experience, open {brand.name} in Chrome or Edge, then click the install icon
+          in the address bar.
         </p>
         <Button onClick={onCopyLink} variant="outline" className="w-full justify-center gap-2">
           {copied ? (

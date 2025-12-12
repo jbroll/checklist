@@ -25,6 +25,7 @@ const ShareDialog = lazy(() =>
   import('@/components/sharing/ShareDialog').then((m) => ({ default: m.ShareDialog })),
 );
 
+import { ListIcon } from '@/components/ui/BrandIcon';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -39,7 +40,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { KjekitIcon } from '@/components/ui/KjekitIcon';
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, FolderNode, TemplateItem } from '@/schemas';
@@ -258,7 +258,7 @@ export const FolderNodeView = memo(function FolderNodeView({
               >
                 {/* Icon */}
                 {isTemplate ? (
-                  <KjekitIcon className="h-4 w-4 shrink-0" size={16} />
+                  <ListIcon className="h-4 w-4 shrink-0" size={16} />
                 ) : (
                   <Folder className="h-4 w-4 shrink-0 text-yellow-600" />
                 )}

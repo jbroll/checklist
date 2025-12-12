@@ -231,20 +231,16 @@ export function setupStripeWebhook(app: Express, db: Database.Database): void {
             if (userId && tierSlug && subscriptionId) {
               // Get subscription details for period end
               const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
-              handleCheckoutCompleted(
-                db,
-                userId,
-                tierSlug,
-                subscriptionId,
-                (subscription as { current_period_end: number }).current_period_end
-              );
+              const periodEnd = (subscription as unknown as { current_period_end: number })
+                .current_period_end;
+              handleCheckoutCompleted(db, userId, tierSlug, subscriptionId, periodEnd);
               console.log(`[webhook] Checkout completed for user ${userId}, tier: ${tierSlug}`);
             }
             break;
           }
 
           case 'customer.subscription.updated': {
-            const subscription = event.data.object as {
+            const subscription = event.data.object as unknown as {
               id: string;
               metadata?: Record<string, string>;
               status: string;

@@ -13,6 +13,7 @@ import {
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
+import { legacyStorageKey } from '@/lib/brand';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
@@ -137,11 +138,11 @@ export function TreeView({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
-    const stored = localStorage.getItem('kjekit-show-archived-templates');
+    const stored = localStorage.getItem(legacyStorageKey('show-archived-templates'));
     return stored === 'true';
   });
   const [showArchivedSessions, setShowArchivedSessions] = useState(() => {
-    const stored = localStorage.getItem('kjekit-show-archived-sessions');
+    const stored = localStorage.getItem(legacyStorageKey('show-archived-sessions'));
     return stored === 'true';
   });
 
@@ -159,11 +160,14 @@ export function TreeView({
 
   // Persist archived view preferences
   useEffect(() => {
-    localStorage.setItem('kjekit-show-archived-templates', String(showArchivedTemplates));
+    localStorage.setItem(
+      legacyStorageKey('show-archived-templates'),
+      String(showArchivedTemplates),
+    );
   }, [showArchivedTemplates]);
 
   useEffect(() => {
-    localStorage.setItem('kjekit-show-archived-sessions', String(showArchivedSessions));
+    localStorage.setItem(legacyStorageKey('show-archived-sessions'), String(showArchivedSessions));
   }, [showArchivedSessions]);
 
   // Get selected folder by ID

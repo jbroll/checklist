@@ -58,3 +58,4 @@ ios/build/
 
 # Generated PWA icons from capacitor-assets
 icons/
+coverage/

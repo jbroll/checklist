@@ -9,6 +9,7 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { storageKey } from '../../lib/brand';
 import type { AccountParam } from '../../schemas';
 import {
   countUserLists,
@@ -25,7 +26,7 @@ interface UpgradeBannerProps {
 }
 
 // Key for localStorage to track dismissal
-const DISMISS_KEY = 'kjekit_upgrade_banner_dismissed';
+const DISMISS_KEY = storageKey('upgrade_banner_dismissed');
 const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export function UpgradeBanner({ account, onUpgradeClick }: UpgradeBannerProps) {
