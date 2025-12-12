@@ -53,6 +53,10 @@ initAgent().catch((error) => {
 // Express server
 const app = express();
 
+// Trust proxy headers (X-Forwarded-Host, X-Forwarded-Proto)
+// Required for multi-domain OAuth to work correctly behind Apache proxy
+app.set('trust proxy', true);
+
 // Security headers (helmet.js)
 app.use(
   helmet({
@@ -91,6 +95,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://app.kjekit.com',
   'https://kjekit.com',
+  'https://checklist-app.rkroll.com',  // Brand alias
   process.env.FRONTEND_URL,
   'https://appleid.apple.com',  // Apple OAuth callback
 ].filter(Boolean);

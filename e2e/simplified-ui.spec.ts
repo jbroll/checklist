@@ -11,7 +11,7 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -26,7 +26,7 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -43,7 +43,7 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -55,7 +55,7 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     await page.reload();
 
     // Should still be in classic view (check for Basic View menu item)
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
     await page.getByLabel('More options').first().click();
@@ -66,7 +66,7 @@ test.describe('Simplified UI - View Mode Toggle', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -92,7 +92,7 @@ test.describe('Simplified UI - Template Selection', () => {
     await page.goto('/');
 
     // Wait for page to load (default is simplified view)
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -121,7 +121,7 @@ test.describe('Simplified UI - Template Selection', () => {
 
     // Navigate to home (default is simplified view)
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -167,7 +167,7 @@ test.describe('Simplified UI - Session View', () => {
 
     // Navigate to home (default is simplified view)
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -221,7 +221,7 @@ test.describe('Simplified UI - Data Synchronization', () => {
 
     // Go to home (default is simplified view)
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 

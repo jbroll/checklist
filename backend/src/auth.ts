@@ -63,14 +63,17 @@ export const auth = betterAuth({
   // Use better-sqlite3 directly (recommended pattern)
   database: sqliteDb,
 
-  // Base URL for OAuth callbacks - must be the full path to the auth API
-  // This tells BetterAuth where OAuth providers should redirect back to
-  baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}/api/auth` : 'http://localhost:5173/api/auth',
+  // Base URL for OAuth callbacks
+  // Don't set this - let BetterAuth auto-detect from request origin
+  // This allows multiple domains (app.kjekit.com, checklist-app.rkroll.com) to work
+  // Each domain needs its OAuth redirect URIs registered with Google/Apple
 
   // Trust the frontend origin and Apple's domain for Sign In with Apple
   trustedOrigins: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
-    "https://appleid.apple.com",
+    'https://app.kjekit.com',
+    'https://checklist-app.rkroll.com',  // Brand alias
+    'https://appleid.apple.com',
   ],
 
   // Session configuration
@@ -87,17 +90,8 @@ export const auth = betterAuth({
     useSecureCookies: process.env.NODE_ENV === 'production',
     // Disable CSRF check for development only
     disableCSRFCheck: process.env.NODE_ENV !== 'production',
-    // Configure cookie attributes for OAuth redirects
-    // Note: Apple OAuth uses POST callbacks which require sameSite: "none"
-    // See: https://github.com/better-auth/better-auth/issues/5227
-    defaultCookieAttributes: {
-      // Must use 'none' for Apple OAuth (POST-based callbacks don't receive 'lax' cookies)
-      sameSite: "none",
-      httpOnly: true,
-      // secure: true is required when sameSite is "none"
-      secure: true,
-      path: "/",
-    },
+    // Use default cookie settings (sameSite: "lax") for Google OAuth
+    // Apple OAuth (POST-based callbacks) may need sameSite: "none" but Google works with "lax"
   },
 
   // Email verification for resending verification emails

@@ -14,11 +14,11 @@ test.describe('Application Smoke Tests', () => {
     await expect(page.locator('h1')).toBeVisible();
   });
 
-  test('should display kjekit after loading', async ({ page }) => {
+  test('should display app header after loading', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for the kjekit heading
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    // Wait for the main heading (brand.headerText - "Lists" for kjekit)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
   });
@@ -27,7 +27,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -39,7 +39,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -57,7 +57,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -76,7 +76,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -95,7 +95,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
@@ -115,7 +115,7 @@ test.describe('Application Smoke Tests', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /kjekit/i })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
 
