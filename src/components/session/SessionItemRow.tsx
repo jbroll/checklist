@@ -52,7 +52,8 @@ export const SessionItemRow = memo(function SessionItemRow({
   onEditNote,
   showNotesIcon,
 }: SessionItemRowProps) {
-  const { me } = useAccount<typeof Account>();
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount<typeof Account>() as any;
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const justEnteredEditMode = useRef(false);
@@ -150,7 +151,6 @@ export const SessionItemRow = memo(function SessionItemRow({
     // Only save if changed
     if (trimmedValue !== item.name) {
       try {
-        // @ts-expect-error Jazz TypeScript inference issue with Account root type
         templateService.renameItem(me, template.$jazz.id, item.id, trimmedValue);
       } catch (error) {
         console.error('[SessionItemRow] Failed to rename item:', error);

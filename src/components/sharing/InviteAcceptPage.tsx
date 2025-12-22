@@ -41,7 +41,8 @@ type PageState =
   | { type: 'error'; message: string };
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
-  const { me } = useAccount(Account);
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount(Account) as any;
   const browserInfo = useInAppBrowserDetection();
   const [state, setState] = useState<PageState>(() =>
     browserInfo.isInAppBrowser ? { type: 'in_app_browser' } : { type: 'loading' },

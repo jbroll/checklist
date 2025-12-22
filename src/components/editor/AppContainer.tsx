@@ -54,7 +54,9 @@ export function AppContainer({
   onViewModeChange,
   isAuthenticated,
 }: AppContainerProps) {
-  const { me } = useAccount<typeof Account>();
+  // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount<typeof Account>() as any;
   const { navState, navigateTo, goBack } = useNavigationHistory();
 
   // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)

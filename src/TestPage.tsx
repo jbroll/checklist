@@ -9,18 +9,20 @@
 
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
-import { useAccount } from '@/lib/jazz';
+import { useAccount, useLogOut } from '@/lib/jazz';
 import { Account } from '@/schemas';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
-  const { me, logOut } = useAccount(Account);
+  // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount(Account) as any;
+  const logOut = useLogOut();
 
   // Expose services to window for E2E tests
   useEffect(() => {
     if (me) {
-      // @ts-expect-error - Jazz v0.18.x Account.root nullable during migration
       exposeServicesToWindow(() => me);
       console.log('[TestPage] Test mode active - services exposed to window.testExports');
 

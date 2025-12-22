@@ -28,7 +28,8 @@ interface SessionViewProps {
 }
 
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
-  const { me } = useAccount<typeof Account>();
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount<typeof Account>() as any;
   const { navState, navigateTo } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
@@ -74,7 +75,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     me,
   });
 
@@ -90,7 +90,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const { sensors, activeItem, handleDragStart, handleDragEnd, handleDragCancel } =
     useSessionDragDrop({
       template,
-      // @ts-expect-error Jazz TypeScript inference issue with Account root type
       me,
       activeItems,
     });
@@ -100,7 +99,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     me,
     activeItems,
     selectedItems,
@@ -115,7 +113,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    // @ts-expect-error Jazz TypeScript inference issue with Account root type
     me,
     activeItems,
   });

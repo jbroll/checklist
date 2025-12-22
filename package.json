@@ -71,7 +71,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fast-fuzzy": "^1.12.0",
-    "jazz-tools": "^0.18.33",
+    "jazz-tools": "^0.19.13",
     "lucide-react": "^0.462.0",
     "nanoid": "^5.1.6",
     "react": "^18.3.1",

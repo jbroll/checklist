@@ -92,7 +92,8 @@ export function SessionZone({
   canDragItemFn,
   onEditNote,
 }: SessionZoneProps) {
-  const { me } = useAccount<typeof Account>();
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount<typeof Account>() as any;
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -145,7 +146,6 @@ export function SessionZone({
     // Only save if changed
     if (trimmedValue !== title) {
       try {
-        // @ts-expect-error Jazz TypeScript inference issue with Account root type
         templateService.renameItem(me, template.$jazz.id, categoryItem.id, trimmedValue);
       } catch (error) {
         console.error('[SessionZone] Failed to rename category:', error);

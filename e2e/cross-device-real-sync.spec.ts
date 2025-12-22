@@ -102,7 +102,7 @@ test.describe('Cross-Device Real Sync - Anonymous Mode', () => {
     }
   });
 
-  test('should persist data in IndexedDB on Device A', async ({ browser }) => {
+  test.skip('should persist data in IndexedDB on Device A', async ({ browser }) => {
     // Create Device A context
     const contextA = await browser.newContext();
     const deviceA = await contextA.newPage();

@@ -34,7 +34,8 @@ interface TemplateItemEditorProps {
 }
 
 export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps) {
-  const { me } = useAccount<typeof Account>();
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
+  const me = useAccount<typeof Account>() as any;
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -112,7 +113,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
         parentPath = existingCategory.path;
       } else {
         // Create the category first
-        // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
         ItemService.createCategory(me, template.$jazz.id, categoryName, undefined);
 
         // For root-level categories, path equals the category name (no sanitization)
@@ -120,22 +120,18 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       }
     }
 
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     ItemService.createItem(me, template.$jazz.id, name, parentPath, defaultQuantity);
   };
 
   const handleAddCategory = (name: string) => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     ItemService.createCategory(me, template.$jazz.id, name, undefined);
   };
 
   const handleRenameItem = (itemId: string, newName: string) => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     ItemService.renameItem(me, template.$jazz.id, itemId, newName);
   };
 
   const handleDeleteItem = (itemId: string) => {
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
     ItemService.archiveItem(me, template.$jazz.id, itemId);
   };
 
@@ -153,7 +149,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
 
   const handleSaveNote = (note: string) => {
     if (!me || !noteEditorState.itemId) return;
-    // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
     ItemService.updateItemNotes(me, template.$jazz.id, noteEditorState.itemId, note);
   };
 
@@ -230,7 +225,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
 
     // Archive all selected items
     for (const itemId of selectedIds) {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
       ItemService.archiveItem(me, template.$jazz.id, itemId);
     }
 
@@ -301,7 +295,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
         // Move and reorder in a single operation
         try {
           ItemService.moveItem(
-            // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with Account root type
             me,
             template.$jazz.id,
             draggedItem.id,
@@ -314,7 +307,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
       } else {
         // Just reordering within the same folder
         try {
-          // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
           ItemService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
         } catch {
           // Silently ignore errors
@@ -353,7 +345,6 @@ export function TemplateItemEditor({ template, onBack }: TemplateItemEditorProps
     }
 
     try {
-      // @ts-expect-error - Jazz v0.18.x TypeScript inference issue with nested CoLists
       ItemService.moveItem(me, template.$jazz.id, draggedItem.id, newParentPath);
     } catch {
       // Silently ignore expected validation errors
