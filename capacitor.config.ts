@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'kjekit',
   webDir: 'dist',
   server: {
-    // Use the production URL when running on device
-    // For local development, use: url: 'http://YOUR_LOCAL_IP:8765'
+    url: 'https://checklist.rkroll.com',
     androidScheme: 'https',
     iosScheme: 'https',
   },
