@@ -125,6 +125,11 @@ app.use(
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  // Debug: log host headers and cookies for OAuth troubleshooting
+  if (req.url.includes('/auth/')) {
+    console.log(`[${timestamp}] Host: ${req.headers.host}, X-Forwarded-Host: ${req.headers['x-forwarded-host']}, Origin: ${req.headers.origin}`);
+    console.log(`[${timestamp}] Cookies: ${req.headers.cookie?.substring(0, 200) || 'none'}`);
+  }
   next();
 });
 

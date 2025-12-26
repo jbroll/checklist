@@ -222,7 +222,7 @@ export function archiveFolder(folder: FolderType): void {
   folder.$jazz.set('updatedAt', now);
 
   // Recursively archive children
-  if (folder.children) {
+  if (folder.children && Array.isArray(folder.children)) {
     for (const child of folder.children) {
       if (child && !child.archived) {
         archiveFolder(child);
@@ -245,7 +245,7 @@ export function unarchiveFolder(folder: FolderType): void {
   folder.$jazz.set('updatedAt', now);
 
   // Recursively unarchive children
-  if (folder.children) {
+  if (folder.children && Array.isArray(folder.children)) {
     for (const child of folder.children) {
       if (child?.archived) {
         unarchiveFolder(child);
@@ -415,19 +415,21 @@ export function getAllTemplateFolders(account: AccountType, showArchived = false
 
   const templates: FolderType[] = [];
 
-  function collect(folders: FolderType[]) {
+  function collect(folders: FolderType[] | null | undefined) {
+    if (!folders || !Array.isArray(folders)) return;
     for (const folder of folders) {
       if (!folder || (!showArchived && folder.archived)) continue;
 
       if (isTemplateFolder(folder)) {
         templates.push(folder);
-      } else if (folder.children) {
+      } else if (folder.children && Array.isArray(folder.children)) {
         collect(folder.children);
       }
     }
   }
 
-  collect(Array.from(account.root.folders));
+  const foldersArray = account.root.folders ? Array.from(account.root.folders) : [];
+  collect(foldersArray);
   return templates;
 }
 
@@ -436,20 +438,22 @@ export function getArchivedFolders(account: AccountType): FolderType[] {
 
   const archived: FolderType[] = [];
 
-  function collect(folders: FolderType[]) {
+  function collect(folders: FolderType[] | null | undefined) {
+    if (!folders || !Array.isArray(folders)) return;
     for (const folder of folders) {
       if (!folder) continue;
 
       if (folder.archived) {
         archived.push(folder);
         // Don't recurse into archived folders' children
-      } else if (folder.children) {
+      } else if (folder.children && Array.isArray(folder.children)) {
         collect(folder.children);
       }
     }
   }
 
-  collect(Array.from(account.root.folders));
+  const foldersArray = account.root.folders ? Array.from(account.root.folders) : [];
+  collect(foldersArray);
   return archived;
 }
 

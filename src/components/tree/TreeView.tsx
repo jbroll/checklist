@@ -82,19 +82,21 @@ function expandAncestorFoldersInViewState(
  * Build hierarchical tree from FolderNode structure
  */
 function buildFolderTree(
-  folders: InstanceOfSchema<typeof FolderNode>[],
+  folders: InstanceOfSchema<typeof FolderNode>[] | null | undefined,
   showArchived: boolean,
   level = 0,
 ): TreeNode[] {
+  if (!folders || !Array.isArray(folders)) return [];
   const nodes: TreeNode[] = [];
 
   for (const folder of folders) {
     if (!folder) continue;
     if (!showArchived && folder.archived) continue;
 
-    const children = folder.children
-      ? buildFolderTree(folder.children, showArchived, level + 1)
-      : [];
+    const children =
+      folder.children && Array.isArray(folder.children)
+        ? buildFolderTree(folder.children, showArchived, level + 1)
+        : [];
 
     nodes.push({
       folder,
@@ -407,10 +409,12 @@ export function TreeView({
   }, []);
 
   // Build hierarchical tree structure
-  const folderTree = useMemo(
-    () => buildFolderTree(Array.from(account.root?.folders || []), showArchivedTemplates),
-    [account.root?.folders, showArchivedTemplates],
-  );
+  const folderTree = useMemo(() => {
+    const folders = account.root?.folders;
+    const foldersArray =
+      folders && Array.isArray(folders) ? folders : folders ? Array.from(folders) : [];
+    return buildFolderTree(foldersArray, showArchivedTemplates);
+  }, [account.root?.folders, showArchivedTemplates]);
 
   // Check if there are any archived folders
   const hasArchivedTemplates = useMemo(() => {
