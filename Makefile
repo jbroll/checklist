@@ -1,7 +1,7 @@
-.PHONY: setup install install-frontend install-backend deploy count icons
+.PHONY: setup install install-frontend install-backend install-playwright deploy count icons
 
 # Setup targets
-setup: install
+setup: install install-playwright
 	@echo "Setup complete. Run 'make deploy' to deploy."
 
 install: install-frontend install-backend
@@ -12,6 +12,9 @@ install-frontend:
 
 install-backend:
 	cd backend && npm install --legacy-peer-deps
+
+install-playwright:
+	npx playwright install chromium
 
 # Deployment
 deploy:
