@@ -1,4 +1,29 @@
+.PHONY: setup install install-frontend install-backend deploy count icons
 
+# Setup targets
+setup: install
+	@echo "Setup complete. Run 'make deploy' to deploy."
+
+install: install-frontend install-backend
+	@echo "All dependencies installed."
+
+install-frontend:
+	npm install --legacy-peer-deps
+
+install-backend:
+	cd backend && npm install --legacy-peer-deps
+
+# Deployment
+deploy:
+	./deploy-full.sh
+
+deploy-update:
+	./deploy-full.sh update
+
+deploy-init:
+	./deploy-full.sh init
+
+# Utilities
 count:
 	find src -name '*.ts*' \
 			| grep -v "\.test\." \
