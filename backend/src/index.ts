@@ -14,7 +14,7 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { auth, sqliteDb } from './auth.js';
+import { auth, sqliteDb, getAuthForOrigin, getOriginFromRequest } from './auth.js';
 import { initDb } from './db.js';
 import { initAgent } from './agent.js';
 import { setupSharingRoutes } from './shares.js';
@@ -125,11 +125,22 @@ app.use(
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  // Debug: log host and forwarded headers for OAuth troubleshooting
+  if (req.url.includes('/auth/')) {
+    console.log(`[${timestamp}] Host: ${req.headers.host}, X-Forwarded-Host: ${req.headers['x-forwarded-host']}, X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+    console.log(`[${timestamp}] Cookies: ${req.headers.cookie ? 'present' : 'none'}, Origin: ${req.headers.origin || 'none'}, Referer: ${req.headers.referer || 'none'}`);
+  }
   next();
 });
 
 // BetterAuth handler - MUST come before express.json()
-app.use('/api/auth', toNodeHandler(auth));
+// Uses per-origin auth instances for multi-domain OAuth support
+app.use('/api/auth', (req, res) => {
+  const origin = getOriginFromRequest(req.headers);
+  console.log(`[auth] Using auth instance for origin: ${origin}`);
+  const authInstance = getAuthForOrigin(origin);
+  return toNodeHandler(authInstance)(req, res);
+});
 
 // Stripe webhook - MUST come before express.json() for raw body access
 setupStripeWebhook(app, sqliteDb);

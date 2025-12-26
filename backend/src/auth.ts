@@ -58,85 +58,89 @@ const sqliteDb = new Database(dbPath);
 // Export database for sharing functionality
 export { sqliteDb };
 
-// Create BetterAuth instance with SQLite
-export const auth = betterAuth({
-  // Use better-sqlite3 directly (recommended pattern)
-  database: sqliteDb,
+// Allowed origins for multi-domain OAuth
+const allowedOrigins = [
+  'https://app.kjekit.com',
+  'https://checklist-app.rkroll.com',
+  'http://localhost:5173',
+  'http://localhost:8765',
+];
 
-  // Base URL for OAuth callbacks
-  // Don't set this - let BetterAuth auto-detect from request origin
-  // This allows multiple domains (app.kjekit.com, checklist-app.rkroll.com) to work
-  // Each domain needs its OAuth redirect URIs registered with Google/Apple
+// Shared auth configuration (everything except baseURL)
+function createAuthConfig(baseURL: string) {
+  return {
+    database: sqliteDb,
+    baseURL,
 
-  // Trust the frontend origin and Apple's domain for Sign In with Apple
-  trustedOrigins: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'https://app.kjekit.com',
-    'https://checklist-app.rkroll.com',  // Brand alias
-    'https://appleid.apple.com',
-  ],
+    // Trust all allowed origins plus Apple's domain
+    trustedOrigins: [
+      ...allowedOrigins,
+      'https://appleid.apple.com',
+    ],
 
-  // Session configuration
-  session: {
-    cookieCache: {
+    // Session configuration
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60, // 5 minutes
+      },
+    },
+
+    // Advanced configuration
+    advanced: {
+      // Use secure cookies in production (HTTPS), disable for local development (HTTP)
+      useSecureCookies: process.env.NODE_ENV === 'production',
+      // Disable CSRF check for development only
+      disableCSRFCheck: process.env.NODE_ENV !== 'production',
+      // Apple OAuth uses POST-based callbacks which require sameSite: "none"
+      defaultCookieAttributes: {
+        sameSite: 'none' as const,
+        secure: true,
+      },
+    },
+
+    // Email verification
+    emailVerification: {
+      autoSignInAfterVerification: false,
+      sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+        await sendEmail(
+          user.email,
+          'Verify your kjekit email',
+          `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to verify your email: ${url}
+
+This link expires in 24 hours.
+
+- kjekit`
+        );
+      },
+    },
+
+    // Email/Password authentication
+    emailAndPassword: {
       enabled: true,
-      maxAge: 5 * 60, // 5 minutes
-    },
-  },
-
-  // Advanced configuration
-  advanced: {
-    // Use secure cookies in production (HTTPS), disable for local development (HTTP)
-    useSecureCookies: process.env.NODE_ENV === 'production',
-    // Disable CSRF check for development only
-    disableCSRFCheck: process.env.NODE_ENV !== 'production',
-    // Use default cookie settings (sameSite: "lax") for Google OAuth
-    // Apple OAuth (POST-based callbacks) may need sameSite: "none" but Google works with "lax"
-  },
-
-  // Email verification for resending verification emails
-  emailVerification: {
-    // Don't auto-sign in - user must sign in manually after verification
-    autoSignInAfterVerification: false,
-    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-      await sendEmail(
-        user.email,
-        'Verify your kjekit email',
-        `Hi${user.name ? ` ${user.name}` : ''},
+      requireEmailVerification: true,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+      sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+        await sendEmail(
+          user.email,
+          'Verify your kjekit email',
+          `Hi${user.name ? ` ${user.name}` : ''},
 
 Click to verify your email: ${url}
 
 This link expires in 24 hours.
 
 - kjekit`
-      );
-    },
-  },
-
-  // Email/Password authentication
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: true,
-    minPasswordLength: 8,
-    maxPasswordLength: 128,
-    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-      await sendEmail(
-        user.email,
-        'Verify your kjekit email',
-        `Hi${user.name ? ` ${user.name}` : ''},
-
-Click to verify your email: ${url}
-
-This link expires in 24 hours.
-
-- kjekit`
-      );
-    },
-    sendResetPassword: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-      await sendEmail(
-        user.email,
-        'Reset your kjekit password',
-        `Hi${user.name ? ` ${user.name}` : ''},
+        );
+      },
+      sendResetPassword: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
+        await sendEmail(
+          user.email,
+          'Reset your kjekit password',
+          `Hi${user.name ? ` ${user.name}` : ''},
 
 Click to reset your password: ${url}
 
@@ -144,39 +148,83 @@ This link expires in 1 hour.
 If you didn't request this, you can ignore this email.
 
 - kjekit`
-      );
+        );
+      },
     },
-  },
 
-  // Account linking - auto-link when same email used across providers
-  accountLinking: {
-    enabled: true,
-    trustedProviders: ["google", "apple"],
-  },
-
-  // Jazz plugin to store Jazz account keys with users
-  plugins: [
-    jazzPlugin()
-  ],
-
-  // OAuth providers
-  // Privacy: Only request email scope, not profile (name/image)
-  // This way user's name and profile photo never hit our servers
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      prompt: "select_account",
-      // Only request email, not profile data (name/image)
-      scope: ["openid", "email"],
-      disableDefaultScopes: true,
+    // Account linking
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "apple"],
     },
-    apple: {
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
-    },
-  },
 
-  // Secret for signing tokens
-  secret: process.env.BETTER_AUTH_SECRET!,
-});
+    // Jazz plugin
+    plugins: [
+      jazzPlugin()
+    ],
+
+    // OAuth providers
+    socialProviders: {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        prompt: "select_account" as const,
+        scope: ["openid", "email"],
+        disableDefaultScopes: true,
+      },
+      apple: {
+        clientId: process.env.APPLE_CLIENT_ID!,
+        clientSecret: process.env.APPLE_CLIENT_SECRET!,
+      },
+    },
+
+    secret: process.env.BETTER_AUTH_SECRET!,
+  };
+}
+
+// Cache of auth instances per origin
+const authInstances = new Map<string, ReturnType<typeof betterAuth>>();
+
+/**
+ * Get BetterAuth instance for a specific origin.
+ * Each origin gets its own instance with the correct baseURL for OAuth callbacks.
+ */
+export function getAuthForOrigin(origin: string): ReturnType<typeof betterAuth> {
+  // Normalize origin
+  const normalizedOrigin = origin.replace(/\/$/, '');
+
+  if (!authInstances.has(normalizedOrigin)) {
+    console.log(`[auth] Creating BetterAuth instance for origin: ${normalizedOrigin}`);
+    authInstances.set(normalizedOrigin, betterAuth(createAuthConfig(normalizedOrigin)));
+  }
+
+  return authInstances.get(normalizedOrigin)!;
+}
+
+/**
+ * Extract origin from request headers.
+ * Prefers X-Forwarded-Host (set by Apache proxy), falls back to Host header.
+ * Handles comma-separated values in forwarded headers.
+ */
+export function getOriginFromRequest(headers: Record<string, string | string[] | undefined>): string {
+  const forwardedHost = headers['x-forwarded-host'];
+  let host: string | undefined;
+
+  if (typeof forwardedHost === 'string') {
+    // Handle comma-separated values (e.g., "app.kjekit.com, app.kjekit.com")
+    host = forwardedHost.split(',')[0].trim();
+  } else if (Array.isArray(forwardedHost)) {
+    host = forwardedHost[0];
+  } else {
+    const hostHeader = headers['host'];
+    host = typeof hostHeader === 'string' ? hostHeader : undefined;
+  }
+
+  const proto = headers['x-forwarded-proto'] || 'https';
+  const protocol = typeof proto === 'string' ? proto.split(',')[0].trim() : 'https';
+
+  return `${protocol}://${host}`;
+}
+
+// Default auth instance (for backwards compatibility with non-HTTP contexts)
+export const auth = getAuthForOrigin('https://app.kjekit.com');
