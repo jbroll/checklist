@@ -125,11 +125,6 @@ app.use(
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.url}`);
-  // Debug: log host and forwarded headers for OAuth troubleshooting
-  if (req.url.includes('/auth/')) {
-    console.log(`[${timestamp}] Host: ${req.headers.host}, X-Forwarded-Host: ${req.headers['x-forwarded-host']}, X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
-    console.log(`[${timestamp}] Cookies: ${req.headers.cookie ? 'present' : 'none'}, Origin: ${req.headers.origin || 'none'}, Referer: ${req.headers.referer || 'none'}`);
-  }
   next();
 });
 
@@ -137,7 +132,6 @@ app.use((req, res, next) => {
 // Uses per-origin auth instances for multi-domain OAuth support
 app.use('/api/auth', (req, res) => {
   const origin = getOriginFromRequest(req.headers);
-  console.log(`[auth] Using auth instance for origin: ${origin}`);
   const authInstance = getAuthForOrigin(origin);
   return toNodeHandler(authInstance)(req, res);
 });

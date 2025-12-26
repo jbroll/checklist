@@ -194,7 +194,6 @@ export function getAuthForOrigin(origin: string): ReturnType<typeof betterAuth> 
   const normalizedOrigin = origin.replace(/\/$/, '');
 
   if (!authInstances.has(normalizedOrigin)) {
-    console.log(`[auth] Creating BetterAuth instance for origin: ${normalizedOrigin}`);
     authInstances.set(normalizedOrigin, betterAuth(createAuthConfig(normalizedOrigin)));
   }
 
