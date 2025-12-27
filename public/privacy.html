@@ -44,7 +44,7 @@
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="kjekit-path.svg" alt="kjekit" class="h-10">
+                        <img src="kjekit-path.svg" alt="kjekit" class="h-10" data-brand="logo">
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">
@@ -69,9 +69,9 @@
 <p><strong>How we operate the service.</strong> We use your email to authenticate your account and respond to support requests. Your list data is stored locally on your device first, encrypted during sync, and backed up via Jazz.tools. All communications use HTTPS/TLS encryption.</p>
 <p><strong>Third-party services.</strong> We use third-party services for data sync and OAuth authentication. Your data is encrypted before it reaches the sync service—they cannot read your lists. Your use of these services is subject to their respective privacy policies.</p>
 <p><strong>We share data only when</strong> required by law, necessary to protect our rights or users&#39; safety, or part of a business transfer (with notice). We don&#39;t sell your data.</p>
-<p><strong>Children.</strong> kjekit is not for children under 13. We don&#39;t knowingly collect data from children under 13.</p>
-<p><strong>International users.</strong> kjekit operates in the United States. Using the service means your data may be transferred to the US.</p>
-<p>Contact: <a href="mailto:support@kjekit.com">support@kjekit.com</a></p>
+<p><strong>Children.</strong> <span data-brand="name">kjekit</span> is not for children under 13. We don&#39;t knowingly collect data from children under 13.</p>
+<p><strong>International users.</strong> <span data-brand="name">kjekit</span> operates in the United States. Using the service means your data may be transferred to the US.</p>
+<p>Contact: <a href="mailto:support@kjekit.com" data-brand="supportEmail">support@kjekit.com</a></p>
 
         </div>
     </div>
@@ -90,5 +90,36 @@
             </div>
         </div>
     </footer>
+    
+<script>
+(function() {
+  var hostname = window.location.hostname;
+  var isChecklist = hostname.startsWith('checklist-app.') || hostname.includes('checklist-app');
+  var brand = isChecklist ? {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.app","salesEmail":"sales@checklist.app","logo":"kjekit-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day."} : {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day."};
+
+  // Replace all brand placeholders
+  document.querySelectorAll('[data-brand]').forEach(function(el) {
+    var key = el.getAttribute('data-brand');
+    if (brand[key]) {
+      if (el.tagName === 'A' && key.includes('Email')) {
+        el.href = 'mailto:' + brand[key];
+        el.textContent = brand[key];
+      } else if (el.tagName === 'IMG') {
+        el.src = brand[key];
+        el.alt = brand.name;
+      } else {
+        el.textContent = brand[key];
+      }
+    }
+  });
+
+  // Update title
+  var title = document.querySelector('title');
+  if (title) {
+    title.textContent = title.textContent.replace(/kjekit|CheckList/g, brand.name);
+  }
+})();
+</script>
+
 </body>
 </html>

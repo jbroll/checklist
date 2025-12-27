@@ -2,6 +2,12 @@
 /**
  * Build script to convert markdown files to HTML pages
  * Run with: node website/build-legal.js
+ *
+ * Supports brand variables in markdown:
+ *   {{brand.name}} - Brand display name (kjekit or CheckList)
+ *   {{brand.supportEmail}} - Support email address
+ *   {{brand.salesEmail}} - Sales email address
+ *   {{brand.tagline}} - Brand tagline
  */
 
 import { readFileSync, writeFileSync } from 'fs';
@@ -16,6 +22,59 @@ marked.setOptions({
   gfm: true,
   breaks: false,
 });
+
+// Brand configurations (must match src/lib/brand.ts)
+const brands = {
+  kjekit: {
+    name: 'kjekit',
+    tagline: 'Nicely Shared Checklists',
+    supportEmail: 'support@kjekit.com',
+    salesEmail: 'sales@kjekit.com',
+    logo: 'kjekit-path.svg',
+    aboutIntro: 'kjekit (pronounced "check it") is a checklist app designed for lists you use every day.',
+  },
+  checklist: {
+    name: 'CheckList',
+    tagline: 'Shared Checklists',
+    supportEmail: 'support@checklist.app',
+    salesEmail: 'sales@checklist.app',
+    logo: 'kjekit-icon.svg',
+    aboutIntro: 'CheckList is a checklist app designed for lists you use every day.',
+  },
+};
+
+// Runtime brand detection script (injected into pages)
+const brandScript = `
+<script>
+(function() {
+  var hostname = window.location.hostname;
+  var isChecklist = hostname.startsWith('checklist-app.') || hostname.includes('checklist-app');
+  var brand = isChecklist ? ${JSON.stringify(brands.checklist)} : ${JSON.stringify(brands.kjekit)};
+
+  // Replace all brand placeholders
+  document.querySelectorAll('[data-brand]').forEach(function(el) {
+    var key = el.getAttribute('data-brand');
+    if (brand[key]) {
+      if (el.tagName === 'A' && key.includes('Email')) {
+        el.href = 'mailto:' + brand[key];
+        el.textContent = brand[key];
+      } else if (el.tagName === 'IMG') {
+        el.src = brand[key];
+        el.alt = brand.name;
+      } else {
+        el.textContent = brand[key];
+      }
+    }
+  });
+
+  // Update title
+  var title = document.querySelector('title');
+  if (title) {
+    title.textContent = title.textContent.replace(/kjekit|CheckList/g, brand.name);
+  }
+})();
+</script>
+`;
 
 // Common styles - using system font stack similar to Inter
 const styles = `
@@ -67,11 +126,27 @@ function generateFooterLinks(currentPage) {
   return links.join('\n                ');
 }
 
+// Process markdown content to convert {{brand.X}} to data-brand elements
+function processBrandVariables(html) {
+  // Replace {{brand.name}} with span
+  html = html.replace(/\{\{brand\.name\}\}/g, '<span data-brand="name">kjekit</span>');
+  // Replace {{brand.tagline}} with span
+  html = html.replace(/\{\{brand\.tagline\}\}/g, '<span data-brand="tagline">Nicely Shared Checklists</span>');
+  // Replace {{brand.aboutIntro}} with span
+  html = html.replace(/\{\{brand\.aboutIntro\}\}/g, `<span data-brand="aboutIntro">${brands.kjekit.aboutIntro}</span>`);
+  // Replace {{brand.supportEmail}} with link
+  html = html.replace(/\{\{brand\.supportEmail\}\}/g, '<a href="mailto:support@kjekit.com" data-brand="supportEmail">support@kjekit.com</a>');
+  // Replace {{brand.salesEmail}} with link
+  html = html.replace(/\{\{brand\.salesEmail\}\}/g, '<a href="mailto:sales@kjekit.com" data-brand="salesEmail">sales@kjekit.com</a>');
+  return html;
+}
+
 // Generate HTML page from markdown
 function generatePage(mdFile, htmlFile, title) {
   const mdPath = join(__dirname, mdFile);
   const mdContent = readFileSync(mdPath, 'utf-8');
-  const contentHtml = marked.parse(mdContent);
+  let contentHtml = marked.parse(mdContent);
+  contentHtml = processBrandVariables(contentHtml);
 
   const navLinks = generateNavLinks(htmlFile);
   const footerLinks = generateFooterLinks(htmlFile);
@@ -105,7 +180,7 @@ function generatePage(mdFile, htmlFile, title) {
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="kjekit-path.svg" alt="kjekit" class="h-10">
+                        <img src="kjekit-path.svg" alt="kjekit" class="h-10" data-brand="logo">
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">
@@ -135,6 +210,7 @@ function generatePage(mdFile, htmlFile, title) {
             </div>
         </div>
     </footer>
+    ${brandScript}
 </body>
 </html>
 `;

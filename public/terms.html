@@ -44,7 +44,7 @@
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center">
-                        <img src="kjekit-path.svg" alt="kjekit" class="h-10">
+                        <img src="kjekit-path.svg" alt="kjekit" class="h-10" data-brand="logo">
                     </a>
                 </div>
                 <div class="flex items-center space-x-8">
@@ -61,18 +61,18 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
             <h1>Terms of Service</h1>
 <p><em>Last Updated: December 2, 2025</em></p>
-<p><strong>By using kjekit, you agree to these terms.</strong> If you don&#39;t agree, don&#39;t use the service.</p>
-<p><strong>To use kjekit,</strong> you must be at least 13 years old, provide accurate information, and keep your credentials secure. You&#39;re responsible for activity on your account.</p>
+<p><strong>By using <span data-brand="name">kjekit</span>, you agree to these terms.</strong> If you don&#39;t agree, don&#39;t use the service.</p>
+<p><strong>To use <span data-brand="name">kjekit</span>,</strong> you must be at least 13 years old, provide accurate information, and keep your credentials secure. You&#39;re responsible for activity on your account.</p>
 <p><strong>You agree not to</strong> violate laws, infringe others&#39; intellectual property, transmit malware, attempt to hack the service, harass others, scrape data, or reverse engineer the service.</p>
 <p><strong>You own your content.</strong> By using the service, you grant us a license to store and transmit your content to provide the service. This license ends when you delete your content. You&#39;re responsible for your content—keep backups using the export feature.</p>
-<p><strong>Our intellectual property.</strong> The service design, code, and branding belong to kjekit. Don&#39;t copy, modify, or use our trademarks without permission.</p>
+<p><strong>Our intellectual property.</strong> The service design, code, and branding belong to <span data-brand="name">kjekit</span>. Don&#39;t copy, modify, or use our trademarks without permission.</p>
 <p><strong>This is a software service.</strong> It may be unstable, features may change, data may need to be reset, and there may be downtime. The service is provided &quot;as is&quot; without warranties. We&#39;re not liable for indirect, incidental, or consequential damages. Our total liability is limited to what you paid us.</p>
 <p><strong>Indemnification.</strong> You agree to indemnify us against claims arising from your use of the service, violation of these terms, or your content.</p>
 <p><strong>Third-party services.</strong> We use third-party services for data sync and authentication. Their terms apply to your use of those services.</p>
 <p><strong>Termination.</strong> You may delete your account anytime. We may terminate your account if you violate these terms, pose a security risk, or if required by law.</p>
 <p><strong>Changes to these terms.</strong> We may update these terms. Material changes will be posted here with an updated date. Continued use means acceptance.</p>
 <p><strong>General.</strong> These terms are governed by US law. These terms are the entire agreement. Invalid provisions don&#39;t affect the rest. Our failure to enforce a provision isn&#39;t a waiver.</p>
-<p>Contact: <a href="mailto:support@kjekit.com">support@kjekit.com</a></p>
+<p>Contact: <a href="mailto:support@kjekit.com" data-brand="supportEmail">support@kjekit.com</a></p>
 
         </div>
     </div>
@@ -91,5 +91,36 @@
             </div>
         </div>
     </footer>
+    
+<script>
+(function() {
+  var hostname = window.location.hostname;
+  var isChecklist = hostname.startsWith('checklist-app.') || hostname.includes('checklist-app');
+  var brand = isChecklist ? {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.app","salesEmail":"sales@checklist.app","logo":"kjekit-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day."} : {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day."};
+
+  // Replace all brand placeholders
+  document.querySelectorAll('[data-brand]').forEach(function(el) {
+    var key = el.getAttribute('data-brand');
+    if (brand[key]) {
+      if (el.tagName === 'A' && key.includes('Email')) {
+        el.href = 'mailto:' + brand[key];
+        el.textContent = brand[key];
+      } else if (el.tagName === 'IMG') {
+        el.src = brand[key];
+        el.alt = brand.name;
+      } else {
+        el.textContent = brand[key];
+      }
+    }
+  });
+
+  // Update title
+  var title = document.querySelector('title');
+  if (title) {
+    title.textContent = title.textContent.replace(/kjekit|CheckList/g, brand.name);
+  }
+})();
+</script>
+
 </body>
 </html>
