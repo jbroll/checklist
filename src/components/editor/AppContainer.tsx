@@ -57,7 +57,7 @@ export function AppContainer({
   // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount<typeof Account>() as any;
-  const { navState, navigateTo, goBack } = useNavigationHistory();
+  const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
 
   // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)
   useEffect(() => {
@@ -238,7 +238,11 @@ export function AppContainer({
   const handleSwitchSession = (newSessionId: string) => {
     // Replace current history entry with new session (don't add to stack)
     if (activeSessionTemplateId) {
-      navigateTo({ view: 'session', templateId: activeSessionTemplateId, sessionId: newSessionId });
+      replaceState({
+        view: 'session',
+        templateId: activeSessionTemplateId,
+        sessionId: newSessionId,
+      });
     }
   };
 

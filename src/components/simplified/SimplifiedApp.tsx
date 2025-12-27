@@ -46,7 +46,7 @@ export function SimplifiedApp({
   showProfileDialog,
   onShowProfileDialogChange,
 }: SimplifiedAppProps) {
-  const { navState, navigateTo, goBack } = useNavigationHistory();
+  const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
@@ -128,7 +128,7 @@ export function SimplifiedApp({
             goBack();
           }}
           onSwitchSession={(newSessionId) => {
-            navigateTo({
+            replaceState({
               view: 'session',
               templateId: selectedTemplateId,
               sessionId: newSessionId,
