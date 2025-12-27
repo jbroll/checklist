@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
   User,
+  Zap,
 } from 'lucide-react';
 import { BrandIcon } from '@/components/ui/BrandIcon';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,11 @@ interface TreeViewHeaderProps {
   canInstallApp?: boolean;
   onInstallApp?: () => void;
   onAbout?: () => void;
+  // Subscription info
+  subscriptionTier?: string;
+  listCount?: number;
+  maxLists?: number;
+  onUpgradeClick?: () => void;
 }
 
 /**
@@ -85,6 +91,10 @@ export function TreeViewHeader({
   canInstallApp = false,
   onInstallApp,
   onAbout,
+  subscriptionTier = 'Free',
+  listCount = 0,
+  maxLists = 3,
+  onUpgradeClick,
 }: TreeViewHeaderProps) {
   // Droppable setup for root-level drops (always called for hooks rules)
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -227,6 +237,15 @@ export function TreeViewHeader({
                       <DropdownMenuItem onClick={onPendingInvites}>
                         <Mail className="mr-2 h-4 w-4" />
                         Pending Invites
+                      </DropdownMenuItem>
+                    )}
+                    {maxLists !== -1 && onUpgradeClick && (
+                      <DropdownMenuItem onClick={onUpgradeClick}>
+                        <Zap className="mr-2 h-4 w-4 text-green-600" />
+                        <span className="flex-1">Upgrade Plan</span>
+                        <span className="ml-4 text-xs text-content-tertiary">
+                          {subscriptionTier} {listCount}/{maxLists}
+                        </span>
                       </DropdownMenuItem>
                     )}
                     {isAuthenticated &&

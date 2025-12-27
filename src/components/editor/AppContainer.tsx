@@ -258,6 +258,12 @@ export function AppContainer({
           isAuthenticated={isAuthenticated}
           showProfileDialog={showProfileDialog}
           onShowProfileDialogChange={setShowProfileDialog}
+          subscriptionTier={subscriptionService.getTierDisplayName(
+            subscriptionService.getSubscriptionTier(me),
+          )}
+          listCount={subscriptionService.countUserLists(me)}
+          maxLists={subscriptionService.getMaxLists(me)}
+          onUpgradeClick={() => setShowUpgradeDialog(true)}
         />
 
         <AddFolderDialog

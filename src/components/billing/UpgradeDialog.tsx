@@ -11,7 +11,14 @@ import { brand } from '../../lib/brand';
 import type { AccountParam } from '../../schemas';
 import { getSubscriptionTier, redirectToCheckout, TIERS } from '../../services/subscriptionService';
 import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -109,6 +116,15 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
+        <DialogClose asChild>
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-surface-elevated transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogClose>
         <DialogHeader>
           <DialogTitle>Upgrade your plan</DialogTitle>
           {message && (

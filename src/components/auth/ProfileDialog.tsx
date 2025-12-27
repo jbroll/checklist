@@ -184,37 +184,22 @@ export function ProfileDialog({
           </div>
 
           {/* Subscription Section */}
-          <div className="border-t border-border-default pt-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-content-primary">Subscription</span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded ${
-                  subscriptionTier === 'free'
-                    ? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
-                    : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                }`}
-              >
-                {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}
-              </span>
-            </div>
-            <div className="mb-3 text-sm text-content-secondary">
-              {maxLists === -1 ? (
-                <span>Unlimited lists</span>
-              ) : (
-                <span>
-                  {listCount} of {maxLists} lists used
-                </span>
-              )}
-            </div>
+          <div className="border-t border-border-default pt-3 flex flex-col gap-2">
             {maxLists !== -1 && onUpgradeClick && (
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-500 dark:hover:bg-green-900/30"
+                className="w-full justify-between gap-2"
                 onClick={onUpgradeClick}
               >
-                <Zap className="h-4 w-4" />
-                Upgrade Plan
+                <span className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-green-600" />
+                  Upgrade Plan
+                </span>
+                <span className="text-xs text-content-tertiary">
+                  {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)} {listCount}
+                  /{maxLists}
+                </span>
               </Button>
             )}
             {subscriptionTier !== 'free' && onManageBillingClick && (

@@ -57,6 +57,11 @@ interface TreeViewProps {
   hideArchivedTemplatesToggle?: boolean;
   hideArchivedSessionsToggle?: boolean;
   hideArchiveAction?: boolean;
+  // Subscription info
+  subscriptionTier?: string;
+  listCount?: number;
+  maxLists?: number;
+  onUpgradeClick?: () => void;
 }
 
 /**
@@ -126,6 +131,10 @@ export function TreeView({
   hideArchivedTemplatesToggle = false,
   hideArchivedSessionsToggle = false,
   hideArchiveAction = false,
+  subscriptionTier,
+  listCount,
+  maxLists,
+  onUpgradeClick,
 }: TreeViewProps) {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -531,6 +540,10 @@ export function TreeView({
           onAbout={() => {
             window.location.href = '/about.html';
           }}
+          subscriptionTier={subscriptionTier}
+          listCount={listCount}
+          maxLists={maxLists}
+          onUpgradeClick={onUpgradeClick}
         />
 
         {folderTree.length === 0 ? (
