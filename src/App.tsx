@@ -79,6 +79,19 @@ const VerifyEmailPage = lazy(() =>
   })),
 );
 
+// Lazy load billing pages for Stripe checkout flow
+const BillingSuccessPage = lazy(() =>
+  import('./components/billing/BillingSuccessPage').then((module) => ({
+    default: module.BillingSuccessPage,
+  })),
+);
+
+const BillingCancelPage = lazy(() =>
+  import('./components/billing/BillingCancelPage').then((module) => ({
+    default: module.BillingCancelPage,
+  })),
+);
+
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
   import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
@@ -141,6 +154,8 @@ function App() {
   const isTestPage = pathname === '/test';
   const isResetPasswordPage = pathname === '/reset-password';
   const isVerifyEmailPage = pathname === '/verify-email';
+  const isBillingSuccess = pathname === '/billing/success';
+  const isBillingCancel = pathname === '/billing/cancel';
   const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
   const inviteToken = inviteMatch ? inviteMatch[1] : null;
 
@@ -187,6 +202,14 @@ function App() {
             ) : isVerifyEmailPage ? (
               <Suspense fallback={<LoadingScreen />}>
                 <VerifyEmailPage />
+              </Suspense>
+            ) : isBillingSuccess ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <BillingSuccessPage />
+              </Suspense>
+            ) : isBillingCancel ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <BillingCancelPage />
               </Suspense>
             ) : isTestPage ? (
               <Suspense fallback={<LoadingScreen />}>

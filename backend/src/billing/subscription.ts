@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { stripe, isStripeEnabled, STRIPE_PRICES, type TierSlug, type SubscriptionTier, type UserSubscription } from './stripe.js';
+import { stripe, isStripeEnabled, type TierSlug, type SubscriptionTier, type UserSubscription } from './stripe.js';
 
 // Default tier limits for when database isn't available
 const DEFAULT_TIERS: Record<TierSlug, { maxLists: number; sessionRetentionDays: number }> = {
@@ -157,9 +157,11 @@ export async function createCheckoutSession(
     throw new Error('Stripe is not configured');
   }
 
-  const priceId = STRIPE_PRICES[tierSlug];
+  // Get price ID from database (synced from env vars on startup)
+  const tier = getTier(db, tierSlug);
+  const priceId = tier?.stripePriceId;
   if (!priceId) {
-    throw new Error(`No Stripe price configured for tier: ${tierSlug}`);
+    throw new Error(`No Stripe price configured for tier: ${tierSlug}. Set STRIPE_PRICE_${tierSlug.toUpperCase()} env var.`);
   }
 
   // Get or create Stripe customer

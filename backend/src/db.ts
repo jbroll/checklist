@@ -20,5 +20,29 @@ export function initDb(sqliteDb: Database.Database) {
   const subscriptionsSql = readFileSync(join(__dirname, 'migrations/subscriptions.sql'), 'utf-8');
   sqliteDb.exec(subscriptionsSql);
 
+  // Sync Stripe price IDs from environment variables to database
+  // This allows the database to be the single source of truth for tier configuration
+  syncStripePriceIds(sqliteDb);
+
   return sqliteDb;
+}
+
+// Sync Stripe price IDs from env vars to database
+function syncStripePriceIds(db: Database.Database) {
+  const updatePriceId = db.prepare(
+    'UPDATE subscription_tier SET stripe_price_id = ? WHERE slug = ?'
+  );
+
+  const premiumPriceId = process.env.STRIPE_PRICE_PREMIUM;
+  const teamPriceId = process.env.STRIPE_PRICE_TEAM;
+
+  if (premiumPriceId) {
+    updatePriceId.run(premiumPriceId, 'premium');
+    console.log('[db] Synced Stripe price ID for premium tier');
+  }
+
+  if (teamPriceId) {
+    updatePriceId.run(teamPriceId, 'team');
+    console.log('[db] Synced Stripe price ID for team tier');
+  }
 }

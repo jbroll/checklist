@@ -12,10 +12,9 @@ export function isStripeEnabled(): boolean {
   return stripe !== null;
 }
 
-export const STRIPE_PRICES = {
-  premium: process.env.STRIPE_PRICE_PREMIUM || '',
-  team: process.env.STRIPE_PRICE_TEAM || '',
-} as const;
+// Note: Stripe price IDs are now stored in the database (subscription_tier.stripe_price_id)
+// They are synced from STRIPE_PRICE_PREMIUM and STRIPE_PRICE_TEAM env vars on startup
+// See: backend/src/db.ts syncStripePriceIds()
 
 export type TierSlug = 'free' | 'premium' | 'team' | 'enterprise';
 
