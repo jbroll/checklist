@@ -129,7 +129,6 @@ export function useSessionInteractionMode() {
   const canDrag = useCallback(
     (itemId: string) => {
       // Dragging is allowed when in ADDING mode or already dragging this item
-      // Both Simplified and Classic UI work the same way for dragging
       return isAdding || (isDragging && activeItemId === itemId);
     },
     [isAdding, isDragging, activeItemId],

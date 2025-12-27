@@ -25,7 +25,7 @@ interface UseItemInteractionOptions {
   onStartEdit?: () => void;
   onEndEdit?: () => void;
   isDragging?: boolean; // From dnd-kit useDraggable
-  editModeEnabled?: boolean; // Only allow edit in simplified UI
+  editModeEnabled?: boolean; // Enable long-press to edit
   dragEnabled?: boolean; // Reserved for future use - may control drag behavior
 }
 

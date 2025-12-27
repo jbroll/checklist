@@ -58,7 +58,6 @@ interface TreeViewHeaderProps {
  * Root-level header and drop zone for the main tree view.
  * Acts as a droppable target for moving folders to root level.
  * Styled to integrate with the tree structure.
- * Can be reused in simplified view by setting isDragging to undefined.
  */
 export function TreeViewHeader({
   isDragging = false,
