@@ -12,7 +12,6 @@ interface UseSessionHandlersOptions {
   sessionId: string;
   me: InstanceOfSchema<typeof Account> | null;
   activeItems: TemplateItem[];
-  selectedItems: TemplateItem[];
   checkedItems: TemplateItem[];
   captureScrollPosition: () => void;
   setSelectedItemId: (id: string | null) => void;
@@ -29,7 +28,6 @@ export function useSessionHandlers({
   sessionId,
   me,
   activeItems,
-  selectedItems,
   checkedItems,
   captureScrollPosition,
   setSelectedItemId,
@@ -123,15 +121,13 @@ export function useSessionHandlers({
   const handleClearOrNew = () => {
     if (!me) return;
 
-    const hasCheckedItems = selectedItems.length > 0 || checkedItems.length > 0;
-
-    if (hasCheckedItems) {
+    // Only create a new session if items have been checked off (purchased)
+    // If session is still in default state (no checked items), do nothing
+    if (checkedItems.length > 0) {
       const newSessionId = SessionService.createSession(me, template.$jazz.id);
       if (onSwitchSession) {
         onSwitchSession(newSessionId);
       }
-    } else {
-      SessionService.clearSessionState(me, template.$jazz.id, sessionId);
     }
   };
 

@@ -107,7 +107,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     sessionId,
     me,
     activeItems,
-    selectedItems,
     checkedItems,
     captureScrollPosition,
     setSelectedItemId,
