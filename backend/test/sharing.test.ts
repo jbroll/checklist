@@ -11,6 +11,13 @@ import { setupSharingRoutes } from '../src/shares.js';
 import request from 'supertest';
 import express from 'express';
 
+// Mock the rate limiter
+vi.mock('../src/lib/rate-limiter.js', () => ({
+  shareInviteLimiter: {
+    check: vi.fn().mockReturnValue(true),
+  },
+}));
+
 // Mock the auth module completely to avoid BetterAuth initialization
 vi.mock('../src/auth.js', () => {
   // Create database instance inside the factory to avoid hoisting issues
@@ -36,6 +43,7 @@ vi.mock('../src/agent.js', () => ({
 }));
 
 import { auth, sqliteDb } from '../src/auth.js';
+import { shareInviteLimiter } from '../src/lib/rate-limiter.js';
 
 // Test app setup
 const app = express();
@@ -101,6 +109,7 @@ describe('Folder Sharing API', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+    vi.mocked(shareInviteLimiter.check).mockReturnValue(true);
   });
 
   describe('POST /api/shares/invite', () => {
@@ -148,6 +157,29 @@ describe('Folder Sharing API', () => {
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('unauthorized');
+    });
+
+    it('should reject when rate limited', async () => {
+      // Mock rate limiter to reject
+      vi.mocked(shareInviteLimiter.check).mockReturnValue(false);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_test123',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      expect(response.status).toBe(429);
+      expect(response.body.error).toBe('rate_limited');
+      expect(response.body.message).toContain('Too many invite requests');
     });
   });
 
@@ -469,6 +501,413 @@ describe('Folder Sharing API', () => {
       // Verify invite still exists
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(token);
       expect(invite).toBeDefined();
+    });
+  });
+
+  describe('POST /api/shares/accept with verified emails', () => {
+    it('should accept invite when recipient uses verified alias email', async () => {
+      // Create verified_email table if not exists
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS verified_email (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          verified_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL
+        );
+      `);
+
+      // Add a verified email alias for user 2
+      sqliteDb.prepare(`
+        INSERT OR REPLACE INTO verified_email (id, user_id, email, verified_at, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('ve-1', testUser2.id, 'user2-work@company.com', Date.now(), Date.now());
+
+      // User 1 creates invite for user2's work email
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const createResponse = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: 'user2-work@company.com',
+          folderCoValueId: 'co_test_alias',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      const token = createResponse.body.token;
+
+      // User 2 accepts (logged in with primary email, invite sent to alias)
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser2,
+        session: { id: 'session-2' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/accept')
+        .send({ token });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+
+      // Clean up
+      sqliteDb.prepare('DELETE FROM verified_email WHERE id = ?').run('ve-1');
+    });
+  });
+
+  describe('POST /api/shares/accept edge cases', () => {
+    it('should reject when user has no Jazz account', async () => {
+      // User 1 creates invite
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const createResponse = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_test_no_jazz',
+          permission: 'view',
+          expiresInDays: 7,
+        });
+
+      const token = createResponse.body.token;
+
+      // User 2 tries to accept but has no Jazz accountID
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { ...testUser2, accountID: undefined },
+        session: { id: 'session-2' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/accept')
+        .send({ token });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('no_jazz_account');
+    });
+
+    it('should reject expired invite on accept', async () => {
+      // Create an expired invite directly
+      const expiredToken = 'expired-accept-test';
+      const now = Math.floor(Date.now() / 1000);
+
+      sqliteDb.prepare(`
+        INSERT INTO share_invites (
+          token, sender_email, sender_jazz_account_id, recipient_email,
+          folder_covalue_id, permission, created_at, expires_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        expiredToken,
+        testUser1.email,
+        testUser1.accountID,
+        testUser2.email,
+        'co_test_expired',
+        'edit',
+        now - (10 * 24 * 60 * 60),
+        now - (3 * 24 * 60 * 60) // Expired 3 days ago
+      );
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser2,
+        session: { id: 'session-2' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/accept')
+        .send({ token: expiredToken });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('expired');
+    });
+
+    it('should handle Jazz addToFolderGroup failure gracefully', async () => {
+      const { addToFolderGroup } = await import('../src/agent.js');
+
+      // Mock addToFolderGroup to throw
+      vi.mocked(addToFolderGroup).mockRejectedValueOnce(new Error('Jazz sync failed'));
+
+      // User 1 creates invite
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const createResponse = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_test_jazz_fail',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      const token = createResponse.body.token;
+
+      // User 2 accepts
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser2,
+        session: { id: 'session-2' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/accept')
+        .send({ token });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('failed_to_grant_access');
+
+      // Invite should NOT be marked as accepted
+      const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(token) as any;
+      expect(invite.accepted_at).toBeNull();
+    });
+
+    it('should return alreadyMember when user is already in group', async () => {
+      const { addToFolderGroup } = await import('../src/agent.js');
+
+      // Mock addToFolderGroup to return alreadyMember
+      vi.mocked(addToFolderGroup).mockResolvedValueOnce({ alreadyMember: true });
+
+      // User 1 creates invite
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const createResponse = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_test_already_member',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      const token = createResponse.body.token;
+
+      // User 2 accepts
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser2,
+        session: { id: 'session-2' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/accept')
+        .send({ token });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.alreadyMember).toBe(true);
+    });
+  });
+
+  describe('POST /api/shares/invite with sender validation', () => {
+    it('should reject invite when sender lacks folder access', async () => {
+      const { validateSenderAccess } = await import('../src/agent.js');
+
+      // Mock validateSenderAccess to return false
+      vi.mocked(validateSenderAccess).mockResolvedValueOnce(false);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_folder_no_access',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('forbidden');
+      expect(response.body.message).toContain('do not have access');
+    });
+  });
+
+  describe('GET /api/shares/folders/:folderId/collaborators', () => {
+    it('should return collaborators mapped from Jazz group members', async () => {
+      const { getFolderGroupMembers } = await import('../src/agent.js');
+
+      // Mock Jazz group members
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'admin' },
+        { id: testUser2.accountID, role: 'writer' },
+      ]);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/co_test_collab/collaborators');
+
+      expect(response.status).toBe(200);
+      expect(response.body.collaborators).toHaveLength(2);
+
+      const admin = response.body.collaborators.find((c: any) => c.permission === 'admin');
+      expect(admin).toBeDefined();
+      expect(admin.email).toBe(testUser1.email);
+
+      const editor = response.body.collaborators.find((c: any) => c.permission === 'edit');
+      expect(editor).toBeDefined();
+      expect(editor.email).toBe(testUser2.email);
+    });
+
+    it('should handle Jazz members not in BetterAuth database', async () => {
+      const { getFolderGroupMembers } = await import('../src/agent.js');
+
+      // Mock Jazz group with unknown member
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'admin' },
+        { id: 'co_unknown_user', role: 'reader' },
+      ]);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/co_test_unknown/collaborators');
+
+      expect(response.status).toBe(200);
+      // Should only return the known user
+      expect(response.body.collaborators).toHaveLength(1);
+      expect(response.body.collaborators[0].email).toBe(testUser1.email);
+    });
+
+    it('should require authentication', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/co_test/collaborators');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should handle Jazz error gracefully', async () => {
+      const { getFolderGroupMembers } = await import('../src/agent.js');
+
+      vi.mocked(getFolderGroupMembers).mockRejectedValueOnce(new Error('Jazz error'));
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/co_test_error/collaborators');
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('failed_to_get_collaborators');
+    });
+  });
+
+  describe('DELETE /api/shares/folders/:folderId/collaborators/:accountId', () => {
+    it('should remove collaborator when requester is admin', async () => {
+      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+
+      // Mock: testUser1 is admin
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'admin' },
+        { id: testUser2.accountID, role: 'writer' },
+      ]);
+
+      vi.mocked(removeFromFolderGroup).mockResolvedValueOnce(undefined);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete(`/api/shares/folders/co_test_remove/collaborators/${testUser2.accountID}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(removeFromFolderGroup).toHaveBeenCalledWith('co_test_remove', testUser2.accountID);
+    });
+
+    it('should reject when requester is not admin', async () => {
+      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+
+      // Mock: testUser1 is only a writer
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'writer' },
+        { id: testUser2.accountID, role: 'writer' },
+      ]);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete(`/api/shares/folders/co_test_noadmin/collaborators/${testUser2.accountID}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('forbidden');
+      expect(removeFromFolderGroup).not.toHaveBeenCalled();
+    });
+
+    it('should reject when requester is reader', async () => {
+      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'reader' },
+        { id: testUser2.accountID, role: 'writer' },
+      ]);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete(`/api/shares/folders/co_test_reader/collaborators/${testUser2.accountID}`);
+
+      expect(response.status).toBe(403);
+      expect(removeFromFolderGroup).not.toHaveBeenCalled();
+    });
+
+    it('should handle Jazz removeFromFolderGroup error', async () => {
+      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'admin' },
+      ]);
+
+      vi.mocked(removeFromFolderGroup).mockRejectedValueOnce(new Error('Cannot remove owner'));
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete(`/api/shares/folders/co_test_owner/collaborators/${testUser2.accountID}`);
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('failed_to_remove_collaborator');
+    });
+
+    it('should require authentication', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
+
+      const response = await request(app)
+        .delete('/api/shares/folders/co_test/collaborators/co_user');
+
+      expect(response.status).toBe(401);
     });
   });
 });
