@@ -95,8 +95,8 @@
 <script>
 (function() {
   var hostname = window.location.hostname;
-  var isChecklist = hostname.startsWith('checklist-app.') || hostname.includes('checklist-app');
-  var brand = isChecklist ? {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.app","salesEmail":"sales@checklist.app","logo":"kjekit-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day."} : {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day."};
+  var isChecklist = hostname.includes('checklist');
+  var brand = isChecklist ? {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.rkroll.com","salesEmail":"sales@checklist.rkroll.com","logo":"kjekit-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day."} : {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day."};
 
   // Replace all brand placeholders
   document.querySelectorAll('[data-brand]').forEach(function(el) {

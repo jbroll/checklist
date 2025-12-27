@@ -96,10 +96,10 @@ export const checklistBrand: BrandConfig = {
   themeColor: '#22c55e',
   backgroundColor: '#ffffff',
   storagePrefix: 'checklist',
-  supportEmail: 'support@checklist.app',
-  salesEmail: 'sales@checklist.app',
-  appDomain: 'app.checklist.app',
-  websiteDomain: 'checklist.app',
+  supportEmail: 'support@checklist.rkroll.com',
+  salesEmail: 'sales@checklist.rkroll.com',
+  appDomain: 'checklist-app.rkroll.com',
+  websiteDomain: 'checklist.rkroll.com',
   logos: {
     headerIcon: '/kjekit-icon.svg', // Checklist icon for header
     listIcon: '/kjekit-icon.svg', // Same icon for tree items
@@ -131,7 +131,7 @@ export function getBrand(): BrandConfig {
   // Runtime domain detection
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
-  if (hostname.startsWith('checklist-app.') || hostname.includes('checklist-app')) {
+  if (hostname.includes('checklist')) {
     return checklistBrand;
   }
 

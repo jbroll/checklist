@@ -36,8 +36,8 @@ const brands = {
   checklist: {
     name: 'CheckList',
     tagline: 'Shared Checklists',
-    supportEmail: 'support@checklist.app',
-    salesEmail: 'sales@checklist.app',
+    supportEmail: 'support@checklist.rkroll.com',
+    salesEmail: 'sales@checklist.rkroll.com',
     logo: 'kjekit-icon.svg',
     aboutIntro: 'CheckList is a checklist app designed for lists you use every day.',
   },
@@ -48,7 +48,7 @@ const brandScript = `
 <script>
 (function() {
   var hostname = window.location.hostname;
-  var isChecklist = hostname.startsWith('checklist-app.') || hostname.includes('checklist-app');
+  var isChecklist = hostname.includes('checklist');
   var brand = isChecklist ? ${JSON.stringify(brands.checklist)} : ${JSON.stringify(brands.kjekit)};
 
   // Replace all brand placeholders
