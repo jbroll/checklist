@@ -4,10 +4,12 @@ import type { ViewMode } from '@/components/AuthGate';
 import { UpgradeBanner, UpgradeDialog } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
+import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
+import { ListLimitExceededError } from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import * as subscriptionService from '@/services/subscriptionService';
 import * as userSettingsService from '@/services/userSettingsService';
@@ -58,6 +60,7 @@ export function AppContainer({
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount<typeof Account>() as any;
   const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
+  const { showAlert } = useDialog();
 
   // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)
   useEffect(() => {
@@ -185,9 +188,19 @@ export function AppContainer({
       }
     }
 
-    // Create folder (organizational or template)
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-    folderService.createFolder(me as any, name, isTemplate, parent);
+    try {
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+      folderService.createFolder(me as any, name, isTemplate, parent);
+    } catch (error) {
+      if (error instanceof ListLimitExceededError) {
+        showAlert({
+          title: 'List Limit Reached',
+          message: `You've reached your limit of ${error.maxLists} lists. Upgrade your plan to create more.`,
+        });
+      } else {
+        throw error;
+      }
+    }
   };
 
   const handleUseTemplate = () => {

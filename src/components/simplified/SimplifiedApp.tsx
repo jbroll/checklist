@@ -4,9 +4,11 @@ import type { ViewMode } from '@/components/AuthGate';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
 import { TreeView } from '@/components/tree/TreeView';
 import { LoadingScreen } from '@/components/ui/loading';
+import { useDialog } from '@/lib/dialog-context';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
+import { ListLimitExceededError } from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
 
 // Lazy load heavy components
@@ -47,6 +49,7 @@ export function SimplifiedApp({
   onShowProfileDialogChange,
 }: SimplifiedAppProps) {
   const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
+  const { showAlert } = useDialog();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
@@ -89,8 +92,18 @@ export function SimplifiedApp({
       }
     }
 
-    // Create folder (organizational or template)
-    folderService.createFolder(account, name, isTemplate, parent);
+    try {
+      folderService.createFolder(account, name, isTemplate, parent);
+    } catch (error) {
+      if (error instanceof ListLimitExceededError) {
+        showAlert({
+          title: 'List Limit Reached',
+          message: `You've reached your limit of ${error.maxLists} lists. Upgrade your plan to create more.`,
+        });
+      } else {
+        throw error;
+      }
+    }
   };
 
   // If a template is selected, show session view
