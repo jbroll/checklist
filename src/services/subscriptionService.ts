@@ -128,6 +128,8 @@ export function getSubscriptionStatus(account: AccountParam): SubscriptionStatus
 
 /**
  * Get full subscription info (from Jazz cache)
+ * Note: Limits are always derived from TIER_LIMITS based on tier slug,
+ * not from cached values, to ensure tier changes take effect immediately.
  */
 export function getSubscriptionInfo(account: AccountParam): SubscriptionInfo {
   const userSettings = account?.root?.userSettings;
@@ -137,11 +139,7 @@ export function getSubscriptionInfo(account: AccountParam): SubscriptionInfo {
     tier,
     status: (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'active',
     endsAt: userSettings?.subscriptionEndsAt ?? null,
-    limits: {
-      maxLists: userSettings?.maxLists ?? TIER_LIMITS[tier].maxLists,
-      sessionRetentionDays:
-        userSettings?.sessionRetentionDays ?? TIER_LIMITS[tier].sessionRetentionDays,
-    },
+    limits: TIER_LIMITS[tier],
     syncedAt: userSettings?.subscriptionSyncedAt ?? null,
   };
 }

@@ -97,13 +97,13 @@ describe('SubscriptionService', () => {
   });
 
   describe('getMaxLists', () => {
-    it('should return cached maxLists from settings', () => {
-      const account = createMockAccount({ maxLists: 50 });
+    it('should return maxLists based on subscription tier', () => {
+      const account = createMockAccount({ subscriptionTier: 'premium' });
 
-      expect(getMaxLists(account)).toBe(50);
+      expect(getMaxLists(account)).toBe(30);
     });
 
-    it('should fall back to tier defaults when not cached', () => {
+    it('should return team tier maxLists', () => {
       const account = createMockAccount({ subscriptionTier: 'team' });
 
       expect(getMaxLists(account)).toBe(300);
@@ -117,13 +117,13 @@ describe('SubscriptionService', () => {
   });
 
   describe('getSessionRetentionDays', () => {
-    it('should return cached retention from settings', () => {
-      const account = createMockAccount({ sessionRetentionDays: 180 });
+    it('should return retention based on subscription tier', () => {
+      const account = createMockAccount({ subscriptionTier: 'team' });
 
-      expect(getSessionRetentionDays(account)).toBe(180);
+      expect(getSessionRetentionDays(account)).toBe(365);
     });
 
-    it('should fall back to tier defaults when not cached', () => {
+    it('should return premium tier retention', () => {
       const account = createMockAccount({ subscriptionTier: 'premium' });
 
       expect(getSessionRetentionDays(account)).toBe(30);
@@ -132,28 +132,28 @@ describe('SubscriptionService', () => {
 
   describe('isAtListLimit', () => {
     it('should return true when at limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 5);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 3); // free tier limit is 3
 
       expect(isAtListLimit(account)).toBe(true);
     });
 
     it('should return true when over limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 7);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 5);
 
       expect(isAtListLimit(account)).toBe(true);
     });
 
     it('should return false when under limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 3);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 2);
 
       expect(isAtListLimit(account)).toBe(false);
     });
 
     it('should return false for unlimited tier', () => {
-      const account = createMockAccount({ maxLists: -1 });
+      const account = createMockAccount({ subscriptionTier: 'enterprise' });
       addTemplateFolders(account, 1000);
 
       expect(isAtListLimit(account)).toBe(false);
@@ -162,21 +162,21 @@ describe('SubscriptionService', () => {
 
   describe('canCreateList', () => {
     it('should return true when under limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 4);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 2);
 
       expect(canCreateList(account)).toBe(true);
     });
 
     it('should return false when at limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 5);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 3);
 
       expect(canCreateList(account)).toBe(false);
     });
 
     it('should return true for unlimited tier', () => {
-      const account = createMockAccount({ maxLists: -1 });
+      const account = createMockAccount({ subscriptionTier: 'enterprise' });
       addTemplateFolders(account, 999);
 
       expect(canCreateList(account)).toBe(true);
@@ -185,21 +185,21 @@ describe('SubscriptionService', () => {
 
   describe('getListsRemaining', () => {
     it('should return correct remaining count', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 3);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 1);
 
-      expect(getListsRemaining(account)).toBe(2);
+      expect(getListsRemaining(account)).toBe(2); // 3 - 1 = 2
     });
 
     it('should return 0 when at or over limit', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 6);
+      const account = createMockAccount({ subscriptionTier: 'free' });
+      addTemplateFolders(account, 5);
 
       expect(getListsRemaining(account)).toBe(0);
     });
 
     it('should return -1 for unlimited tier', () => {
-      const account = createMockAccount({ maxLists: -1 });
+      const account = createMockAccount({ subscriptionTier: 'enterprise' });
 
       expect(getListsRemaining(account)).toBe(-1);
     });
@@ -207,21 +207,21 @@ describe('SubscriptionService', () => {
 
   describe('getUsagePercentage', () => {
     it('should return correct percentage', () => {
-      const account = createMockAccount({ maxLists: 10 });
-      addTemplateFolders(account, 3);
+      const account = createMockAccount({ subscriptionTier: 'premium' }); // 30 lists
+      addTemplateFolders(account, 9); // 30%
 
       expect(getUsagePercentage(account)).toBe(30);
     });
 
     it('should cap at 100%', () => {
-      const account = createMockAccount({ maxLists: 5 });
+      const account = createMockAccount({ subscriptionTier: 'free' }); // 3 lists
       addTemplateFolders(account, 10);
 
       expect(getUsagePercentage(account)).toBe(100);
     });
 
     it('should return 0 for unlimited tier', () => {
-      const account = createMockAccount({ maxLists: -1 });
+      const account = createMockAccount({ subscriptionTier: 'enterprise' });
       addTemplateFolders(account, 100);
 
       expect(getUsagePercentage(account)).toBe(0);
@@ -230,28 +230,28 @@ describe('SubscriptionService', () => {
 
   describe('isApproachingLimit', () => {
     it('should return true at 80% usage', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 4); // 80%
+      const account = createMockAccount({ subscriptionTier: 'premium' }); // 30 lists
+      addTemplateFolders(account, 24); // 80%
 
       expect(isApproachingLimit(account)).toBe(true);
     });
 
     it('should return true at 100% usage', () => {
-      const account = createMockAccount({ maxLists: 5 });
-      addTemplateFolders(account, 5);
+      const account = createMockAccount({ subscriptionTier: 'free' }); // 3 lists
+      addTemplateFolders(account, 3);
 
       expect(isApproachingLimit(account)).toBe(true);
     });
 
     it('should return false below 80% usage', () => {
-      const account = createMockAccount({ maxLists: 10 });
-      addTemplateFolders(account, 7); // 70%
+      const account = createMockAccount({ subscriptionTier: 'premium' }); // 30 lists
+      addTemplateFolders(account, 21); // 70%
 
       expect(isApproachingLimit(account)).toBe(false);
     });
 
     it('should return false for unlimited tier', () => {
-      const account = createMockAccount({ maxLists: -1 });
+      const account = createMockAccount({ subscriptionTier: 'enterprise' });
       addTemplateFolders(account, 1000);
 
       expect(isApproachingLimit(account)).toBe(false);

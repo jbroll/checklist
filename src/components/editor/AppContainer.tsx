@@ -352,6 +352,14 @@ export function AppContainer({
               onToggleAutoCategorization={() =>
                 userSettingsService.toggleEnableAutoCategorization(me)
               }
+              subscriptionTier={subscriptionService.getSubscriptionTier(me)}
+              listCount={subscriptionService.countUserLists(me)}
+              maxLists={subscriptionService.getMaxLists(me)}
+              onUpgradeClick={() => {
+                setShowProfileDialog(false);
+                setShowUpgradeDialog(true);
+              }}
+              onManageBillingClick={() => subscriptionService.redirectToPortal()}
             />
           </Suspense>
         )}

@@ -62,7 +62,7 @@ export function ProfileDialog({
   onToggleAutoCategorization,
   subscriptionTier = 'free',
   listCount = 0,
-  maxLists = 5,
+  maxLists = 3,
   onUpgradeClick,
   onManageBillingClick,
 }: ProfileDialogProps) {
@@ -206,7 +206,7 @@ export function ProfileDialog({
                 </span>
               )}
             </div>
-            {subscriptionTier === 'free' && onUpgradeClick ? (
+            {maxLists !== -1 && onUpgradeClick && (
               <Button
                 type="button"
                 variant="outline"
@@ -216,7 +216,8 @@ export function ProfileDialog({
                 <Zap className="h-4 w-4" />
                 Upgrade Plan
               </Button>
-            ) : onManageBillingClick ? (
+            )}
+            {subscriptionTier !== 'free' && onManageBillingClick && (
               <Button
                 type="button"
                 variant="outline"
@@ -226,7 +227,7 @@ export function ProfileDialog({
                 <CreditCard className="h-4 w-4" />
                 Manage Billing
               </Button>
-            ) : null}
+            )}
           </div>
 
           <Button
