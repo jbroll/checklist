@@ -2,13 +2,14 @@
  * UpgradeDialog - Modal for upgrading subscription tier
  *
  * Shows tier comparison and redirects to Stripe checkout.
+ * Tier data is dynamically pulled from subscriptionService.
  */
 
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { brand } from '../../lib/brand';
-import type { AccountParam, SubscriptionTier } from '../../schemas';
-import { getSubscriptionTier, redirectToCheckout } from '../../services/subscriptionService';
+import type { AccountParam } from '../../schemas';
+import { getSubscriptionTier, redirectToCheckout, TIERS } from '../../services/subscriptionService';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 
@@ -27,20 +28,25 @@ interface TierFeature {
   team: string | boolean;
 }
 
+// Dynamic features derived from tier configuration
 const FEATURES: TierFeature[] = [
-  { name: 'Lists', free: '5', premium: '50', team: '250' },
-  { name: 'Session history', free: '30 days', premium: '1 year', team: '5 years' },
+  {
+    name: 'Lists',
+    free: TIERS.free.maxListsDisplay,
+    premium: TIERS.premium.maxListsDisplay,
+    team: TIERS.team.maxListsDisplay,
+  },
+  {
+    name: 'Session history',
+    free: TIERS.free.sessionRetentionDisplay,
+    premium: TIERS.premium.sessionRetentionDisplay,
+    team: TIERS.team.sessionRetentionDisplay,
+  },
   { name: 'Real-time sync', free: true, premium: true, team: true },
   { name: 'Offline support', free: true, premium: true, team: true },
   { name: 'Sharing', free: true, premium: true, team: true },
   { name: 'Encrypted data', free: true, premium: true, team: true },
 ];
-
-const TIER_PRICES: Record<Exclude<SubscriptionTier, 'enterprise'>, string> = {
-  free: '$0',
-  premium: '$9.99/year',
-  team: '$19.99/year',
-};
 
 export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeDialogProps) {
   const [loading, setLoading] = useState<'premium' | 'team' | null>(null);
@@ -122,21 +128,21 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
                     Feature
                   </th>
                   <th className="py-3 text-center text-sm font-medium text-content-secondary">
-                    <div>Free</div>
+                    <div>{TIERS.free.name}</div>
                     <div className="text-xs font-normal text-content-tertiary">
-                      {TIER_PRICES.free}
+                      {TIERS.free.priceDisplay}
                     </div>
                   </th>
                   <th className="py-3 text-center text-sm font-medium text-content-secondary">
-                    <div className="text-green-600">Premium</div>
+                    <div className="text-green-600">{TIERS.premium.name}</div>
                     <div className="text-xs font-normal text-content-tertiary">
-                      {TIER_PRICES.premium}
+                      {TIERS.premium.priceDisplay}
                     </div>
                   </th>
                   <th className="py-3 text-center text-sm font-medium text-content-secondary">
-                    <div>Team</div>
+                    <div>{TIERS.team.name}</div>
                     <div className="text-xs font-normal text-content-tertiary">
-                      {TIER_PRICES.team}
+                      {TIERS.team.priceDisplay}
                     </div>
                   </th>
                 </tr>

@@ -5,9 +5,9 @@
  * Provides limit checking and usage tracking for the freemium model.
  *
  * Tier Limits:
- * - Free: 5 lists, 30-day session history
- * - Premium ($9.99/yr): 100 lists, 1-year session history
- * - Team ($29.99/yr): 500 lists, unlimited session history
+ * - Free: 3 lists, 7-day session history
+ * - Premium ($9.99/yr): 30 lists, 30-day session history
+ * - Team ($19.99/yr): 300 lists, 1-year session history
  * - Enterprise: Unlimited (contact sales)
  */
 
@@ -37,13 +37,71 @@ export interface SubscriptionInfo {
   syncedAt: number | null;
 }
 
-// Default limits per tier (fallback when not synced from backend)
-export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
-  free: { maxLists: 5, sessionRetentionDays: 30 },
-  premium: { maxLists: 50, sessionRetentionDays: 365 },
-  team: { maxLists: 250, sessionRetentionDays: 1825 }, // 5 years
-  enterprise: { maxLists: -1, sessionRetentionDays: -1 }, // -1 = unlimited
+// ============================================================================
+// Tier Configuration (Single Source of Truth)
+// ============================================================================
+
+export interface TierConfig {
+  slug: SubscriptionTier;
+  name: string;
+  priceCents: number;
+  priceDisplay: string;
+  maxLists: number;
+  maxListsDisplay: string;
+  sessionRetentionDays: number;
+  sessionRetentionDisplay: string;
+}
+
+export const TIERS: Record<SubscriptionTier, TierConfig> = {
+  free: {
+    slug: 'free',
+    name: 'Free',
+    priceCents: 0,
+    priceDisplay: 'Free',
+    maxLists: 3,
+    maxListsDisplay: '3',
+    sessionRetentionDays: 7,
+    sessionRetentionDisplay: '7 days',
+  },
+  premium: {
+    slug: 'premium',
+    name: 'Premium',
+    priceCents: 999,
+    priceDisplay: '$9.99/year',
+    maxLists: 30,
+    maxListsDisplay: '30',
+    sessionRetentionDays: 30,
+    sessionRetentionDisplay: '30 days',
+  },
+  team: {
+    slug: 'team',
+    name: 'Team',
+    priceCents: 1999,
+    priceDisplay: '$19.99/year',
+    maxLists: 300,
+    maxListsDisplay: '300',
+    sessionRetentionDays: 365,
+    sessionRetentionDisplay: '1 year',
+  },
+  enterprise: {
+    slug: 'enterprise',
+    name: 'Enterprise',
+    priceCents: 0,
+    priceDisplay: 'Contact sales',
+    maxLists: -1,
+    maxListsDisplay: 'Unlimited',
+    sessionRetentionDays: -1,
+    sessionRetentionDisplay: 'Unlimited',
+  },
 };
+
+// Legacy compatibility - derive TIER_LIMITS from TIERS
+export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = Object.fromEntries(
+  Object.entries(TIERS).map(([key, config]) => [
+    key,
+    { maxLists: config.maxLists, sessionRetentionDays: config.sessionRetentionDays },
+  ]),
+) as Record<SubscriptionTier, TierLimits>;
 
 // Sync interval: 1 hour
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;
@@ -366,13 +424,7 @@ export function getTierDisplayName(tier: SubscriptionTier): string {
  * Get tier price display
  */
 export function getTierPrice(tier: SubscriptionTier): string {
-  const prices: Record<SubscriptionTier, string> = {
-    free: 'Free',
-    premium: '$9.99/year',
-    team: '$19.99/year',
-    enterprise: 'Contact sales',
-  };
-  return prices[tier];
+  return TIERS[tier].priceDisplay;
 }
 
 /**

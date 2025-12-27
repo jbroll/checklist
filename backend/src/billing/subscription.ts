@@ -3,9 +3,9 @@ import { stripe, isStripeEnabled, STRIPE_PRICES, type TierSlug, type Subscriptio
 
 // Default tier limits for when database isn't available
 const DEFAULT_TIERS: Record<TierSlug, { maxLists: number; sessionRetentionDays: number }> = {
-  free: { maxLists: 5, sessionRetentionDays: 30 },
-  premium: { maxLists: 100, sessionRetentionDays: 365 },
-  team: { maxLists: 500, sessionRetentionDays: -1 },
+  free: { maxLists: 3, sessionRetentionDays: 7 },
+  premium: { maxLists: 30, sessionRetentionDays: 30 },
+  team: { maxLists: 300, sessionRetentionDays: 365 },
   enterprise: { maxLists: -1, sessionRetentionDays: -1 },
 };
 

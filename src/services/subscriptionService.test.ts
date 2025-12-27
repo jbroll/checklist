@@ -58,18 +58,18 @@ const addTemplateFolders = (account: any, count: number) => {
 describe('SubscriptionService', () => {
   describe('TIER_LIMITS', () => {
     it('should have correct limits for free tier', () => {
-      expect(TIER_LIMITS.free.maxLists).toBe(5);
-      expect(TIER_LIMITS.free.sessionRetentionDays).toBe(30);
+      expect(TIER_LIMITS.free.maxLists).toBe(3);
+      expect(TIER_LIMITS.free.sessionRetentionDays).toBe(7);
     });
 
     it('should have correct limits for premium tier', () => {
-      expect(TIER_LIMITS.premium.maxLists).toBe(50);
-      expect(TIER_LIMITS.premium.sessionRetentionDays).toBe(365);
+      expect(TIER_LIMITS.premium.maxLists).toBe(30);
+      expect(TIER_LIMITS.premium.sessionRetentionDays).toBe(30);
     });
 
     it('should have correct limits for team tier', () => {
-      expect(TIER_LIMITS.team.maxLists).toBe(250);
-      expect(TIER_LIMITS.team.sessionRetentionDays).toBe(1825); // 5 years
+      expect(TIER_LIMITS.team.maxLists).toBe(300);
+      expect(TIER_LIMITS.team.sessionRetentionDays).toBe(365); // 1 year
     });
 
     it('should have correct limits for enterprise tier', () => {
@@ -106,13 +106,13 @@ describe('SubscriptionService', () => {
     it('should fall back to tier defaults when not cached', () => {
       const account = createMockAccount({ subscriptionTier: 'team' });
 
-      expect(getMaxLists(account)).toBe(250);
+      expect(getMaxLists(account)).toBe(300);
     });
 
     it('should return free tier limit as default', () => {
       const account = createMockAccount({});
 
-      expect(getMaxLists(account)).toBe(5);
+      expect(getMaxLists(account)).toBe(3);
     });
   });
 
@@ -126,7 +126,7 @@ describe('SubscriptionService', () => {
     it('should fall back to tier defaults when not cached', () => {
       const account = createMockAccount({ subscriptionTier: 'premium' });
 
-      expect(getSessionRetentionDays(account)).toBe(365);
+      expect(getSessionRetentionDays(account)).toBe(30);
     });
   });
 
