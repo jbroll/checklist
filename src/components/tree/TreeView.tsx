@@ -34,12 +34,10 @@ interface TreeNode {
 interface TreeViewProps {
   account: InstanceOfSchema<typeof Account>;
   selectedTemplateId?: string | null;
-  selectedFolderId?: string | null; // Changed from selectedEntryId
+  selectedFolderId?: string | null;
   onTemplateSelect?: (templateId: string) => void;
-  onFolderSelect?: (folderId: string) => void; // Changed from onEntrySelect
+  onFolderSelect?: (folderId: string) => void;
   onAddItem?: (parentTemplateId: string) => void;
-  onUseTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
   onOpenSession?: (templateId: string, sessionId: string) => void;
   onExportSession?: (templateId: string, sessionId: string) => void;
   // Header action handlers
@@ -52,13 +50,10 @@ interface TreeViewProps {
   onSignIn?: () => void;
   onDeleteAccount?: () => void;
   isAuthenticated?: boolean;
-  onSwitchToSimplified?: () => void;
-  switchViewLabel?: string;
   // Profile dialog control (lifted state)
   showProfileDialog?: boolean;
   onShowProfileDialogChange?: (show: boolean) => void;
-  // Session display control
-  sessionsEnabled?: boolean;
+  // Archive display control
   hideArchivedTemplatesToggle?: boolean;
   hideArchivedSessionsToggle?: boolean;
   hideArchiveAction?: boolean;
@@ -110,13 +105,11 @@ function buildFolderTree(
 
 export function TreeView({
   account,
-  selectedTemplateId,
+  selectedTemplateId: _selectedTemplateId,
   selectedFolderId,
   onTemplateSelect,
   onFolderSelect,
   onAddItem: _onAddItem,
-  onUseTemplate,
-  onEditTemplate,
   onOpenSession,
   onExportSession,
   onHeaderClick,
@@ -128,11 +121,8 @@ export function TreeView({
   onSignIn,
   onDeleteAccount,
   isAuthenticated,
-  onSwitchToSimplified,
-  switchViewLabel,
   showProfileDialog,
   onShowProfileDialogChange,
-  sessionsEnabled = true,
   hideArchivedTemplatesToggle = false,
   hideArchivedSessionsToggle = false,
   hideArchiveAction = false,
@@ -396,9 +386,9 @@ export function TreeView({
     const { folder, children } = node;
     const isTemplate = folderService.isTemplateFolder(folder);
 
-    // For templates, show sessions only when sessionsEnabled is true
+    // For templates, always show sessions
     let sessionChildren: React.ReactNode[] = [];
-    if (sessionsEnabled && isTemplate && folder.sessions) {
+    if (isTemplate && folder.sessions) {
       const sessions = Array.isArray(folder.sessions)
         ? folder.sessions
         : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
@@ -455,8 +445,6 @@ export function TreeView({
         onRename={(newName) => handleRenameFolder(folder, newName)}
         onArchive={() => handleToggleArchiveFolder(folder)}
         onDelete={() => handleDeleteFolder(folder)}
-        onUseTemplate={isTemplate ? () => onUseTemplate?.(folder.$jazz.id) : undefined}
-        onEditTemplate={isTemplate ? () => onEditTemplate?.(folder.$jazz.id) : undefined}
         onDuplicated={handleFolderDuplicated}
         autoStartEditing={editingFolderId === folder.$jazz.id}
         onAutoEditStarted={() => setEditingFolderId(null)}
@@ -501,12 +489,6 @@ export function TreeView({
     );
   };
 
-  // Determine button states based on selection
-  const isTemplate = selectedFolder ? folderService.isTemplateFolder(selectedFolder) : false;
-
-  // Show Edit/Use buttons only when a non-archived template is selected
-  const canEditOrUse = isTemplate && !selectedFolder?.archived;
-
   // Always show New Folder/List buttons
   // Users can create new items at any time, regardless of selection or archived view state
   const canCreateFolderOrList = true;
@@ -525,23 +507,12 @@ export function TreeView({
         <TreeViewHeader
           isDragging={!!activeFolderId}
           canCreateFolderOrList={canCreateFolderOrList}
-          canEditOrUse={canEditOrUse}
           showArchivedTemplates={showArchivedTemplates}
           showArchivedSessions={showArchivedSessions}
           hideArchivedTemplatesToggle={hideArchivedTemplatesToggle}
           hideArchivedSessionsToggle={hideArchivedSessionsToggle}
           hasArchivedTemplates={hasArchivedTemplates}
           onHeaderClick={onHeaderClick || (() => {})}
-          onEditTemplate={() => {
-            if (selectedTemplateId && onEditTemplate) {
-              onEditTemplate(selectedTemplateId);
-            }
-          }}
-          onUseTemplate={() => {
-            if (selectedTemplateId && onUseTemplate) {
-              onUseTemplate(selectedTemplateId);
-            }
-          }}
           onAddFolder={onAddFolder || (() => {})}
           onAddTemplate={onAddTemplate || (() => {})}
           onExport={onExport || (() => {})}
@@ -553,8 +524,6 @@ export function TreeView({
           onSignIn={onSignIn}
           onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
-          onSwitchView={onSwitchToSimplified}
-          switchViewLabel={switchViewLabel}
           showProfileDialog={showProfileDialog}
           onShowProfileDialogChange={onShowProfileDialogChange}
           canInstallApp={showInstallOption}

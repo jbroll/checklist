@@ -5,8 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
  */
 export type NavState =
   | { view: 'main' }
-  | { view: 'session'; templateId: string; sessionId: string; editing?: boolean }
-  | { view: 'edit'; templateId: string };
+  | { view: 'session'; templateId: string; sessionId: string; editing?: boolean };
 
 /**
  * Parse URL hash to determine navigation state
@@ -40,15 +39,6 @@ function parseHash(hash: string): NavState {
     };
   }
 
-  // Parse edit view: #edit/{templateId}
-  const editMatch = path.match(/^edit\/([^/]+)$/);
-  if (editMatch) {
-    return {
-      view: 'edit',
-      templateId: editMatch[1],
-    };
-  }
-
   // Default to main view for invalid hashes
   return { view: 'main' };
 }
@@ -63,8 +53,6 @@ function stateToHash(state: NavState): string {
         return `#session/${state.templateId}/${state.sessionId}/edit`;
       }
       return `#session/${state.templateId}/${state.sessionId}`;
-    case 'edit':
-      return `#edit/${state.templateId}`;
     default:
       return '';
   }

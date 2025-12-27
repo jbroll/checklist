@@ -1,6 +1,5 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import type { ViewMode } from '@/components/AuthGate';
 import { UpgradeBanner, UpgradeDialog } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
@@ -13,16 +12,11 @@ import { ListLimitExceededError } from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import * as subscriptionService from '@/services/subscriptionService';
 import * as userSettingsService from '@/services/userSettingsService';
-import * as viewStateService from '@/services/viewStateService';
 import { AddFolderDialog } from './AddFolderDialog';
-import { TemplateItemEditor } from './TemplateItemEditor';
 
 // Lazy load heavy components to reduce initial bundle
 const SessionView = lazy(() =>
   import('@/components/session/SessionView').then((m) => ({ default: m.SessionView })),
-);
-const SimplifiedApp = lazy(() =>
-  import('@/components/simplified/SimplifiedApp').then((m) => ({ default: m.SimplifiedApp })),
 );
 const ProfileDialog = lazy(() =>
   import('@/components/auth/ProfileDialog').then((m) => ({ default: m.ProfileDialog })),
@@ -43,8 +37,6 @@ interface AppContainerProps {
   onSignOut?: () => void;
   onSignIn?: () => void;
   onDeleteAccount?: () => void;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   isAuthenticated: boolean;
 }
 
@@ -52,8 +44,6 @@ export function AppContainer({
   onSignOut,
   onSignIn,
   onDeleteAccount,
-  viewMode,
-  onViewModeChange,
   isAuthenticated,
 }: AppContainerProps) {
   // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
@@ -92,7 +82,6 @@ export function AppContainer({
   // Derive navigation state from history hook
   const activeSessionTemplateId = navState.view === 'session' ? navState.templateId : null;
   const activeSessionId = navState.view === 'session' ? navState.sessionId : null;
-  const activeEditTemplateId = navState.view === 'edit' ? navState.templateId : null;
 
   // Find selected folder for import (must be before early return)
   const selectedFolder = useMemo(() => {
@@ -118,57 +107,6 @@ export function AppContainer({
     );
   }
 
-  // Compute switch view label based on current mode
-  const switchViewLabel = viewMode === 'simplified' ? 'Advanced View' : 'Basic View';
-
-  // If view mode is simplified, render SimplifiedApp instead of classic UI
-  if (viewMode === 'simplified') {
-    return (
-      <Suspense fallback={<LoadingScreen />}>
-        <SimplifiedApp
-          // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-          account={me as any}
-          onViewModeChange={onViewModeChange}
-          onSignOut={onSignOut}
-          onSignIn={onSignIn}
-          onDeleteAccount={onDeleteAccount}
-          isAuthenticated={isAuthenticated}
-          showProfileDialog={showProfileDialog}
-          onShowProfileDialogChange={setShowProfileDialog}
-        />
-        {onSignOut && onDeleteAccount && (
-          <Suspense fallback={null}>
-            <ProfileDialog
-              open={showProfileDialog}
-              onOpenChange={setShowProfileDialog}
-              onSignOut={onSignOut}
-              onDeleteAccount={onDeleteAccount}
-              onSwitchView={() => onViewModeChange('classic')}
-              switchViewLabel={switchViewLabel}
-              defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
-              enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-              onChangeDefaultAutocompleteDomain={(domain) =>
-                userSettingsService.setDefaultAutocompleteDomain(me, domain)
-              }
-              onToggleAutoCategorization={() =>
-                userSettingsService.toggleEnableAutoCategorization(me)
-              }
-              subscriptionTier={subscriptionService.getSubscriptionTier(me)}
-              listCount={subscriptionService.countUserLists(me)}
-              maxLists={subscriptionService.getMaxLists(me)}
-              onUpgradeClick={() => {
-                setShowProfileDialog(false);
-                setShowUpgradeDialog(true);
-              }}
-              onManageBillingClick={() => subscriptionService.redirectToPortal()}
-            />
-          </Suspense>
-        )}
-      </Suspense>
-    );
-  }
-
-  // Otherwise render classic UI below
   // Get all template folders from the hierarchy
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const templates = folderService.getAllTemplateFolders(me as any);
@@ -203,32 +141,6 @@ export function AppContainer({
     }
   };
 
-  const handleUseTemplate = () => {
-    if (!selectedTemplateId || !selectedFolder) return;
-
-    // Expand the template and its ancestors so it's visible when returning (using viewState)
-    let current = selectedFolder.parent;
-    while (current) {
-      viewStateService.setFolderExpanded(me, current.$jazz.id, true);
-      current = current.parent;
-    }
-    viewStateService.setFolderExpanded(me, selectedFolder.$jazz.id, true);
-
-    // Create session using service
-    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-    const sessionId = SessionService.createSession(me as any, selectedTemplateId);
-
-    // Navigate to shopping session view (with browser history)
-    navigateTo({ view: 'session', templateId: selectedTemplateId, sessionId });
-  };
-
-  const handleEditTemplate = () => {
-    if (!selectedTemplateId) return;
-
-    // Navigate to template editing view (with browser history)
-    navigateTo({ view: 'edit', templateId: selectedTemplateId });
-  };
-
   const handleBackToTemplates = () => {
     goBack();
   };
@@ -244,12 +156,33 @@ export function AppContainer({
     }
   };
 
-  const handleBackFromEdit = () => {
-    goBack();
-  };
-
   const handleTemplateSelect = (templateId: string) => {
+    // Find the template folder
+    const template = templates.find((t) => t?.$jazz.id === templateId);
+    if (!template) return;
+
+    // Always use the latest session (or create one)
+    const sessions = SessionService.getSessions(me, templateId);
+    const activeSessions = sessions.filter((s) => !s.archived);
+
+    let sessionId: string;
+    if (activeSessions.length > 0) {
+      // Find latest session by createdAt
+      const latestSession = activeSessions.reduce((latest, current) => {
+        const latestTime = latest?.createdAt ? new Date(latest.createdAt).getTime() : 0;
+        const currentTime = current?.createdAt ? new Date(current.createdAt).getTime() : 0;
+        return currentTime > latestTime ? current : latest;
+      });
+      sessionId = latestSession.id;
+    } else {
+      // No session exists - create a new one
+      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
+      sessionId = SessionService.createSession(me as any, templateId);
+    }
+
+    // Navigate to session view (with browser history)
     setSelectedTemplateId(templateId);
+    navigateTo({ view: 'session', templateId, sessionId });
   };
 
   const handleFolderSelect = (folderId: string) => {
@@ -266,15 +199,6 @@ export function AppContainer({
     setSessionExportData({ templateId, sessionId });
     setShowSessionExportDialog(true);
   };
-
-  // If editing a template, show TemplateItemEditor
-  if (activeEditTemplateId) {
-    const editTemplate = templates.find((t) => t?.$jazz.id === activeEditTemplateId);
-    if (editTemplate) {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-      return <TemplateItemEditor template={editTemplate as any} onBack={handleBackFromEdit} />;
-    }
-  }
 
   // If viewing a shopping session, show SessionView
   if (activeSessionTemplateId && activeSessionId) {
@@ -311,8 +235,6 @@ export function AppContainer({
           selectedFolderId={selectedFolderId}
           onTemplateSelect={handleTemplateSelect}
           onFolderSelect={handleFolderSelect}
-          onUseTemplate={handleUseTemplate}
-          onEditTemplate={handleEditTemplate}
           onOpenSession={(templateId, sessionId) => {
             navigateTo({ view: 'session', templateId, sessionId });
           }}
@@ -334,11 +256,8 @@ export function AppContainer({
           onSignIn={onSignIn}
           onDeleteAccount={onDeleteAccount}
           isAuthenticated={isAuthenticated}
-          onSwitchToSimplified={() => onViewModeChange('simplified')}
-          switchViewLabel={switchViewLabel}
           showProfileDialog={showProfileDialog}
           onShowProfileDialogChange={setShowProfileDialog}
-          sessionsEnabled={true}
         />
 
         <AddFolderDialog
@@ -425,8 +344,6 @@ export function AppContainer({
               onOpenChange={setShowProfileDialog}
               onSignOut={onSignOut}
               onDeleteAccount={onDeleteAccount}
-              onSwitchView={() => onViewModeChange('simplified')}
-              switchViewLabel={switchViewLabel}
               defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
               enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
               onChangeDefaultAutocompleteDomain={(domain) =>

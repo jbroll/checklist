@@ -1,16 +1,13 @@
 import { useDroppable } from '@dnd-kit/core';
 import {
   Archive,
-  CheckSquare,
   Download,
   FolderPlus,
   Info,
-  LayoutGrid,
   ListPlus,
   LogIn,
   Mail,
   MoreVertical,
-  Pencil,
   Smartphone,
   Trash2,
   Upload,
@@ -32,15 +29,12 @@ import { brand } from '@/lib/brand';
 interface TreeViewHeaderProps {
   isDragging?: boolean;
   canCreateFolderOrList: boolean;
-  canEditOrUse: boolean;
   showArchivedTemplates?: boolean;
   showArchivedSessions?: boolean;
   hideArchivedTemplatesToggle?: boolean;
   hideArchivedSessionsToggle?: boolean;
   hasArchivedTemplates?: boolean;
   onHeaderClick: () => void;
-  onEditTemplate: () => void;
-  onUseTemplate: () => void;
   onAddFolder: () => void;
   onAddTemplate: () => void;
   onExport: () => void;
@@ -53,8 +47,6 @@ interface TreeViewHeaderProps {
   onDeleteAccount?: () => void;
   onPendingInvites?: () => void;
   isAuthenticated?: boolean;
-  onSwitchView?: () => void;
-  switchViewLabel?: string;
   showProfileDialog?: boolean;
   onShowProfileDialogChange?: (show: boolean) => void;
   canInstallApp?: boolean;
@@ -71,15 +63,12 @@ interface TreeViewHeaderProps {
 export function TreeViewHeader({
   isDragging = false,
   canCreateFolderOrList,
-  canEditOrUse,
   showArchivedTemplates = false,
   showArchivedSessions = false,
   hideArchivedTemplatesToggle = false,
   hideArchivedSessionsToggle = false,
   hasArchivedTemplates = false,
   onHeaderClick,
-  onEditTemplate,
-  onUseTemplate,
   onAddFolder,
   onAddTemplate,
   onExport,
@@ -92,8 +81,6 @@ export function TreeViewHeader({
   onDeleteAccount,
   onPendingInvites,
   isAuthenticated = false,
-  onSwitchView,
-  switchViewLabel = 'Basic View',
   showProfileDialog: _showProfileDialog = false,
   onShowProfileDialogChange,
   canInstallApp = false,
@@ -135,42 +122,6 @@ export function TreeViewHeader({
         </button>
         <TooltipProvider>
           <div className="flex items-center gap-2">
-            {canEditOrUse && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      onClick={onEditTemplate}
-                      variant="outline"
-                      size="icon"
-                      aria-label="Edit list"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Edit List</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      onClick={onUseTemplate}
-                      variant="outline"
-                      size="icon"
-                      aria-label="Use list"
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Use List</p>
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            )}
             {canCreateFolderOrList && (
               <>
                 <Tooltip>
@@ -288,20 +239,12 @@ export function TreeViewHeader({
                         Profile
                       </DropdownMenuItem>
                     ) : (
-                      <>
-                        {onSwitchView && (
-                          <DropdownMenuItem onClick={onSwitchView}>
-                            <LayoutGrid className="mr-2 h-4 w-4" />
-                            {switchViewLabel}
-                          </DropdownMenuItem>
-                        )}
-                        {onSignIn && (
-                          <DropdownMenuItem onClick={onSignIn}>
-                            <LogIn className="mr-2 h-4 w-4" />
-                            Sign In
-                          </DropdownMenuItem>
-                        )}
-                      </>
+                      onSignIn && (
+                        <DropdownMenuItem onClick={onSignIn}>
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Sign In
+                        </DropdownMenuItem>
+                      )
                     )}
                   </>
                 )}

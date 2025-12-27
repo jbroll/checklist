@@ -58,8 +58,6 @@ interface FolderNodeViewProps {
   onRename?: (newName: string) => void;
   onDelete?: () => void;
   onArchive?: () => void;
-  onUseTemplate?: () => void;
-  onEditTemplate?: () => void;
   onDuplicated?: (newFolder: InstanceOfSchema<typeof FolderNode>) => void;
   autoStartEditing?: boolean;
   onAutoEditStarted?: () => void;
@@ -78,8 +76,6 @@ export const FolderNodeView = memo(function FolderNodeView({
   onRename,
   onDelete,
   onArchive,
-  onUseTemplate: _onUseTemplate,
-  onEditTemplate: _onEditTemplate,
   onDuplicated,
   autoStartEditing = false,
   onAutoEditStarted,

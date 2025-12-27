@@ -2,7 +2,6 @@ import {
   ChevronDown,
   CreditCard,
   FolderSearch,
-  LayoutGrid,
   LogOut,
   Moon,
   Sparkles,
@@ -39,8 +38,6 @@ interface ProfileDialogProps {
   onOpenChange: (open: boolean) => void;
   onSignOut: () => void;
   onDeleteAccount: () => void;
-  onSwitchView?: () => void;
-  switchViewLabel?: string;
   // User settings
   defaultAutocompleteDomain?: AutocompleteDomain;
   enableAutoCategorization?: boolean;
@@ -59,8 +56,6 @@ export function ProfileDialog({
   onOpenChange,
   onSignOut,
   onDeleteAccount,
-  onSwitchView,
-  switchViewLabel = 'Basic View',
   defaultAutocompleteDomain = 'grocery',
   enableAutoCategorization = true,
   onChangeDefaultAutocompleteDomain,
@@ -81,10 +76,6 @@ export function ProfileDialog({
   const handleDeleteAccount = () => {
     onOpenChange(false);
     onDeleteAccount();
-  };
-
-  const handleSwitchView = () => {
-    onSwitchView?.();
   };
 
   return (
@@ -109,17 +100,6 @@ export function ProfileDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4 flex flex-col gap-3">
-          {onSwitchView && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={handleSwitchView}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              {switchViewLabel}
-            </Button>
-          )}
           <Button
             type="button"
             variant="outline"

@@ -18,8 +18,8 @@ import { type AccountParam, ViewState } from '../schemas';
  */
 export function getFolderExpanded(account: AccountParam, folderId: string): boolean {
   const viewState = account?.root?.viewState;
-  if (!viewState?.folderExpanded) return true; // Default to expanded
-  return viewState.folderExpanded[folderId] ?? true;
+  if (!viewState?.folderExpanded) return false; // Default to collapsed
+  return viewState.folderExpanded[folderId] ?? false;
 }
 
 /**

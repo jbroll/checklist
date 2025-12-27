@@ -10,8 +10,6 @@ import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
 import { LoadingScreen } from './ui/loading';
 
-export type ViewMode = 'classic' | 'simplified';
-
 export function AuthGate() {
   // Check if user just verified their email
   // Use sessionStorage to persist across remounts (Jazz can cause remounts during init)
@@ -52,17 +50,6 @@ export function AuthGate() {
   // Run viewState cleanup in the background
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with optional root
   useViewStateCleanup(me as any);
-
-  // View mode state - defaults to "simplified" for new users
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const stored = localStorage.getItem('view-mode');
-    return stored ? (stored as ViewMode) : 'simplified';
-  });
-
-  // Persist view mode preference to localStorage
-  useEffect(() => {
-    localStorage.setItem('view-mode', viewMode);
-  }, [viewMode]);
 
   // Track if user explicitly signed out
   const [userSignedOut, setUserSignedOut] = useState(
@@ -221,8 +208,6 @@ export function AuthGate() {
         key={`auth-${accountId}`}
         onSignOut={handleSignOut}
         onDeleteAccount={handleDeleteAccount}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         isAuthenticated={true}
       />
     );
@@ -241,8 +226,6 @@ export function AuthGate() {
       <AppContainer
         key={`anon-${accountId}`}
         onSignIn={handleShowSignInDialog}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         isAuthenticated={false}
       />
     </>
