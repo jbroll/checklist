@@ -145,6 +145,11 @@ export function createItem(
   };
 
   template.$jazz.set('items', [...template.items, newItem]);
+
+  // Auto-add new items to defaults
+  const defaultItems = { ...(template.defaultItems || {}), [newItem.id]: true };
+  template.$jazz.set('defaultItems', defaultItems);
+
   template.$jazz.set('updatedAt', new Date());
 
   return newItem.id;
@@ -520,4 +525,98 @@ export function calculateInsertionPoint(
   const nextItem = siblings[selectedIndex + 1];
   const sortOrder = (selectedItem.sortOrder + nextItem.sortOrder) / 2;
   return { parentPath, sortOrder };
+}
+
+// ============================================================================
+// Default Items Operations
+// ============================================================================
+
+/**
+ * Set whether an item is a default item (selected when creating new sessions)
+ */
+export function setItemDefault(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+  isDefault: boolean,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const defaultItems = { ...(template.defaultItems || {}) };
+
+  if (isDefault) {
+    defaultItems[itemId] = true;
+  } else {
+    delete defaultItems[itemId];
+  }
+
+  template.$jazz.set('defaultItems', defaultItems);
+  template.$jazz.set('updatedAt', new Date());
+}
+
+/**
+ * Toggle item's default state
+ */
+export function toggleItemDefault(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemId: string,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const isCurrentlyDefault = template.defaultItems?.[itemId] ?? false;
+  setItemDefault(account, templateId, itemId, !isCurrentlyDefault);
+}
+
+/**
+ * Batch set default items
+ */
+export function batchSetItemsDefault(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemIds: string[],
+  isDefault: boolean,
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const defaultItems = { ...(template.defaultItems || {}) };
+
+  for (const itemId of itemIds) {
+    if (isDefault) {
+      defaultItems[itemId] = true;
+    } else {
+      delete defaultItems[itemId];
+    }
+  }
+
+  template.$jazz.set('defaultItems', defaultItems);
+  template.$jazz.set('updatedAt', new Date());
+}
+
+/**
+ * Invert default state for items
+ */
+export function invertItemsDefault(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+  itemIds: string[],
+): void {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+
+  const defaultItems = { ...(template.defaultItems || {}) };
+
+  for (const itemId of itemIds) {
+    if (defaultItems[itemId]) {
+      delete defaultItems[itemId];
+    } else {
+      defaultItems[itemId] = true;
+    }
+  }
+
+  template.$jazz.set('defaultItems', defaultItems);
+  template.$jazz.set('updatedAt', new Date());
 }

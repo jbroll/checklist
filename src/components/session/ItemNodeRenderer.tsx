@@ -183,8 +183,8 @@ export function ItemNodeRenderer({
         showDeleteIcon={showAddForm}
         enableDrag={showAddForm}
         enableEdit={showAddForm}
-        showCheckbox={!showAddForm}
-        onEditNote={!showAddForm ? onEditNote : undefined}
+        showCheckbox={item.type === 'item'}
+        onEditNote={onEditNote}
       />
       {/* Reorder zone after each sibling */}
       <ReorderDropZone

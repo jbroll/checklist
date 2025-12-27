@@ -89,6 +89,37 @@ export function useSessionHandlers({
     SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
   };
 
+  // Default items handlers - update both defaults AND current session
+  const handleToggleDefault = (itemId: string) => {
+    if (!me) return;
+    captureScrollPosition();
+    // Toggle in defaultItems
+    templateService.toggleItemDefault(me, template.$jazz.id, itemId);
+    // Also toggle in current session to keep them in sync
+    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
+  };
+
+  const handleBatchDefaultSelectAll = (itemIds: string[]) => {
+    if (!me) return;
+    captureScrollPosition();
+    templateService.batchSetItemsDefault(me, template.$jazz.id, itemIds, true);
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
+  };
+
+  const handleBatchDefaultDeselectAll = (itemIds: string[]) => {
+    if (!me) return;
+    captureScrollPosition();
+    templateService.batchSetItemsDefault(me, template.$jazz.id, itemIds, false);
+    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
+  };
+
+  const handleBatchDefaultToggle = (itemIds: string[]) => {
+    if (!me) return;
+    captureScrollPosition();
+    templateService.invertItemsDefault(me, template.$jazz.id, itemIds);
+    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
+  };
+
   const handleClearOrNew = () => {
     if (!me) return;
 
@@ -230,6 +261,10 @@ export function useSessionHandlers({
       finalSortOrder,
     );
 
+    // Also add the new item to the current session (since it's auto-added to defaults,
+    // we need to sync the session state to match)
+    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, newItemId);
+
     setSelectedItemId(newItemId);
   };
 
@@ -243,6 +278,10 @@ export function useSessionHandlers({
     handleBatchSelectAll,
     handleBatchDeselectAll,
     handleBatchToggle,
+    handleToggleDefault,
+    handleBatchDefaultSelectAll,
+    handleBatchDefaultDeselectAll,
+    handleBatchDefaultToggle,
     handleClearOrNew,
     handleAddItem,
     handleAddItemWithInsertionPoint,

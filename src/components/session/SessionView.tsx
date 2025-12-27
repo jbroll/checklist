@@ -30,7 +30,7 @@ interface SessionViewProps {
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount<typeof Account>() as any;
-  const { navState, navigateTo } = useNavigationHistory();
+  const { navState, navigateTo, goBack } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const [zoneExpanded, setZoneExpanded] = useState({
@@ -46,14 +46,20 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   // Toggle edit mode with browser history
   const setShowAddForm = useCallback(
     (show: boolean) => {
-      navigateTo({
-        view: 'session',
-        templateId,
-        sessionId,
-        editing: show,
-      });
+      if (show) {
+        // Entering edit mode: push new history entry so back button exits edit
+        navigateTo({
+          view: 'session',
+          templateId,
+          sessionId,
+          editing: true,
+        });
+      } else {
+        // Exiting edit mode: go back to previous state (don't push new entry)
+        goBack();
+      }
     },
-    [navigateTo, templateId, sessionId],
+    [navigateTo, goBack, templateId, sessionId],
   );
 
   // Get session early (before hooks)
@@ -249,67 +255,82 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                 />
               )}
 
-              {/* Available Items Zone */}
-              {itemTree.length === 0 ? (
-                <div className="p-8 text-center text-content-tertiary bg-blue-50 dark:bg-blue-900/20">
-                  <p>No items in this list yet.</p>
-                </div>
-              ) : (
-                <div ref={availableZoneRef} className="bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <SessionZone
-                    title="Available Items"
-                    icon={Package}
-                    zone="available"
-                    items={activeItems}
-                    itemStates={session.itemStates || {}}
-                    expanded={zoneExpanded.available}
-                    onToggleExpand={() =>
-                      setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
-                    }
-                    onToggleSelected={handlers.handleToggleSelected}
-                    onToggleChecked={handlers.handleToggleChecked}
-                    onBatchSelectAll={!showAddForm ? handlers.handleBatchSelectAll : undefined}
-                    onBatchDeselectAll={!showAddForm ? handlers.handleBatchDeselectAll : undefined}
-                    onBatchToggle={!showAddForm ? handlers.handleBatchToggle : undefined}
-                    count={activeItems.length}
-                    showHeading={!showAddForm}
-                    onEditNote={noteEditor.openNoteEditor('available')}
+              {/* Empty state - shopping mode with no selected items */}
+              {!showAddForm && selectedItems.length === 0 && checkedItems.length === 0 && (
+                <div className="p-8 text-center text-content-tertiary">
+                  <p>No items selected for this session.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(true)}
+                    className="mt-4 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    <div className="divide-y divide-divider-secondary">
-                      {/* Invisible anchor element for scroll preservation */}
-                      <div ref={anchorRef} className="h-0" />
-                      {itemTree.map((node, index) => (
-                        <ItemNodeRenderer
-                          key={node.item.id}
-                          node={node}
-                          depth={0}
-                          siblings={itemTree}
-                          index={index}
-                          showAddForm={showAddForm}
-                          selectedItemId={selectedItemId}
-                          currentItemId={currentItemId}
-                          setSelectedItemId={setSelectedItemId}
-                          setCurrentItemId={setCurrentItemId}
-                          session={session}
-                          template={template}
-                          activeItems={activeItems}
-                          activeItem={activeItem}
-                          isCategoryExpanded={isCategoryExpanded}
-                          onRenameItem={handlers.handleRenameItem}
-                          onDeleteItem={handlers.handleDeleteItem}
-                          onToggleExpand={handlers.handleToggleExpand}
-                          onToggleSelected={handlers.handleToggleSelected}
-                          onToggleChecked={handlers.handleToggleChecked}
-                          onBatchSelectAll={handlers.handleBatchSelectAll}
-                          onBatchDeselectAll={handlers.handleBatchDeselectAll}
-                          onBatchToggle={handlers.handleBatchToggle}
-                          onEditNote={noteEditor.openNoteEditor('available')}
-                        />
-                      ))}
-                    </div>
-                  </SessionZone>
+                    Edit to select default items
+                  </button>
                 </div>
               )}
+
+              {/* Edit mode - show all items with checkboxes to edit defaults */}
+              {showAddForm &&
+                (itemTree.length === 0 ? (
+                  <div className="p-8 text-center text-content-tertiary bg-blue-50 dark:bg-blue-900/20">
+                    <p>No items in this list yet.</p>
+                  </div>
+                ) : (
+                  <div ref={availableZoneRef} className="bg-blue-50 dark:bg-blue-900/20 p-4">
+                    <SessionZone
+                      title="Default Items"
+                      icon={Package}
+                      zone="available"
+                      items={activeItems}
+                      itemStates={session.itemStates || {}}
+                      expanded={zoneExpanded.available}
+                      onToggleExpand={() =>
+                        setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
+                      }
+                      onToggleSelected={handlers.handleToggleDefault}
+                      onToggleChecked={handlers.handleToggleChecked}
+                      onBatchSelectAll={handlers.handleBatchDefaultSelectAll}
+                      onBatchDeselectAll={handlers.handleBatchDefaultDeselectAll}
+                      onBatchToggle={handlers.handleBatchDefaultToggle}
+                      count={activeItems.length}
+                      showHeading={true}
+                      onEditNote={noteEditor.openNoteEditor('available')}
+                    >
+                      <div className="divide-y divide-divider-secondary">
+                        {/* Invisible anchor element for scroll preservation */}
+                        <div ref={anchorRef} className="h-0" />
+                        {itemTree.map((node, index) => (
+                          <ItemNodeRenderer
+                            key={node.item.id}
+                            node={node}
+                            depth={0}
+                            siblings={itemTree}
+                            index={index}
+                            showAddForm={showAddForm}
+                            selectedItemId={selectedItemId}
+                            currentItemId={currentItemId}
+                            setSelectedItemId={setSelectedItemId}
+                            setCurrentItemId={setCurrentItemId}
+                            session={session}
+                            template={template}
+                            activeItems={activeItems}
+                            activeItem={activeItem}
+                            isCategoryExpanded={isCategoryExpanded}
+                            onRenameItem={handlers.handleRenameItem}
+                            onDeleteItem={handlers.handleDeleteItem}
+                            onToggleExpand={handlers.handleToggleExpand}
+                            onToggleSelected={handlers.handleToggleDefault}
+                            onToggleChecked={handlers.handleToggleChecked}
+                            onBatchSelectAll={handlers.handleBatchDefaultSelectAll}
+                            onBatchDeselectAll={handlers.handleBatchDefaultDeselectAll}
+                            onBatchToggle={handlers.handleBatchDefaultToggle}
+                            onEditNote={noteEditor.openNoteEditor('available')}
+                          />
+                        ))}
+                      </div>
+                    </SessionZone>
+                  </div>
+                ))}
             </div>
           </div>
         </div>

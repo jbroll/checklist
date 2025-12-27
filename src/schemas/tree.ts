@@ -134,6 +134,10 @@ export const FolderNode: any = co.map({
   ),
   showZoneHeadings: z.optional(z.boolean()),
 
+  // Default items - which items are pre-selected when creating new sessions
+  // Maps itemId -> true for items that should be selected by default
+  defaultItems: z.optional(z.record(z.string(), z.boolean())),
+
   // Per-template autocomplete/categorization settings (override global user settings)
   // undefined = inherit from global user settings
   // autocompleteDomain: 'none' | 'grocery' | 'hardware' | 'outdoor' | 'all' (or undefined to inherit)
@@ -206,6 +210,10 @@ export const Template = co.map({
 
   // Template-specific settings
   showZoneHeadings: z.boolean(),
+
+  // Default items - which items are pre-selected when creating new sessions
+  // Maps itemId -> true for items that should be selected by default
+  defaultItems: z.optional(z.record(z.string(), z.boolean())),
 
   // Per-template autocomplete/categorization settings (override global user settings)
   // undefined = inherit from global user settings

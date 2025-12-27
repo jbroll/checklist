@@ -63,6 +63,14 @@ export function SimplifiedApp({
     const targetId = selectedTemplateId || selectedFolderId;
     if (!account?.root?.folders || !targetId) return null;
 
+    // Defensive check: ensure folders is iterable (Jazz CoList may not be ready)
+    let foldersArray: InstanceOfSchema<typeof FolderNode>[];
+    try {
+      foldersArray = Array.from(account.root.folders);
+    } catch {
+      return null;
+    }
+
     const findFolder = (
       folders: InstanceOfSchema<typeof FolderNode>[],
     ): InstanceOfSchema<typeof FolderNode> | null => {
@@ -70,14 +78,14 @@ export function SimplifiedApp({
         if (!f) continue;
         if (f.$jazz.id === targetId) return f;
         if (f.children) {
-          const found = findFolder(f.children);
+          const found = findFolder(Array.from(f.children));
           if (found) return found;
         }
       }
       return null;
     };
 
-    return findFolder(Array.from(account.root.folders));
+    return findFolder(foldersArray);
   }, [selectedTemplateId, selectedFolderId, account?.root?.folders]);
 
   // Compute parent folder for import based on selected folder

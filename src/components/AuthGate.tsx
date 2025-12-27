@@ -101,6 +101,7 @@ export function AuthGate() {
     // Each domain (app.kjekit.com, checklist.rkroll.com) uses its own origin
     betterAuthClient.signIn.social({
       provider: 'google',
+      callbackURL: window.location.origin,
     });
   };
 
@@ -112,6 +113,7 @@ export function AuthGate() {
     // BetterAuth handles OAuth redirect automatically
     betterAuthClient.signIn.social({
       provider: 'apple',
+      callbackURL: window.location.origin,
     });
   };
 

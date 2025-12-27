@@ -219,8 +219,10 @@ export function getOriginFromRequest(headers: Record<string, string | string[] |
     host = typeof hostHeader === 'string' ? hostHeader : undefined;
   }
 
-  const proto = headers['x-forwarded-proto'] || 'https';
-  const protocol = typeof proto === 'string' ? proto.split(',')[0].trim() : 'https';
+  // Default to http for local development, https for production
+  const defaultProto = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const proto = headers['x-forwarded-proto'] || defaultProto;
+  const protocol = typeof proto === 'string' ? proto.split(',')[0].trim() : defaultProto;
 
   return `${protocol}://${host}`;
 }

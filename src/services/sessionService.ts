@@ -110,16 +110,33 @@ export function createSession(
   const activeItems = template.items.filter(
     (item: TemplateItem) => !item.archived && item.type === 'item',
   );
-  const remainingCount = activeItems.length;
+
+  // Initialize itemStates from template.defaultItems
+  const itemStates: Record<string, ItemState> = {};
+  const defaultItems = template.defaultItems || {};
+  let selectedCount = 0;
+
+  for (const item of activeItems) {
+    if (defaultItems[item.id]) {
+      itemStates[item.id] = {
+        selected: true,
+        checked: false,
+        selectedAt: now,
+      };
+      selectedCount++;
+    }
+  }
+
+  const remainingCount = activeItems.length - selectedCount;
 
   // Create new list session as plain JavaScript object
   const newSession: SessionData = {
     id: generateId(),
-    itemStates: {},
+    itemStates,
     archived: false,
     categoryExpanded: {},
     viewMode: 'zone-in-hierarchy', // Default view mode
-    selectedCount: 0,
+    selectedCount,
     checkedCount: 0,
     remainingCount,
     createdAt: now,
