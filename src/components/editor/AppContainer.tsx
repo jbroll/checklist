@@ -78,7 +78,7 @@ export function AppContainer({
   const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [upgradeMessage, setUpgradeMessage] = useState<string | undefined>(undefined);
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
   const [sessionExportData, setSessionExportData] = useState<{
     templateId: string;
     sessionId: string;
@@ -320,9 +320,9 @@ export function AppContainer({
           onHeaderClick={handleHeaderClick}
           onAddFolder={() => setShowAddFolder(true)}
           onAddTemplate={() => {
-            // Check if at list limit before showing add template dialog
             if (subscriptionService.isAtListLimit(me)) {
-              setUpgradeMessage("You've reached your list limit.");
+              const maxLists = subscriptionService.getMaxLists(me);
+              setUpgradeReason(`${maxLists} list limit reached`);
               setShowUpgradeDialog(true);
             } else {
               setShowAddTemplate(true);
@@ -376,9 +376,12 @@ export function AppContainer({
         {/* Upgrade Dialog */}
         <UpgradeDialog
           open={showUpgradeDialog}
-          onOpenChange={setShowUpgradeDialog}
+          onOpenChange={(open) => {
+            setShowUpgradeDialog(open);
+            if (!open) setUpgradeReason(undefined);
+          }}
           account={me}
-          message={upgradeMessage}
+          message={upgradeReason}
         />
 
         {/* Session Export Dialog */}

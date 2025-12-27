@@ -1,6 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import type { ViewMode } from '@/components/AuthGate';
+import { UpgradeDialog } from '@/components/billing';
 import { AddFolderDialog } from '@/components/editor/AddFolderDialog';
 import { TreeView } from '@/components/tree/TreeView';
 import { LoadingScreen } from '@/components/ui/loading';
@@ -10,6 +11,7 @@ import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import { ListLimitExceededError } from '@/services/folderService';
 import * as sessionService from '@/services/sessionService';
+import * as subscriptionService from '@/services/subscriptionService';
 
 // Lazy load heavy components
 const ExportDialog = lazy(() =>
@@ -55,6 +57,8 @@ export function SimplifiedApp({
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
 
   // Derive navigation state from history hook
   const selectedTemplateId = navState.view === 'session' ? navState.templateId : null;
@@ -205,7 +209,15 @@ export function SimplifiedApp({
           onEditTemplate={handleEditTemplate}
           onHeaderClick={handleHeaderClick}
           onAddFolder={() => setShowAddFolder(true)}
-          onAddTemplate={() => setShowAddTemplate(true)}
+          onAddTemplate={() => {
+            if (subscriptionService.isAtListLimit(account)) {
+              const maxLists = subscriptionService.getMaxLists(account);
+              setUpgradeReason(`${maxLists} list limit reached`);
+              setShowUpgradeDialog(true);
+            } else {
+              setShowAddTemplate(true);
+            }
+          }}
           onExport={() => setShowExportDialog(true)}
           onImport={() => setShowImportDialog(true)}
           onSignOut={onSignOut}
@@ -252,6 +264,16 @@ export function SimplifiedApp({
             parentFolder={importParentFolder}
           />
         </Suspense>
+
+        <UpgradeDialog
+          open={showUpgradeDialog}
+          onOpenChange={(open) => {
+            setShowUpgradeDialog(open);
+            if (!open) setUpgradeReason(undefined);
+          }}
+          account={account}
+          message={upgradeReason}
+        />
       </main>
     </div>
   );
