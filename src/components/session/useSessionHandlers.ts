@@ -131,18 +131,33 @@ export function useSessionHandlers({
     }
   };
 
-  const handleAddItem = (value: ItemInputValue) => {
+  // Find existing category by name at root level
+  const findCategoryByName = (categoryName: string): TemplateItem | undefined => {
+    return activeItems.find(
+      (item) =>
+        item.type === 'category' && item.name === categoryName && item.path === categoryName,
+    );
+  };
+
+  // Core add-item logic shared by both handlers
+  const addItemCore = (
+    value: ItemInputValue,
+    selectedItemId: string | null,
+    syncToSession: boolean,
+  ): string | undefined => {
     if (!me) return;
 
-    // For categories, use standard insertion point logic
+    const templateId = template.$jazz.id;
+
+    // For categories, use insertion point logic
     if (value.type === 'category') {
       const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
         template,
-        null, // selectedItemId passed separately
+        selectedItemId,
       );
       const newItemId = templateService.createCategory(
         me,
-        template.$jazz.id,
+        templateId,
         value.name,
         parentPath,
         sortOrder,
@@ -151,118 +166,51 @@ export function useSessionHandlers({
       return newItemId;
     }
 
-    // For items, check if auto-categorization is enabled
+    // For items, determine parent path based on auto-categorization
     const autoCategorizeEnabled = userSettingsService.getTemplateAutoCategorizeEnabled(
       me,
       template,
     );
-
     let finalParentPath: string | undefined;
     let finalSortOrder: number | undefined;
 
-    // If categoryInfo provided and auto-categorization is enabled, place item in category
     if (value.categoryInfo && autoCategorizeEnabled) {
       const categoryName = value.categoryInfo.subcategoryName || value.categoryInfo.categoryName;
-
-      const existingCategory = activeItems.find(
-        (item) =>
-          item.type === 'category' && item.name === categoryName && item.path === categoryName,
-      );
+      const existingCategory = findCategoryByName(categoryName);
 
       if (existingCategory) {
         finalParentPath = existingCategory.path;
       } else {
-        templateService.createCategory(me, template.$jazz.id, categoryName, undefined);
+        templateService.createCategory(me, templateId, categoryName, undefined);
         finalParentPath = categoryName;
       }
     } else {
-      const { parentPath, sortOrder } = templateService.calculateInsertionPoint(template, null);
-      finalParentPath = parentPath;
-      finalSortOrder = sortOrder;
+      const insertion = templateService.calculateInsertionPoint(template, selectedItemId);
+      finalParentPath = insertion.parentPath;
+      finalSortOrder = insertion.sortOrder;
     }
 
     const newItemId = templateService.createItem(
       me,
-      template.$jazz.id,
+      templateId,
       value.name,
       finalParentPath,
       value.defaultQuantity || '',
       finalSortOrder,
     );
+
+    if (syncToSession) {
+      SessionService.toggleItemSelected(me, templateId, sessionId, newItemId);
+    }
 
     setSelectedItemId(newItemId);
     return newItemId;
   };
 
-  // Wrapper that includes insertion point calculation
-  const handleAddItemWithInsertionPoint = (
-    value: ItemInputValue,
-    selectedItemId: string | null,
-  ) => {
-    if (!me) return;
+  const handleAddItem = (value: ItemInputValue) => addItemCore(value, null, false);
 
-    if (value.type === 'category') {
-      const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
-        template,
-        selectedItemId,
-      );
-      const newItemId = templateService.createCategory(
-        me,
-        template.$jazz.id,
-        value.name,
-        parentPath,
-        sortOrder,
-      );
-      setSelectedItemId(newItemId);
-      return;
-    }
-
-    const autoCategorizeEnabled = userSettingsService.getTemplateAutoCategorizeEnabled(
-      me,
-      template,
-    );
-
-    let finalParentPath: string | undefined;
-    let finalSortOrder: number | undefined;
-
-    if (value.categoryInfo && autoCategorizeEnabled) {
-      const categoryName = value.categoryInfo.subcategoryName || value.categoryInfo.categoryName;
-
-      const existingCategory = activeItems.find(
-        (item) =>
-          item.type === 'category' && item.name === categoryName && item.path === categoryName,
-      );
-
-      if (existingCategory) {
-        finalParentPath = existingCategory.path;
-      } else {
-        templateService.createCategory(me, template.$jazz.id, categoryName, undefined);
-        finalParentPath = categoryName;
-      }
-    } else {
-      const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
-        template,
-        selectedItemId,
-      );
-      finalParentPath = parentPath;
-      finalSortOrder = sortOrder;
-    }
-
-    const newItemId = templateService.createItem(
-      me,
-      template.$jazz.id,
-      value.name,
-      finalParentPath,
-      value.defaultQuantity || '',
-      finalSortOrder,
-    );
-
-    // Also add the new item to the current session (since it's auto-added to defaults,
-    // we need to sync the session state to match)
-    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, newItemId);
-
-    setSelectedItemId(newItemId);
-  };
+  const handleAddItemWithInsertionPoint = (value: ItemInputValue, selectedItemId: string | null) =>
+    addItemCore(value, selectedItemId, true);
 
   return {
     handleRenameItem,

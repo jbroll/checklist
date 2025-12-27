@@ -163,6 +163,19 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     return templateCategoryExpanded[itemId] ?? true;
   };
 
+  // Shared props for view mode renderers (read-only mode)
+  const toggleZoneExpanded = (zone: 'selected' | 'checked') =>
+    setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }));
+
+  const viewerCommonProps = {
+    showDeleteIcon: false as const,
+    interactionMode: { mode: 'normal' as const },
+    onEnterEditMode: () => {},
+    onExitEditMode: () => {},
+    canEdit: () => false,
+    canDrag: () => false,
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -215,20 +228,13 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   session={session}
                   selectedItems={selectedItems}
                   checkedItems={checkedItems}
-                  zoneExpanded={{ selected: zoneExpanded.selected, checked: zoneExpanded.checked }}
-                  onToggleZoneExpanded={(zone) =>
-                    setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }))
-                  }
+                  zoneExpanded={zoneExpanded}
+                  onToggleZoneExpanded={toggleZoneExpanded}
                   onToggleSelected={handlers.handleToggleSelected}
                   onToggleChecked={handlers.handleToggleChecked}
-                  showDeleteIcon={false}
                   onDeleteItem={handlers.handleDeleteItem}
-                  interactionMode={{ mode: 'normal' }}
-                  onEnterEditMode={() => {}}
-                  onExitEditMode={() => {}}
-                  canEdit={() => false}
-                  canDrag={() => false}
                   onEditNote={noteEditor.openNoteEditor('selected')}
+                  {...viewerCommonProps}
                 />
               )}
 
@@ -243,14 +249,9 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   onToggleCategoryExpanded={handlers.handleToggleCategoryExpanded}
                   onToggleSelected={handlers.handleToggleSelected}
                   onToggleChecked={handlers.handleToggleChecked}
-                  showDeleteIcon={false}
                   onDeleteItem={handlers.handleDeleteItem}
-                  interactionMode={{ mode: 'normal' }}
-                  onEnterEditMode={() => {}}
-                  onExitEditMode={() => {}}
-                  canEdit={() => false}
-                  canDrag={() => false}
                   onEditNote={noteEditor.openNoteEditor('selected')}
+                  {...viewerCommonProps}
                 />
               )}
 

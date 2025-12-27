@@ -174,24 +174,9 @@ export function TreeView({
 
   // Get selected folder by ID
   const selectedFolder = useMemo(() => {
-    if (!selectedFolderId || !account.root?.folders) return null;
-
-    const findFolder = (
-      folders: typeof account.root.folders,
-    ): InstanceOfSchema<typeof FolderNode> | null => {
-      for (const f of folders) {
-        if (!f) continue;
-        if (f.$jazz.id === selectedFolderId) return f;
-        if (f.children) {
-          const found = findFolder(f.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findFolder(account.root.folders);
-  }, [selectedFolderId, account.root?.folders]);
+    if (!selectedFolderId) return null;
+    return folderService.findFolderById(account, selectedFolderId);
+  }, [selectedFolderId, account]);
 
   // Clear selection when selected folder becomes archived
   useEffect(() => {
@@ -301,22 +286,7 @@ export function TreeView({
       const draggedFolderId = active.data.current.folderId as string;
       const overData = over.data.current;
 
-      // Find dragged folder
-      const findFolder = (
-        folders: typeof account.root.folders,
-      ): InstanceOfSchema<typeof FolderNode> | null => {
-        for (const f of folders) {
-          if (!f) continue;
-          if (f.$jazz.id === draggedFolderId) return f;
-          if (f.children) {
-            const found = findFolder(f.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const draggedFolder = findFolder(account.root.folders);
+      const draggedFolder = folderService.findFolderById(account, draggedFolderId);
       if (!draggedFolder) return;
 
       // Check if dropped on a reorder zone
@@ -326,23 +296,9 @@ export function TreeView({
         const targetParentId = overData.parentId as string | undefined;
 
         // Find target parent folder (undefined means root level)
-        let targetParent: InstanceOfSchema<typeof FolderNode> | null = null;
-        if (targetParentId) {
-          const findParent = (
-            folders: typeof account.root.folders,
-          ): InstanceOfSchema<typeof FolderNode> | null => {
-            for (const f of folders) {
-              if (!f) continue;
-              if (f.$jazz.id === targetParentId) return f;
-              if (f.children) {
-                const found = findParent(f.children);
-                if (found) return found;
-              }
-            }
-            return null;
-          };
-          targetParent = findParent(account.root.folders);
-        }
+        const targetParent = targetParentId
+          ? folderService.findFolderById(account, targetParentId)
+          : null;
 
         // Get the target list (either parent's children or root folders)
         const targetList = targetParent?.children || account.root.folders;

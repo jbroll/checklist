@@ -75,6 +75,24 @@ function validateNotCircular(folder: FolderType, target: FolderType | null | und
 }
 
 /**
+ * Recursively find a folder by ID in a folder tree
+ */
+function findFolderRecursive(
+  folders: FolderType[] | Iterable<FolderType | null>,
+  folderId: string,
+): FolderType | null {
+  for (const f of folders) {
+    if (!f) continue;
+    if (f.$jazz.id === folderId) return f;
+    if (f.children) {
+      const found = findFolderRecursive(f.children, folderId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
  * Update group permissions when moving between parents
  */
 function updateGroupPermissions(
@@ -408,6 +426,14 @@ export function findFolderByPath(account: AccountType, pathSegments: string[]): 
   }
 
   return current || null;
+}
+
+/**
+ * Find a folder by its Jazz ID, searching recursively through the tree
+ */
+export function findFolderById(account: AccountType, folderId: string): FolderType | null {
+  if (!account.root?.folders || !folderId) return null;
+  return findFolderRecursive(account.root.folders, folderId);
 }
 
 export function getAllTemplateFolders(account: AccountType, showArchived = false): FolderType[] {

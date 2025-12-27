@@ -14,6 +14,49 @@ import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUti
 import * as folderService from './folderService';
 
 // ============================================================================
+// Internal Helper Functions
+// ============================================================================
+
+type Template = InstanceOfSchema<typeof FolderNode>;
+
+/**
+ * Get template by ID, throws if not found
+ */
+function requireTemplate(account: InstanceOfSchema<typeof Account>, templateId: string): Template {
+  const template = getTemplate(account, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+  return template;
+}
+
+/**
+ * Find item index in template, throws if not found
+ */
+function requireItemIndex(template: Template, itemId: string): number {
+  const index = template.items.findIndex((i: TemplateItem) => i.id === itemId);
+  if (index === -1) throw new Error(`Item ${itemId} not found in template`);
+  return index;
+}
+
+/**
+ * Check for duplicate path, throws if exists
+ */
+function assertNoDuplicatePath(template: Template, path: string, excludeItemId?: string): void {
+  const existingItem = template.items.find(
+    (i: TemplateItem) => i.path === path && !i.archived && i.id !== excludeItemId,
+  );
+  if (existingItem) {
+    throw new Error(`Item already exists at path: ${path}`);
+  }
+}
+
+/**
+ * Update template's updatedAt timestamp
+ */
+function touchTemplate(template: Template): void {
+  template.$jazz.set('updatedAt', new Date());
+}
+
+// ============================================================================
 // Template Operations
 // ============================================================================
 
@@ -23,7 +66,7 @@ import * as folderService from './folderService';
 export function getTemplate(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-): InstanceOfSchema<typeof FolderNode> | null {
+): Template | null {
   const templates = folderService.getAllTemplateFolders(account, true);
   return templates.find((t) => t?.$jazz.id === templateId) || null;
 }
@@ -31,9 +74,7 @@ export function getTemplate(
 /**
  * Get all templates
  */
-export function getAllTemplates(
-  account: InstanceOfSchema<typeof Account>,
-): Array<InstanceOfSchema<typeof FolderNode>> {
+export function getAllTemplates(account: InstanceOfSchema<typeof Account>): Array<Template> {
   return folderService.getAllTemplateFolders(account, false);
 }
 
@@ -70,6 +111,43 @@ function updateDescendantPaths(
 }
 
 /**
+ * Internal helper to create a template item (category or item)
+ */
+function createTemplateItem(
+  template: Template,
+  type: 'category' | 'item',
+  name: string,
+  parentPath?: string,
+  options?: { defaultQuantity?: string; sortOrder?: number; addToDefaults?: boolean },
+): string {
+  const path = createChildPath(parentPath, name);
+  assertNoDuplicatePath(template, path);
+
+  const newItem: TemplateItem = {
+    id: generateId(),
+    name,
+    type,
+    path,
+    expanded: type === 'category', // Categories start expanded, items don't
+    sortOrder: options?.sortOrder ?? template.items.length,
+    archived: false,
+    defaultQuantity: options?.defaultQuantity || '',
+    createdAt: new Date(),
+  };
+
+  template.$jazz.set('items', [...template.items, newItem]);
+
+  // Auto-add new items to defaults if requested
+  if (options?.addToDefaults) {
+    const defaultItems = { ...(template.defaultItems || {}), [newItem.id]: true };
+    template.$jazz.set('defaultItems', defaultItems);
+  }
+
+  touchTemplate(template);
+  return newItem.id;
+}
+
+/**
  * Create a new category in a template
  */
 export function createCategory(
@@ -79,34 +157,8 @@ export function createCategory(
   parentPath?: string,
   sortOrder?: number,
 ): string {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  // Generate path from name (no normalization)
-  const path = createChildPath(parentPath, name);
-
-  // Check for duplicates at the same level (excluding archived items)
-  const existingItem = template.items.find((i: TemplateItem) => i.path === path && !i.archived);
-  if (existingItem) {
-    throw new Error(`Category already exists at path: ${path}`);
-  }
-
-  const newCategory: TemplateItem = {
-    id: generateId(),
-    name,
-    type: 'category',
-    path,
-    expanded: true, // Categories start expanded
-    sortOrder: sortOrder !== undefined ? sortOrder : template.items.length,
-    archived: false,
-    defaultQuantity: '',
-    createdAt: new Date(),
-  };
-
-  template.$jazz.set('items', [...template.items, newCategory]);
-  template.$jazz.set('updatedAt', new Date());
-
-  return newCategory.id;
+  const template = requireTemplate(account, templateId);
+  return createTemplateItem(template, 'category', name, parentPath, { sortOrder });
 }
 
 /**
@@ -120,39 +172,12 @@ export function createItem(
   defaultQuantity?: string,
   sortOrder?: number,
 ): string {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  // Generate path from name (no normalization)
-  const path = createChildPath(parentPath, name);
-
-  // Check for duplicates at the same level (excluding archived items)
-  const existingItem = template.items.find((i: TemplateItem) => i.path === path && !i.archived);
-  if (existingItem) {
-    throw new Error(`Item already exists at path: ${path}`);
-  }
-
-  const newItem: TemplateItem = {
-    id: generateId(),
-    name,
-    type: 'item',
-    path,
-    expanded: false, // Items don't expand
-    sortOrder: sortOrder !== undefined ? sortOrder : template.items.length,
-    archived: false,
-    defaultQuantity: defaultQuantity || '',
-    createdAt: new Date(),
-  };
-
-  template.$jazz.set('items', [...template.items, newItem]);
-
-  // Auto-add new items to defaults
-  const defaultItems = { ...(template.defaultItems || {}), [newItem.id]: true };
-  template.$jazz.set('defaultItems', defaultItems);
-
-  template.$jazz.set('updatedAt', new Date());
-
-  return newItem.id;
+  const template = requireTemplate(account, templateId);
+  return createTemplateItem(template, 'item', name, parentPath, {
+    defaultQuantity,
+    sortOrder,
+    addToDefaults: true,
+  });
 }
 
 /**
@@ -205,42 +230,27 @@ export function renameItem(
   itemId: string,
   newName: string,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  const template = requireTemplate(account, templateId);
+  const itemIndex = requireItemIndex(template, itemId);
 
   const item = template.items[itemIndex];
   const oldPath = item.path;
   const parentPath = getParentPath(oldPath);
-  // Use new name as-is without normalization
   const newPath = createChildPath(parentPath, newName);
 
-  // Check for duplicates
   if (oldPath !== newPath) {
-    const existingItem = template.items.find((i: TemplateItem) => i.path === newPath);
-    if (existingItem) {
-      throw new Error(`Item already exists at path: ${newPath}`);
-    }
+    assertNoDuplicatePath(template, newPath, itemId);
   }
 
   let updatedItems = [...template.items];
+  updatedItems[itemIndex] = { ...item, name: newName, path: newPath };
 
-  // Update item name and path
-  updatedItems[itemIndex] = {
-    ...item,
-    name: newName,
-    path: newPath,
-  };
-
-  // If this is a category, update all descendant paths
   if (item.type === 'category') {
     updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
   }
 
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -252,23 +262,14 @@ export function updateItemNotes(
   itemId: string,
   notes: string,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
+  const template = requireTemplate(account, templateId);
+  const itemIndex = requireItemIndex(template, itemId);
 
-  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
-
-  const item = template.items[itemIndex];
   const updatedItems = [...template.items];
-
-  // Update item notes (empty string removes notes)
-  updatedItems[itemIndex] = {
-    ...item,
-    notes: notes || undefined,
-  };
+  updatedItems[itemIndex] = { ...template.items[itemIndex], notes: notes || undefined };
 
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -280,31 +281,21 @@ export function archiveItem(
   templateId: string,
   itemId: string,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const item = template.items.find((i: TemplateItem) => i.id === itemId);
-  if (!item) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  if (!item) throw new Error(`Item ${itemId} not found in template`);
 
-  let updatedItems = template.items.map((i: TemplateItem) => {
-    if (i.id === itemId) {
+  const categoryPrefix = item.type === 'category' ? `${item.path}${PATH_SEPARATOR}` : null;
+
+  const updatedItems = template.items.map((i: TemplateItem) => {
+    if (i.id === itemId || (categoryPrefix && i.path.startsWith(categoryPrefix))) {
       return { ...i, archived: true };
     }
     return i;
   });
 
-  // If this is a category, archive all descendants
-  if (item.type === 'category') {
-    updatedItems = updatedItems.map((i: TemplateItem) => {
-      if (i.path.startsWith(`${item.path}${PATH_SEPARATOR}`)) {
-        return { ...i, archived: true };
-      }
-      return i;
-    });
-  }
-
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -319,44 +310,32 @@ export function moveItem(
   newParentPath: string | undefined,
   sortOrder?: number,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  const template = requireTemplate(account, templateId);
+  const itemIndex = requireItemIndex(template, itemId);
 
   const item = template.items[itemIndex];
   const oldPath = item.path;
-  // Use item name as-is without normalization
   const newPath = createChildPath(newParentPath, item.name);
 
-  // Don't move if it's the same location and sortOrder isn't changing
   if (oldPath === newPath && sortOrder === undefined) return;
 
-  // Check for duplicates only if path is changing
   if (oldPath !== newPath) {
-    const existingItem = template.items.find((i: TemplateItem) => i.path === newPath);
-    if (existingItem) {
-      throw new Error(`Item already exists at path: ${newPath}`);
-    }
+    assertNoDuplicatePath(template, newPath, itemId);
   }
 
   let updatedItems = [...template.items];
-
-  // Update item path and optionally sortOrder
   updatedItems[itemIndex] = {
     ...item,
     path: newPath,
     ...(sortOrder !== undefined && { sortOrder }),
   };
 
-  // If this is a category, update all descendant paths
   if (item.type === 'category') {
     updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
   }
 
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -367,13 +346,10 @@ export function getCategoryExpanded(
   templateId: string,
   itemId: string,
 ): boolean {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const item = template.items.find((i: TemplateItem) => i.id === itemId);
-  if (!item) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  if (!item) throw new Error(`Item ${itemId} not found in template`);
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
-
   return item.expanded;
 }
 
@@ -386,23 +362,16 @@ export function setCategoryExpanded(
   itemId: string,
   expanded: boolean,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
-
+  const template = requireTemplate(account, templateId);
+  const itemIndex = requireItemIndex(template, itemId);
   const item = template.items[itemIndex];
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
 
   const updatedItems = [...template.items];
-  updatedItems[itemIndex] = {
-    ...item,
-    expanded,
-  };
+  updatedItems[itemIndex] = { ...item, expanded };
 
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -419,7 +388,6 @@ export function toggleCategoryExpanded(
 
 /**
  * Reorder an item by changing its sortOrder (fractional indexing)
- * This updates the sortOrder of the dragged item to place it between two siblings
  */
 export function reorderItem(
   account: InstanceOfSchema<typeof Account>,
@@ -427,20 +395,14 @@ export function reorderItem(
   itemId: string,
   newSortOrder: number,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
-  const itemIndex = template.items.findIndex((i: TemplateItem) => i.id === itemId);
-  if (itemIndex === -1) throw new Error(`Item ${itemId} not found in template ${templateId}`);
+  const template = requireTemplate(account, templateId);
+  const itemIndex = requireItemIndex(template, itemId);
 
   const updatedItems = [...template.items];
-  updatedItems[itemIndex] = {
-    ...updatedItems[itemIndex],
-    sortOrder: newSortOrder,
-  };
+  updatedItems[itemIndex] = { ...updatedItems[itemIndex], sortOrder: newSortOrder };
 
   template.$jazz.set('items', updatedItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 // ============================================================================
@@ -540,9 +502,7 @@ export function setItemDefault(
   itemId: string,
   isDefault: boolean,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const defaultItems = { ...(template.defaultItems || {}) };
 
   if (isDefault) {
@@ -552,7 +512,7 @@ export function setItemDefault(
   }
 
   template.$jazz.set('defaultItems', defaultItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -563,9 +523,7 @@ export function toggleItemDefault(
   templateId: string,
   itemId: string,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const isCurrentlyDefault = template.defaultItems?.[itemId] ?? false;
   setItemDefault(account, templateId, itemId, !isCurrentlyDefault);
 }
@@ -579,9 +537,7 @@ export function batchSetItemsDefault(
   itemIds: string[],
   isDefault: boolean,
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const defaultItems = { ...(template.defaultItems || {}) };
 
   for (const itemId of itemIds) {
@@ -593,7 +549,7 @@ export function batchSetItemsDefault(
   }
 
   template.$jazz.set('defaultItems', defaultItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }
 
 /**
@@ -604,9 +560,7 @@ export function invertItemsDefault(
   templateId: string,
   itemIds: string[],
 ): void {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-
+  const template = requireTemplate(account, templateId);
   const defaultItems = { ...(template.defaultItems || {}) };
 
   for (const itemId of itemIds) {
@@ -618,5 +572,5 @@ export function invertItemsDefault(
   }
 
   template.$jazz.set('defaultItems', defaultItems);
-  template.$jazz.set('updatedAt', new Date());
+  touchTemplate(template);
 }

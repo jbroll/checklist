@@ -61,32 +61,9 @@ export function SimplifiedApp({
   // Uses selectedTemplateId (from URL) or selectedFolderId (from UI selection)
   const selectedFolder = useMemo(() => {
     const targetId = selectedTemplateId || selectedFolderId;
-    if (!account?.root?.folders || !targetId) return null;
-
-    // Defensive check: ensure folders is iterable (Jazz CoList may not be ready)
-    let foldersArray: InstanceOfSchema<typeof FolderNode>[];
-    try {
-      foldersArray = Array.from(account.root.folders);
-    } catch {
-      return null;
-    }
-
-    const findFolder = (
-      folders: InstanceOfSchema<typeof FolderNode>[],
-    ): InstanceOfSchema<typeof FolderNode> | null => {
-      for (const f of folders) {
-        if (!f) continue;
-        if (f.$jazz.id === targetId) return f;
-        if (f.children) {
-          const found = findFolder(Array.from(f.children));
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findFolder(foldersArray);
-  }, [selectedTemplateId, selectedFolderId, account?.root?.folders]);
+    if (!account || !targetId) return null;
+    return folderService.findFolderById(account, targetId);
+  }, [selectedTemplateId, selectedFolderId, account]);
 
   // Compute parent folder for import based on selected folder
   const importParentFolder = useMemo(() => {
@@ -171,23 +148,7 @@ export function SimplifiedApp({
   };
 
   const handleFolderSelect = (folderId: string) => {
-    // Find the folder
-    const findFolder = (
-      folders: InstanceOfSchema<typeof FolderNode>[],
-    ): InstanceOfSchema<typeof FolderNode> | null => {
-      for (const f of folders) {
-        if (!f) continue;
-        if (f.$jazz.id === folderId) return f;
-        if (f.children) {
-          const found = findFolder(f.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const folder = account.root?.folders ? findFolder(Array.from(account.root.folders)) : null;
-
+    const folder = folderService.findFolderById(account, folderId);
     // Only set selectedFolderId for folders (not templates in simplified mode)
     if (folder && folderService.isOrganizationalFolder(folder)) {
       setSelectedFolderId(folderId);

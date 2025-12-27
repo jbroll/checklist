@@ -8,6 +8,49 @@ import nodemailer from 'nodemailer';
 
 dotenv.config();
 
+// =============================================================================
+// Environment Variable Validation
+// =============================================================================
+
+const requiredEnvVars = [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'APPLE_CLIENT_ID',
+  'APPLE_CLIENT_SECRET',
+  'BETTER_AUTH_SECRET',
+] as const;
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`Missing required environment variable: ${envVar}`);
+  }
+}
+
+// =============================================================================
+// Email Templates
+// =============================================================================
+
+function verificationEmailBody(user: { name?: string | null }, url: string): string {
+  return `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to verify your email: ${url}
+
+This link expires in 24 hours.
+
+- kjekit`;
+}
+
+function resetPasswordEmailBody(user: { name?: string | null }, url: string): string {
+  return `Hi${user.name ? ` ${user.name}` : ''},
+
+Click to reset your password: ${url}
+
+This link expires in 1 hour.
+If you didn't request this, you can ignore this email.
+
+- kjekit`;
+}
+
 // Configure SMTP transporter for sending emails
 const smtpTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.purelymail.com',
@@ -103,17 +146,7 @@ function createAuthConfig(baseURL: string) {
     emailVerification: {
       autoSignInAfterVerification: false,
       sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-        await sendEmail(
-          user.email,
-          'Verify your kjekit email',
-          `Hi${user.name ? ` ${user.name}` : ''},
-
-Click to verify your email: ${url}
-
-This link expires in 24 hours.
-
-- kjekit`
-        );
+        await sendEmail(user.email, 'Verify your kjekit email', verificationEmailBody(user, url));
       },
     },
 
@@ -124,31 +157,10 @@ This link expires in 24 hours.
       minPasswordLength: 8,
       maxPasswordLength: 128,
       sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-        await sendEmail(
-          user.email,
-          'Verify your kjekit email',
-          `Hi${user.name ? ` ${user.name}` : ''},
-
-Click to verify your email: ${url}
-
-This link expires in 24 hours.
-
-- kjekit`
-        );
+        await sendEmail(user.email, 'Verify your kjekit email', verificationEmailBody(user, url));
       },
       sendResetPassword: async ({ user, url }: { user: { email: string; name?: string | null }; url: string }) => {
-        await sendEmail(
-          user.email,
-          'Reset your kjekit password',
-          `Hi${user.name ? ` ${user.name}` : ''},
-
-Click to reset your password: ${url}
-
-This link expires in 1 hour.
-If you didn't request this, you can ignore this email.
-
-- kjekit`
-        );
+        await sendEmail(user.email, 'Reset your kjekit password', resetPasswordEmailBody(user, url));
       },
     },
 

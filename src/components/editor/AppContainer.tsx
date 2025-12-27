@@ -93,24 +93,9 @@ export function AppContainer({
 
   // Find selected folder for import (must be before early return)
   const selectedFolder = useMemo(() => {
-    if (!me?.root?.folders || !selectedFolderId) return null;
-
-    const findFolder = (
-      folders: InstanceOfSchema<typeof FolderNode>[],
-    ): InstanceOfSchema<typeof FolderNode> | null => {
-      for (const f of folders) {
-        if (!f) continue;
-        if (f.$jazz.id === selectedFolderId) return f;
-        if (f.children) {
-          const found = findFolder(f.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findFolder(Array.from(me.root.folders));
-  }, [selectedFolderId, me?.root?.folders]);
+    if (!me || !selectedFolderId) return null;
+    return folderService.findFolderById(me, selectedFolderId);
+  }, [selectedFolderId, me]);
 
   // Compute parent folder for import based on selected folder
   const importParentFolder = useMemo(() => {
