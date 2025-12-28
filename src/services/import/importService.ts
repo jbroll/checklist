@@ -100,12 +100,12 @@ export async function importFromFile(
       return await importJson(content, account, parentFolder);
 
     case 'txt':
-      // TODO: Phase 2 - Template list import from TXT
-      return createErrorResult('TXT import not yet implemented');
+      // TXT imports handled by importItemsFromTxtFile() or importAsNewTemplate()
+      return createErrorResult('Use importAsNewTemplate() for TXT files');
 
     case 'csv':
-      // TODO: Phase 2/3 - Template list or session import from CSV
-      return createErrorResult('CSV import not yet implemented');
+      // CSV imports handled by importItemsFromCsvFile() or importAsNewTemplate()
+      return createErrorResult('Use importAsNewTemplate() for CSV files');
 
     default:
       return createErrorResult(`Unsupported file type: ${detectedType}`);

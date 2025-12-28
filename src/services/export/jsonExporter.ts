@@ -6,6 +6,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import packageJson from '../../../package.json';
 import { generateSessionName } from '../../lib/utils';
 import type { Account, FolderNode, SessionData } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
@@ -52,7 +53,7 @@ export function exportAllFolders(account: InstanceOfSchema<typeof Account>): Exp
   return {
     version: '2.0',
     exportDate: new Date().toISOString(),
-    appVersion: '1.0.0', // TODO: Get from package.json
+    appVersion: packageJson.version,
     folders,
   };
 }
@@ -67,7 +68,7 @@ export function exportTemplate(template: InstanceOfSchema<typeof FolderNode>): E
   return {
     version: '2.0',
     exportDate: new Date().toISOString(),
-    appVersion: '1.0.0', // TODO: Get from package.json
+    appVersion: packageJson.version,
     folders: [exportTemplateNode(template)],
   };
 }
