@@ -1,4 +1,4 @@
-import { XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, lazy, type ReactNode, Suspense, useEffect } from 'react';
 import { AuthGate } from './components/AuthGate';
 import { LoadingScreen } from './components/ui/loading';
@@ -31,20 +31,25 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-red-50">
-          <div className="max-w-md rounded-lg border-4 border-red-500 bg-white p-8 text-center shadow-lg">
+        <div className="flex min-h-screen items-center justify-center bg-green-50 dark:bg-neutral-900">
+          <div className="max-w-md rounded-xl border border-green-200 dark:border-green-800 bg-white dark:bg-neutral-800 p-8 text-center shadow-lg">
             <div className="mb-4 flex justify-center">
-              <XCircle className="h-16 w-16 text-red-500" />
+              <div className="rounded-full bg-green-100 dark:bg-green-900 p-4">
+                <RefreshCw className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
             </div>
-            <h1 className="mb-2 text-2xl font-bold text-red-900">Something went wrong</h1>
-            <p className="mb-4 text-neutral-600">
-              An unexpected error occurred. Please refresh the page to try again.
+            <h1 className="mb-2 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+              Just a moment...
+            </h1>
+            <p className="mb-6 text-neutral-600 dark:text-neutral-400">
+              We hit a small bump. A quick refresh should get things back on track.
             </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-block rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-white font-medium hover:bg-green-700 transition-colors"
             >
+              <RefreshCw className="h-4 w-4" />
               Refresh Page
             </button>
           </div>
@@ -162,16 +167,22 @@ function App() {
   // Block test page in production
   if (isTestPage && import.meta.env.PROD) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-red-50">
-        <div className="max-w-md rounded-lg border-4 border-red-500 bg-white p-8 text-center shadow-lg">
+      <div className="flex min-h-screen items-center justify-center bg-green-50 dark:bg-neutral-900">
+        <div className="max-w-md rounded-xl border border-green-200 dark:border-green-800 bg-white dark:bg-neutral-800 p-8 text-center shadow-lg">
           <div className="mb-4 flex justify-center">
-            <XCircle className="h-16 w-16 text-red-500" />
+            <div className="rounded-full bg-green-100 dark:bg-green-900 p-4">
+              <RefreshCw className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-red-900">Access Denied</h1>
-          <p className="mb-4 text-neutral-600">Test page is not available in production.</p>
+          <h1 className="mb-2 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+            Page Not Available
+          </h1>
+          <p className="mb-6 text-neutral-600 dark:text-neutral-400">
+            This page is only available in development mode.
+          </p>
           <a
             href="/"
-            className="inline-block rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-white font-medium hover:bg-green-700 transition-colors"
           >
             Go to Home
           </a>
