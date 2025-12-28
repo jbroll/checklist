@@ -1,1 +1,1 @@
-Easy lists organized in folders. Real-time collaboration, offline-first, encrypted sync. No ads, no tracking.
+Organize lists in folders. Real-time sync, offline support, encrypted. No ads.

@@ -1,4 +1,4 @@
-BubbleList helps you organize lists in folders and share them with family.
+CheckList helps you organize lists in folders and share them with family.
 
 Create a list once, then start shopping sessions to check items off without changing your original list. When you're done, start a fresh session and your list is ready again.
 
