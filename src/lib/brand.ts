@@ -77,8 +77,8 @@ export const kjekitBrand: BrandConfig = {
   websiteDomain: 'kjekit.com',
   logos: {
     headerIcon: '/kjekit-path.svg', // Wordmark as header icon
-    listIcon: '/kjekit-icon.svg', // Square icon for tree items
-    favicon: '/kjekit-icon.svg', // Use icon as favicon
+    listIcon: '/checklist-icon.svg', // Square icon for tree items
+    favicon: '/checklist-icon.svg', // Use icon as favicon
   },
   headerText: 'Lists',
   headerAriaLabel: 'kjekit - Return to main view',
@@ -101,9 +101,9 @@ export const checklistBrand: BrandConfig = {
   appDomain: 'checklist-app.rkroll.com',
   websiteDomain: 'checklist.rkroll.com',
   logos: {
-    headerIcon: '/kjekit-icon.svg', // Checklist icon for header
-    listIcon: '/kjekit-icon.svg', // Same icon for tree items
-    favicon: '/kjekit-icon.svg',
+    headerIcon: '/checklist-icon.svg', // Checklist icon for header
+    listIcon: '/checklist-icon.svg', // Same icon for tree items
+    favicon: '/checklist-icon.svg',
   },
   headerText: 'CheckList',
   headerAriaLabel: 'CheckList - Return to main view',

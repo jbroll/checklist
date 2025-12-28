@@ -38,7 +38,7 @@ const brands = {
     tagline: 'Shared Checklists',
     supportEmail: 'support@checklist.rkroll.com',
     salesEmail: 'sales@checklist.rkroll.com',
-    logo: 'kjekit-icon.svg',
+    logo: 'checklist-icon.svg',
     aboutIntro: 'CheckList is a checklist app designed for lists you use every day.',
   },
 };
