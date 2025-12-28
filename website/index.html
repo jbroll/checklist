@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Simple shared checklists for groceries, packing, and more. Real-time collaboration, offline-first, encrypted sync.">
-    <title>kjekit</title>
-    <link rel="icon" type="image/svg+xml" href="kjekit.svg">
+    <title>CheckList</title>
+    <link rel="icon" type="image/svg+xml" href="kjekit-icon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* ========================================
@@ -229,12 +229,12 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <img src="kjekit-path.svg" alt="kjekit" class="h-10" id="nav-logo">
-                    <span id="nav-brand-text" class="hidden ml-2 text-xl font-bold" style="color: var(--text-primary);"></span>
+                    <img src="kjekit-icon.svg" alt="CheckList" class="h-10" id="nav-logo">
+                    <span id="nav-brand-text" class="ml-2 text-xl font-bold" style="color: var(--text-primary);">CheckList</span>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="about.html" class="hover:opacity-80" style="color: var(--text-secondary);">About</a>
-                    <a href="https://app.kjekit.com" class="btn-primary text-white px-4 py-2 rounded-lg transition">Try Free</a>
+                    <a href="https://checklist.rkroll.com" class="btn-primary text-white px-4 py-2 rounded-lg transition">Try Free</a>
                 </div>
                 <button id="mobile-menu-button" class="md:hidden p-2" style="color: var(--text-primary);" aria-label="Toggle menu">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +246,7 @@
             <div id="mobile-menu" class="hidden md:hidden py-3" style="border-top: 1px solid var(--border-color);">
                 <div class="flex flex-col space-y-3">
                     <a href="about.html" class="hover:opacity-80 px-2 py-1" style="color: var(--text-secondary);">About</a>
-                    <a href="https://app.kjekit.com" class="btn-primary text-white px-4 py-2 rounded-lg transition text-center">Try Free</a>
+                    <a href="https://checklist.rkroll.com" class="btn-primary text-white px-4 py-2 rounded-lg transition text-center">Try Free</a>
                 </div>
             </div>
         </div>
@@ -265,34 +265,34 @@
                     Simple Shared Checklists
                 </h1>
                 <!-- Use cases + CTA -->
-                <div class="flex flex-wrap justify-center items-center gap-3 max-w-4xl mx-auto text-sm">
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🛒</span>
-                        <div class="text-cyan-100">Groceries</div>
+                <div class="flex flex-wrap justify-center items-center gap-4 max-w-4xl mx-auto">
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🛒</span>
+                        <div class="text-cyan-100 text-base mt-1">Groceries</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🧳</span>
-                        <div class="text-cyan-100">Packing</div>
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🧳</span>
+                        <div class="text-cyan-100 text-base mt-1">Packing</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🏕️</span>
-                        <div class="text-cyan-100">Camping</div>
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🏕️</span>
+                        <div class="text-cyan-100 text-base mt-1">Camping</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🐕</span>
-                        <div class="text-cyan-100">Pet Care</div>
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🐕</span>
+                        <div class="text-cyan-100 text-base mt-1">Pet Care</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🧹</span>
-                        <div class="text-cyan-100">Cleaning</div>
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🧹</span>
+                        <div class="text-cyan-100 text-base mt-1">Cleaning</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-3 py-2">
-                        <span class="text-lg">🚀</span>
-                        <div class="text-cyan-100">Launches</div>
+                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                        <span class="text-4xl">🚀</span>
+                        <div class="text-cyan-100 text-base mt-1">Launches</div>
                     </div>
-                    <a href="https://app.kjekit.com" class="rounded-lg px-3 py-2 transition" style="background-color: var(--primary-50);" onmouseover="this.style.backgroundColor='var(--primary-100)'" onmouseout="this.style.backgroundColor='var(--primary-50)'">
-                        <span class="text-lg">✨</span>
-                        <div class="text-teal-600 font-medium">Try Free</div>
+                    <a href="https://checklist.rkroll.com" class="rounded-lg px-4 py-3 text-center transition" style="background-color: var(--primary-50);" onmouseover="this.style.backgroundColor='var(--primary-100)'" onmouseout="this.style.backgroundColor='var(--primary-50)'">
+                        <span class="text-4xl">✨</span>
+                        <div class="text-teal-600 text-base font-medium mt-1">Try Free</div>
                     </a>
                 </div>
             </div>
@@ -306,14 +306,14 @@
                 <!-- Feature 0: Lists + Sessions - with mini illustration -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Lists + Sessions</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Lists + Sessions</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Your list stays unchanged. Each use is a new session.
                             </p>
                         </div>
@@ -346,14 +346,14 @@
                 <!-- Feature 1: Smart Autocomplete -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Smart Autocomplete</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Smart Autocomplete</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 4,600+ items. Auto-creates categories as you type.
                             </p>
                         </div>
@@ -383,14 +383,14 @@
                 <!-- Feature 2: Hierarchical Folders -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Hierarchical Folders</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Hierarchical Folders</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Unlimited nesting. Organize lists however you want.
                             </p>
                         </div>
@@ -429,14 +429,14 @@
                 <!-- Feature 3: Real-Time Collaboration -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Real-Time Collaboration</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Real-Time Collaboration</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Share with family. See changes instantly.
                             </p>
                         </div>
@@ -493,14 +493,14 @@
                 <!-- Feature 4: Offline-First -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Offline-First</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Offline-First</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Works without internet. Install as an app.
                             </p>
                         </div>
@@ -542,14 +542,14 @@
                 <!-- Feature 5: Encrypted Sync -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">Encrypted Sync</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">Encrypted Sync</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Data encrypted in transit and at rest.
                             </p>
                         </div>
@@ -585,14 +585,14 @@
                 <!-- Feature 6: No Ads -->
                 <div class="feature-card p-4 rounded-lg border" style="border-color: var(--border-color);">
                     <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 feature-icon-bg rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 feature-icon-bg rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7 feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-semibold" style="color: var(--text-primary);">No Ads, No Tracking</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <h3 class="text-lg font-semibold" style="color: var(--text-primary);">No Ads, No Tracking</h3>
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 No ads, no behavior tracking, no data selling.
                             </p>
                         </div>
@@ -659,7 +659,7 @@
                         </div>
                         <div>
                             <h3 class="font-semibold" style="color: var(--text-primary);">Import & Export</h3>
-                            <p class="text-sm" style="color: var(--text-secondary);">
+                            <p class="text-base" style="color: var(--text-secondary);">
                                 Your data is never locked in.
                             </p>
                         </div>
@@ -693,7 +693,7 @@
                     <a href="privacy.html" class="text-xs hover:text-white">Privacy</a>
                     <a href="terms.html" class="text-xs hover:text-white">Terms</a>
                 </div>
-                <a href="https://app.kjekit.com" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium transition">Try Free</a>
+                <a href="https://checklist.rkroll.com" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium transition">Try Free</a>
             </div>
         </div>
     </footer>
@@ -718,45 +718,37 @@
     <script>
         (function() {
             const hostname = window.location.hostname;
-            const isCheckList = hostname.includes('checklist');
+            const isKjekit = hostname.includes('kjekit');
 
-            if (isCheckList) {
+            if (isKjekit) {
                 // Update page title
-                document.title = 'CheckList';
+                document.title = 'kjekit';
 
                 // Update favicon
                 const favicon = document.querySelector('link[rel="icon"]');
-                if (favicon) favicon.href = 'kjekit-icon.svg';
+                if (favicon) favicon.href = 'kjekit.svg';
 
-                // Update nav logo to icon + text
+                // Update nav logo to kjekit path logo
                 const navLogo = document.getElementById('nav-logo');
                 const navBrandText = document.getElementById('nav-brand-text');
                 if (navLogo) {
-                    navLogo.src = 'kjekit-icon.svg';
-                    navLogo.alt = 'CheckList';
+                    navLogo.src = 'kjekit-path.svg';
+                    navLogo.alt = 'kjekit';
                     navLogo.style.height = '2.5rem';
                 }
                 if (navBrandText) {
-                    navBrandText.textContent = 'CheckList';
-                    navBrandText.classList.remove('hidden');
+                    navBrandText.classList.add('hidden');
                 }
 
-                // Update other logo images
-                document.querySelectorAll('img[src*="kjekit-path"]:not(#nav-logo)').forEach(img => {
-                    img.src = 'kjekit-icon.svg';
-                    img.alt = 'CheckList';
-                    img.style.height = '2.5rem';
-                });
-
-                // Update app links to point to checklist-app.rkroll.com
-                document.querySelectorAll('a[href*="app.kjekit.com"]').forEach(link => {
-                    link.href = link.href.replace('app.kjekit.com', 'checklist-app.rkroll.com');
+                // Update app links to point to app.kjekit.com
+                document.querySelectorAll('a[href*="checklist.rkroll.com"]').forEach(link => {
+                    link.href = link.href.replace('checklist.rkroll.com', 'app.kjekit.com');
                 });
 
                 // Update meta description
                 const metaDesc = document.querySelector('meta[name="description"]');
                 if (metaDesc) {
-                    metaDesc.content = metaDesc.content.replace('kjekit', 'CheckList');
+                    metaDesc.content = metaDesc.content.replace('CheckList', 'kjekit');
                 }
             }
         })();
