@@ -48,7 +48,7 @@ Guide for publishing kjekit/CheckList to the Google Play Store.
 
 | Asset | Size | Status | Notes |
 |-------|------|--------|-------|
-| App icon | 512x512 PNG | VERIFY | Check `resources/icon.png` |
+| App icon | 512x512 PNG | OK | `playstore/icon-512x512.png` (run `scripts/generate-store-icons.sh`) |
 | Feature graphic | 1024x500 PNG/JPG | MISSING | Banner shown at top of listing |
 | Phone screenshots | 1080x1920 (min 2) | MISSING | 2-8 screenshots required |
 | Tablet screenshots | 1920x1200 (optional) | SKIP | Can add later |
