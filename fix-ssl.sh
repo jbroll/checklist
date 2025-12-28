@@ -1,10 +1,10 @@
 #!/bin/bash
-# SSL Certificate Fix Script for bubblelist.rkroll.com
+# SSL Certificate Fix Script for checklist.rkroll.com
 # Run this on the remote server to fix SSL certificate issues
 
 set -e
 
-DOMAIN="bubblelist.rkroll.com"
+DOMAIN="checklist.rkroll.com"
 EMAIL="${LETSENCRYPT_EMAIL:-admin@rkroll.com}"
 
 echo "=== Fixing SSL Certificate for $DOMAIN ==="
@@ -39,15 +39,15 @@ echo ""
 # Step 2: Check Apache configuration
 echo "Checking Apache configuration..."
 
-if [ ! -f /etc/apache2/sites-available/bubblelist.conf ]; then
-    echo "ERROR: /etc/apache2/sites-available/bubblelist.conf not found"
+if [ ! -f /etc/apache2/sites-available/checklist.conf ]; then
+    echo "ERROR: /etc/apache2/sites-available/checklist.conf not found"
     echo "You need to deploy the Apache configuration first"
     exit 1
 fi
 
 # Step 3: Enable the site
-echo "Enabling bubblelist site..."
-sudo a2ensite bubblelist
+echo "Enabling checklist site..."
+sudo a2ensite checklist
 
 # Step 4: Test Apache configuration
 echo "Testing Apache configuration..."

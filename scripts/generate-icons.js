@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const svgPath = join(__dirname, '../public/bubblelist.svg');
+const svgPath = join(__dirname, '../public/checklist.svg');
 const publicPath = join(__dirname, '../public');
 
 const svgBuffer = readFileSync(svgPath);

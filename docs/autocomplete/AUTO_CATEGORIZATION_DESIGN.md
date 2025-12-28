@@ -1,6 +1,6 @@
 # Auto-Categorization System Design
 
-A local-first, dictionary-based categorization system for Bubblelist supporting grocery, hardware, outdoor recreation, packing, moving, and camping/travel domains.
+A local-first, dictionary-based categorization system for CheckList supporting grocery, hardware, outdoor recreation, packing, moving, and camping/travel domains.
 
 *Created: December 2025*
 

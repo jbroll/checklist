@@ -11,8 +11,8 @@ describe('exportService', () => {
       const scope = { type: 'all-folders' as const };
       const filename = generateFilename(scope, 'json');
 
-      // Should match pattern: bubblelist-data-YYYY-MM-DD.json
-      expect(filename).toMatch(/^bubblelist-data-\d{4}-\d{2}-\d{2}\.json$/);
+      // Should match pattern: checklist-data-YYYY-MM-DD.json
+      expect(filename).toMatch(/^checklist-data-\d{4}-\d{2}-\d{2}\.json$/);
     });
 
     it('should generate filename for all-folders export with different formats', () => {

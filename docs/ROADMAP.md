@@ -1,4 +1,4 @@
-# Bubblelist Roadmap
+# CheckList Roadmap
 
 Product positioning, competitive analysis, and development priorities.
 
@@ -10,7 +10,7 @@ Product positioning, competitive analysis, and development priorities.
 
 ### Unique Differentiators (Verified)
 
-These features are implemented and genuinely differentiate Bubblelist:
+These features are implemented and genuinely differentiate CheckList:
 
 | Feature | Status | Competitors |
 |---------|:------:|:-----------:|
@@ -26,7 +26,7 @@ These features are implemented and genuinely differentiate Bubblelist:
 
 ### Key Competitors
 
-| App | Strength | Weakness vs Bubblelist |
+| App | Strength | Weakness vs CheckList |
 |-----|----------|------------------------|
 | **AnyList** | Market leader, 4.9 rating, recipes | No template separation, proprietary |
 | **OurGroceries** | Simple, established | No hierarchy, dated UI |
@@ -120,7 +120,7 @@ These add complexity without proportional value:
 
 ## Value Proposition
 
-> Bubblelist separates your shopping templates from your shopping sessions - so you can reuse your carefully organized lists week after week without resetting anything. Combined with real-time collaboration, encrypted sync, and true offline support, it's the list app for people who take organization seriously.
+> CheckList separates your shopping templates from your shopping sessions - so you can reuse your carefully organized lists week after week without resetting anything. Combined with real-time collaboration, encrypted sync, and true offline support, it's the list app for people who take organization seriously.
 
 ### Key Messages
 

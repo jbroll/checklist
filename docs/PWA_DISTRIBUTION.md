@@ -1,6 +1,6 @@
 # PWA Distribution Options
 
-BubbleList is a Progressive Web App (PWA) that can be distributed through various channels beyond traditional app stores.
+CheckList is a Progressive Web App (PWA) that can be distributed through various channels beyond traditional app stores.
 
 ## Confirmed Active PWA Directories
 
@@ -56,10 +56,10 @@ Before submitting to PWA directories, ensure:
 - [ ] Clear app icon (512x512 recommended)
 - [ ] App description and screenshots ready
 
-## BubbleList PWA Assets
+## CheckList PWA Assets
 
-- **App URL**: https://bubblelist-app.rkroll.com
-- **Marketing Site**: https://bubblelist.rkroll.com
+- **App URL**: https://checklist-app.rkroll.com
+- **Marketing Site**: https://checklist.rkroll.com
 - **Icon**: 512x512 PNG available at `/icon-512.png`
 - **Manifest**: `/manifest.json`
 

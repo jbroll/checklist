@@ -86,7 +86,7 @@ async function sendEmail(to: string, subject: string, text: string) {
 // Use AUTH_DB_PATH environment variable if set, otherwise default to ./data/auth.db
 const dbPath = process.env.AUTH_DB_PATH || (
   process.env.NODE_ENV === 'production'
-    ? './data/auth.db'  // Production: /var/lib/bubblelist-api/data/auth.db
+    ? './data/auth.db'  // Production: /var/lib/checklist-api/data/auth.db
     : './auth.db'       // Development: ./auth.db
 )
 

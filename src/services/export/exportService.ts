@@ -94,7 +94,7 @@ export function generateFilename(
   const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   if (scope.type === 'all-folders') {
-    return `bubblelist-data-${timestamp}.${format}`;
+    return `checklist-data-${timestamp}.${format}`;
   }
 
   // Single folder - use folder name

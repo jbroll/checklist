@@ -1,6 +1,6 @@
 # Market Comparison: List Apps
 
-A competitive analysis of the list/checklist app market and Bubblelist's positioning.
+A competitive analysis of the list/checklist app market and CheckList's positioning.
 
 *Last updated: December 2025*
 
@@ -303,9 +303,9 @@ Simple notes and checklists with Google integration.
 | **Listonic** | None. AI suggests from history | Auto-suggest only |
 | **Out of Milk** | Pantry as implicit template | Stock levels trigger suggestions |
 | **Todoist** | Project templates (duplicate to use) | Copy entire project |
-| **Bubblelist** | **True templates with separate sessions** | **Session tracks state, template unchanged** |
+| **CheckList** | **True templates with separate sessions** | **Session tracks state, template unchanged** |
 
-**Key Insight**: No major competitor separates template content from shopping state. Bubblelist's template-session model is genuinely unique.
+**Key Insight**: No major competitor separates template content from shopping state. CheckList's template-session model is genuinely unique.
 
 ---
 
@@ -313,7 +313,7 @@ Simple notes and checklists with Google integration.
 
 ### Shopping-Focused Apps
 
-| Feature | AnyList | OurGroceries | Bring! | Cozi | Listonic | Out of Milk | Bubblelist |
+| Feature | AnyList | OurGroceries | Bring! | Cozi | Listonic | Out of Milk | CheckList |
 |---------|:-------:|:------------:|:------:|:----:|:--------:|:-----------:|:----------:|
 | **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Offline support** | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
@@ -329,7 +329,7 @@ Simple notes and checklists with Google integration.
 
 ### General List/Task Apps
 
-| Feature | Todoist | Notion | Workflowy | TickTick | ClickUp | Google Keep | Bubblelist |
+| Feature | Todoist | Notion | Workflowy | TickTick | ClickUp | Google Keep | CheckList |
 |---------|:-------:|:------:|:---------:|:--------:|:-------:|:-----------:|:----------:|
 | **Real-time sync** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Offline support** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ |
@@ -364,11 +364,11 @@ Simple notes and checklists with Google integration.
 
 ---
 
-## Bubblelist Differentiators
+## CheckList Differentiators
 
 ### 1. Encrypted Data Sync
 
-**What Bubblelist offers**: Data is encrypted using Jazz.tools' cryptographic layer. All data is signed with your account's keypair and encrypted with group read keys before leaving your device.
+**What CheckList offers**: Data is encrypted using Jazz.tools' cryptographic layer. All data is signed with your account's keypair and encrypted with group read keys before leaving your device.
 
 **Important caveat**: This is NOT zero-knowledge end-to-end encryption. Jazz uses a group-based encryption model where:
 - Data is encrypted at rest on servers
@@ -412,7 +412,7 @@ Simple notes and checklists with Google integration.
 - Multiple people can shop different sessions simultaneously
 - Session history persists for reference
 
-**Competitors**: ALL major apps mix list content with shopping state. This is genuinely unique to Bubblelist.
+**Competitors**: ALL major apps mix list content with shopping state. This is genuinely unique to CheckList.
 
 ---
 
@@ -476,7 +476,7 @@ These are expected by users. Missing any is a dealbreaker.
 
 ### What's in Schema vs Exposed in UI
 
-Bubblelist's data model is already richer than most competitors. The opportunity is **exposing existing features**, not adding schema complexity.
+CheckList's data model is already richer than most competitors. The opportunity is **exposing existing features**, not adding schema complexity.
 
 | Schema Field | Location | Currently Exposed | Opportunity |
 |--------------|----------|:-----------------:|-------------|
@@ -516,7 +516,7 @@ These add complexity without proportional value for a list app:
 
 ## Strategic Approach: Simplicity Over Features
 
-Many "missing features" come from **project management apps** (Notion, ClickUp, Todoist), not list apps. Bubblelist should resist this scope creep.
+Many "missing features" come from **project management apps** (Notion, ClickUp, Todoist), not list apps. CheckList should resist this scope creep.
 
 **Philosophy**: Do lists exceptionally well, not everything adequately.
 
@@ -528,7 +528,7 @@ Many "missing features" come from **project management apps** (Notion, ClickUp, 
 4. **Session stats** - Use existing timestamps for completion time
 5. **Smart input** - AI parses text at entry time, stores in existing fields
 
-### What Makes Bubblelist Different
+### What Makes CheckList Different
 
 The **template-session separation** remains genuinely unique. No competitor offers this. Combined with:
 - Encrypted sync (vs plaintext everywhere else)
@@ -565,7 +565,7 @@ The gap to close is **friction reduction** (search, smart input), not feature pa
 
 ### Value Proposition
 
-> Bubblelist separates your shopping templates from your shopping sessions—so you can reuse your carefully organized lists week after week without resetting anything. Combined with real-time collaboration, encrypted sync, and true offline support, it's the shopping list app for people who take organization seriously.
+> CheckList separates your shopping templates from your shopping sessions—so you can reuse your carefully organized lists week after week without resetting anything. Combined with real-time collaboration, encrypted sync, and true offline support, it's the shopping list app for people who take organization seriously.
 
 ### Key Messages
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
-const THEME_STORAGE_KEY = 'bubblelist-theme';
+const THEME_STORAGE_KEY = 'checklist-theme';
 
 function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';

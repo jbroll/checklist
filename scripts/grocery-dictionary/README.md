@@ -1,6 +1,6 @@
 # Grocery Dictionary Generator
 
-Scripts and data for building the Bubblelist grocery categorization database.
+Scripts and data for building the CheckList grocery categorization database.
 
 ## Data Sources
 

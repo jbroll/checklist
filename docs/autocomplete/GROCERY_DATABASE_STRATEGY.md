@@ -1,6 +1,6 @@
 # Grocery Categorization Database Strategy
 
-A strategy for building a comprehensive grocery item categorization database for Bubblelist.
+A strategy for building a comprehensive grocery item categorization database for CheckList.
 
 *Created: December 2025*
 *Status: ✅ IMPLEMENTED - December 2025*

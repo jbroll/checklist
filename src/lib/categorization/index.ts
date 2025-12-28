@@ -1,5 +1,5 @@
 /**
- * Auto-categorization system for Bubblelist
+ * Auto-categorization system for CheckList
  *
  * Provides local-first, dictionary-based categorization for items
  * using fast-fuzzy for fuzzy matching.

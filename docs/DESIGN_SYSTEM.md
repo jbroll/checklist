@@ -150,7 +150,7 @@ text-white          // Text on dark backgrounds
 
 ```tsx
 // Page title
-<h1 className="text-3xl font-bold text-neutral-900">BubbleList</h1>
+<h1 className="text-3xl font-bold text-neutral-900">CheckList</h1>
 
 // Section header
 <h2 className="text-xl font-semibold text-neutral-900">Shopping Lists</h2>

@@ -86,10 +86,10 @@ export default defineConfig({
     serveWebsiteFiles(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['bubblelist.svg', 'apple-touch-icon.png'],
+      includeAssets: ['checklist.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'BubbleList - Collaborative Lists',
-        short_name: 'BubbleList',
+        name: 'CheckList - Collaborative Lists',
+        short_name: 'CheckList',
         description: 'Collaborative list app with real-time sync across devices',
         theme_color: '#76daDA',
         background_color: '#ffffff',

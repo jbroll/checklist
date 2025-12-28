@@ -1,5 +1,5 @@
 #!/bin/bash
-# SSL Certificate Diagnostic Script for bubblelist.rkroll.com
+# SSL Certificate Diagnostic Script for checklist.rkroll.com
 # Run this on the remote server to diagnose the SSL issue
 
 echo "=== SSL Certificate Diagnostics ==="
@@ -10,12 +10,12 @@ echo "1. Checking Let's Encrypt certificates..."
 sudo certbot certificates
 echo ""
 
-# Check if bubblelist.rkroll.com certificate exists
-if sudo ls /etc/letsencrypt/live/bubblelist.rkroll.com 2>/dev/null; then
-    echo "✓ Certificate directory exists for bubblelist.rkroll.com"
-    sudo ls -la /etc/letsencrypt/live/bubblelist.rkroll.com/
+# Check if checklist.rkroll.com certificate exists
+if sudo ls /etc/letsencrypt/live/checklist.rkroll.com 2>/dev/null; then
+    echo "✓ Certificate directory exists for checklist.rkroll.com"
+    sudo ls -la /etc/letsencrypt/live/checklist.rkroll.com/
 else
-    echo "✗ No certificate found for bubblelist.rkroll.com"
+    echo "✗ No certificate found for checklist.rkroll.com"
 fi
 echo ""
 
@@ -29,22 +29,22 @@ echo "3. Enabled Apache sites:"
 ls -la /etc/apache2/sites-enabled/
 echo ""
 
-# Check bubblelist Apache config
-echo "4. Checking bubblelist Apache configuration..."
-if [ -f /etc/apache2/sites-available/bubblelist.conf ]; then
+# Check checklist Apache config
+echo "4. Checking checklist Apache configuration..."
+if [ -f /etc/apache2/sites-available/checklist.conf ]; then
     echo "✓ Config file exists"
     echo "Certificate paths in config:"
-    grep -i "SSLCertificate" /etc/apache2/sites-available/bubblelist.conf || echo "No SSL configuration found"
+    grep -i "SSLCertificate" /etc/apache2/sites-available/checklist.conf || echo "No SSL configuration found"
 else
-    echo "✗ /etc/apache2/sites-available/bubblelist.conf not found"
+    echo "✗ /etc/apache2/sites-available/checklist.conf not found"
 fi
 echo ""
 
 # Check if site is enabled
-if [ -L /etc/apache2/sites-enabled/bubblelist.conf ]; then
-    echo "✓ bubblelist site is enabled"
+if [ -L /etc/apache2/sites-enabled/checklist.conf ]; then
+    echo "✓ checklist site is enabled"
 else
-    echo "✗ bubblelist site is NOT enabled"
+    echo "✗ checklist site is NOT enabled"
 fi
 echo ""
 
@@ -57,23 +57,23 @@ echo "=== Recommended Actions ==="
 echo ""
 
 # Provide recommendations based on findings
-if ! sudo ls /etc/letsencrypt/live/bubblelist.rkroll.com 2>/dev/null >/dev/null; then
-    echo "ISSUE: Certificate for bubblelist.rkroll.com doesn't exist"
+if ! sudo ls /etc/letsencrypt/live/checklist.rkroll.com 2>/dev/null >/dev/null; then
+    echo "ISSUE: Certificate for checklist.rkroll.com doesn't exist"
     echo ""
     echo "FIX: Run certbot to create the certificate:"
-    echo "  sudo certbot certonly --webroot -w /var/www/html -d bubblelist.rkroll.com --non-interactive --agree-tos -m admin@rkroll.com"
+    echo "  sudo certbot certonly --webroot -w /var/www/html -d checklist.rkroll.com --non-interactive --agree-tos -m admin@rkroll.com"
     echo ""
 fi
 
-if [ ! -L /etc/apache2/sites-enabled/bubblelist.conf ]; then
-    echo "ISSUE: bubblelist site is not enabled"
+if [ ! -L /etc/apache2/sites-enabled/checklist.conf ]; then
+    echo "ISSUE: checklist site is not enabled"
     echo ""
     echo "FIX: Enable the site:"
-    echo "  sudo a2ensite bubblelist"
+    echo "  sudo a2ensite checklist"
     echo "  sudo systemctl reload apache2"
     echo ""
 fi
 
 echo "To test SSL after fixes:"
-echo "  curl -I https://bubblelist.rkroll.com"
+echo "  curl -I https://checklist.rkroll.com"
 echo ""

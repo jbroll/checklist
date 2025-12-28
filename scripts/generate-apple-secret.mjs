@@ -58,7 +58,7 @@ Example:
     --key ~/Downloads/AuthKey_3G93L773A2.p8 \\
     --key-id 3G93L773A2 \\
     --team-id ABC123DEF4 \\
-    --client-id com.rkroll.bubblelist.si
+    --client-id com.rkroll.checklist.si
 `);
       process.exit(0);
     }

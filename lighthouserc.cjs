@@ -13,7 +13,7 @@ module.exports = {
   ci: {
     collect: {
       // Audit the production app
-      url: ['https://bubblelist-app.rkroll.com'],
+      url: ['https://checklist-app.rkroll.com'],
       // Run 3 times to get more stable results
       numberOfRuns: 3,
       settings: {
