@@ -50,11 +50,24 @@ Guide for publishing kjekit/CheckList to the Google Play Store.
 |-------|------|--------|-------|
 | App icon | 512x512 PNG | OK | `playstore/icon-512x512.png` (run `scripts/generate-store-icons.sh`) |
 | Feature graphic | 1024x500 PNG/JPG | MISSING | Banner shown at top of listing |
-| Phone screenshots | 1080x1920 (min 2) | MISSING | 2-8 screenshots required |
-| Tablet screenshots | 1920x1200 (optional) | SKIP | Can add later |
+| Phone screenshots | min 320px, max 3840px (2-8) | MISSING | Use native device resolution |
+| Tablet screenshots | 7" or 10" tablet (optional) | SKIP | Can add later |
 | Promo video | YouTube URL (optional) | MISSING | Shows app in action, appears at top of listing |
 
-### Screenshot Recommendations
+### Screenshot Specifications
+
+Requirements:
+- **Format**: PNG or JPEG (PNG recommended)
+- **Size**: Min 320px, max 3840px per side
+- **Aspect ratio**: Between 16:9 and 9:16
+- **Count**: 2-8 screenshots required
+
+Recommended approach:
+- Use native device resolution (e.g., 1080x2400 for modern Android)
+- Portrait orientation for phone screenshots
+- Capture directly from device: `adb exec-out screencap -p > screenshot.png`
+
+### Screenshot Content
 
 Capture these key screens:
 1. **Main dashboard** - Folder tree with templates
@@ -65,7 +78,6 @@ Capture these key screens:
 6. **Profile/settings** - Account management
 
 Tools:
-- Android emulator screenshot: `adb exec-out screencap -p > screenshot.png`
 - Add device frame: https://deviceframes.com or Android Studio
 
 ### Feature Graphic

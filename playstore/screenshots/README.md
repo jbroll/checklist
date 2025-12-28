@@ -2,10 +2,12 @@
 
 ## Specifications
 
-- **Dimensions**: 1080x1920 (portrait) or 1920x1080 (landscape)
-- **Format**: PNG or JPG
-- **Min/Max**: 2-8 screenshots
-- **Aspect ratio**: 16:9
+- **Format**: PNG or JPEG (PNG recommended)
+- **Size**: Min 320px, max 3840px per side
+- **Aspect ratio**: Between 16:9 and 9:16
+- **Count**: 2-8 screenshots required
+
+Use native device resolution (e.g., 1080x2400 for modern Android phones).
 
 ## Naming Convention
 
