@@ -2,7 +2,7 @@
  * Brand configuration system for white-labeling the app.
  *
  * To switch brands, change the VITE_BRAND environment variable.
- * Default is 'kjekit'.
+ * Default is 'checklist'. Kjekit brand is used on kjekit.com domains.
  */
 
 export interface BrandConfig {
@@ -119,23 +119,23 @@ export const brands: Record<string, BrandConfig> = {
 
 /**
  * Get the current brand configuration based on domain.
- * - checklist.rkroll.com → CheckList brand
- * - kjekit.com (and everything else) → kjekit brand
+ * - kjekit.com → kjekit brand
+ * - Everything else (including localhost) → CheckList brand (default)
  */
 export function getBrand(): BrandConfig {
   // Allow build-time override for testing
   if (import.meta.env.VITE_BRAND) {
-    return brands[import.meta.env.VITE_BRAND] || kjekitBrand;
+    return brands[import.meta.env.VITE_BRAND] || checklistBrand;
   }
 
   // Runtime domain detection
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
-  if (hostname.includes('checklist')) {
-    return checklistBrand;
+  if (hostname.includes('kjekit')) {
+    return kjekitBrand;
   }
 
-  return kjekitBrand;
+  return checklistBrand;
 }
 
 /**
