@@ -33,16 +33,16 @@ function syncStripePriceIds(db: Database.Database) {
     'UPDATE subscription_tier SET stripe_price_id = ? WHERE slug = ?'
   );
 
+  const plusPriceId = process.env.STRIPE_PRICE_PLUS;
   const premiumPriceId = process.env.STRIPE_PRICE_PREMIUM;
-  const teamPriceId = process.env.STRIPE_PRICE_TEAM;
+
+  if (plusPriceId) {
+    updatePriceId.run(plusPriceId, 'plus');
+    console.log('[db] Synced Stripe price ID for plus tier');
+  }
 
   if (premiumPriceId) {
     updatePriceId.run(premiumPriceId, 'premium');
     console.log('[db] Synced Stripe price ID for premium tier');
-  }
-
-  if (teamPriceId) {
-    updatePriceId.run(teamPriceId, 'team');
-    console.log('[db] Synced Stripe price ID for team tier');
   }
 }

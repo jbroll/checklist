@@ -6,9 +6,13 @@
  *
  * Tier Limits:
  * - Free: 3 lists, 7-day session history
- * - Premium ($9.99/yr): 30 lists, 30-day session history
- * - Team ($19.99/yr): 300 lists, 1-year session history
+ * - Plus ($9.99/yr): 30 lists, 30-day session history
+ * - Premium ($19.99/yr): 300 lists, 1-year session history
  * - Enterprise: Unlimited (contact sales)
+ *
+ * Beta Mode:
+ * When subscription status is 'beta', users get Plus tier limits regardless of their
+ * actual tier. This allows soft enforcement during beta testing.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
@@ -63,9 +67,9 @@ export const TIERS: Record<SubscriptionTier, TierConfig> = {
     sessionRetentionDays: 7,
     sessionRetentionDisplay: '7 days',
   },
-  premium: {
-    slug: 'premium',
-    name: 'Premium',
+  plus: {
+    slug: 'plus',
+    name: 'Plus',
     priceCents: 999,
     priceDisplay: '$9.99/year',
     maxLists: 30,
@@ -73,9 +77,9 @@ export const TIERS: Record<SubscriptionTier, TierConfig> = {
     sessionRetentionDays: 30,
     sessionRetentionDisplay: '30 days',
   },
-  team: {
-    slug: 'team',
-    name: 'Team',
+  premium: {
+    slug: 'premium',
+    name: 'Premium',
     priceCents: 1999,
     priceDisplay: '$19.99/year',
     maxLists: 300,
@@ -112,6 +116,8 @@ const SYNC_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * Get current subscription tier (from Jazz cache)
+ * Note: This returns the user's actual tier, not the effective tier.
+ * Use getEffectiveTier() for limit calculations during beta.
  */
 export function getSubscriptionTier(account: AccountParam): SubscriptionTier {
   const userSettings = account?.root?.userSettings;
@@ -123,23 +129,49 @@ export function getSubscriptionTier(account: AccountParam): SubscriptionTier {
  */
 export function getSubscriptionStatus(account: AccountParam): SubscriptionStatus {
   const userSettings = account?.root?.userSettings;
-  return (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'active';
+  return (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'beta';
+}
+
+/**
+ * Check if user is in beta mode
+ */
+export function isBetaUser(account: AccountParam): boolean {
+  return getSubscriptionStatus(account) === 'beta';
+}
+
+/**
+ * Get effective tier for limit calculations
+ * During beta, all users get Plus tier limits regardless of actual tier.
+ */
+export function getEffectiveTier(account: AccountParam): SubscriptionTier {
+  if (isBetaUser(account)) {
+    return 'plus';
+  }
+  return getSubscriptionTier(account);
+}
+
+/**
+ * Get beta status message for display
+ */
+export function getBetaMessage(): string {
+  return 'During beta, all users have Plus features free!';
 }
 
 /**
  * Get full subscription info (from Jazz cache)
- * Note: Limits are always derived from TIER_LIMITS based on tier slug,
- * not from cached values, to ensure tier changes take effect immediately.
+ * Note: Limits are derived from effective tier (respects beta status).
  */
 export function getSubscriptionInfo(account: AccountParam): SubscriptionInfo {
   const userSettings = account?.root?.userSettings;
   const tier = (userSettings?.subscriptionTier as SubscriptionTier) ?? 'free';
+  const status = (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'beta';
+  const effectiveTier = status === 'beta' ? 'plus' : tier;
 
   return {
     tier,
-    status: (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'active',
+    status,
     endsAt: userSettings?.subscriptionEndsAt ?? null,
-    limits: TIER_LIMITS[tier],
+    limits: TIER_LIMITS[effectiveTier],
     syncedAt: userSettings?.subscriptionSyncedAt ?? null,
   };
 }
@@ -162,19 +194,21 @@ export function needsSubscriptionSync(account: AccountParam): boolean {
 // ============================================================================
 
 /**
- * Get the maximum number of lists allowed for the current tier
+ * Get the maximum number of lists allowed for the effective tier
+ * (respects beta status)
  */
 export function getMaxLists(account: AccountParam): number {
-  const { limits } = getSubscriptionInfo(account);
-  return limits.maxLists;
+  const effectiveTier = getEffectiveTier(account);
+  return TIER_LIMITS[effectiveTier].maxLists;
 }
 
 /**
  * Get the session retention period in days (-1 = unlimited)
+ * (respects beta status)
  */
 export function getSessionRetentionDays(account: AccountParam): number {
-  const { limits } = getSubscriptionInfo(account);
-  return limits.sessionRetentionDays;
+  const effectiveTier = getEffectiveTier(account);
+  return TIER_LIMITS[effectiveTier].sessionRetentionDays;
 }
 
 /**
@@ -304,7 +338,7 @@ export async function recordUsageToBackend(account: AccountParam): Promise<void>
 /**
  * Create a Stripe checkout session for upgrading
  */
-export async function createCheckoutSession(tierSlug: 'premium' | 'team'): Promise<string | null> {
+export async function createCheckoutSession(tierSlug: 'plus' | 'premium'): Promise<string | null> {
   try {
     const response = await fetch('/api/billing/checkout', {
       method: 'POST',
@@ -354,7 +388,7 @@ export async function createPortalSession(): Promise<string | null> {
 /**
  * Redirect to Stripe checkout for upgrading
  */
-export async function redirectToCheckout(tierSlug: 'premium' | 'team'): Promise<void> {
+export async function redirectToCheckout(tierSlug: 'plus' | 'premium'): Promise<void> {
   const url = await createCheckoutSession(tierSlug);
   if (url) {
     window.location.href = url;
@@ -388,9 +422,9 @@ function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof User
       {
         enableAutoCategorization: true,
         subscriptionTier: 'free',
-        subscriptionStatus: 'active',
-        maxLists: TIER_LIMITS.free.maxLists,
-        sessionRetentionDays: TIER_LIMITS.free.sessionRetentionDays,
+        subscriptionStatus: 'beta', // Default to beta during beta period
+        maxLists: TIER_LIMITS.plus.maxLists, // Beta users get Plus limits
+        sessionRetentionDays: TIER_LIMITS.plus.sessionRetentionDays,
       },
       { owner: account },
     );
@@ -411,8 +445,8 @@ function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof User
 export function getTierDisplayName(tier: SubscriptionTier): string {
   const names: Record<SubscriptionTier, string> = {
     free: 'Free',
+    plus: 'Plus',
     premium: 'Premium',
-    team: 'Team',
     enterprise: 'Enterprise',
   };
   return names[tier];

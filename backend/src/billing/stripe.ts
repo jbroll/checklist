@@ -13,10 +13,10 @@ export function isStripeEnabled(): boolean {
 }
 
 // Note: Stripe price IDs are now stored in the database (subscription_tier.stripe_price_id)
-// They are synced from STRIPE_PRICE_PREMIUM and STRIPE_PRICE_TEAM env vars on startup
+// They are synced from STRIPE_PRICE_PLUS and STRIPE_PRICE_PREMIUM env vars on startup
 // See: backend/src/db.ts syncStripePriceIds()
 
-export type TierSlug = 'free' | 'premium' | 'team' | 'enterprise';
+export type TierSlug = 'free' | 'plus' | 'premium' | 'enterprise';
 
 export interface SubscriptionTier {
   slug: TierSlug;
@@ -32,7 +32,7 @@ export interface UserSubscription {
   tierSlug: TierSlug;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
-  status: 'active' | 'past_due' | 'cancelled' | 'trialing';
+  status: 'active' | 'past_due' | 'cancelled' | 'trialing' | 'beta';
   currentPeriodEnd: number | null;
   cancelAtPeriodEnd: boolean;
 }

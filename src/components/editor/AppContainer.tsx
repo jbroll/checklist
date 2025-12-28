@@ -361,6 +361,7 @@ export function AppContainer({
               subscriptionTier={subscriptionService.getSubscriptionTier(me)}
               listCount={subscriptionService.countUserLists(me)}
               maxLists={subscriptionService.getMaxLists(me)}
+              isBeta={subscriptionService.isBetaUser(me)}
               onUpgradeClick={() => {
                 setShowProfileDialog(false);
                 setShowUpgradeDialog(true);

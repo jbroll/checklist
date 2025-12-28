@@ -128,7 +128,7 @@ export function setupBillingRoutes(
       }
 
       const { tierSlug } = req.body as { tierSlug?: string };
-      if (!tierSlug || !['premium', 'team'].includes(tierSlug)) {
+      if (!tierSlug || !['plus', 'premium'].includes(tierSlug)) {
         return res.status(400).json({ error: 'Invalid tier' });
       }
 
@@ -136,7 +136,7 @@ export function setupBillingRoutes(
         db,
         session.user.id,
         session.user.email,
-        tierSlug as 'premium' | 'team',
+        tierSlug as 'plus' | 'premium',
         `${frontendUrl}/billing/success`,
         `${frontendUrl}/billing/cancel`
       );

@@ -27,9 +27,18 @@ export const ViewState = co.map({
 
 /**
  * Subscription tier type
+ * - free: Basic tier (3 lists, 7-day retention)
+ * - plus: Mid tier (30 lists, 30-day retention) - $9.99/yr
+ * - premium: High tier (300 lists, 1-year retention) - $19.99/yr
+ * - enterprise: Unlimited (contact sales)
  */
-export type SubscriptionTier = 'free' | 'premium' | 'team' | 'enterprise';
-export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled' | 'trialing';
+export type SubscriptionTier = 'free' | 'plus' | 'premium' | 'enterprise';
+
+/**
+ * Subscription status
+ * - beta: Beta period - gets Plus tier limits regardless of actual tier
+ */
+export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled' | 'trialing' | 'beta';
 
 /**
  * UserSettings - Global user preferences
@@ -47,10 +56,10 @@ export const UserSettings = co.map({
   // === Subscription fields (cached from backend, source of truth is server) ===
 
   // Current subscription tier
-  subscriptionTier: z.optional(z.enum(['free', 'premium', 'team', 'enterprise'])),
+  subscriptionTier: z.optional(z.enum(['free', 'plus', 'premium', 'enterprise'])),
 
   // Subscription status
-  subscriptionStatus: z.optional(z.enum(['active', 'past_due', 'cancelled', 'trialing'])),
+  subscriptionStatus: z.optional(z.enum(['active', 'past_due', 'cancelled', 'trialing', 'beta'])),
 
   // When the current subscription period ends (Unix timestamp)
   subscriptionEndsAt: z.optional(z.number()),

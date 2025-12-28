@@ -47,6 +47,7 @@ interface ProfileDialogProps {
   subscriptionTier?: SubscriptionTier;
   listCount?: number;
   maxLists?: number;
+  isBeta?: boolean;
   onUpgradeClick?: () => void;
   onManageBillingClick?: () => void;
 }
@@ -63,6 +64,7 @@ export function ProfileDialog({
   subscriptionTier = 'free',
   listCount = 0,
   maxLists = 3,
+  isBeta = false,
   onUpgradeClick,
   onManageBillingClick,
 }: ProfileDialogProps) {
@@ -185,6 +187,13 @@ export function ProfileDialog({
 
           {/* Subscription Section */}
           <div className="border-t border-border-default pt-3 flex flex-col gap-2">
+            {isBeta && (
+              <div className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 px-3 py-2 mb-1">
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  Beta: All users have Plus features free!
+                </p>
+              </div>
+            )}
             {maxLists !== -1 && onUpgradeClick && (
               <Button
                 type="button"
@@ -197,12 +206,14 @@ export function ProfileDialog({
                   Upgrade Plan
                 </span>
                 <span className="text-xs text-content-tertiary">
-                  {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)} {listCount}
-                  /{maxLists}
+                  {isBeta
+                    ? 'Plus (Beta)'
+                    : subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}{' '}
+                  {listCount}/{maxLists}
                 </span>
               </Button>
             )}
-            {subscriptionTier !== 'free' && onManageBillingClick && (
+            {subscriptionTier !== 'free' && !isBeta && onManageBillingClick && (
               <Button
                 type="button"
                 variant="outline"

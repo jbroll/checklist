@@ -4,8 +4,8 @@ import { stripe, isStripeEnabled, type TierSlug, type SubscriptionTier, type Use
 // Default tier limits for when database isn't available
 const DEFAULT_TIERS: Record<TierSlug, { maxLists: number; sessionRetentionDays: number }> = {
   free: { maxLists: 3, sessionRetentionDays: 7 },
-  premium: { maxLists: 30, sessionRetentionDays: 30 },
-  team: { maxLists: 300, sessionRetentionDays: 365 },
+  plus: { maxLists: 30, sessionRetentionDays: 30 },
+  premium: { maxLists: 300, sessionRetentionDays: 365 },
   enterprise: { maxLists: -1, sessionRetentionDays: -1 },
 };
 
@@ -48,10 +48,10 @@ export function getUserSubscription(db: Database.Database, userId: string): User
     };
   }
 
-  // Create default free subscription
+  // Create default free subscription with beta status
   const insertStmt = db.prepare(`
     INSERT INTO user_subscription (user_id, tier_slug, status)
-    VALUES (?, 'free', 'active')
+    VALUES (?, 'free', 'beta')
   `);
   insertStmt.run(userId);
 
@@ -60,7 +60,7 @@ export function getUserSubscription(db: Database.Database, userId: string): User
     tierSlug: 'free',
     stripeCustomerId: null,
     stripeSubscriptionId: null,
-    status: 'active',
+    status: 'beta',
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
   };
@@ -149,7 +149,7 @@ export async function createCheckoutSession(
   db: Database.Database,
   userId: string,
   userEmail: string,
-  tierSlug: 'premium' | 'team',
+  tierSlug: 'plus' | 'premium',
   successUrl: string,
   cancelUrl: string
 ): Promise<string | null> {
@@ -236,7 +236,7 @@ export function handleCheckoutCompleted(
 export function handleSubscriptionUpdated(
   db: Database.Database,
   stripeSubscriptionId: string,
-  status: 'active' | 'past_due' | 'cancelled' | 'trialing',
+  status: 'active' | 'past_due' | 'cancelled' | 'trialing' | 'beta',
   tierSlug: TierSlug | null,
   currentPeriodEnd: number,
   cancelAtPeriodEnd: boolean

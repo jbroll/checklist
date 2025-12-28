@@ -9,7 +9,13 @@ import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { brand } from '../../lib/brand';
 import type { AccountParam } from '../../schemas';
-import { getSubscriptionTier, redirectToCheckout, TIERS } from '../../services/subscriptionService';
+import {
+  getBetaMessage,
+  getSubscriptionTier,
+  isBetaUser,
+  redirectToCheckout,
+  TIERS,
+} from '../../services/subscriptionService';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -31,8 +37,8 @@ interface UpgradeDialogProps {
 interface TierFeature {
   name: string;
   free: string | boolean;
+  plus: string | boolean;
   premium: string | boolean;
-  team: string | boolean;
 }
 
 // Dynamic features derived from tier configuration
@@ -40,26 +46,27 @@ const FEATURES: TierFeature[] = [
   {
     name: 'Lists',
     free: TIERS.free.maxListsDisplay,
+    plus: TIERS.plus.maxListsDisplay,
     premium: TIERS.premium.maxListsDisplay,
-    team: TIERS.team.maxListsDisplay,
   },
   {
     name: 'Session history',
     free: TIERS.free.sessionRetentionDisplay,
+    plus: TIERS.plus.sessionRetentionDisplay,
     premium: TIERS.premium.sessionRetentionDisplay,
-    team: TIERS.team.sessionRetentionDisplay,
   },
-  { name: 'Real-time sync', free: true, premium: true, team: true },
-  { name: 'Offline support', free: true, premium: true, team: true },
-  { name: 'Sharing', free: true, premium: true, team: true },
-  { name: 'Encrypted data', free: true, premium: true, team: true },
+  { name: 'Real-time sync', free: true, plus: true, premium: true },
+  { name: 'Offline support', free: true, plus: true, premium: true },
+  { name: 'Sharing', free: true, plus: true, premium: true },
+  { name: 'Encrypted data', free: true, plus: true, premium: true },
 ];
 
 export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeDialogProps) {
-  const [loading, setLoading] = useState<'premium' | 'team' | null>(null);
+  const [loading, setLoading] = useState<'plus' | 'premium' | null>(null);
   const currentTier = getSubscriptionTier(account);
+  const isBeta = isBetaUser(account);
 
-  const handleUpgrade = async (tier: 'premium' | 'team') => {
+  const handleUpgrade = async (tier: 'plus' | 'premium') => {
     setLoading(tier);
     try {
       await redirectToCheckout(tier);
@@ -80,10 +87,10 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
     return <span className="text-sm">{value}</span>;
   };
 
-  const renderTierButton = (tier: 'premium' | 'team') => {
+  const renderTierButton = (tier: 'plus' | 'premium') => {
     const isCurrent = currentTier === tier;
     const isDowngrade =
-      (currentTier === 'team' && tier === 'premium') || currentTier === 'enterprise';
+      (currentTier === 'premium' && tier === 'plus') || currentTier === 'enterprise';
 
     if (isCurrent) {
       return (
@@ -101,9 +108,18 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
       );
     }
 
+    // Disable upgrade buttons during beta (checkout not configured)
+    if (isBeta) {
+      return (
+        <Button variant="outline" disabled className="w-full text-content-tertiary">
+          Coming soon
+        </Button>
+      );
+    }
+
     return (
       <Button
-        variant={tier === 'premium' ? 'primary' : 'outline'}
+        variant={tier === 'plus' ? 'primary' : 'outline'}
         className="w-full"
         isLoading={loading === tier}
         onClick={() => handleUpgrade(tier)}
@@ -132,6 +148,11 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
               {message}
             </DialogDescription>
           )}
+          {isBeta && (
+            <div className="mt-2 rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 px-3 py-2">
+              <p className="text-sm text-green-700 dark:text-green-300">{getBetaMessage()}</p>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="mt-4">
@@ -150,15 +171,15 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
                     </div>
                   </th>
                   <th className="py-3 text-center text-sm font-medium text-content-secondary">
-                    <div className="text-green-600">{TIERS.premium.name}</div>
+                    <div className="text-green-600">{TIERS.plus.name}</div>
                     <div className="text-xs font-normal text-content-tertiary">
-                      {TIERS.premium.priceDisplay}
+                      {TIERS.plus.priceDisplay}
                     </div>
                   </th>
                   <th className="py-3 text-center text-sm font-medium text-content-secondary">
-                    <div>{TIERS.team.name}</div>
+                    <div>{TIERS.premium.name}</div>
                     <div className="text-xs font-normal text-content-tertiary">
-                      {TIERS.team.priceDisplay}
+                      {TIERS.premium.priceDisplay}
                     </div>
                   </th>
                 </tr>
@@ -168,8 +189,8 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
                   <tr key={feature.name} className="border-b border-divider-secondary">
                     <td className="py-3 text-sm text-content-primary">{feature.name}</td>
                     <td className="py-3 text-center">{renderFeatureValue(feature.free)}</td>
+                    <td className="py-3 text-center">{renderFeatureValue(feature.plus)}</td>
                     <td className="py-3 text-center">{renderFeatureValue(feature.premium)}</td>
-                    <td className="py-3 text-center">{renderFeatureValue(feature.team)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -185,8 +206,8 @@ export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeD
                       <span />
                     )}
                   </td>
+                  <td className="pt-4 px-2">{renderTierButton('plus')}</td>
                   <td className="pt-4 px-2">{renderTierButton('premium')}</td>
-                  <td className="pt-4 px-2">{renderTierButton('team')}</td>
                 </tr>
               </tfoot>
             </table>

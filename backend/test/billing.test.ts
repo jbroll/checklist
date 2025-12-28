@@ -63,11 +63,11 @@ describe('Subscription Tiers', () => {
     const tiers = getSubscriptionTiers(db);
 
     expect(tiers).toHaveLength(4);
-    // Sorted by price_cents ASC: free (0), enterprise (0), premium (999), team (1999)
+    // Sorted by price_cents ASC: free (0), enterprise (0), plus (999), premium (1999)
     const slugs = tiers.map((t) => t.slug);
     expect(slugs).toContain('free');
+    expect(slugs).toContain('plus');
     expect(slugs).toContain('premium');
-    expect(slugs).toContain('team');
     expect(slugs).toContain('enterprise');
   });
 
@@ -78,10 +78,10 @@ describe('Subscription Tiers', () => {
     expect(freeTier?.maxLists).toBe(3);
     expect(freeTier?.sessionRetentionDays).toBe(7);
 
-    const premiumTier = getTier(db, 'premium');
-    expect(premiumTier).not.toBeNull();
-    expect(premiumTier?.slug).toBe('premium');
-    expect(premiumTier?.maxLists).toBe(30);
+    const plusTier = getTier(db, 'plus');
+    expect(plusTier).not.toBeNull();
+    expect(plusTier?.slug).toBe('plus');
+    expect(plusTier?.maxLists).toBe(30);
   });
 
   it('should return null for non-existent tier', () => {
@@ -90,7 +90,7 @@ describe('Subscription Tiers', () => {
   });
 
   it('should have stripe_price_id column in tier', () => {
-    const tier = getTier(db, 'premium');
+    const tier = getTier(db, 'plus');
     expect(tier).toHaveProperty('stripePriceId');
   });
 });
@@ -98,61 +98,61 @@ describe('Subscription Tiers', () => {
 describe('Stripe Price ID Sync', () => {
   it('should sync price IDs from env vars to database', () => {
     // Set env vars and re-run initDb to sync
+    const originalPlus = process.env.STRIPE_PRICE_PLUS;
     const originalPremium = process.env.STRIPE_PRICE_PREMIUM;
-    const originalTeam = process.env.STRIPE_PRICE_TEAM;
 
-    process.env.STRIPE_PRICE_PREMIUM = 'price_test_premium_123';
-    process.env.STRIPE_PRICE_TEAM = 'price_test_team_456';
+    process.env.STRIPE_PRICE_PLUS = 'price_test_plus_123';
+    process.env.STRIPE_PRICE_PREMIUM = 'price_test_premium_456';
 
     // Re-init to trigger sync
     initDb(db);
 
+    const plusTier = getTier(db, 'plus');
     const premiumTier = getTier(db, 'premium');
-    const teamTier = getTier(db, 'team');
 
-    expect(premiumTier?.stripePriceId).toBe('price_test_premium_123');
-    expect(teamTier?.stripePriceId).toBe('price_test_team_456');
+    expect(plusTier?.stripePriceId).toBe('price_test_plus_123');
+    expect(premiumTier?.stripePriceId).toBe('price_test_premium_456');
 
     // Restore original env vars
+    if (originalPlus) {
+      process.env.STRIPE_PRICE_PLUS = originalPlus;
+    } else {
+      delete process.env.STRIPE_PRICE_PLUS;
+    }
     if (originalPremium) {
       process.env.STRIPE_PRICE_PREMIUM = originalPremium;
     } else {
       delete process.env.STRIPE_PRICE_PREMIUM;
     }
-    if (originalTeam) {
-      process.env.STRIPE_PRICE_TEAM = originalTeam;
-    } else {
-      delete process.env.STRIPE_PRICE_TEAM;
-    }
   });
 
   it('should not update price ID if env var is not set', () => {
     // Clear the price ID first
-    db.exec("UPDATE subscription_tier SET stripe_price_id = NULL WHERE slug = 'premium'");
+    db.exec("UPDATE subscription_tier SET stripe_price_id = NULL WHERE slug = 'plus'");
 
-    const originalPremium = process.env.STRIPE_PRICE_PREMIUM;
-    delete process.env.STRIPE_PRICE_PREMIUM;
+    const originalPlus = process.env.STRIPE_PRICE_PLUS;
+    delete process.env.STRIPE_PRICE_PLUS;
 
     // Re-init
     initDb(db);
 
-    const premiumTier = getTier(db, 'premium');
-    expect(premiumTier?.stripePriceId).toBeNull();
+    const plusTier = getTier(db, 'plus');
+    expect(plusTier?.stripePriceId).toBeNull();
 
     // Restore
-    if (originalPremium) {
-      process.env.STRIPE_PRICE_PREMIUM = originalPremium;
+    if (originalPlus) {
+      process.env.STRIPE_PRICE_PLUS = originalPlus;
     }
   });
 });
 
 describe('User Subscription', () => {
-  it('should create default free subscription for new user', () => {
+  it('should create default free subscription with beta status for new user', () => {
     const subscription = getUserSubscription(db, 'test-user-1');
 
     expect(subscription.userId).toBe('test-user-1');
     expect(subscription.tierSlug).toBe('free');
-    expect(subscription.status).toBe('active');
+    expect(subscription.status).toBe('beta'); // Beta status during beta period
     expect(subscription.stripeCustomerId).toBeNull();
     expect(subscription.stripeSubscriptionId).toBeNull();
   });
@@ -163,12 +163,12 @@ describe('User Subscription', () => {
 
     // Update it
     updateUserSubscription(db, 'test-user-1', {
-      tierSlug: 'premium',
+      tierSlug: 'plus',
       stripeCustomerId: 'cus_123',
     });
 
     const subscription = getUserSubscription(db, 'test-user-1');
-    expect(subscription.tierSlug).toBe('premium');
+    expect(subscription.tierSlug).toBe('plus');
     expect(subscription.stripeCustomerId).toBe('cus_123');
   });
 
@@ -186,17 +186,17 @@ describe('Subscription Updates', () => {
   it('should update subscription tier', () => {
     getUserSubscription(db, 'test-user-1');
 
-    updateUserSubscription(db, 'test-user-1', { tierSlug: 'team' });
+    updateUserSubscription(db, 'test-user-1', { tierSlug: 'premium' });
 
     const subscription = getUserSubscription(db, 'test-user-1');
-    expect(subscription.tierSlug).toBe('team');
+    expect(subscription.tierSlug).toBe('premium');
   });
 
   it('should update multiple fields', () => {
     getUserSubscription(db, 'test-user-1');
 
     updateUserSubscription(db, 'test-user-1', {
-      tierSlug: 'premium',
+      tierSlug: 'plus',
       stripeCustomerId: 'cus_abc',
       stripeSubscriptionId: 'sub_xyz',
       status: 'active',
@@ -205,7 +205,7 @@ describe('Subscription Updates', () => {
     });
 
     const subscription = getUserSubscription(db, 'test-user-1');
-    expect(subscription.tierSlug).toBe('premium');
+    expect(subscription.tierSlug).toBe('plus');
     expect(subscription.stripeCustomerId).toBe('cus_abc');
     expect(subscription.stripeSubscriptionId).toBe('sub_xyz');
     expect(subscription.currentPeriodEnd).toBe(1700000000);
@@ -256,10 +256,10 @@ describe('Webhook Handlers', () => {
   it('should handle checkout completed', () => {
     getUserSubscription(db, 'test-user-1');
 
-    handleCheckoutCompleted(db, 'test-user-1', 'premium', 'sub_123', 1700000000);
+    handleCheckoutCompleted(db, 'test-user-1', 'plus', 'sub_123', 1700000000);
 
     const subscription = getUserSubscription(db, 'test-user-1');
-    expect(subscription.tierSlug).toBe('premium');
+    expect(subscription.tierSlug).toBe('plus');
     expect(subscription.stripeSubscriptionId).toBe('sub_123');
     expect(subscription.status).toBe('active');
     expect(subscription.currentPeriodEnd).toBe(1700000000);
@@ -269,18 +269,18 @@ describe('Webhook Handlers', () => {
     getUserSubscription(db, 'test-user-1');
     updateUserSubscription(db, 'test-user-1', { stripeSubscriptionId: 'sub_456' });
 
-    handleSubscriptionUpdated(db, 'sub_456', 'past_due', 'premium', 1800000000, true);
+    handleSubscriptionUpdated(db, 'sub_456', 'past_due', 'plus', 1800000000, true);
 
     const subscription = getUserSubscription(db, 'test-user-1');
     expect(subscription.status).toBe('past_due');
-    expect(subscription.tierSlug).toBe('premium');
+    expect(subscription.tierSlug).toBe('plus');
     expect(subscription.cancelAtPeriodEnd).toBe(true);
   });
 
   it('should handle subscription deleted (downgrade to free)', () => {
     getUserSubscription(db, 'test-user-1');
     updateUserSubscription(db, 'test-user-1', {
-      tierSlug: 'premium',
+      tierSlug: 'plus',
       stripeSubscriptionId: 'sub_789',
     });
 
