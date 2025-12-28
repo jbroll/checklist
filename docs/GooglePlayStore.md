@@ -69,13 +69,22 @@ Recommended approach:
 
 ### Screenshot Content
 
-Capture these key screens:
-1. **Main dashboard** - Folder tree with templates
-2. **Template editor** - Showing nested categories
-3. **Shopping session** - Items being checked off
-4. **Share dialog** - Collaboration feature
-5. **Dark mode** - Show theme support
-6. **Profile/settings** - Account management
+**Core Functionality (must-have):**
+1. [ ] **Folder tree** - Hierarchical organization with folders and lists
+2. [ ] **Template editor** - List with nested categories and items
+3. [ ] **Shopping session** - Items being checked off, progress visible
+4. [ ] **Autocomplete** - Dropdown showing smart suggestions while typing
+
+**Collaboration:**
+5. [ ] **Share dialog** - Invite collaborators, permission options
+6. [ ] **Shared list indicator** - List with collaborator avatars visible
+
+**Additional Features:**
+7. [ ] **Import/Export dialog** - Shows data portability (JSON, CSV, TXT)
+8. [ ] **Dark mode** - Same screen as folder tree or session in dark theme
+9. [ ] **Profile/settings** - Account management, subscription info
+
+Priority: Capture 1-6 for core set (6 screenshots), add 7-9 for full coverage (8 max).
 
 Tools:
 - Add device frame: https://deviceframes.com or Android Studio
