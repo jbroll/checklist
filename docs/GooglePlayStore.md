@@ -52,6 +52,7 @@ Guide for publishing kjekit/CheckList to the Google Play Store.
 | Feature graphic | 1024x500 PNG/JPG | MISSING | Banner shown at top of listing |
 | Phone screenshots | 1080x1920 (min 2) | MISSING | 2-8 screenshots required |
 | Tablet screenshots | 1920x1200 (optional) | SKIP | Can add later |
+| Promo video | YouTube URL (optional) | MISSING | Shows app in action, appears at top of listing |
 
 ### Screenshot Recommendations
 
@@ -74,6 +75,20 @@ Create 1024x500 banner with:
 - Key value proposition
 - Brand colors (#76daDA for kjekit, #22c55e for CheckList)
 - Optional: device mockup showing app
+
+### Promo Video
+
+Optional YouTube video (30-120 seconds recommended):
+- Show real-time sync between devices
+- Demo creating and checking off items
+- Highlight collaboration/sharing features
+- Show offline functionality
+- Keep it short and focused
+
+Requirements:
+- Must be uploaded to YouTube (unlisted OK)
+- Landscape orientation preferred
+- No age restrictions on video
 
 ---
 
