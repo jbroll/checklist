@@ -43,9 +43,9 @@ Templates are reusable shopping lists organized in folders. When you "use" a tem
 - `FolderNodeView.tsx` - Folder/template row
 - `SessionRowView.tsx` - Session list item
 
-**Template Editor** (`src/components/editor/`):
-- `TemplateEditor.tsx` - Manage template items
-- `TemplateItemsView.tsx` - Item list with hierarchy
+**App Container** (`src/components/editor/`):
+- `AppContainer.tsx` - Main app shell and view routing
+- `AddFolderDialog.tsx` - Create new folder dialog
 
 **Shopping Session** (`src/components/session/`):
 - `ShoppingSessionView.tsx` - Active shopping interface

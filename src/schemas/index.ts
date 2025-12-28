@@ -18,7 +18,7 @@ export const ViewState = co.map({
   // Which folders are expanded in the tree (folderId -> expanded)
   folderExpanded: z.record(z.string(), z.boolean()),
 
-  // Which categories are expanded in template editor (templateId -> categoryId -> expanded)
+  // Which categories are expanded in tree view (templateId -> categoryId -> expanded)
   templateCategoryExpanded: z.record(z.string(), z.record(z.string(), z.boolean())),
 
   // Which categories are expanded per session (sessionId -> categoryKey -> expanded)

@@ -70,8 +70,8 @@ Recommended approach:
 ### Screenshot Content
 
 **Core Functionality (must-have):**
-1. [ ] **Folder tree** - Hierarchical organization with folders and lists
-2. [ ] **Template editor** - List with nested categories and items
+1. [ ] **Tree view (folders)** - Hierarchical organization with folders and lists
+2. [ ] **Tree view (items)** - List expanded showing nested categories and items
 3. [ ] **Shopping session** - Items being checked off, progress visible
 4. [ ] **Autocomplete** - Dropdown showing smart suggestions while typing
 

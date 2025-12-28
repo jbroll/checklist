@@ -10,8 +10,8 @@
 ## Naming Convention
 
 ```
-01-dashboard.png
-02-editor.png
+01-tree-view-folders.png
+02-tree-view-items.png
 03-shopping.png
 04-sharing.png
 05-dark-mode.png

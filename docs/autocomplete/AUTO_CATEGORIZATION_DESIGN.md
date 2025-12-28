@@ -899,7 +899,7 @@ When `categorizationAutoCreate` is enabled and item's category doesn't exist:
 ### 1. Template Item Creation
 
 ```typescript
-// In template editor, after user submits new item
+// In tree view, after user submits new item
 function onAddItem(rawInput: string) {
   const result = categorize(rawInput, currentDomain);
 

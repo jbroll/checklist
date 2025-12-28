@@ -18,8 +18,8 @@ Place in `screenshots/` folder.
 
 ### Recommended Screenshots
 
-1. `01-dashboard.png` - Main folder tree with templates
-2. `02-editor.png` - Template editor with nested categories
+1. `01-tree-view-folders.png` - Folder tree with lists
+2. `02-tree-view-items.png` - List with nested categories
 3. `03-shopping.png` - Shopping session with items checked
 4. `04-sharing.png` - Share/collaboration dialog
 5. `05-dark-mode.png` - Dark theme view
@@ -29,7 +29,7 @@ Place in `screenshots/` folder.
 
 ```bash
 # From connected device/emulator
-adb exec-out screencap -p > screenshots/01-dashboard.png
+adb exec-out screencap -p > screenshots/01-tree-view-folders.png
 ```
 
 ## Brand Colors

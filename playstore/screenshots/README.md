@@ -12,8 +12,8 @@ Use native device resolution (e.g., 1080x2400 for modern Android phones).
 ## Naming Convention
 
 ```
-01-dashboard.png
-02-editor.png
+01-tree-view-folders.png
+02-tree-view-items.png
 03-shopping.png
 04-sharing.png
 05-dark-mode.png
@@ -23,5 +23,5 @@ Use native device resolution (e.g., 1080x2400 for modern Android phones).
 ## Capture Command
 
 ```bash
-adb exec-out screencap -p > 01-dashboard.png
+adb exec-out screencap -p > 01-tree-view-folders.png
 ```

@@ -46,11 +46,11 @@ export function toggleFolderExpanded(account: AccountParam, folderId: string): v
 }
 
 // ============================================================================
-// Template Category Expanded State (for template editor)
+// Template Category Expanded State (for tree view)
 // ============================================================================
 
 /**
- * Get whether a category is expanded in the template editor
+ * Get whether a category is expanded in the tree view
  */
 export function getTemplateCategoryExpanded(
   account: AccountParam,
@@ -65,7 +65,7 @@ export function getTemplateCategoryExpanded(
 }
 
 /**
- * Set whether a category is expanded in the template editor
+ * Set whether a category is expanded in the tree view
  */
 export function setTemplateCategoryExpanded(
   account: AccountParam,
@@ -85,7 +85,7 @@ export function setTemplateCategoryExpanded(
 }
 
 /**
- * Toggle category expanded state in template editor
+ * Toggle category expanded state in tree view
  */
 export function toggleTemplateCategoryExpanded(
   account: AccountParam,

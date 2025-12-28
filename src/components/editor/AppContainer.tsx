@@ -218,7 +218,7 @@ export function AppContainer({
     }
   }
 
-  // Otherwise show Template Editor
+  // Otherwise show Tree View
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const accountAsAny = me as any;
   return (

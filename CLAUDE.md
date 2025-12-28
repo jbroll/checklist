@@ -70,9 +70,9 @@ kjekit/
 │   │   ├── jazz.tsx       # Jazz provider setup
 │   │   └── utils.ts       # Helper functions
 │   ├── components/
-│   │   ├── Dashboard.tsx  # Main dashboard with auth UI
-│   │   ├── tree/          # Folder tree navigation
-│   │   ├── editor/        # Template editing
+│   │   ├── AuthGate.tsx   # Auth wrapper component
+│   │   ├── tree/          # Tree view (folders and items)
+│   │   ├── editor/        # App container and routing
 │   │   ├── session/       # Shopping session interface
 │   │   ├── import/        # Import dialogs
 │   │   ├── export/        # Export dialogs

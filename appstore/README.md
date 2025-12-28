@@ -32,8 +32,8 @@ Folder: `screenshots/iphone-6.7/`
 
 ## Recommended Screenshots
 
-1. Main dashboard with folder tree
-2. Template editor with categories
+1. Tree view with folder tree
+2. Tree view with items and categories
 3. Shopping session view
 4. Sharing/collaboration
 5. Dark mode
