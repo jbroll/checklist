@@ -36,6 +36,7 @@ dist-ssr
 .env.production.local
 .env.production
 secrets.env
+secrets-test.env
 
 # Test reports
 playwright-report/
