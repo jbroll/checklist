@@ -1,10 +1,20 @@
 import { RefreshCw } from 'lucide-react';
-import { Component, type ErrorInfo, lazy, type ReactNode, Suspense, useEffect } from 'react';
+import {
+  Component,
+  type ErrorInfo,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useState,
+} from 'react';
 import { AuthGate } from './components/AuthGate';
+import { InAppBrowserWarning } from './components/sharing/InAppBrowserWarning';
 import { LoadingScreen } from './components/ui/loading';
 import { brand } from './lib/brand';
 import { DialogProvider } from './lib/dialog-context';
 import { JazzProvider } from './lib/jazz';
+import { detectInAppBrowser } from './utils/inAppBrowserDetection';
 
 /**
  * Error Boundary to catch rendering errors and prevent white screen crashes
@@ -122,6 +132,11 @@ function ConditionalJazzInspector() {
 }
 
 function App() {
+  // Check for in-app browser (Facebook, Instagram, etc.) which don't support
+  // OAuth properly and have limited local storage capabilities
+  const [browserInfo] = useState(() => detectInAppBrowser());
+  const [dismissedWarning, setDismissedWarning] = useState(false);
+
   // Update document head based on brand
   useEffect(() => {
     // Update title
@@ -189,6 +204,12 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  // Block in-app browsers (Facebook, Instagram, etc.) which don't support
+  // OAuth and have unreliable local storage for offline data
+  if (browserInfo.isInAppBrowser && !dismissedWarning) {
+    return <InAppBrowserWarning onContinue={() => setDismissedWarning(true)} />;
   }
 
   return (

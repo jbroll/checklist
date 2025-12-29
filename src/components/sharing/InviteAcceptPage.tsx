@@ -1,22 +1,10 @@
 import type { CoMap, ID } from 'jazz-tools';
-import {
-  AlertTriangle,
-  Apple,
-  Check,
-  Copy,
-  ExternalLink,
-  Loader2,
-  Share2,
-  XCircle,
-} from 'lucide-react';
+import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
 import { Account, FolderNode } from '@/schemas';
-import type { InAppBrowserInfo } from '@/utils/inAppBrowserDetection';
-import { copyToClipboard, getCurrentUrl } from '@/utils/inAppBrowserDetection';
-import { useInAppBrowserDetection } from './InAppBrowserWarning';
 
 interface InviteAcceptPageProps {
   token: string;
@@ -31,7 +19,6 @@ interface InviteValidation {
 }
 
 type PageState =
-  | { type: 'in_app_browser' }
   | { type: 'loading' }
   | { type: 'not_authenticated'; invite: InviteValidation }
   | { type: 'email_mismatch'; inviteEmail: string; userEmail: string }
@@ -43,10 +30,7 @@ type PageState =
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount(Account) as any;
-  const browserInfo = useInAppBrowserDetection();
-  const [state, setState] = useState<PageState>(() =>
-    browserInfo.isInAppBrowser ? { type: 'in_app_browser' } : { type: 'loading' },
-  );
+  const [state, setState] = useState<PageState>({ type: 'loading' });
 
   // Track if we've moved past the initial validation phase
   // Once we're in accepting/success/error state, don't re-validate
@@ -54,11 +38,6 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
   // Validate the invite token
   useEffect(() => {
-    // Don't validate if in-app browser
-    if (browserInfo.isInAppBrowser) {
-      return;
-    }
-
     // Don't re-validate if we've already started accepting or completed
     if (hasStartedAcceptingRef.current) {
       return;
@@ -105,7 +84,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     }
 
     doValidation();
-  }, [token, me, browserInfo.isInAppBrowser]);
+  }, [token, me]);
 
   const handleAccept = async () => {
     // Mark that we've started accepting - prevents re-validation on me changes
@@ -175,8 +154,6 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-secondary p-4">
       <div className="w-full max-w-md">
-        {state.type === 'in_app_browser' && <InAppBrowserState browserInfo={browserInfo} />}
-
         {state.type === 'loading' && <LoadingState />}
 
         {state.type === 'not_authenticated' && (
@@ -215,72 +192,6 @@ function LoadingState() {
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-green-600" />
         <p className="text-content-secondary">Loading invite...</p>
-      </div>
-    </div>
-  );
-}
-
-function InAppBrowserState({ browserInfo }: { browserInfo: InAppBrowserInfo }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyLink = async () => {
-    const url = getCurrentUrl();
-    const success = await copyToClipboard(url);
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const browserName = browserInfo.browserName || 'this app';
-
-  return (
-    <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-8 shadow-sm">
-      <div className="mb-6 flex justify-center">
-        <div className="rounded-full bg-amber-100 dark:bg-amber-800/30 p-3">
-          <AlertTriangle className="h-8 w-8 text-amber-600" />
-        </div>
-      </div>
-
-      <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">Open in Browser</h1>
-
-      <p className="mb-4 text-center text-content-secondary">
-        You're viewing this page in <span className="font-medium">{browserName}</span>'s built-in
-        browser, which doesn't support sign-in properly.
-      </p>
-
-      <div className="mb-6 rounded-lg bg-surface-primary p-4 border border-amber-200 dark:border-amber-700">
-        <div className="flex items-start gap-3">
-          <ExternalLink className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-content-secondary">
-            <p className="font-medium mb-1">How to open in your browser:</p>
-            <p>{browserInfo.openInBrowserInstructions}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <Button
-          className="w-full"
-          onClick={handleCopyLink}
-          variant={copied ? 'primary' : 'outline'}
-        >
-          {copied ? (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Link Copied!
-            </>
-          ) : (
-            <>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy Link
-            </>
-          )}
-        </Button>
-
-        <p className="text-center text-xs text-content-tertiary">
-          Copy this link and paste it in Safari, Chrome, or your preferred browser.
-        </p>
       </div>
     </div>
   );
