@@ -1,0 +1,175 @@
+#!/bin/bash
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits, reverts, etc.
+if grep -qE "^(Merge|Revert)" "$COMMIT_MSG_FILE"; then
+    exit 0
+fi
+
+BODY_LINES=$(echo "$COMMIT_MSG" | grep -v "^#" | wc -l)
+
+STAT=PASS
+
+# Get subject line (first non-empty line)
+SUBJECT=$(echo "$COMMIT_MSG" | grep -v "^#" | head -1)
+SUBJECT_LENGTH=${#SUBJECT}
+
+# Count body lines (excluding comments, blank lines, and Claude signature)
+
+# Check for non-ASCII characters
+if echo "$COMMIT_MSG" | LC_ALL=C grep -q '[^[:print:][:space:]]'; then
+    echo "Commit message contains non-ASCII characters" 1>&2
+    exit 1
+fi
+
+
+# Check if this commit only contains documentation/non-code files
+# If so, skip the expensive test suite
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Define patterns for code files that require testing
+CODE_FILE_PATTERNS="\.tsx?$|\.jsx?$|\.css$|\.json$|\.html$|package\.json|tsconfig\.json"
+
+# Check if any code files are in the commit
+if ! echo "$STAGED_FILES" | grep -qE "$CODE_FILE_PATTERNS"; then
+    echo "📝 Documentation-only commit detected - skipping test suite"
+    echo "✅ Commit message validation passed"
+    exit 0
+fi
+
+# Pre-Commit Hook for CheckList
+# Validates code quality and functionality before allowing commits
+#
+# This hook runs:
+# 1. TypeScript type checking
+# 2. Biome linting
+# 3. Complete unit test suite (Vitest)
+# 4. Complete Playwright E2E test suite
+#
+# Logs are saved to: .git/hooks/logs/pre-commit-TIMESTAMP.log
+# See docs/COMMIT_TROUBLESHOOTING.md for debugging help
+#
+# NO BYPASS OPTION - All tests must pass to commit
+
+# Get project root (where package.json is)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+# Setup logging
+LOG_DIR="$PROJECT_ROOT/.git/hooks/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="$LOG_DIR/pre-commit-$TIMESTAMP.log"
+
+# Log to file only (quiet mode for console)
+log_only() {
+    cat >> "$LOG_FILE"
+}
+
+# Display to console AND log to file (for important status messages)
+log_and_display() {
+    tee -a "$LOG_FILE"
+}
+
+# Start logging (header goes to file only)
+{
+    echo "════════════════════════════════════════════════════════════════"
+    echo "  Pre-Commit Validation Log"
+    echo "════════════════════════════════════════════════════════════════"
+    echo "Started: $(date)"
+    echo "Project: $PROJECT_ROOT"
+    echo "Log file: $LOG_FILE"
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
+} | log_only
+
+# Console summary header
+echo "Running pre-commit validation..."
+echo "Log: $LOG_FILE"
+echo ""
+
+# Function to print section headers (file only, console shows brief status)
+section() {
+    {
+        echo ""
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  $1"
+        echo "═══════════════════════════════════════════════════════════"
+        echo ""
+    } | log_only
+    # Brief console output
+    echo -n "  $1... "
+}
+
+# Function to handle failures (shows on console + logs)
+fail() {
+    echo "FAILED"
+    echo ""
+    echo "FAILED: $1"
+    echo "See log for details: $LOG_FILE"
+    echo ""
+    {
+        echo ""
+        echo "Pre-commit validation FAILED: $1"
+        echo ""
+    } >> "$LOG_FILE"
+    exit 1
+}
+
+# 1. TypeScript Type Checking
+section "1/4: TypeScript Type Checking"
+if ! npm run type-check 2>&1 | log_only; then
+    fail "TypeScript type checking failed"
+fi
+echo "OK"
+echo "TypeScript type checking passed" >> "$LOG_FILE"
+
+# 2. Biome Linting
+section "2/4: Biome Linting"
+if ! npm run lint 2>&1 | log_only; then
+    fail "Biome linting failed"
+fi
+echo "OK"
+echo "Biome linting passed" >> "$LOG_FILE"
+
+# 3. Unit Tests (Vitest)
+section "3/4: Unit Tests (Vitest)"
+if ! npm run test:run 2>&1 | log_only; then
+    fail "Unit tests failed"
+fi
+echo "OK"
+echo "Unit tests passed" >> "$LOG_FILE"
+
+# 4. E2E Tests (Playwright)
+section "4/4: End-to-End Tests (Playwright)"
+{
+    echo "Running full Playwright test suite..."
+    echo "(This may take 5-10 minutes)"
+    echo ""
+} | log_only
+if ! npm run test:e2e 2>&1 | log_only; then
+    fail "End-to-end tests failed"
+fi
+echo "OK"
+echo "End-to-end tests passed" >> "$LOG_FILE"
+
+# All checks passed
+{
+    echo ""
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  ALL PRE-COMMIT CHECKS PASSED"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "Completed: $(date)"
+    echo "Duration: $SECONDS seconds"
+    echo ""
+} >> "$LOG_FILE"
+
+echo ""
+echo "All checks passed (${SECONDS}s)"
+echo ""
+
+exit 0

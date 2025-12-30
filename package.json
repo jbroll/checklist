@@ -40,7 +40,9 @@
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
     "cap:run:android": "npx cap run android",
-    "cap:run:ios": "npx cap run ios"
+    "cap:run:ios": "npx cap run ios",
+    "prepare": "./scripts/git-hooks/install.sh",
+    "setup:hooks": "./scripts/git-hooks/install.sh"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
