@@ -161,6 +161,20 @@ describe('sessionService - Core Functions', () => {
       }).toThrow('Template nonexistent not found');
     });
 
+    it('should initialize sessions array if not exists', () => {
+      const items = [createMockItem('item-1', 'Milk')];
+      const template = createMockTemplate('template-1', 'Groceries', items, []);
+      // Simulate older template without sessions array
+      (template as any).sessions = undefined;
+      const account = createMockAccount([template]);
+
+      const sessionId = createSession(account, 'template-1');
+
+      expect(sessionId).toBeDefined();
+      expect(template.sessions).toBeDefined();
+      expect(template.sessions).toHaveLength(1);
+    });
+
     it('should set default view mode', () => {
       const items = [createMockItem('item-1', 'Milk')];
       const template = createMockTemplate('template-1', 'Groceries', items, []);
@@ -287,6 +301,44 @@ describe('sessionService - Core Functions', () => {
       setItemSelected(account, 'template-1', 'session-1', 'item-1', false);
 
       expect(template.sessions[0].itemStates['item-1']?.checked).toBe(false);
+    });
+
+    it('should update createdAt on first item selection', () => {
+      // Create session with no selected items
+      const testItems = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
+      const emptySession = createMockSession('session-empty', {});
+      const emptyTemplate = createMockTemplate('template-empty', 'Empty', testItems, [
+        emptySession,
+      ]);
+      const emptyAccount = createMockAccount([emptyTemplate]);
+
+      const beforeSelect = new Date();
+      setItemSelected(emptyAccount, 'template-empty', 'session-empty', 'item-1', true);
+
+      // createdAt should be updated to now (first selection)
+      expect(emptyTemplate.sessions[0].createdAt.getTime()).toBeGreaterThanOrEqual(
+        beforeSelect.getTime(),
+      );
+    });
+
+    it('should not change createdAt on subsequent selections', () => {
+      // Session already has a selected item
+      const originalCreatedAt = template.sessions[0].createdAt;
+
+      setItemSelected(account, 'template-1', 'session-1', 'item-2', true);
+
+      // createdAt should remain unchanged
+      expect(template.sessions[0].createdAt).toEqual(originalCreatedAt);
+    });
+
+    it('should skip update when deselecting non-existent item', () => {
+      const originalStates = { ...template.sessions[0].itemStates };
+
+      // Deselecting an item that doesn't exist should be a no-op
+      setItemSelected(account, 'template-1', 'session-1', 'nonexistent', false);
+
+      // itemStates should be unchanged (no new keys added)
+      expect(Object.keys(template.sessions[0].itemStates)).toEqual(Object.keys(originalStates));
     });
   });
 
