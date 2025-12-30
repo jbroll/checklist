@@ -93,21 +93,31 @@ export function ItemNodeRenderer({
     return (
       <div key={item.id}>
         <SessionZone
-          title={item.name}
-          zone="available"
           items={categoryItems}
           itemStates={session.itemStates || {}}
           expanded={isCategoryExpanded(item.id)}
           onToggleExpand={() => onToggleExpand(item.id)}
-          onToggleSelected={onToggleSelected}
-          onToggleChecked={onToggleChecked}
-          onBatchSelectAll={onBatchSelectAll}
-          onBatchDeselectAll={onBatchDeselectAll}
-          onBatchToggle={onBatchToggle}
-          count={categoryItemIds.length}
-          categoryItem={item}
           template={template}
-          onEditNote={onEditNote}
+          zoneConfig={{
+            title: item.name,
+            zone: 'available',
+            count: categoryItemIds.length,
+          }}
+          itemActions={{
+            onToggleSelected,
+            onToggleChecked,
+          }}
+          batchActions={{
+            onBatchSelectAll,
+            onBatchDeselectAll,
+            onBatchToggle,
+          }}
+          categorySelection={{
+            categoryItem: item,
+          }}
+          itemEditModeProps={{
+            onEditNote,
+          }}
         >
           <div className="pl-4">
             {children.map((child, childIndex) => (

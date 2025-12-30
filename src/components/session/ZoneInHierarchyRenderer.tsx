@@ -46,6 +46,23 @@ export function ZoneInHierarchyRenderer({
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
+  // Shared prop objects for SessionZone
+  const itemActions = {
+    onToggleSelected,
+    onToggleChecked,
+    onDeleteItem,
+    showDeleteIcon,
+  };
+
+  const itemEditModeProps = {
+    interactionMode,
+    onEnterItemEditMode: onEnterEditMode,
+    onExitItemEditMode: onExitEditMode,
+    canEditItemFn: canEdit,
+    canDragItemFn: canDrag,
+    onEditNote,
+  };
+
   // Only include categories that have items selected or checked
   const selectedAndCheckedItems = [...selectedItems, ...checkedItems];
   const categoriesWithItems = buildCategoryTree(selectedAndCheckedItems, template.items);
@@ -135,25 +152,21 @@ export function ZoneInHierarchyRenderer({
       return (
         <SessionZone
           key={category.path}
-          title={category.name}
-          zone="available"
           items={[]}
           itemStates={{}}
           expanded={categoryExpanded[`category-${category.path}`] ?? true}
           onToggleExpand={() => onToggleCategoryExpanded(`category-${category.path}`)}
-          onToggleSelected={onToggleSelected}
-          onToggleChecked={onToggleChecked}
-          count={totalItems}
-          checkedVsSelectedCount={{
-            checked: counts.checked,
-            selected: counts.selected + counts.checked,
+          zoneConfig={{
+            title: category.name,
+            zone: 'available',
+            count: totalItems,
+            checkedVsSelectedCount: {
+              checked: counts.checked,
+              selected: counts.selected + counts.checked,
+            },
           }}
-          interactionMode={interactionMode}
-          onEnterItemEditMode={onEnterEditMode}
-          onExitItemEditMode={onExitEditMode}
-          canEditItemFn={canEdit}
-          canDragItemFn={canDrag}
-          onEditNote={onEditNote}
+          itemActions={itemActions}
+          itemEditModeProps={itemEditModeProps}
         >
           <div className="flex flex-col pl-4">
             {/* Show zones for items at this level */}
@@ -161,56 +174,44 @@ export function ZoneInHierarchyRenderer({
               <>
                 {catSelected.length > 0 && (
                   <SessionZone
-                    title="Selected"
-                    icon={ListChecks}
-                    zone="selected"
                     items={catSelected}
                     itemStates={session.itemStates || {}}
                     expanded={categoryExpanded[`${category.path}-selected`] ?? true}
                     onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-selected`)}
-                    onToggleSelected={onToggleSelected}
-                    onToggleChecked={onToggleChecked}
-                    count={catSelected.length}
-                    checkedVsSelectedCount={{
-                      checked: catChecked.length,
-                      selected: catSelected.length + catChecked.length,
+                    zoneConfig={{
+                      title: 'Selected',
+                      icon: ListChecks,
+                      zone: 'selected',
+                      count: catSelected.length,
+                      checkedVsSelectedCount: {
+                        checked: catChecked.length,
+                        selected: catSelected.length + catChecked.length,
+                      },
+                      showHeading: showZoneHeadings,
                     }}
-                    showHeading={showZoneHeadings}
-                    showDeleteIcon={showDeleteIcon}
-                    onDeleteItem={onDeleteItem}
-                    interactionMode={interactionMode}
-                    onEnterItemEditMode={onEnterEditMode}
-                    onExitItemEditMode={onExitEditMode}
-                    canEditItemFn={canEdit}
-                    canDragItemFn={canDrag}
-                    onEditNote={onEditNote}
+                    itemActions={itemActions}
+                    itemEditModeProps={itemEditModeProps}
                   />
                 )}
                 {catChecked.length > 0 && (
                   <SessionZone
-                    title="Checked"
-                    icon={CheckCircle2}
-                    zone="checked"
                     items={catChecked}
                     itemStates={session.itemStates || {}}
                     expanded={categoryExpanded[`${category.path}-checked`] ?? true}
                     onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-checked`)}
-                    onToggleSelected={onToggleSelected}
-                    onToggleChecked={onToggleChecked}
-                    count={catChecked.length}
-                    checkedVsSelectedCount={{
-                      checked: catChecked.length,
-                      selected: catSelected.length + catChecked.length,
+                    zoneConfig={{
+                      title: 'Checked',
+                      icon: CheckCircle2,
+                      zone: 'checked',
+                      count: catChecked.length,
+                      checkedVsSelectedCount: {
+                        checked: catChecked.length,
+                        selected: catSelected.length + catChecked.length,
+                      },
+                      showHeading: showZoneHeadings,
                     }}
-                    showHeading={showZoneHeadings}
-                    showDeleteIcon={showDeleteIcon}
-                    onDeleteItem={onDeleteItem}
-                    interactionMode={interactionMode}
-                    onEnterItemEditMode={onEnterEditMode}
-                    onExitItemEditMode={onExitEditMode}
-                    canEditItemFn={canEdit}
-                    canDragItemFn={canDrag}
-                    onEditNote={onEditNote}
+                    itemActions={itemActions}
+                    itemEditModeProps={itemEditModeProps}
                   />
                 )}
               </>
@@ -231,56 +232,44 @@ export function ZoneInHierarchyRenderer({
         <>
           {uncategorizedSelectedItems.length > 0 && (
             <SessionZone
-              title="Selected"
-              icon={ListChecks}
-              zone="selected"
               items={uncategorizedSelectedItems}
               itemStates={session.itemStates || {}}
               expanded={categoryExpanded['uncategorized-selected'] ?? true}
               onToggleExpand={() => onToggleCategoryExpanded('uncategorized-selected')}
-              onToggleSelected={onToggleSelected}
-              onToggleChecked={onToggleChecked}
-              count={uncategorizedSelectedItems.length}
-              checkedVsSelectedCount={{
-                checked: uncategorizedCheckedItems.length,
-                selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+              zoneConfig={{
+                title: 'Selected',
+                icon: ListChecks,
+                zone: 'selected',
+                count: uncategorizedSelectedItems.length,
+                checkedVsSelectedCount: {
+                  checked: uncategorizedCheckedItems.length,
+                  selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+                },
+                showHeading: showZoneHeadings,
               }}
-              showHeading={showZoneHeadings}
-              showDeleteIcon={showDeleteIcon}
-              onDeleteItem={onDeleteItem}
-              interactionMode={interactionMode}
-              onEnterItemEditMode={onEnterEditMode}
-              onExitItemEditMode={onExitEditMode}
-              canEditItemFn={canEdit}
-              canDragItemFn={canDrag}
-              onEditNote={onEditNote}
+              itemActions={itemActions}
+              itemEditModeProps={itemEditModeProps}
             />
           )}
           {uncategorizedCheckedItems.length > 0 && (
             <SessionZone
-              title="Checked"
-              icon={CheckCircle2}
-              zone="checked"
               items={uncategorizedCheckedItems}
               itemStates={session.itemStates || {}}
               expanded={categoryExpanded['uncategorized-checked'] ?? true}
               onToggleExpand={() => onToggleCategoryExpanded('uncategorized-checked')}
-              onToggleSelected={onToggleSelected}
-              onToggleChecked={onToggleChecked}
-              count={uncategorizedCheckedItems.length}
-              checkedVsSelectedCount={{
-                checked: uncategorizedCheckedItems.length,
-                selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+              zoneConfig={{
+                title: 'Checked',
+                icon: CheckCircle2,
+                zone: 'checked',
+                count: uncategorizedCheckedItems.length,
+                checkedVsSelectedCount: {
+                  checked: uncategorizedCheckedItems.length,
+                  selected: uncategorizedSelectedItems.length + uncategorizedCheckedItems.length,
+                },
+                showHeading: showZoneHeadings,
               }}
-              showHeading={showZoneHeadings}
-              showDeleteIcon={showDeleteIcon}
-              onDeleteItem={onDeleteItem}
-              interactionMode={interactionMode}
-              onEnterItemEditMode={onEnterEditMode}
-              onExitItemEditMode={onExitEditMode}
-              canEditItemFn={canEdit}
-              canDragItemFn={canDrag}
-              onEditNote={onEditNote}
+              itemActions={itemActions}
+              itemEditModeProps={itemEditModeProps}
             />
           )}
         </>

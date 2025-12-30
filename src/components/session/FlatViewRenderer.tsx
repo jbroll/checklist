@@ -48,53 +48,55 @@ export function FlatViewRenderer({
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.showZoneHeadings ?? false;
 
+  const itemActions = {
+    onToggleSelected,
+    onToggleChecked,
+    onDeleteItem,
+    showDeleteIcon,
+  };
+
+  const itemEditModeProps = {
+    interactionMode,
+    onEnterItemEditMode: onEnterEditMode,
+    onExitItemEditMode: onExitEditMode,
+    canEditItemFn: canEdit,
+    canDragItemFn: canDrag,
+    onEditNote,
+  };
+
   return (
     <>
       <SessionZone
-        title="Selected"
-        icon={ListChecks}
-        zone="selected"
         items={selectedItems}
         itemStates={session.itemStates || {}}
         expanded={zoneExpanded.selected}
         onToggleExpand={() => onToggleZoneExpanded('selected')}
-        onToggleSelected={onToggleSelected}
-        onToggleChecked={onToggleChecked}
-        count={selectedItems.length}
-        showHeading={showZoneHeadings}
-        showDeleteIcon={showDeleteIcon}
-        onDeleteItem={onDeleteItem}
         template={template}
-        // Interaction mode props for item editing
-        interactionMode={interactionMode}
-        onEnterItemEditMode={onEnterEditMode}
-        onExitItemEditMode={onExitEditMode}
-        canEditItemFn={canEdit}
-        canDragItemFn={canDrag}
-        onEditNote={onEditNote}
+        zoneConfig={{
+          title: 'Selected',
+          icon: ListChecks,
+          zone: 'selected',
+          count: selectedItems.length,
+          showHeading: showZoneHeadings,
+        }}
+        itemActions={itemActions}
+        itemEditModeProps={itemEditModeProps}
       />
       <SessionZone
-        title="Checked"
-        icon={CheckCircle2}
-        zone="checked"
         items={checkedItems}
         itemStates={session.itemStates || {}}
         expanded={zoneExpanded.checked}
         onToggleExpand={() => onToggleZoneExpanded('checked')}
-        onToggleSelected={onToggleSelected}
-        onToggleChecked={onToggleChecked}
-        count={checkedItems.length}
-        showHeading={showZoneHeadings}
-        showDeleteIcon={showDeleteIcon}
-        onDeleteItem={onDeleteItem}
         template={template}
-        // Interaction mode props for item editing
-        interactionMode={interactionMode}
-        onEnterItemEditMode={onEnterEditMode}
-        onExitItemEditMode={onExitEditMode}
-        canEditItemFn={canEdit}
-        canDragItemFn={canDrag}
-        onEditNote={onEditNote}
+        zoneConfig={{
+          title: 'Checked',
+          icon: CheckCircle2,
+          zone: 'checked',
+          count: checkedItems.length,
+          showHeading: showZoneHeadings,
+        }}
+        itemActions={itemActions}
+        itemEditModeProps={itemEditModeProps}
       />
     </>
   );

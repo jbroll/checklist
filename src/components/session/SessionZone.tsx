@@ -14,84 +14,113 @@ import type { CategoryNode } from './categoryTreeBuilder';
 import { collectAllItemIds, getSelectionState } from './categoryTreeUtils';
 import { SessionItemRow } from './SessionItemRow';
 
-interface SessionZoneProps {
+// Grouped prop interfaces to reduce prop count
+export interface SessionZoneConfig {
   title: string;
   icon?: LucideIcon;
   zone: 'available' | 'selected' | 'checked';
+  count?: number;
+  showHeading?: boolean;
+  isTopLevelZone?: boolean;
+  checkedVsSelectedCount?: { checked: number; selected: number };
+}
+
+export interface SessionZoneItemActions {
+  onToggleSelected: (itemId: string) => void;
+  onToggleChecked: (itemId: string) => void;
+  onDeleteItem?: (itemId: string) => void;
+  showDeleteIcon?: boolean;
+}
+
+export interface SessionZoneBatchActions {
+  onBatchSelectAll?: (itemIds: string[]) => void;
+  onBatchDeselectAll?: (itemIds: string[]) => void;
+  onBatchToggle?: (itemIds: string[]) => void;
+}
+
+export interface SessionZoneCategorySelection {
+  categoryItem?: TemplateItem;
+  isSelected?: boolean;
+  onSelectItem?: (itemId: string | null) => void;
+}
+
+export interface SessionZoneEditModeProps {
+  isEditingThisItem?: boolean;
+  canEditItem?: boolean;
+  canDragItem?: boolean;
+  onEnterEditMode?: () => void;
+  onExitEditMode?: () => void;
+}
+
+export interface SessionZoneItemEditModeProps {
+  interactionMode?: InteractionMode;
+  onEnterItemEditMode?: (itemId: string) => void;
+  onExitItemEditMode?: () => void;
+  canEditItemFn?: (itemId: string) => boolean;
+  canDragItemFn?: (itemId: string) => boolean;
+  onEditNote?: (itemId: string) => void;
+}
+
+interface SessionZoneProps {
+  // Core data props
   items: TemplateItem[];
   itemStates: Record<string, ItemState>;
   expanded: boolean;
   onToggleExpand: () => void;
-  onToggleSelected: (itemId: string) => void;
-  onToggleChecked: (itemId: string) => void;
-  onBatchSelectAll?: (itemIds: string[]) => void;
-  onBatchDeselectAll?: (itemIds: string[]) => void;
-  onBatchToggle?: (itemIds: string[]) => void;
-  count?: number;
+  category?: CategoryNode | null;
+  template?: InstanceOfSchema<typeof FolderNode>;
   children?: React.ReactNode;
-  showHeading?: boolean; // Controls whether to show the zone heading
-  isTopLevelZone?: boolean; // Controls whether this is a top-level zone (for styling)
-  category?: CategoryNode | null; // Category node for batch operations
-  showDeleteIcon?: boolean;
-  // For zone-in-hierarchy: show checked vs selected instead of selected vs total
-  checkedVsSelectedCount?: { checked: number; selected: number };
-  onDeleteItem?: (itemId: string) => void;
-  categoryItem?: TemplateItem; // The actual category item for selection
-  isSelected?: boolean; // Category selection state
-  onSelectItem?: (itemId: string | null) => void; // Category selection handler
-  template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
-  // Interaction mode props (centralized state management)
-  isEditingThisItem?: boolean; // Is this specific category being edited
-  canEditItem?: boolean; // Can edit this category in current mode
-  canDragItem?: boolean; // Can drag items in this zone in current mode
-  onEnterEditMode?: () => void; // Enter edit mode for this category
-  onExitEditMode?: () => void; // Exit edit mode for this category
-  // Interaction mode props for child items (when rendering items directly)
-  interactionMode?: InteractionMode; // InteractionMode from parent
-  onEnterItemEditMode?: (itemId: string) => void; // Enter edit mode for an item
-  onExitItemEditMode?: () => void; // Exit edit mode for an item
-  canEditItemFn?: (itemId: string) => boolean; // Can edit a specific item
-  canDragItemFn?: (itemId: string) => boolean; // Can drag a specific item
-  // Notes
-  onEditNote?: (itemId: string) => void; // Open note editor dialog
+  // Grouped props
+  zoneConfig: SessionZoneConfig;
+  itemActions: SessionZoneItemActions;
+  batchActions?: SessionZoneBatchActions;
+  categorySelection?: SessionZoneCategorySelection;
+  editModeProps?: SessionZoneEditModeProps;
+  itemEditModeProps?: SessionZoneItemEditModeProps;
 }
 
 export function SessionZone({
-  title,
-  icon: Icon,
-  zone,
   items,
   itemStates,
   expanded,
   onToggleExpand,
-  onToggleSelected,
-  onToggleChecked,
-  onBatchSelectAll,
-  onBatchDeselectAll,
-  onBatchToggle,
-  count,
-  children,
-  showHeading = true,
-  isTopLevelZone = false,
   category,
-  showDeleteIcon = false,
-  checkedVsSelectedCount,
-  onDeleteItem,
-  categoryItem,
-  isSelected = false,
-  onSelectItem,
   template,
-  isEditingThisItem = false,
-  canEditItem = true,
-  onEnterEditMode,
-  onExitEditMode,
-  interactionMode,
-  onEnterItemEditMode,
-  onExitItemEditMode,
-  canEditItemFn,
-  canDragItemFn,
-  onEditNote,
+  children,
+  zoneConfig,
+  itemActions,
+  batchActions = {},
+  categorySelection = {},
+  editModeProps = {},
+  itemEditModeProps = {},
 }: SessionZoneProps) {
+  // Destructure grouped props
+  const {
+    title,
+    icon: Icon,
+    zone,
+    count,
+    showHeading = true,
+    isTopLevelZone = false,
+    checkedVsSelectedCount,
+  } = zoneConfig;
+  const { onToggleSelected, onToggleChecked, onDeleteItem, showDeleteIcon = false } = itemActions;
+  const { onBatchSelectAll, onBatchDeselectAll, onBatchToggle } = batchActions;
+  const { categoryItem, isSelected = false, onSelectItem } = categorySelection;
+  const {
+    isEditingThisItem = false,
+    canEditItem = true,
+    onEnterEditMode,
+    onExitEditMode,
+  } = editModeProps;
+  const {
+    interactionMode,
+    onEnterItemEditMode,
+    onExitItemEditMode,
+    canEditItemFn,
+    canDragItemFn,
+    onEditNote,
+  } = itemEditModeProps;
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount<typeof Account>() as any;
   const [editValue, setEditValue] = useState('');

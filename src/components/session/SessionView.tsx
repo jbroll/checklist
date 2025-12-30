@@ -278,23 +278,31 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                 ) : (
                   <div ref={availableZoneRef} className="bg-blue-50 dark:bg-blue-900/20 p-4">
                     <SessionZone
-                      title="Default Items"
-                      icon={Package}
-                      zone="available"
                       items={activeItems}
                       itemStates={session.itemStates || {}}
                       expanded={zoneExpanded.available}
                       onToggleExpand={() =>
                         setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))
                       }
-                      onToggleSelected={handlers.handleToggleDefault}
-                      onToggleChecked={handlers.handleToggleChecked}
-                      onBatchSelectAll={handlers.handleBatchDefaultSelectAll}
-                      onBatchDeselectAll={handlers.handleBatchDefaultDeselectAll}
-                      onBatchToggle={handlers.handleBatchDefaultToggle}
-                      count={activeItems.length}
-                      showHeading={true}
-                      onEditNote={noteEditor.openNoteEditor('available')}
+                      zoneConfig={{
+                        title: 'Default Items',
+                        icon: Package,
+                        zone: 'available',
+                        count: activeItems.length,
+                        showHeading: true,
+                      }}
+                      itemActions={{
+                        onToggleSelected: handlers.handleToggleDefault,
+                        onToggleChecked: handlers.handleToggleChecked,
+                      }}
+                      batchActions={{
+                        onBatchSelectAll: handlers.handleBatchDefaultSelectAll,
+                        onBatchDeselectAll: handlers.handleBatchDefaultDeselectAll,
+                        onBatchToggle: handlers.handleBatchDefaultToggle,
+                      }}
+                      itemEditModeProps={{
+                        onEditNote: noteEditor.openNoteEditor('available'),
+                      }}
                     >
                       <div className="divide-y divide-divider-secondary">
                         {/* Invisible anchor element for scroll preservation */}
