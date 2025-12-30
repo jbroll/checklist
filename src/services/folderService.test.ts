@@ -2,13 +2,14 @@
  * FolderService Unit Tests
  *
  * Tests for hierarchical folder management using FolderNode CoValues.
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../test/setup';
 
 // Mock jazz-tools Group and co.list before importing
 let groupIdCounter = 0;
-let listIdCounter = 0;
 vi.mock('jazz-tools', async () => {
   const actual: any = await vi.importActual('jazz-tools');
 
@@ -17,14 +18,8 @@ vi.mock('jazz-tools', async () => {
     const originalListSchema = actual.co.list(schema);
     return {
       ...originalListSchema,
-      create: vi.fn((data: any[], options: any) => {
-        const list: any[] = [...data];
-        list.$jazz = {
-          id: `list-${listIdCounter++}`,
-          push: (item: any) => list.push(item),
-          splice: (index: number, deleteCount: number, ...items: any[]) =>
-            list.splice(index, deleteCount, ...items),
-        };
+      create: vi.fn((data: any[], _options: any) => {
+        const list = createMockCoList([...data], { trackMutations: true });
         return list;
       }),
     };
@@ -40,7 +35,6 @@ vi.mock('jazz-tools', async () => {
           $jazz: { id, owner: options.owner },
           members,
           addMember: vi.fn((memberOrGroup: any, role?: string) => {
-            // Handle both Account and Group members
             const memberId = memberOrGroup.$jazz?.id || memberOrGroup.id;
             members.push({ id: memberId, role: role || 'member' });
           }),
@@ -106,64 +100,52 @@ let folderIdCounter = 0;
 // Mock FolderNode.create before tests
 (FolderNode as any).create = vi.fn((data: any, options: any) => {
   const id = `folder-${folderIdCounter++}`;
-  const folder: any = { ...data };
-
-  folder.$jazz = {
-    id,
-    owner: options?.owner, // Include the owner (Group) from options
-    set: (key: string, value: any) => {
-      folder[key] = value;
-    },
-  };
 
   // For template folders, wrap sessions array with $jazz methods
-  if (data.sessions !== undefined) {
-    const sessions: any[] = [...(data.sessions || [])];
-    sessions.$jazz = {
-      push: (item: any) => sessions.push(item),
-      splice: (index: number, deleteCount: number, ...items: any[]) =>
-        sessions.splice(index, deleteCount, ...items),
-    };
-    folder.sessions = sessions;
-  }
+  const sessions =
+    data.sessions !== undefined
+      ? createMockCoList([...(data.sessions || [])], { trackMutations: true })
+      : undefined;
 
-  // items are plain arrays
+  // Create folder using jazz-mock
+  const folder = createMockCoMap(
+    {
+      ...data,
+      sessions,
+    },
+    { id, trackMutations: true },
+  );
+
+  // Include the owner (Group) from options
+  (folder.$jazz as any).owner = options?.owner;
+
   return folder;
 });
 
-// Mock Jazz CoValues
+// Helper to create mock account using jazz-mock
 const createMockAccount = (): InstanceOfSchema<typeof Account> => {
-  const folders: any[] = [];
-  folders.$jazz = {
-    push: (folder: any) => folders.push(folder),
-    splice: (index: number, deleteCount: number, ...items: any[]) =>
-      folders.splice(index, deleteCount, ...items),
-  };
+  const folders = createMockCoList([], { trackMutations: true });
 
-  const account: any = {
-    root: {
-      folders,
-      $jazz: {
-        set: () => {},
-      },
-    },
-    $jazz: {
-      id: 'account-1',
-    },
-  };
+  const root = createMockCoMap({ folders }, { trackMutations: true });
+
+  const account = createMockCoMap(
+    { root },
+    { id: 'account-1', trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof Account>;
 
   // Mock the owner property to return the account
-  account._owner = account;
+  (account as any)._owner = account;
 
-  return account as InstanceOfSchema<typeof Account>;
+  return account;
 };
 
+// Helper to create mock folder using jazz-mock
 const createMockFolder = (
   name: string,
   isTemplate: boolean,
   parent?: InstanceOfSchema<typeof FolderNode>,
 ): InstanceOfSchema<typeof FolderNode> => {
-  const folder: any = {
+  const baseData: any = {
     name,
     expanded: !isTemplate,
     archived: false,
@@ -174,34 +156,18 @@ const createMockFolder = (
 
   if (isTemplate) {
     // Template folder
-    folder.items = [];
-    const sessions: any[] = [];
-    sessions.$jazz = {
-      push: (s: any) => sessions.push(s),
-      splice: (index: number, deleteCount: number, ...items: any[]) =>
-        sessions.splice(index, deleteCount, ...items),
-    };
-    folder.sessions = sessions;
-    folder.showZoneHeadings = false;
+    baseData.items = [];
+    baseData.sessions = createMockCoList([], { trackMutations: true });
+    baseData.showZoneHeadings = false;
   } else {
     // Organizational folder
-    const children: any[] = [];
-    children.$jazz = {
-      push: (c: any) => children.push(c),
-      splice: (index: number, deleteCount: number, ...items: any[]) =>
-        children.splice(index, deleteCount, ...items),
-    };
-    folder.children = children;
+    baseData.children = createMockCoList([], { trackMutations: true });
   }
 
-  folder.$jazz = {
+  return createMockCoMap(baseData, {
     id: `folder-${Math.random().toString(36).substring(7)}`,
-    set: (key: string, value: any) => {
-      folder[key] = value;
-    },
-  };
-
-  return folder as InstanceOfSchema<typeof FolderNode>;
+    trackMutations: true,
+  }) as unknown as InstanceOfSchema<typeof FolderNode>;
 };
 
 describe('FolderService', () => {
@@ -448,8 +414,8 @@ describe('FolderService', () => {
     it('should clean up sessions for template folders', () => {
       const template = createFolder(account, 'Template', true);
       // Mock some sessions
-      template.sessions?.$jazz.push({} as any);
-      template.sessions?.$jazz.push({} as any);
+      template.sessions?.push({} as any);
+      template.sessions?.push({} as any);
       expect(template.sessions).toHaveLength(2);
 
       deleteFolder(account, template);
@@ -931,7 +897,7 @@ describe('FolderService', () => {
     it('should NOT copy sessions (start fresh)', () => {
       const template = createFolder(account, 'My Template', true);
       // Add mock sessions
-      template.sessions?.$jazz.push({
+      template.sessions?.push({
         id: 'session-1',
         itemStates: {},
         archived: false,
