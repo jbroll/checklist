@@ -63,7 +63,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         connectSrc: [
           "'self'",
@@ -103,9 +103,14 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without origin header (mobile apps, server-to-server, curl)
+      // In production, require origin header (except for same-origin requests)
       if (!origin) {
-        return callback(null, true);
+        if (process.env.NODE_ENV === 'development') {
+          return callback(null, true);
+        }
+        // Production: reject requests without origin
+        console.warn('[CORS] Rejected request without origin header');
+        return callback(new Error('Origin header required'), false);
       }
 
       // Use exact match instead of startsWith to prevent subdomain attacks

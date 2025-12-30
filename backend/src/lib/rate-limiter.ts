@@ -1,16 +1,47 @@
 /**
- * Simple in-memory rate limiter.
+ * Simple in-memory rate limiter with automatic cleanup.
  * Resets on server restart.
  */
 export class RateLimiter {
   private limits: Map<string, { count: number; resetAt: number }>;
   private maxRequests: number;
   private windowMs: number;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(maxRequests: number = 3, windowMs: number = 60 * 60 * 1000) {
     this.limits = new Map();
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
+
+    // Clean up expired entries every minute
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
+    // Don't block process exit
+    if (this.cleanupInterval.unref) {
+      this.cleanupInterval.unref();
+    }
+  }
+
+  /**
+   * Remove expired entries from the map.
+   */
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [key, value] of this.limits.entries()) {
+      if (value.resetAt < now) {
+        this.limits.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Stop the cleanup interval and clear all entries.
+   */
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.limits.clear();
   }
 
   /**

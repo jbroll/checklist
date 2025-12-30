@@ -5,10 +5,11 @@ import { auth } from './auth.js';
 import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
 import { shareInviteLimiter } from './lib/rate-limiter.js';
+import { validateBody, createInviteSchema, acceptInviteSchema } from './lib/validation.js';
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
-  app.post('/api/shares/invite', async (req, res) => {
+  app.post('/api/shares/invite', validateBody(createInviteSchema), async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
@@ -74,7 +75,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
   });
 
   // Accept invite
-  app.post('/api/shares/accept', async (req, res) => {
+  app.post('/api/shares/accept', validateBody(acceptInviteSchema), async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
@@ -100,8 +101,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     if (!emailMatches) {
       return res.status(403).json({
         error: 'email_mismatch',
-        message: `This invite is for ${invite.recipient_email}`,
-        recipientEmail: invite.recipient_email,
+        message: 'This invite is not associated with your account',
       });
     }
 
@@ -151,6 +151,29 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     const { folderId } = req.params;
 
     try {
+      // Authorization check: verify user owns invites for this folder OR is a collaborator
+      const userJazzAccountId = (session.user as any).accountID;
+
+      // Check if user is the owner (has sent invites for this folder)
+      const ownerInvite = db.prepare(`
+        SELECT 1 FROM share_invites
+        WHERE folder_covalue_id = ? AND sender_email = ?
+        LIMIT 1
+      `).get(folderId, session.user.email);
+
+      let isAuthorized = !!ownerInvite;
+
+      // If not owner, check if user is a collaborator
+      if (!isAuthorized && userJazzAccountId) {
+        const members = await getFolderGroupMembers(folderId);
+        const isMember = members.some(m => m.id === userJazzAccountId);
+        isAuthorized = isMember;
+      }
+
+      if (!isAuthorized) {
+        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view invites for this folder' });
+      }
+
       const invites = db.prepare(`
         SELECT token, recipient_email, permission, created_at, expires_at
         FROM share_invites
@@ -212,8 +235,21 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     const { folderId } = req.params;
 
     try {
+      // Authorization check: verify user is a member of this folder's group
+      const userJazzAccountId = (session.user as any).accountID;
+
+      if (!userJazzAccountId) {
+        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view collaborators for this folder' });
+      }
+
       // Get Jazz group members
       const members = await getFolderGroupMembers(folderId);
+
+      // Check if requesting user is a member
+      const isMember = members.some(m => m.id === userJazzAccountId);
+      if (!isMember) {
+        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view collaborators for this folder' });
+      }
 
       // Map Jazz account IDs to user info from BetterAuth
       const collaborators = [];

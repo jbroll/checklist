@@ -14,6 +14,7 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
 import { legacyStorageKey } from '@/lib/brand';
+import { useDialog } from '@/lib/dialog-context';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
@@ -151,6 +152,7 @@ export function TreeView({
     hideArchiveAction = false,
   } = archiveSettings;
   const { subscriptionTier, listCount, maxLists, onUpgradeClick } = subscriptionInfo;
+  const { showConfirm } = useDialog();
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
@@ -396,15 +398,16 @@ export function TreeView({
     const count = folderService.getArchivedFolders(account).length;
     if (count === 0) return;
 
-    // Import showConfirm from dialog context at the component level
-    // For now, we'll use window.confirm as a fallback
-    const confirmed = window.confirm(
-      `Permanently delete ${count} archived item${count === 1 ? '' : 's'}? This cannot be undone.`,
-    );
+    const confirmed = await showConfirm({
+      title: 'Empty Trash',
+      message: `Permanently delete ${count} archived item${count === 1 ? '' : 's'}? This cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
     if (confirmed) {
       folderService.emptyTrash(account);
     }
-  }, [account]);
+  }, [account, showConfirm]);
 
   const renderNode = (node: TreeNode): React.ReactNode => {
     const { folder, children } = node;

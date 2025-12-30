@@ -139,24 +139,34 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
         });
       }
 
-      // Double-check email isn't taken (race condition protection)
-      const existingUser = db.prepare('SELECT id FROM user WHERE LOWER(email) = ?').get(payload.email.toLowerCase()) as any;
-      if (existingUser) {
-        return res.status(400).json({ error: 'This email is no longer available' });
-      }
+      // Use transaction for race condition protection
+      const insertVerifiedEmail = db.transaction(() => {
+        // Check if email is taken (inside transaction for atomicity)
+        const existingUser = db.prepare('SELECT id FROM user WHERE LOWER(email) = ?').get(payload.email.toLowerCase());
+        if (existingUser) {
+          return { error: 'This email is no longer available' };
+        }
 
-      const existingVerified = db.prepare('SELECT id FROM verified_email WHERE LOWER(email) = ?').get(payload.email.toLowerCase()) as any;
-      if (existingVerified) {
-        return res.status(400).json({ error: 'This email is no longer available' });
-      }
+        const existingVerified = db.prepare('SELECT id FROM verified_email WHERE LOWER(email) = ?').get(payload.email.toLowerCase());
+        if (existingVerified) {
+          return { error: 'This email is no longer available' };
+        }
 
-      // Create verified email entry
-      const id = randomBytes(16).toString('hex');
-      const now = Math.floor(Date.now() / 1000);
-      db.prepare(`
-        INSERT INTO verified_email (id, user_id, email, verified_at, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(id, session.user.id, payload.email, now, now);
+        // Create verified email entry
+        const id = randomBytes(16).toString('hex');
+        const now = Math.floor(Date.now() / 1000);
+        db.prepare(`
+          INSERT INTO verified_email (id, user_id, email, verified_at, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(id, session.user.id, payload.email, now, now);
+
+        return { success: true };
+      });
+
+      const result = insertVerifiedEmail();
+      if (result.error) {
+        return res.status(400).json({ error: result.error });
+      }
 
       console.log(`[verified-emails] User ${session.user.email} verified additional email: ${payload.email}`);
 
