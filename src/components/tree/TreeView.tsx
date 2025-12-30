@@ -31,37 +31,53 @@ interface TreeNode {
   level: number;
 }
 
-interface TreeViewProps {
-  account: InstanceOfSchema<typeof Account>;
-  selectedTemplateId?: string | null;
-  selectedFolderId?: string | null;
+// Grouped prop interfaces to reduce prop drilling
+export interface TreeViewSelectionHandlers {
   onTemplateSelect?: (templateId: string) => void;
   onFolderSelect?: (folderId: string) => void;
-  onAddItem?: (parentTemplateId: string) => void;
   onOpenSession?: (templateId: string, sessionId: string) => void;
   onExportSession?: (templateId: string, sessionId: string) => void;
-  // Header action handlers
+}
+
+export interface TreeViewHeaderActions {
   onHeaderClick?: () => void;
   onAddFolder?: () => void;
   onAddTemplate?: () => void;
   onExport?: () => void;
   onImport?: () => void;
+}
+
+export interface TreeViewAuthProps {
   onSignOut?: () => void;
   onSignIn?: () => void;
   onDeleteAccount?: () => void;
   isAuthenticated?: boolean;
-  // Profile dialog control (lifted state)
   showProfileDialog?: boolean;
   onShowProfileDialogChange?: (show: boolean) => void;
-  // Archive display control
+}
+
+export interface TreeViewArchiveSettings {
   hideArchivedTemplatesToggle?: boolean;
   hideArchivedSessionsToggle?: boolean;
   hideArchiveAction?: boolean;
-  // Subscription info
+}
+
+export interface TreeViewSubscriptionInfo {
   subscriptionTier?: string;
   listCount?: number;
   maxLists?: number;
   onUpgradeClick?: () => void;
+}
+
+interface TreeViewProps {
+  account: InstanceOfSchema<typeof Account>;
+  selectedTemplateId?: string | null;
+  selectedFolderId?: string | null;
+  selectionHandlers?: TreeViewSelectionHandlers;
+  headerActions?: TreeViewHeaderActions;
+  authProps?: TreeViewAuthProps;
+  archiveSettings?: TreeViewArchiveSettings;
+  subscriptionInfo?: TreeViewSubscriptionInfo;
 }
 
 /**
@@ -112,30 +128,29 @@ export function TreeView({
   account,
   selectedTemplateId: _selectedTemplateId,
   selectedFolderId,
-  onTemplateSelect,
-  onFolderSelect,
-  onAddItem: _onAddItem,
-  onOpenSession,
-  onExportSession,
-  onHeaderClick,
-  onAddFolder,
-  onAddTemplate,
-  onExport,
-  onImport,
-  onSignOut,
-  onSignIn,
-  onDeleteAccount,
-  isAuthenticated,
-  showProfileDialog,
-  onShowProfileDialogChange,
-  hideArchivedTemplatesToggle = false,
-  hideArchivedSessionsToggle = false,
-  hideArchiveAction = false,
-  subscriptionTier,
-  listCount,
-  maxLists,
-  onUpgradeClick,
+  selectionHandlers = {},
+  headerActions = {},
+  authProps = {},
+  archiveSettings = {},
+  subscriptionInfo = {},
 }: TreeViewProps) {
+  // Destructure grouped props
+  const { onTemplateSelect, onFolderSelect, onOpenSession, onExportSession } = selectionHandlers;
+  const { onHeaderClick, onAddFolder, onAddTemplate, onExport, onImport } = headerActions;
+  const {
+    onSignOut,
+    onSignIn,
+    onDeleteAccount,
+    isAuthenticated,
+    showProfileDialog,
+    onShowProfileDialogChange,
+  } = authProps;
+  const {
+    hideArchivedTemplatesToggle = false,
+    hideArchivedSessionsToggle = false,
+    hideArchiveAction = false,
+  } = archiveSettings;
+  const { subscriptionTier, listCount, maxLists, onUpgradeClick } = subscriptionInfo;
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {

@@ -233,37 +233,45 @@ export function AppContainer({
           account={accountAsAny}
           selectedTemplateId={selectedTemplateId}
           selectedFolderId={selectedFolderId}
-          onTemplateSelect={handleTemplateSelect}
-          onFolderSelect={handleFolderSelect}
-          onOpenSession={(templateId, sessionId) => {
-            navigateTo({ view: 'session', templateId, sessionId });
+          selectionHandlers={{
+            onTemplateSelect: handleTemplateSelect,
+            onFolderSelect: handleFolderSelect,
+            onOpenSession: (templateId, sessionId) => {
+              navigateTo({ view: 'session', templateId, sessionId });
+            },
+            onExportSession: handleExportSession,
           }}
-          onExportSession={handleExportSession}
-          onHeaderClick={handleHeaderClick}
-          onAddFolder={() => setShowAddFolder(true)}
-          onAddTemplate={() => {
-            if (subscriptionService.isAtListLimit(me)) {
-              const maxLists = subscriptionService.getMaxLists(me);
-              setUpgradeReason(`${maxLists} list limit reached`);
-              setShowUpgradeDialog(true);
-            } else {
-              setShowAddTemplate(true);
-            }
+          headerActions={{
+            onHeaderClick: handleHeaderClick,
+            onAddFolder: () => setShowAddFolder(true),
+            onAddTemplate: () => {
+              if (subscriptionService.isAtListLimit(me)) {
+                const maxLists = subscriptionService.getMaxLists(me);
+                setUpgradeReason(`${maxLists} list limit reached`);
+                setShowUpgradeDialog(true);
+              } else {
+                setShowAddTemplate(true);
+              }
+            },
+            onExport: () => setShowExportDialog(true),
+            onImport: () => setShowImportDialog(true),
           }}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onSignOut={onSignOut}
-          onSignIn={onSignIn}
-          onDeleteAccount={onDeleteAccount}
-          isAuthenticated={isAuthenticated}
-          showProfileDialog={showProfileDialog}
-          onShowProfileDialogChange={setShowProfileDialog}
-          subscriptionTier={subscriptionService.getTierDisplayName(
-            subscriptionService.getSubscriptionTier(me),
-          )}
-          listCount={subscriptionService.countUserLists(me)}
-          maxLists={subscriptionService.getMaxLists(me)}
-          onUpgradeClick={() => setShowUpgradeDialog(true)}
+          authProps={{
+            onSignOut,
+            onSignIn,
+            onDeleteAccount,
+            isAuthenticated,
+            showProfileDialog,
+            onShowProfileDialogChange: setShowProfileDialog,
+          }}
+          subscriptionInfo={{
+            subscriptionTier: subscriptionService.getTierDisplayName(
+              subscriptionService.getSubscriptionTier(me),
+            ),
+            listCount: subscriptionService.countUserLists(me),
+            maxLists: subscriptionService.getMaxLists(me),
+            onUpgradeClick: () => setShowUpgradeDialog(true),
+          }}
         />
 
         <AddFolderDialog
