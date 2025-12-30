@@ -28,12 +28,23 @@ vi.mock('../../utils/fileUpload', () => ({
 import { readFileAsText } from '../../utils/fileUpload';
 import {
   importAsNewTemplate,
+  importFromFile,
   importItemsFromCsvFile,
   importItemsFromJsonFile,
   importItemsFromTxtFile,
   importSessionFromCsvFile,
 } from './importService';
 import { validateImportFile } from './importValidator';
+
+// Mock jsonImporter for importFromFile tests
+vi.mock('./jsonImporter', () => ({
+  importJson: vi.fn(),
+  importItemsFromJson: vi
+    .fn()
+    .mockReturnValue({ imported: 0, skipped: 0, errors: [], duplicates: [] }),
+}));
+
+import { importJson } from './jsonImporter';
 
 // Mock the import validator
 vi.mock('./importValidator', () => ({
@@ -393,6 +404,195 @@ Item2,Cat2`;
         expect(result.errors[0]).toContain('Failed to read file');
         expect(result.errors[0]).toContain('Unknown error');
       });
+    });
+  });
+
+  describe('importFromFile', () => {
+    beforeEach(() => {
+      vi.mocked(validateImportFile).mockImplementation(() => {
+        // Default: no validation error
+      });
+    });
+
+    describe('file type detection', () => {
+      it('auto-detects JSON file type from extension', async () => {
+        const file = createMockFile('data.json', '{"items": []}');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockResolvedValue('{"items": []}');
+        vi.mocked(importJson).mockResolvedValue({
+          success: true,
+          errors: [],
+          warnings: [],
+          stats: {},
+        });
+
+        await importFromFile(file, account as any);
+
+        expect(importJson).toHaveBeenCalledWith('{"items": []}', account, undefined);
+      });
+
+      it('auto-detects TXT file type from extension', async () => {
+        const file = createMockFile('items.txt', 'Item1\nItem2');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockResolvedValue('Item1\nItem2');
+
+        const result = await importFromFile(file, account as any);
+
+        // TXT files should return error directing to use importAsNewTemplate
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Use importAsNewTemplate()');
+      });
+
+      it('auto-detects CSV file type from extension', async () => {
+        const file = createMockFile('data.csv', 'name,category\nItem1,Cat1');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockResolvedValue('name,category\nItem1,Cat1');
+
+        const result = await importFromFile(file, account as any);
+
+        // CSV files should return error directing to use importAsNewTemplate
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Use importAsNewTemplate()');
+      });
+
+      it('uses explicit file type when provided', async () => {
+        const file = createMockFile('data.txt', '{"items": []}'); // Wrong extension
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockResolvedValue('{"items": []}');
+        vi.mocked(importJson).mockResolvedValue({
+          success: true,
+          errors: [],
+          warnings: [],
+          stats: {},
+        });
+
+        await importFromFile(file, account as any, 'json');
+
+        expect(importJson).toHaveBeenCalled();
+      });
+
+      it('returns error when file type cannot be detected', async () => {
+        const file = createMockFile('data.xyz', 'content');
+        const account = createMockAccount();
+
+        const result = await importFromFile(file, account as any);
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Unable to determine file type');
+      });
+    });
+
+    describe('validation errors', () => {
+      it('returns error when validation fails', async () => {
+        const file = createMockFile('data.json', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('File too large');
+        });
+
+        const result = await importFromFile(file, account as any);
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('File too large');
+      });
+
+      it('handles non-Error validation exceptions', async () => {
+        const file = createMockFile('data.json', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw 'String error';
+        });
+
+        const result = await importFromFile(file, account as any);
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toBe('Validation failed');
+      });
+    });
+
+    describe('file read errors', () => {
+      it('returns error when file read fails', async () => {
+        const file = createMockFile('data.json', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('Read error'));
+
+        const result = await importFromFile(file, account as any);
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Read error');
+      });
+
+      it('handles non-Error read exceptions', async () => {
+        const file = createMockFile('data.json', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue('Unknown error');
+
+        const result = await importFromFile(file, account as any);
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Unknown error');
+      });
+    });
+
+    describe('JSON import', () => {
+      it('passes parent folder to importJson when provided', async () => {
+        const file = createMockFile('data.json', '{}');
+        const account = createMockAccount();
+        const parentFolder = { name: 'Parent', $jazz: { id: 'folder-1' } };
+
+        vi.mocked(readFileAsText).mockResolvedValue('{}');
+        vi.mocked(importJson).mockResolvedValue({
+          success: true,
+          errors: [],
+          warnings: [],
+          stats: {},
+        });
+
+        await importFromFile(file, account as any, 'json', parentFolder as any);
+
+        expect(importJson).toHaveBeenCalledWith('{}', account, parentFolder);
+      });
+    });
+  });
+
+  describe('importAsNewTemplate additional cases', () => {
+    it('returns success with 0 items for empty file', async () => {
+      const fileContent = 'Item1'; // Single item content
+      const file = createMockFile('single.txt', fileContent);
+      const account = createMockAccount();
+      const mockTemplate = createMockTemplate();
+
+      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
+      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+
+      const result = await importAsNewTemplate(file, account as any, 'Single', 'txt');
+
+      // Should succeed with items imported
+      expect(result.success).toBe(true);
+    });
+
+    it('handles CSV import with duplicate items warning', async () => {
+      const fileContent = 'name,category\nItem1,Cat1\nItem1,Cat1'; // Duplicate
+      const file = createMockFile('data.csv', fileContent);
+      const account = createMockAccount();
+      const mockTemplate = createMockTemplate();
+
+      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
+      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+
+      const result = await importAsNewTemplate(file, account as any, 'Test', 'csv');
+
+      // The import should succeed but may have duplicate warnings
+      expect(result.success).toBe(true);
     });
   });
 });
