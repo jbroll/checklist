@@ -39,10 +39,17 @@ export function useItemInteraction({
   // biome-ignore lint/correctness/noUnusedFunctionParameters: Reserved for future drag functionality
   dragEnabled = false,
 }: UseItemInteractionOptions) {
-  const [state, setState] = useState<InteractionState>('idle');
+  const [state, setStateRaw] = useState<InteractionState>('idle');
+  const stateRef = useRef<InteractionState>('idle');
   const pressStartTime = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasMovedRef = useRef(false);
+
+  // Wrapper that updates ref synchronously for use in setTimeout callbacks
+  const setState = useCallback((newState: InteractionState) => {
+    stateRef.current = newState;
+    setStateRaw(newState);
+  }, []);
 
   // Clean up timer
   const clearTimer = useCallback(() => {
@@ -60,7 +67,7 @@ export function useItemInteraction({
     } else if (!isDragging && state === 'dragging') {
       setState('idle');
     }
-  }, [isDragging, state, clearTimer]);
+  }, [isDragging, state, clearTimer, setState]);
 
   // Call this effect externally or use useEffect
   // We expose it so caller can sync when isDragging changes
@@ -84,14 +91,15 @@ export function useItemInteraction({
         clearTimer();
         longPressTimer.current = setTimeout(() => {
           // Only enter edit mode if we haven't started dragging
-          if (state === 'pressing' && !isDragging && !hasMovedRef.current) {
+          // Use stateRef.current to avoid stale closure over state
+          if (stateRef.current === 'pressing' && !isDragging && !hasMovedRef.current) {
             setState('editing');
             onStartEdit();
           }
         }, 1500); // 1.5 seconds
       }
     },
-    [editModeEnabled, onStartEdit, clearTimer, state, isDragging],
+    [editModeEnabled, onStartEdit, clearTimer, isDragging, setState],
   );
 
   const handlePointerMove = useCallback(
@@ -135,7 +143,7 @@ export function useItemInteraction({
       pressStartTime.current = null;
       hasMovedRef.current = false;
     },
-    [state, onSelect, clearTimer],
+    [state, onSelect, clearTimer, setState],
   );
 
   const handlePointerCancel = useCallback(() => {
@@ -143,14 +151,14 @@ export function useItemInteraction({
     setState('idle');
     pressStartTime.current = null;
     hasMovedRef.current = false;
-  }, [clearTimer]);
+  }, [clearTimer, setState]);
 
   const exitEditMode = useCallback(() => {
     setState('idle');
     if (onEndEdit) {
       onEndEdit();
     }
-  }, [onEndEdit]);
+  }, [onEndEdit, setState]);
 
   return {
     state,

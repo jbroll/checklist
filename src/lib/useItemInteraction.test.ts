@@ -143,15 +143,7 @@ describe('useItemInteraction', () => {
   });
 
   describe('long press', () => {
-    it.skip('TODO: Fix closure bug - should enter edit mode after hold delay', () => {
-      // KNOWN BUG: The setTimeout callback in handlePointerDown captures the `state`
-      // value from when the callback was created (idle), not when setState('pressing')
-      // is called. This causes the check `state === 'pressing'` to always fail.
-      //
-      // TO FIX: Use a ref to track the current state, or restructure the logic
-      // to avoid checking state in the setTimeout callback.
-      //
-      // Expected behavior once fixed:
+    it('should enter edit mode after hold delay', () => {
       const onStartEdit = vi.fn();
       const { result } = renderHook(() =>
         useItemInteraction({ onStartEdit, editModeEnabled: true }),
@@ -330,8 +322,7 @@ describe('useItemInteraction', () => {
   });
 
   describe('edit mode', () => {
-    it.skip('TODO: Fix closure bug - should stay in edit mode after pointer up', () => {
-      // Depends on long press working (see closure bug above)
+    it('should stay in edit mode after pointer up', () => {
       const onStartEdit = vi.fn();
       const { result } = renderHook(() =>
         useItemInteraction({ onStartEdit, editModeEnabled: true }),
@@ -351,8 +342,7 @@ describe('useItemInteraction', () => {
       expect(result.current.state).toBe('editing');
     });
 
-    it.skip('TODO: Fix closure bug - should call onEndEdit when exiting edit mode', () => {
-      // Depends on long press working (see closure bug above)
+    it('should call onEndEdit when exiting edit mode', () => {
       const onStartEdit = vi.fn();
       const onEndEdit = vi.fn();
       const { result } = renderHook(() =>
@@ -466,8 +456,7 @@ describe('useItemInteraction', () => {
       expect(result.current.state).toBe('idle');
     });
 
-    it.skip('TODO: Fix closure bug - should handle idle -> pressing -> editing transition', () => {
-      // Depends on long press working (see closure bug above)
+    it('should handle idle -> pressing -> editing transition', () => {
       const onStartEdit = vi.fn();
       const { result } = renderHook(() =>
         useItemInteraction({ onStartEdit, editModeEnabled: true }),
@@ -477,7 +466,11 @@ describe('useItemInteraction', () => {
 
       act(() => {
         result.current.handlers.onPointerDown(createPointerEvent('pointerdown'));
-        expect(result.current.state).toBe('pressing');
+      });
+
+      expect(result.current.state).toBe('pressing');
+
+      act(() => {
         vi.advanceTimersByTime(1500);
       });
 
@@ -507,8 +500,7 @@ describe('useItemInteraction', () => {
       expect(result.current.state).toBe('dragging');
     });
 
-    it.skip('TODO: Fix closure bug - should handle editing -> idle transition', () => {
-      // Depends on long press working (see closure bug above)
+    it('should handle editing -> idle transition', () => {
       const onStartEdit = vi.fn();
       const { result } = renderHook(() =>
         useItemInteraction({ onStartEdit, editModeEnabled: true }),
@@ -700,8 +692,7 @@ describe('useItemInteraction', () => {
       expect(onSelect2).toHaveBeenCalledTimes(1);
     });
 
-    it.skip('TODO: Fix closure bug - should use latest onStartEdit callback', () => {
-      // Depends on long press working (see closure bug above)
+    it('should use latest onStartEdit callback', () => {
       const onStartEdit1 = vi.fn();
       const onStartEdit2 = vi.fn();
 
