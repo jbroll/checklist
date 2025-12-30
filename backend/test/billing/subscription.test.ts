@@ -1,5 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
+
+// Mock Stripe module
+vi.mock('../../src/billing/stripe.js', () => ({
+  stripe: {
+    customers: {
+      create: vi.fn(),
+    },
+    checkout: {
+      sessions: {
+        create: vi.fn(),
+      },
+    },
+    billingPortal: {
+      sessions: {
+        create: vi.fn(),
+      },
+    },
+  },
+  isStripeEnabled: vi.fn(),
+}));
+
 import {
   getSubscriptionTiers,
   getTier,
@@ -13,7 +34,10 @@ import {
   handleSubscriptionDeleted,
   recordUsage,
   getUsageHistory,
+  createCheckoutSession,
+  createPortalSession,
 } from '../../src/billing/subscription.js';
+import { stripe, isStripeEnabled } from '../../src/billing/stripe.js';
 
 // In-memory database for testing
 let db: Database.Database;
@@ -489,6 +513,136 @@ describe('Subscription Service', () => {
       const history = getUsageHistory(db, 'user-1');
 
       expect(history).toEqual([]);
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    beforeEach(() => {
+      createTestUser('user-1', 'user@example.com');
+      db.prepare(`
+        INSERT INTO user_subscription (user_id, tier_slug, status)
+        VALUES (?, 'free', 'beta')
+      `).run('user-1');
+      vi.clearAllMocks();
+    });
+
+    it('should throw error when Stripe is not configured', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(false);
+
+      await expect(
+        createCheckoutSession(db, 'user-1', 'user@example.com', 'plus', 'http://success', 'http://cancel')
+      ).rejects.toThrow('Stripe is not configured');
+    });
+
+    it('should throw error when tier has no price ID', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+
+      // Update plus tier to have no price ID
+      db.prepare('UPDATE subscription_tier SET stripe_price_id = NULL WHERE slug = ?').run('plus');
+
+      await expect(
+        createCheckoutSession(db, 'user-1', 'user@example.com', 'plus', 'http://success', 'http://cancel')
+      ).rejects.toThrow('No Stripe price configured for tier: plus');
+    });
+
+    it('should create new Stripe customer when user has none', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+      vi.mocked(stripe!.customers.create).mockResolvedValue({ id: 'cus_new123' } as any);
+      vi.mocked(stripe!.checkout.sessions.create).mockResolvedValue({ url: 'https://checkout.stripe.com/session123' } as any);
+
+      const url = await createCheckoutSession(db, 'user-1', 'user@example.com', 'plus', 'http://success', 'http://cancel');
+
+      expect(stripe!.customers.create).toHaveBeenCalledWith({
+        email: 'user@example.com',
+        metadata: { userId: 'user-1' },
+      });
+      expect(url).toBe('https://checkout.stripe.com/session123');
+
+      // Verify customer ID was saved
+      const sub = getUserSubscription(db, 'user-1');
+      expect(sub.stripeCustomerId).toBe('cus_new123');
+    });
+
+    it('should use existing Stripe customer when available', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+      vi.mocked(stripe!.checkout.sessions.create).mockResolvedValue({ url: 'https://checkout.stripe.com/session456' } as any);
+
+      // Set existing customer ID
+      db.prepare('UPDATE user_subscription SET stripe_customer_id = ? WHERE user_id = ?').run('cus_existing', 'user-1');
+
+      const url = await createCheckoutSession(db, 'user-1', 'user@example.com', 'plus', 'http://success', 'http://cancel');
+
+      expect(stripe!.customers.create).not.toHaveBeenCalled();
+      expect(stripe!.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: 'cus_existing',
+          mode: 'subscription',
+          line_items: [{ price: 'price_plus_test', quantity: 1 }],
+          success_url: 'http://success',
+          cancel_url: 'http://cancel',
+        })
+      );
+      expect(url).toBe('https://checkout.stripe.com/session456');
+    });
+
+    it('should include metadata in checkout session', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+      vi.mocked(stripe!.customers.create).mockResolvedValue({ id: 'cus_meta' } as any);
+      vi.mocked(stripe!.checkout.sessions.create).mockResolvedValue({ url: 'https://checkout.stripe.com/meta' } as any);
+
+      await createCheckoutSession(db, 'user-1', 'user@example.com', 'premium', 'http://success', 'http://cancel');
+
+      expect(stripe!.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { userId: 'user-1', tierSlug: 'premium' },
+          subscription_data: {
+            metadata: { userId: 'user-1', tierSlug: 'premium' },
+          },
+        })
+      );
+    });
+  });
+
+  describe('createPortalSession', () => {
+    beforeEach(() => {
+      createTestUser('user-1', 'user@example.com');
+      db.prepare(`
+        INSERT INTO user_subscription (user_id, tier_slug, stripe_customer_id, status)
+        VALUES (?, 'plus', 'cus_portal123', 'active')
+      `).run('user-1');
+      vi.clearAllMocks();
+    });
+
+    it('should throw error when Stripe is not configured', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(false);
+
+      await expect(
+        createPortalSession(db, 'user-1', 'http://return')
+      ).rejects.toThrow('Stripe is not configured');
+    });
+
+    it('should throw error when user has no Stripe customer', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+
+      // Remove customer ID
+      db.prepare('UPDATE user_subscription SET stripe_customer_id = NULL WHERE user_id = ?').run('user-1');
+
+      await expect(
+        createPortalSession(db, 'user-1', 'http://return')
+      ).rejects.toThrow('User has no Stripe customer record');
+    });
+
+    it('should create portal session and return URL', async () => {
+      vi.mocked(isStripeEnabled).mockReturnValue(true);
+      vi.mocked(stripe!.billingPortal.sessions.create).mockResolvedValue({ url: 'https://billing.stripe.com/portal123' } as any);
+
+      const url = await createPortalSession(db, 'user-1', 'http://return');
+
+      expect(stripe!.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: 'cus_portal123',
+        return_url: 'http://return',
+      });
+      expect(url).toBe('https://billing.stripe.com/portal123');
     });
   });
 });
