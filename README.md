@@ -1,6 +1,6 @@
-# Kjekit
+# CheckList
 
-Nicely Shared Checklists - built with Jazz.tools and BetterAuth.
+Shared Checklists - built with Jazz.tools and BetterAuth.
 
 ## Features
 
@@ -11,6 +11,9 @@ Nicely Shared Checklists - built with Jazz.tools and BetterAuth.
 - Hierarchical template organization
 - Session-based shopping tracking
 - Folder sharing and collaboration
+- Freemium subscription tiers with Stripe billing
+- White-label branding support (CheckList, kjekit)
+- Mobile apps via Capacitor (Android/iOS)
 
 ## Getting Started
 
@@ -55,11 +58,13 @@ APPLE_CLIENT_ID=your_apple_client_id
 APPLE_CLIENT_SECRET=your_apple_client_secret
 VITE_API_URL=http://localhost:3001
 VITE_JAZZ_PEER=wss://cloud.jazz.tools
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 ```
 
 ## How It Works
 
-**Templates** are reusable shopping lists organized in folders.
+**Templates** are reusable checklists organized in folders.
 
 **Sessions** are created when you "use" a template - they track what's in your cart and what you've purchased without modifying the template.
 
@@ -74,15 +79,27 @@ VITE_JAZZ_PEER=wss://cloud.jazz.tools
 - Session management
 - Account key storage
 
+**Stripe** provides:
+- Subscription billing
+- Customer portal
+- Webhook event handling
+
+## Subscription Tiers
+
+- **Starter** (Free): Up to 3 lists, 7-day session history
+- **Plus** ($9.99/yr): Up to 30 lists, 30-day session history
+- **Premium** ($19.99/yr): Unlimited lists, unlimited history
+
 ## Development
 
 ```bash
-npm run dev          # Start dev server
+npm run dev          # Start dev server (frontend + backend)
 npm run build        # Build for production
 npm run lint         # Run linter
 npm run type-check   # Check TypeScript
 npm run test:run     # Run unit tests
 npm run test:e2e     # Run E2E tests
+npm run check        # Run type-check + lint + tests
 ```
 
 ## Project Structure
@@ -104,10 +121,18 @@ See `ARCHITECTURE.md` for system overview and code locations.
 **Deployment**:
 - `DEPLOY.md` - Deployment instructions
 
-**Features**:
+**Product**:
 - `docs/ROADMAP.md` - Product roadmap and feature priorities
 - `docs/MARKET_COMPARISON.md` - Competitive analysis
-- `docs/autocomplete/` - Auto-categorization system documentation
+- `docs/GooglePlayStore.md` - App store submission checklist
+
+## White-Label Branding
+
+The app supports multiple brands via runtime domain detection:
+- **CheckList** (default): checklist-app.rkroll.com
+- **kjekit**: app.kjekit.com
+
+Brand configuration is in `src/lib/brand.ts`. Set `VITE_BRAND` env var to override.
 
 ## Deployment
 
@@ -128,14 +153,17 @@ The app deploys in two parts:
 - React 18 + TypeScript + Vite
 - Jazz.tools (distributed database)
 - BetterAuth (authentication)
+- Stripe (billing)
 - Tailwind CSS + Radix UI
 - Framer Motion
+- Capacitor (mobile apps)
 
 ## License
 
-MIT
+[PolyForm Noncommercial 1.0.0](LICENSE.md) - Free for non-commercial use.
 
 ## Resources
 
 - Jazz.tools: https://jazz.tools/
 - BetterAuth: https://better-auth.com/
+- Stripe: https://stripe.com/

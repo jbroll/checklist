@@ -1,6 +1,6 @@
-# System Architecture
+# CheckList System Architecture
 
-A collaborative list application built with Jazz.tools and BetterAuth.
+A collaborative list application built with Jazz.tools, BetterAuth, and Stripe.
 
 ## Core Architecture
 
@@ -107,6 +107,37 @@ Folders (both organizational and template folders) can be shared via email invit
 **Routes**:
 - `/invite/:token` - Invitation acceptance page
 
+## Billing & Subscriptions
+
+**Freemium Model** (`src/services/subscriptionService.ts`):
+- Starter (Free): 3 lists, 7-day session history
+- Plus ($9.99/yr): 30 lists, 30-day history
+- Premium ($19.99/yr): Unlimited lists, unlimited history
+
+**Stripe Integration** (`backend/src/billing/`):
+- `stripe.ts` - Stripe client and webhook handling
+- `subscription.ts` - Tier management and limit enforcement
+
+**Components** (`src/components/billing/`):
+- `UpgradeDialog.tsx` - Tier comparison and checkout
+- `UpgradeBanner.tsx` - Soft limit warning banner
+- `BillingSuccessPage.tsx` / `BillingCancelPage.tsx` - Post-checkout pages
+
+**Beta Mode**: During beta, all users get Plus tier limits free. Controlled via `subscriptionStatus: 'beta'` in user settings.
+
+## White-Label Branding
+
+**Brand Configuration** (`src/lib/brand.ts`):
+- Runtime domain detection for brand switching
+- CheckList (default): checklist-app.rkroll.com
+- kjekit: app.kjekit.com
+
+**Configurable Elements**:
+- App name, tagline, colors
+- Logo assets and favicon
+- Support/sales email addresses
+- Storage key prefixes
+
 ## File Structure Reference
 
 ```
@@ -119,17 +150,23 @@ src/
 │   ├── editor/           # Template editing
 │   ├── session/          # Shopping interface
 │   ├── sharing/          # Folder sharing UI
+│   ├── billing/          # Subscription and upgrade UI
 │   ├── import/           # Import dialogs
 │   └── export/           # Export dialogs
 ├── services/
-│   ├── folderService.ts  # Folder operations
-│   ├── import/           # Import logic
-│   └── export/           # Export logic
+│   ├── folderService.ts        # Folder operations
+│   ├── subscriptionService.ts  # Billing and tier limits
+│   ├── import/                 # Import logic
+│   └── export/                 # Export logic
 └── lib/
     ├── auth-client.ts    # BetterAuth config
+    ├── brand.ts          # White-label branding
     └── jazz.tsx          # Jazz provider
 
 backend/src/
+├── billing/
+│   ├── stripe.ts         # Stripe client and webhooks
+│   └── subscription.ts   # Tier management
 ├── migrations/
 │   └── shares.sql        # Share invites table
 ├── agent.ts              # Jazz agent for groups

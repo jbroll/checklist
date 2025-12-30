@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Kjekit - Nicely Shared Checklists. Built with Jazz.tools and BetterAuth.
+CheckList - Shared Checklists. Built with Jazz.tools and BetterAuth.
 
 **Key Features**:
 - Hierarchical template organization
@@ -13,6 +13,9 @@ Kjekit - Nicely Shared Checklists. Built with Jazz.tools and BetterAuth.
 - Offline-first with automatic sync
 - Encrypted data storage and sync (Jazz.tools)
 - Multi-provider OAuth (Google + Apple)
+- Freemium subscription tiers with Stripe billing
+- White-label branding support (CheckList, kjekit)
+- Mobile apps via Capacitor (Android/iOS)
 
 ## Technology Stack
 
@@ -20,7 +23,9 @@ Kjekit - Nicely Shared Checklists. Built with Jazz.tools and BetterAuth.
 - **Database**: Jazz.tools (distributed, real-time, offline-first)
 - **Authentication**: BetterAuth with Jazz plugin
   - OAuth Providers: Google + Apple
+- **Billing**: Stripe (subscriptions, customer portal)
 - **UI**: Tailwind CSS + Radix UI + Framer Motion
+- **Mobile**: Capacitor (Android/iOS)
 - **Build Tool**: Vite
 
 ## Development Commands
@@ -60,7 +65,7 @@ npm run check           # Run type-check + lint + tests
 ## Project Structure
 
 ```
-kjekit/
+checklist/
 ├── src/
 │   ├── schemas/
 │   │   ├── index.ts       # Account and root schemas
@@ -68,21 +73,25 @@ kjekit/
 │   ├── lib/
 │   │   ├── auth-client.ts # BetterAuth client with Jazz plugin
 │   │   ├── jazz.tsx       # Jazz provider setup
+│   │   ├── brand.ts       # White-label branding config
 │   │   └── utils.ts       # Helper functions
 │   ├── components/
 │   │   ├── AuthGate.tsx   # Auth wrapper component
 │   │   ├── tree/          # Tree view (folders and items)
 │   │   ├── editor/        # App container and routing
 │   │   ├── session/       # Shopping session interface
+│   │   ├── billing/       # Subscription and upgrade UI
 │   │   ├── import/        # Import dialogs
 │   │   ├── export/        # Export dialogs
 │   │   └── ui/            # Base UI components (Radix UI)
 │   ├── services/
-│   │   ├── folderService.ts  # Folder operations
-│   │   ├── import/           # Import logic
-│   │   └── export/           # Export logic
+│   │   ├── folderService.ts       # Folder operations
+│   │   ├── subscriptionService.ts # Billing and tier limits
+│   │   ├── import/                # Import logic
+│   │   └── export/                # Export logic
 │   ├── App.tsx            # Root component
 │   └── main.tsx           # Entry point
+├── backend/               # BetterAuth + Stripe API server
 ├── public/                # Static assets
 ├── ARCHITECTURE.md        # System overview
 ├── README.md              # Getting started
@@ -112,9 +121,9 @@ See `ARCHITECTURE.md` for system overview.
 - `TemplateItem` - Hierarchical category or item node
 - `ShoppingSession` - Shopping trip state tracker
 - `ItemState` - Per-item shopping state
-- `GroceriesAccount` - User account
+- `Account` - User account with subscription info
 
-### Jazz Schema Syntax (v0.18.x)
+### Jazz Schema Syntax (v0.19.x)
 
 Schemas use function-based syntax with `co.map()`:
 
@@ -159,8 +168,10 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 APPLE_CLIENT_ID=...
 APPLE_CLIENT_SECRET=...
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3001
 VITE_JAZZ_PEER=wss://cloud.jazz.tools
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
 ```
 
 ## Common Development Patterns
@@ -171,7 +182,7 @@ Jazz CoValues are reactive - they sync automatically when mutated:
 
 ```typescript
 // Read data (reactive)
-const { me } = useAccount(GroceriesAccount);
+const { me } = useAccount(Account);
 
 // Update data (automatic sync)
 folder.name = "New Name";
@@ -265,7 +276,7 @@ npm run preview      # Test production build
 - **Mutations are automatic** - directly modify CoValue properties, no setState
 - **Real-time sync is automatic** - no manual API calls needed
 - **Offline support is built-in** - data works without connection
-- **Schema syntax is v0.18.x** - use `co.map()` not class-based syntax
+- **Schema syntax is v0.19.x** - use `co.map()` not class-based syntax
 - **Always soft delete** - use `archived: true`, never splice/remove
 - **Templates stay clean** - session state tracked separately in ShoppingSession
 

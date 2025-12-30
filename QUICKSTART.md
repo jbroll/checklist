@@ -1,6 +1,6 @@
-# Quick Start
+# CheckList Quick Start
 
-Get running in 5 minutes.
+Get CheckList running in 5 minutes.
 
 ## 1. Install
 
