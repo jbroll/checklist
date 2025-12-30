@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildItemTree,
   flattenItemTree,
-  getCategoryPath,
   getDescendantItems,
   getDirectChildren,
 } from './itemTreeHelpers';
@@ -217,22 +216,6 @@ describe('itemTreeHelpers', () => {
 
       expect(children).toHaveLength(1);
       expect(children[0].name).toBe('Active');
-    });
-  });
-
-  describe('getCategoryPath', () => {
-    it('returns parent path for nested items', () => {
-      expect(getCategoryPath(`produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples`)).toBe(
-        `produce${PATH_SEPARATOR}fruits`,
-      );
-    });
-
-    it('returns parent for direct children', () => {
-      expect(getCategoryPath(`produce${PATH_SEPARATOR}apples`)).toBe('produce');
-    });
-
-    it('returns undefined for root items', () => {
-      expect(getCategoryPath('produce')).toBeUndefined();
     });
   });
 });

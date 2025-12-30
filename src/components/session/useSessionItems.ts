@@ -1,6 +1,15 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo } from 'react';
 import type { SessionData, Template, TemplateItem } from '@/schemas';
+import { getLeafItems } from '@/utils/itemTreeHelpers';
+
+/** Sort items by sortOrder (with name as fallback) */
+const sortByOrder = (a: TemplateItem, b: TemplateItem) => {
+  if (a.sortOrder !== b.sortOrder) {
+    return a.sortOrder - b.sortOrder;
+  }
+  return a.name.localeCompare(b.name);
+};
 
 interface UseSessionItemsParams {
   template: InstanceOfSchema<typeof Template> | null;
@@ -10,7 +19,7 @@ interface UseSessionItemsParams {
 export function useSessionItems({ template, session }: UseSessionItemsParams) {
   const { activeItems, availableItems, selectedItems, checkedItems } = useMemo(() => {
     const items = template?.items || [];
-    const active = items.filter((item) => item && !item.archived && item.type === 'item');
+    const active = getLeafItems(items);
     const available: TemplateItem[] = [];
     const selected: TemplateItem[] = [];
     const checked: TemplateItem[] = [];
@@ -38,19 +47,11 @@ export function useSessionItems({ template, session }: UseSessionItemsParams) {
       }
     });
 
-    // Sort all items by sortOrder (with name as fallback)
-    const sortItems = (a: TemplateItem, b: TemplateItem) => {
-      if (a.sortOrder !== b.sortOrder) {
-        return a.sortOrder - b.sortOrder;
-      }
-      return a.name.localeCompare(b.name);
-    };
-
     return {
       activeItems: active,
-      availableItems: available.sort(sortItems),
-      selectedItems: selected.sort(sortItems),
-      checkedItems: checked.sort(sortItems),
+      availableItems: available.sort(sortByOrder),
+      selectedItems: selected.sort(sortByOrder),
+      checkedItems: checked.sort(sortByOrder),
     };
   }, [template, session]);
 

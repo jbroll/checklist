@@ -6,6 +6,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
+import { getDateStampForFilename } from '../../utils/dateUtils';
 import * as folderService from '../folderService';
 import {
   exportSessionToCsv as exportSessionToCsvImpl,
@@ -31,6 +32,20 @@ function findTemplateById(
 ): InstanceOfSchema<typeof FolderNode> | null {
   const templates = folderService.getAllTemplateFolders(account);
   return templates.find((t) => t?.$jazz?.id === templateId) || null;
+}
+
+/**
+ * Find a template by ID or throw if not found
+ */
+function getTemplateOrThrow(
+  account: InstanceOfSchema<typeof Account>,
+  templateId: string,
+): InstanceOfSchema<typeof FolderNode> {
+  const template = findTemplateById(account, templateId);
+  if (!template) {
+    throw new Error(`Template not found: ${templateId}`);
+  }
+  return template;
 }
 
 /**
@@ -91,7 +106,7 @@ export function generateFilename(
   format: 'json' | 'txt' | 'csv',
   folderName?: string,
 ): string {
-  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const timestamp = getDateStampForFilename();
 
   if (scope.type === 'all-folders') {
     return `checklist-data-${timestamp}.${format}`;
@@ -104,90 +119,50 @@ export function generateFilename(
 
 /**
  * Export template items to TXT format
- *
- * @param account - User's Account
- * @param templateId - ID of the template to export
- * @returns Plain text string with one item per line
  */
 export function exportTemplateItemsToText(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
 ): string {
-  const template = findTemplateById(account, templateId);
-  if (!template) {
-    throw new Error(`Template not found: ${templateId}`);
-  }
-
-  return exportTemplateItemsToTextImpl(template);
+  return exportTemplateItemsToTextImpl(getTemplateOrThrow(account, templateId));
 }
 
 /**
  * Export template items to CSV format
- *
- * @param account - User's Account
- * @param templateId - ID of the template to export
- * @returns CSV string with header row
  */
 export function exportTemplateItemsToCsv(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
 ): string {
-  const template = findTemplateById(account, templateId);
-  if (!template) {
-    throw new Error(`Template not found: ${templateId}`);
-  }
-
-  return exportTemplateItemsToCsvImpl(template);
+  return exportTemplateItemsToCsvImpl(getTemplateOrThrow(account, templateId));
 }
 
 /**
  * Export session to TXT format
- *
- * @param account - User's Account
- * @param templateId - ID of the template containing the session
- * @param sessionId - ID of the session to export
- * @returns Plain text string with checkmarks
  */
 export function exportSessionToText(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
 ): string {
-  const template = findTemplateById(account, templateId);
-  if (!template) {
-    throw new Error(`Template not found: ${templateId}`);
-  }
-
-  const result = exportSessionToTextImpl(template, sessionId);
+  const result = exportSessionToTextImpl(getTemplateOrThrow(account, templateId), sessionId);
   if (!result) {
     throw new Error(`Session not found: ${sessionId}`);
   }
-
   return result;
 }
 
 /**
  * Export session to CSV format
- *
- * @param account - User's Account
- * @param templateId - ID of the template containing the session
- * @param sessionId - ID of the session to export
- * @returns CSV string with header row
  */
 export function exportSessionToCsv(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
   sessionId: string,
 ): string {
-  const template = findTemplateById(account, templateId);
-  if (!template) {
-    throw new Error(`Template not found: ${templateId}`);
-  }
-
-  const result = exportSessionToCsvImpl(template, sessionId);
+  const result = exportSessionToCsvImpl(getTemplateOrThrow(account, templateId), sessionId);
   if (!result) {
     throw new Error(`Session not found: ${sessionId}`);
   }
-
   return result;
 }

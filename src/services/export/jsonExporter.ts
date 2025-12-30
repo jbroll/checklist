@@ -10,6 +10,7 @@ import packageJson from '../../../package.json';
 import { generateSessionName } from '../../lib/utils';
 import type { Account, FolderNode, SessionData } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
+import { toISOString } from '../../utils/dateUtils';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import * as folderService from '../folderService';
 import type {
@@ -19,19 +20,6 @@ import type {
   ExportedSession,
   ExportedTemplateItem,
 } from './types';
-
-/**
- * Safely convert a Date or date string to ISO string
- * Handles both Date objects and ISO date strings from Jazz deserialization
- *
- * @param date - Date object or ISO date string
- * @returns ISO date string
- */
-function toISOString(date: Date | string | undefined): string | undefined {
-  if (!date) return undefined;
-  if (typeof date === 'string') return date;
-  return date.toISOString();
-}
 
 /**
  * Export all folders from a user's account
@@ -155,12 +143,16 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
  * @returns Array of exported sessions
  */
 function exportSessions(sessions: SessionData[]): ExportedSession[] {
-  const exportedSessions: ExportedSession[] = [];
-
-  // Convert to array for easier manipulation
+  // Convert to array once for easier manipulation
   const sessionArray = Array.from(sessions);
 
-  for (const session of sessionArray) {
+  // Pre-compute sessions with normalized dates (O(n) instead of O(n²))
+  const sessionsWithDates = sessionArray.map((s) => ({
+    ...s,
+    createdAt: typeof s.createdAt === 'string' ? new Date(s.createdAt) : s.createdAt,
+  })) as readonly (SessionData | null)[];
+
+  return sessionArray.map((session) => {
     const itemStates: Record<string, ExportedItemState> = {};
 
     // Export item states with neutral terminology (v2.0)
@@ -183,22 +175,14 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
     }
 
     // Generate name from createdAt
-    // Convert string dates to Date objects at the export boundary
     const createdAtRaw = session.createdAt;
     if (!createdAtRaw) {
       throw new Error('Session missing createdAt field');
     }
     const createdAt = typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : createdAtRaw;
-
-    // Convert all session dates to Date objects for the utility function
-    const sessionsWithDates = sessionArray.map((s) => ({
-      ...s,
-      createdAt: typeof s.createdAt === 'string' ? new Date(s.createdAt) : s.createdAt,
-    })) as readonly (SessionData | null)[];
-
     const name = generateSessionName(createdAt, sessionsWithDates);
 
-    const exportedSession: ExportedSession = {
+    return {
       name,
       archived: session.archived || false,
       viewMode: session.viewMode,
@@ -206,11 +190,7 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
       createdAt: toISOString(session.createdAt) || new Date().toISOString(),
       lastActivityAt: toISOString(session.lastActivityAt) || new Date().toISOString(),
     };
-
-    exportedSessions.push(exportedSession);
-  }
-
-  return exportedSessions;
+  });
 }
 
 /**

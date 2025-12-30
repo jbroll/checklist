@@ -2,18 +2,38 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo, useSta
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-interface AlertOptions {
+/** Base options shared by all dialog types */
+interface BaseDialogOptions {
   title: string;
   message: string;
+}
+
+interface AlertOptions extends BaseDialogOptions {
   buttonText?: string;
 }
 
-interface ConfirmOptions {
-  title: string;
-  message: string;
+interface ConfirmOptions extends BaseDialogOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: 'primary' | 'danger' | 'secondary';
+}
+
+type DialogOptions = AlertOptions | ConfirmOptions;
+
+/** Type guard to check if options are for an alert dialog */
+function isAlertOptions(
+  type: 'alert' | 'confirm' | null,
+  options: DialogOptions | null,
+): options is AlertOptions {
+  return type === 'alert' && options !== null;
+}
+
+/** Type guard to check if options are for a confirm dialog */
+function isConfirmOptions(
+  type: 'alert' | 'confirm' | null,
+  options: DialogOptions | null,
+): options is ConfirmOptions {
+  return type === 'confirm' && options !== null;
 }
 
 interface DialogContextValue {
@@ -41,7 +61,7 @@ export function useDialog(): DialogContextValue {
 
 interface DialogState {
   type: 'alert' | 'confirm' | null;
-  options: AlertOptions | ConfirmOptions | null;
+  options: DialogOptions | null;
   // biome-ignore lint/suspicious/noExplicitAny: resolve can be for Promise<void> or Promise<boolean>
   resolve: ((value: any) => void) | null;
 }
@@ -79,37 +99,44 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(() => ({ showAlert, showConfirm }), [showAlert, showConfirm]);
 
-  const handleAlertClose = () => {
-    if (dialogState.resolve) {
-      dialogState.resolve(undefined);
-    }
-    setDialogState({ type: null, options: null, resolve: null });
-  };
+  const handleAlertClose = useCallback(() => {
+    setDialogState((state) => {
+      state.resolve?.(undefined);
+      return { type: null, options: null, resolve: null };
+    });
+  }, []);
 
-  const handleConfirmClose = (confirmed: boolean) => {
-    if (dialogState.resolve) {
-      dialogState.resolve(confirmed);
-    }
-    setDialogState({ type: null, options: null, resolve: null });
-  };
+  const handleConfirmClose = useCallback((confirmed: boolean) => {
+    setDialogState((state) => {
+      state.resolve?.(confirmed);
+      return { type: null, options: null, resolve: null };
+    });
+  }, []);
+
+  const alertOptions = isAlertOptions(dialogState.type, dialogState.options)
+    ? dialogState.options
+    : null;
+  const confirmOptions = isConfirmOptions(dialogState.type, dialogState.options)
+    ? dialogState.options
+    : null;
 
   return (
     <DialogContext.Provider value={contextValue}>
       {children}
 
-      {dialogState.type === 'alert' && dialogState.options && (
+      {alertOptions && (
         <AlertDialog
           open={true}
           onOpenChange={(open) => {
             if (!open) handleAlertClose();
           }}
-          title={(dialogState.options as AlertOptions).title}
-          message={(dialogState.options as AlertOptions).message}
-          buttonText={(dialogState.options as AlertOptions).buttonText}
+          title={alertOptions.title}
+          message={alertOptions.message}
+          buttonText={alertOptions.buttonText}
         />
       )}
 
-      {dialogState.type === 'confirm' && dialogState.options && (
+      {confirmOptions && (
         <ConfirmDialog
           open={true}
           onOpenChange={(open) => {
@@ -117,11 +144,11 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           }}
           onConfirm={() => handleConfirmClose(true)}
           onCancel={() => handleConfirmClose(false)}
-          title={(dialogState.options as ConfirmOptions).title}
-          message={(dialogState.options as ConfirmOptions).message}
-          confirmText={(dialogState.options as ConfirmOptions).confirmText}
-          cancelText={(dialogState.options as ConfirmOptions).cancelText}
-          variant={(dialogState.options as ConfirmOptions).variant}
+          title={confirmOptions.title}
+          message={confirmOptions.message}
+          confirmText={confirmOptions.confirmText}
+          cancelText={confirmOptions.cancelText}
+          variant={confirmOptions.variant}
         />
       )}
     </DialogContext.Provider>

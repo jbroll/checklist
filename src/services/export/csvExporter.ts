@@ -5,20 +5,10 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, SessionData, TemplateItem } from '../../schemas';
-
-/**
- * Safely convert a Date or date string to ISO string
- * Handles both Date objects and ISO date strings from Jazz deserialization
- *
- * @param date - Date object or ISO date string
- * @returns ISO date string
- */
-function toISOString(date: Date | string | undefined): string {
-  if (!date) return '';
-  if (typeof date === 'string') return date;
-  return date.toISOString();
-}
+import type { FolderNode } from '../../schemas';
+import { toISOStringOrEmpty } from '../../utils/dateUtils';
+import { getLeafItems } from '../../utils/itemTreeHelpers';
+import { findSessionById } from './helpers';
 
 /**
  * Escape CSV field value
@@ -50,12 +40,7 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Folde
   }
 
   // Get non-archived leaf items (not categories), sorted by sortOrder
-  const items = template.items
-    .filter((item: TemplateItem) => item && !item.archived && item.type === 'item')
-    .sort((a: TemplateItem, b: TemplateItem) => {
-      if (!a || !b) return 0;
-      return a.sortOrder - b.sortOrder;
-    });
+  const items = getLeafItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Add data rows
   for (const item of items) {
@@ -84,16 +69,8 @@ export function exportSessionToCsv(
   template: InstanceOfSchema<typeof FolderNode>,
   sessionId: string,
 ): string | null {
-  if (!template.sessions) {
-    return null;
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-  const sessions: SessionData[] = Array.from(template.sessions as any);
-  const session: SessionData | undefined = sessions.find((s: SessionData) => s?.id === sessionId);
-  if (!session) {
-    return null;
-  }
+  const session = findSessionById(template, sessionId);
+  if (!session) return null;
 
   const lines: string[] = [];
 
@@ -105,12 +82,7 @@ export function exportSessionToCsv(
   }
 
   // Get all leaf items (not categories) from the template, sorted by sortOrder
-  const items = template.items
-    .filter((item: TemplateItem) => item && !item.archived && item.type === 'item')
-    .sort((a: TemplateItem, b: TemplateItem) => {
-      if (!a || !b) return 0;
-      return a.sortOrder - b.sortOrder;
-    });
+  const items = getLeafItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Add data rows
   for (const item of items) {
@@ -123,8 +95,8 @@ export function exportSessionToCsv(
     const path = escapeCsvField(item.path);
     const selected = itemState?.selected ? 'true' : 'false';
     const checked = itemState?.checked ? 'true' : 'false';
-    const selectedAt = toISOString(itemState?.selectedAt);
-    const checkedAt = toISOString(itemState?.checkedAt);
+    const selectedAt = toISOStringOrEmpty(itemState?.selectedAt);
+    const checkedAt = toISOStringOrEmpty(itemState?.checkedAt);
 
     lines.push(`${name},${path},${selected},${checked},${selectedAt},${checkedAt}`);
   }

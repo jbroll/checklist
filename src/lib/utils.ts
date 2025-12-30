@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
 import type { SessionData } from '@/schemas';
+import { formatTime } from '@/utils/dateUtils';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,16 +35,17 @@ export function formatRelativeTime(date: Date): string {
 }
 
 /**
- * Format Date object for session display
+ * Format date for session display
  * - "today" for today without specific time (or with time if showTime is true)
  * - "today @11:54" for today with time (if showTime is true and not midnight)
  * - "yesterday" for yesterday
  * - "MM/DD" for dates within the last year
  * - Full date for older dates
+ *
+ * @param date - Date object or ISO string (Jazz may deserialize dates as strings)
  */
-export function formatSessionDate(date: Date, showTime = true): string {
-  // Ensure date is a Date object (Jazz may deserialize as string)
-  const sessionDate = new Date(date);
+export function formatSessionDate(date: Date | string, showTime = true): string {
+  const sessionDate = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
 
   // Reset hours for day comparison
@@ -66,27 +68,13 @@ export function formatSessionDate(date: Date, showTime = true): string {
     }
 
     // Otherwise show "today @HH:MM"
-    const timeStr = sessionDate
-      .toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .toLowerCase();
-    return `today @${timeStr}`;
+    return `today @${formatTime(sessionDate)}`;
   }
 
   // Yesterday
   if (diffDays === 1) {
     if (showTime) {
-      const timeStr = sessionDate
-        .toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-        .toLowerCase();
-      return `yesterday @${timeStr}`;
+      return `yesterday @${formatTime(sessionDate)}`;
     }
     return 'yesterday';
   }
@@ -96,14 +84,7 @@ export function formatSessionDate(date: Date, showTime = true): string {
   if (sessionDate > oneYearAgo) {
     const dateStr = `${sessionDate.getMonth() + 1}/${sessionDate.getDate()}`;
     if (showTime) {
-      const timeStr = sessionDate
-        .toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-        .toLowerCase();
-      return `${dateStr} @${timeStr}`;
+      return `${dateStr} @${formatTime(sessionDate)}`;
     }
     return dateStr;
   }
@@ -115,16 +96,28 @@ export function formatSessionDate(date: Date, showTime = true): string {
     day: 'numeric',
   });
   if (showTime) {
-    const timeStr = sessionDate
-      .toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .toLowerCase();
-    return `${dateStr} @${timeStr}`;
+    return `${dateStr} @${formatTime(sessionDate)}`;
   }
   return dateStr;
+}
+
+/**
+ * Get the start of day (midnight) for a given date
+ */
+function getStartOfDay(date: Date | string): Date {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * Count sessions that fall on the same day as the given date
+ */
+function countSessionsOnSameDay(
+  date: Date | string,
+  sessions: readonly (SessionData | null)[],
+): number {
+  const targetDay = getStartOfDay(date).getTime();
+  return sessions.filter((s) => s && getStartOfDay(s.createdAt).getTime() === targetDay).length;
 }
 
 /**
@@ -146,18 +139,8 @@ export function generateSessionName(
     return dateStr;
   }
 
-  // Check if there are multiple sessions on the same day
-  const sessionDay = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate());
-
-  const sessionsOnSameDay = allSessions.filter((s) => {
-    if (!s) return false;
-    const sDate = s.createdAt;
-    const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-    return sDay.getTime() === sessionDay.getTime();
-  });
-
   // If multiple sessions on same day, include time
-  if (sessionsOnSameDay.length > 1) {
+  if (countSessionsOnSameDay(createdAt, allSessions) > 1) {
     const timeStr = createdAt.toTimeString().slice(0, 5); // HH:MM
     return `${dateStr} ${timeStr}`;
   }
@@ -174,24 +157,7 @@ export function hasMultipleSessionsOnSameDay(
   allSessions: readonly (SessionData | null)[],
 ): boolean {
   if (!session || !allSessions) return false;
-
-  // Ensure createdAt is a Date object (Jazz may deserialize as string)
-  const sessionDate = new Date(session.createdAt);
-  const sessionDay = new Date(
-    sessionDate.getFullYear(),
-    sessionDate.getMonth(),
-    sessionDate.getDate(),
-  );
-
-  // Count sessions on the same day
-  const sessionsOnSameDay = allSessions.filter((s) => {
-    if (!s) return false;
-    const sDate = new Date(s.createdAt);
-    const sDay = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-    return sDay.getTime() === sessionDay.getTime();
-  });
-
-  return sessionsOnSameDay.length > 1;
+  return countSessionsOnSameDay(session.createdAt, allSessions) > 1;
 }
 
 /**

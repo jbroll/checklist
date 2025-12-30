@@ -2,6 +2,30 @@ import type { TemplateItem } from '@/schemas';
 import { getParentPath, PATH_SEPARATOR } from './pathUtils';
 
 /**
+ * Filter to get only active (non-archived) items
+ *
+ * @param items - Array of template items (may contain null/undefined)
+ * @returns Array of non-archived items
+ */
+export function getActiveItems(
+  items: readonly (TemplateItem | null | undefined)[],
+): TemplateItem[] {
+  return items.filter((item): item is TemplateItem => item != null && !item.archived);
+}
+
+/**
+ * Filter to get only leaf items (non-archived items with type === 'item')
+ *
+ * @param items - Array of template items (may contain null/undefined)
+ * @returns Array of non-archived leaf items
+ */
+export function getLeafItems(items: readonly (TemplateItem | null | undefined)[]): TemplateItem[] {
+  return items.filter(
+    (item): item is TemplateItem => item != null && !item.archived && item.type === 'item',
+  );
+}
+
+/**
  * Tree structure for template items (categories and items)
  */
 export interface ItemTreeNode {
@@ -109,12 +133,4 @@ export function getDirectChildren(
     const itemParent = getParentPath(item.path);
     return itemParent === categoryPath;
   });
-}
-
-/**
- * Gets the category path from an item path
- * @example getCategoryPath("produce/fruits/apples") => "produce/fruits"
- */
-export function getCategoryPath(itemPath: string): string | undefined {
-  return getParentPath(itemPath);
 }

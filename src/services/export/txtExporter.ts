@@ -8,14 +8,10 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode, SessionData } from '../../schemas';
+import type { FolderNode } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
-import { PATH_SEPARATOR } from '../../utils/pathUtils';
-
-interface TreeNode {
-  item: TemplateItem;
-  children: TreeNode[];
-}
+import { buildItemTree, getActiveItems, type ItemTreeNode } from '../../utils/itemTreeHelpers';
+import { findSessionById } from './helpers';
 
 /**
  * Export template items to plain text format
@@ -33,12 +29,7 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
   }
 
   // Get non-archived items, sorted by sortOrder
-  const items = template.items
-    .filter((item: TemplateItem) => item && !item.archived)
-    .sort((a: TemplateItem, b: TemplateItem) => {
-      if (!a || !b) return 0;
-      return a.sortOrder - b.sortOrder;
-    });
+  const items = getActiveItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Check if any categories exist
   const hasCategories = items.some((item: TemplateItem) => item?.type === 'category');
@@ -62,62 +53,11 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
  * @returns Indented text string
  */
 function exportHierarchical(items: TemplateItem[]): string {
-  // Build tree structure from flat items
-  const tree = buildTreeFromPaths(items);
+  // Build tree structure from flat items using shared utility
+  const tree = buildItemTree(items);
 
   // Generate indented text
   return treeToIndentedText(tree);
-}
-
-/**
- * Build tree structure from flat items using paths
- *
- * @param items - Flat array of items with paths
- * @returns Tree nodes
- */
-function buildTreeFromPaths(items: TemplateItem[]): TreeNode[] {
-  const root: TreeNode[] = [];
-  const nodeMap = new Map<string, TreeNode>();
-
-  // Create nodes for all items
-  for (const item of items) {
-    if (!item) continue;
-
-    const node: TreeNode = {
-      item,
-      children: [],
-    };
-
-    nodeMap.set(item.path, node);
-  }
-
-  // Build parent-child relationships
-  for (const item of items) {
-    if (!item) continue;
-
-    const node = nodeMap.get(item.path);
-    if (!node) continue;
-
-    // Find parent by checking if path is a child of another path
-    const pathParts = item.path.split(PATH_SEPARATOR);
-    if (pathParts.length === 1) {
-      // Root level item
-      root.push(node);
-    } else {
-      // Find parent
-      const parentPath = pathParts.slice(0, -1).join(PATH_SEPARATOR);
-      const parent = nodeMap.get(parentPath);
-
-      if (parent) {
-        parent.children.push(node);
-      } else {
-        // Parent not found, add to root
-        root.push(node);
-      }
-    }
-  }
-
-  return root;
 }
 
 /**
@@ -127,7 +67,7 @@ function buildTreeFromPaths(items: TemplateItem[]): TreeNode[] {
  * @param indent - Current indentation level
  * @returns Indented text string
  */
-function treeToIndentedText(nodes: TreeNode[], indent = 0): string {
+function treeToIndentedText(nodes: ItemTreeNode[], indent = 0): string {
   const lines: string[] = [];
   const indentStr = '  '.repeat(indent); // 2 spaces per level
 
@@ -159,27 +99,14 @@ export function exportSessionToText(
   template: InstanceOfSchema<typeof FolderNode>,
   sessionId: string,
 ): string | null {
-  if (!template.sessions) {
-    return null;
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-  const sessions: SessionData[] = Array.from(template.sessions as any);
-  const session: SessionData | undefined = sessions.find((s: SessionData) => s?.id === sessionId);
-  if (!session) {
-    return null;
-  }
+  const session = findSessionById(template, sessionId);
+  if (!session) return null;
 
   const lines: string[] = [];
 
   // Get all items from the template
   if (template.items) {
-    const items = template.items
-      .filter((item: TemplateItem) => item && !item.archived)
-      .sort((a: TemplateItem, b: TemplateItem) => {
-        if (!a || !b) return 0;
-        return a.sortOrder - b.sortOrder;
-      });
+    const items = getActiveItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
 
     for (const item of items) {
       if (!item) continue;
