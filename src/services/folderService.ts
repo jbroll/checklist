@@ -21,6 +21,25 @@ export class ListLimitExceededError extends Error {
   }
 }
 
+/**
+ * Error thrown when account root is not initialized
+ */
+export class AccountNotInitializedError extends Error {
+  constructor() {
+    super('Account root not initialized');
+    this.name = 'AccountNotInitializedError';
+  }
+}
+
+/**
+ * Assert that account root is initialized, throw if not
+ */
+function assertAccountRoot(
+  account: AccountType,
+): asserts account is AccountType & { root: NonNullable<AccountType['root']> } {
+  if (!account.root) throw new AccountNotInitializedError();
+}
+
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;
 // Jazz CoList has $jazz methods for mutations
@@ -90,6 +109,42 @@ function findFolderRecursive(
     }
   }
   return null;
+}
+
+/**
+ * Collect folders recursively based on a predicate function
+ *
+ * @param folders - Root folder list to search
+ * @param shouldInclude - Predicate to determine if folder should be included
+ * @param shouldRecurse - Predicate to determine if children should be searched (default: recurse if not included)
+ */
+function collectFoldersByPredicate(
+  folders: FolderType[] | null | undefined,
+  shouldInclude: (folder: FolderType) => boolean,
+  shouldRecurse?: (folder: FolderType, included: boolean) => boolean,
+): FolderType[] {
+  const results: FolderType[] = [];
+
+  function collect(folderList: FolderType[] | null | undefined) {
+    if (!folderList || !Array.isArray(folderList)) return;
+    for (const folder of folderList) {
+      if (!folder) continue;
+
+      const included = shouldInclude(folder);
+      if (included) {
+        results.push(folder);
+      }
+
+      // Default: recurse if not included
+      const recurse = shouldRecurse ? shouldRecurse(folder, included) : !included;
+      if (recurse && folder.children && Array.isArray(folder.children)) {
+        collect(folder.children);
+      }
+    }
+  }
+
+  collect(folders);
+  return results;
 }
 
 /**
@@ -191,7 +246,7 @@ export function createFolder(
   isTemplate: boolean,
   parent?: FolderType | null,
 ): FolderType {
-  if (!account.root) throw new Error('Account root not initialized');
+  assertAccountRoot(account);
 
   // Check subscription limit when creating a template (list)
   if (isTemplate && !canCreateList(account)) {
@@ -273,7 +328,7 @@ export function unarchiveFolder(folder: FolderType): void {
 }
 
 export function deleteFolder(account: AccountType, folder: FolderType): void {
-  if (!account.root) throw new Error('Account root not initialized');
+  assertAccountRoot(account);
 
   // Recursively delete children first
   if (folder.children) {
@@ -330,7 +385,7 @@ export function moveFolderToIndex(
   newParent: FolderType | null | undefined,
   newIndex: number,
 ): void {
-  if (!account.root) throw new Error('Account root not initialized');
+  assertAccountRoot(account);
 
   validateNotCircular(folder, newParent);
 
@@ -368,7 +423,7 @@ export function moveFolder(
   folder: FolderType,
   newParent?: FolderType | null,
 ): void {
-  if (!account.root) throw new Error('Account root not initialized');
+  assertAccountRoot(account);
 
   validateNotCircular(folder, newParent);
 
@@ -439,48 +494,27 @@ export function findFolderById(account: AccountType, folderId: string): FolderTy
 export function getAllTemplateFolders(account: AccountType, showArchived = false): FolderType[] {
   if (!account.root?.folders) return [];
 
-  const templates: FolderType[] = [];
-
-  function collect(folders: FolderType[] | null | undefined) {
-    if (!folders || !Array.isArray(folders)) return;
-    for (const folder of folders) {
-      if (!folder || (!showArchived && folder.archived)) continue;
-
-      if (isTemplateFolder(folder)) {
-        templates.push(folder);
-      } else if (folder.children && Array.isArray(folder.children)) {
-        collect(folder.children);
-      }
-    }
-  }
-
   const foldersArray = account.root.folders ? Array.from(account.root.folders) : [];
-  collect(foldersArray);
-  return templates;
+  return collectFoldersByPredicate(
+    foldersArray,
+    // Include: template folders that are not archived (or all if showArchived)
+    (folder) => isTemplateFolder(folder) && (showArchived || !folder.archived),
+    // Recurse: into non-template folders (and non-archived ones if not showing archived)
+    (folder, included) => !included && (showArchived || !folder.archived),
+  );
 }
 
 export function getArchivedFolders(account: AccountType): FolderType[] {
   if (!account.root?.folders) return [];
 
-  const archived: FolderType[] = [];
-
-  function collect(folders: FolderType[] | null | undefined) {
-    if (!folders || !Array.isArray(folders)) return;
-    for (const folder of folders) {
-      if (!folder) continue;
-
-      if (folder.archived) {
-        archived.push(folder);
-        // Don't recurse into archived folders' children
-      } else if (folder.children && Array.isArray(folder.children)) {
-        collect(folder.children);
-      }
-    }
-  }
-
   const foldersArray = account.root.folders ? Array.from(account.root.folders) : [];
-  collect(foldersArray);
-  return archived;
+  return collectFoldersByPredicate(
+    foldersArray,
+    // Include: archived folders
+    (folder) => folder.archived,
+    // Recurse: only into non-archived folders (don't recurse into archived folders' children)
+    (_folder, included) => !included,
+  );
 }
 
 // =============================================================================
@@ -569,7 +603,7 @@ export function deleteAllUserData(account: AccountType): void {
 }
 
 export function duplicateTemplate(account: AccountType, folder: FolderType): FolderType {
-  if (!account.root) throw new Error('Account root not initialized');
+  assertAccountRoot(account);
   if (!isTemplateFolder(folder)) throw new Error('Can only duplicate template folders');
 
   const baseName = `${folder.name} (Copy)`;
