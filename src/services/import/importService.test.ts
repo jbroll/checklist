@@ -26,7 +26,20 @@ vi.mock('../../utils/fileUpload', () => ({
 }));
 
 import { readFileAsText } from '../../utils/fileUpload';
-import { importAsNewTemplate } from './importService';
+import {
+  importAsNewTemplate,
+  importItemsFromCsvFile,
+  importItemsFromJsonFile,
+  importItemsFromTxtFile,
+  importSessionFromCsvFile,
+} from './importService';
+import { validateImportFile } from './importValidator';
+
+// Mock the import validator
+vi.mock('./importValidator', () => ({
+  validateImportFile: vi.fn(),
+  MAX_FILE_SIZE_MB: 10,
+}));
 
 // Create mock file
 function createMockFile(name: string, content: string): File {
@@ -185,6 +198,201 @@ Item2,Cat2`;
 
       // Last one wins (all same key normalized to lowercase)
       expect(metadata.name).toBe('Uppercase');
+    });
+  });
+
+  describe('validateAndReadFile error handling', () => {
+    const mockTemplate = () =>
+      ({
+        name: 'Test',
+        items: [] as any[],
+        $jazz: { id: 'template-1', set: vi.fn() },
+      }) as any;
+
+    beforeEach(() => {
+      vi.mocked(validateImportFile).mockImplementation(() => {
+        // Default: no validation error
+      });
+    });
+
+    describe('validation errors', () => {
+      it('returns error when file extension is invalid (TXT import)', async () => {
+        const file = createMockFile('test.invalid', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('Invalid file type. Expected: txt');
+        });
+
+        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Invalid file type');
+      });
+
+      it('returns error when file extension is invalid (JSON import)', async () => {
+        const file = createMockFile('test.txt', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('Invalid file type. Expected: json');
+        });
+
+        const result = await importItemsFromJsonFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Invalid file type');
+      });
+
+      it('returns error when file extension is invalid (CSV import)', async () => {
+        const file = createMockFile('test.json', 'name,category');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('Invalid file type. Expected: csv');
+        });
+
+        const result = await importItemsFromCsvFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Invalid file type');
+      });
+
+      it('returns error when file is too large', async () => {
+        const file = createMockFile('test.txt', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('File too large. Maximum size: 10MB');
+        });
+
+        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('File too large');
+      });
+
+      it('returns error for session CSV import when validation fails', async () => {
+        const file = createMockFile('session.csv', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('Invalid file type');
+        });
+
+        const result = await importSessionFromCsvFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(false);
+        expect(result.errors[0]).toContain('Invalid file type');
+      });
+
+      it('returns error for importAsNewTemplate when validation fails', async () => {
+        const file = createMockFile('test.txt', 'Item1');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw new Error('Validation failed');
+        });
+
+        const result = await importAsNewTemplate(file, account as any, 'Test', 'txt');
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Validation failed');
+      });
+
+      it('handles non-Error validation exceptions', async () => {
+        const file = createMockFile('test.txt', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(validateImportFile).mockImplementation(() => {
+          throw 'String error'; // Non-Error exception
+        });
+
+        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toBe('Validation failed');
+      });
+    });
+
+    describe('file read errors', () => {
+      it('returns error when file read fails (TXT import)', async () => {
+        const file = createMockFile('test.txt', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('Network error'));
+
+        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Network error');
+      });
+
+      it('returns error when file read fails (JSON import)', async () => {
+        const file = createMockFile('test.json', '{}');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('Permission denied'));
+
+        const result = await importItemsFromJsonFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Permission denied');
+      });
+
+      it('returns error when file read fails (CSV import)', async () => {
+        const file = createMockFile('test.csv', 'name,category');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('Disk error'));
+
+        const result = await importItemsFromCsvFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Disk error');
+      });
+
+      it('returns error when file read fails (session import)', async () => {
+        const file = createMockFile('session.csv', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('Read timeout'));
+
+        const result = await importSessionFromCsvFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(false);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Read timeout');
+      });
+
+      it('returns error when file read fails (importAsNewTemplate)', async () => {
+        const file = createMockFile('test.txt', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue(new Error('File corrupted'));
+
+        const result = await importAsNewTemplate(file, account as any, 'Test', 'txt');
+
+        expect(result.success).toBe(false);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('File corrupted');
+      });
+
+      it('handles non-Error read exceptions', async () => {
+        const file = createMockFile('test.txt', 'content');
+        const account = createMockAccount();
+
+        vi.mocked(readFileAsText).mockRejectedValue('Unknown failure'); // Non-Error
+
+        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
+
+        expect(result.imported).toBe(0);
+        expect(result.errors[0]).toContain('Failed to read file');
+        expect(result.errors[0]).toContain('Unknown error');
+      });
     });
   });
 });
