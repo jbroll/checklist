@@ -16,6 +16,7 @@ import type {
   ExportedSession,
   ExportedTemplateItem,
 } from '../export/types';
+import { type BaseImportResult, type ItemToImport, importItems } from './baseImporter';
 import type { ImportResult } from './types';
 import { validateJsonData } from './validators';
 
@@ -64,6 +65,140 @@ export async function importJson(
     ...result,
     warnings: [...validation.warnings, ...result.warnings],
   };
+}
+
+/**
+ * Import items from JSON into an existing template
+ *
+ * Accepts multiple JSON formats:
+ * - ExportedData (full export) - extracts items from all folders
+ * - ExportedFolder (single folder) - extracts items directly
+ * - ExportedTemplateItem[] (items array) - uses items directly
+ *
+ * @param jsonString - JSON string containing items
+ * @param template - FolderNode to import items into
+ * @param account - User's Account
+ * @returns Import result with statistics
+ */
+export function importItemsFromJson(
+  jsonString: string,
+  template: InstanceOfSchema<typeof FolderNode>,
+  account: InstanceOfSchema<typeof Account>,
+): BaseImportResult {
+  // Parse JSON
+  let data: unknown;
+  try {
+    data = JSON.parse(jsonString);
+  } catch (error) {
+    return {
+      imported: 0,
+      skipped: 0,
+      errors: [`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`],
+      duplicates: [],
+    };
+  }
+
+  // Extract items based on JSON structure
+  const exportedItems = extractItemsFromJson(data);
+  if (!exportedItems) {
+    return {
+      imported: 0,
+      skipped: 0,
+      errors: ['JSON does not contain recognizable item data'],
+      duplicates: [],
+    };
+  }
+
+  if (exportedItems.length === 0) {
+    return {
+      imported: 0,
+      skipped: 0,
+      errors: ['No items found in JSON'],
+      duplicates: [],
+    };
+  }
+
+  // Convert ExportedTemplateItem[] to ItemToImport[]
+  const itemsToImport = flattenExportedItemsToImport(exportedItems, undefined);
+
+  // Import items using shared base importer
+  return importItems(itemsToImport, template, account);
+}
+
+/**
+ * Extract items from various JSON formats
+ *
+ * @param data - Parsed JSON data
+ * @returns Array of ExportedTemplateItem or null if format not recognized
+ */
+function extractItemsFromJson(data: unknown): ExportedTemplateItem[] | null {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  // Check if it's ExportedData (full export with folders)
+  if ('folders' in data && Array.isArray((data as ExportedData).folders)) {
+    const exportData = data as ExportedData;
+    // Collect items from all folders
+    const allItems: ExportedTemplateItem[] = [];
+    for (const folder of exportData.folders) {
+      if (folder.items && Array.isArray(folder.items)) {
+        allItems.push(...folder.items);
+      }
+    }
+    return allItems;
+  }
+
+  // Check if it's ExportedFolder (single folder)
+  if ('name' in data && 'items' in data && Array.isArray((data as ExportedFolder).items)) {
+    return (data as ExportedFolder).items || [];
+  }
+
+  // Check if it's an array of ExportedTemplateItem
+  if (Array.isArray(data)) {
+    // Validate that items have required fields
+    const isValidItemArray = data.every(
+      (item) => item && typeof item === 'object' && 'name' in item && typeof item.name === 'string',
+    );
+    if (isValidItemArray) {
+      return data as ExportedTemplateItem[];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Flatten ExportedTemplateItem[] to ItemToImport[] (with paths)
+ *
+ * @param exportedItems - Hierarchical exported items
+ * @param parentPath - Parent path for context
+ * @returns Flat array of items with paths
+ */
+function flattenExportedItemsToImport(
+  exportedItems: ExportedTemplateItem[],
+  parentPath: string | undefined,
+): ItemToImport[] {
+  const items: ItemToImport[] = [];
+
+  for (const exportedItem of exportedItems) {
+    const itemPath = createChildPath(parentPath, exportedItem.name);
+
+    items.push({
+      name: exportedItem.name,
+      path: itemPath,
+      type: exportedItem.type || 'item',
+      defaultQuantity: exportedItem.defaultQuantity || '',
+    });
+
+    // Recursively flatten children
+    if (exportedItem.children && exportedItem.children.length > 0) {
+      const childItems = flattenExportedItemsToImport(exportedItem.children, itemPath);
+      items.push(...childItems);
+    }
+  }
+
+  return items;
 }
 
 /**

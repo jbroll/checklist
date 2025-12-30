@@ -8,6 +8,7 @@ import {
   importAsNewTemplate,
   importFromFile,
   importItemsFromCsvFile,
+  importItemsFromJsonFile,
   importItemsFromTxtFile,
 } from '@/services/import/importService';
 import { parseTextMetadata, type TxtImportResult } from '@/services/import/txtImporter';
@@ -118,9 +119,11 @@ export function useImportDialog({
 
     let result: UnifiedImportResult;
 
-    // Template-level import (TXT/CSV only - JSON is for full backups)
+    // Template-level import
     if (template) {
-      if (detectedType === 'txt') {
+      if (detectedType === 'json') {
+        result = await importItemsFromJsonFile(file, template, account);
+      } else if (detectedType === 'txt') {
         result = await importItemsFromTxtFile(file, template, account);
       } else {
         result = await importItemsFromCsvFile(file, template, account);
@@ -172,8 +175,8 @@ export function useImportDialog({
     if (template) {
       return {
         title: `Import Items: ${template.name}`,
-        description: 'Import TXT or CSV to add items to this list.',
-        acceptedFileTypes: ['txt', 'csv'],
+        description: 'Auto-detects JSON (items list) or TXT/CSV (append items).',
+        acceptedFileTypes: ['json', 'txt', 'csv'],
         infoContent: learnMoreLink,
       };
     }

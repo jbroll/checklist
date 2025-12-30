@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
-import type { ExportedData } from '../export/types';
-import { importJson } from './jsonImporter';
+import type { ExportedData, ExportedFolder, ExportedTemplateItem } from '../export/types';
+import { importItemsFromJson, importJson } from './jsonImporter';
 
 // Minimal mock account for validation testing
 const createMockAccount = () => ({
@@ -345,6 +345,185 @@ describe('jsonImporter', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
+    });
+  });
+});
+
+// Mock template for importItemsFromJson tests
+const createMockTemplate = () => ({
+  items: [] as any[],
+  $jazz: {
+    set: (key: string, value: any) => {
+      if (key === 'items') {
+        (createMockTemplate as any)._items = value;
+      }
+    },
+  },
+  updatedAt: new Date(),
+});
+
+describe('importItemsFromJson', () => {
+  describe('format detection', () => {
+    it('should import items from ExportedData (full export)', () => {
+      const exportData: ExportedData = {
+        version: '2.0',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            name: 'Groceries',
+            type: 'template-folder',
+            items: [
+              {
+                id: 'item-1',
+                name: 'Apples',
+                type: 'item',
+                sortOrder: 0,
+                createdAt: '2024-11-01T00:00:00.000Z',
+                updatedAt: '2024-11-01T00:00:00.000Z',
+              },
+            ],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson(
+        JSON.stringify(exportData),
+        template as any,
+        account as any,
+      );
+
+      expect(result.imported).toBe(1);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should import items from ExportedFolder (single folder)', () => {
+      const folder: ExportedFolder = {
+        name: 'Shopping List',
+        type: 'template-folder',
+        items: [
+          {
+            id: 'item-1',
+            name: 'Milk',
+            type: 'item',
+            sortOrder: 0,
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+          {
+            id: 'item-2',
+            name: 'Bread',
+            type: 'item',
+            sortOrder: 1,
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+        createdAt: '2024-11-01T00:00:00.000Z',
+        updatedAt: '2024-11-01T00:00:00.000Z',
+      };
+
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson(JSON.stringify(folder), template as any, account as any);
+
+      expect(result.imported).toBe(2);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should import items from ExportedTemplateItem[] (items array)', () => {
+      const items: ExportedTemplateItem[] = [
+        {
+          id: 'item-1',
+          name: 'Eggs',
+          type: 'item',
+          sortOrder: 0,
+          createdAt: '2024-11-01T00:00:00.000Z',
+          updatedAt: '2024-11-01T00:00:00.000Z',
+        },
+        {
+          id: 'item-2',
+          name: 'Butter',
+          type: 'item',
+          sortOrder: 1,
+          createdAt: '2024-11-01T00:00:00.000Z',
+          updatedAt: '2024-11-01T00:00:00.000Z',
+        },
+      ];
+
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson(JSON.stringify(items), template as any, account as any);
+
+      expect(result.imported).toBe(2);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should flatten hierarchical items', () => {
+      const items: ExportedTemplateItem[] = [
+        {
+          id: 'cat-1',
+          name: 'Produce',
+          type: 'category',
+          sortOrder: 0,
+          children: [
+            {
+              id: 'item-1',
+              name: 'Apples',
+              type: 'item',
+              sortOrder: 0,
+              createdAt: '2024-11-01T00:00:00.000Z',
+              updatedAt: '2024-11-01T00:00:00.000Z',
+            },
+          ],
+          createdAt: '2024-11-01T00:00:00.000Z',
+          updatedAt: '2024-11-01T00:00:00.000Z',
+        },
+      ];
+
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson(JSON.stringify(items), template as any, account as any);
+
+      // Should import category + item
+      expect(result.imported).toBe(2);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should reject invalid JSON', () => {
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson('not valid json{{{', template as any, account as any);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('Invalid JSON');
+    });
+
+    it('should reject unrecognized format', () => {
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson('{"foo": "bar"}', template as any, account as any);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('does not contain recognizable');
+    });
+
+    it('should reject empty items array', () => {
+      const template = createMockTemplate();
+      const account = createMockAccount();
+      const result = importItemsFromJson('[]', template as any, account as any);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('No items found');
     });
   });
 });

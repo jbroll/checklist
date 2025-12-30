@@ -10,7 +10,7 @@ import { readFileAsText } from '../../utils/fileUpload';
 import * as folderService from '../folderService';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
-import { importJson } from './jsonImporter';
+import { importItemsFromJson, importJson } from './jsonImporter';
 import { createErrorResult, createSuccessResult } from './resultHelpers';
 import {
   importSessionFromCsv,
@@ -163,6 +163,31 @@ export async function importItemsFromTxtFile(
     return { imported: 0, skipped: 0, errors: [result.error], duplicates: [], metadata: {} };
   }
   return importItemsFromText(result.content, template, account);
+}
+
+/**
+ * Import template items from JSON file
+ *
+ * Accepts multiple JSON formats:
+ * - Full export (ExportedData) - extracts items from all folders
+ * - Single folder (ExportedFolder) - extracts items directly
+ * - Items array (ExportedTemplateItem[]) - uses items directly
+ *
+ * @param file - JSON file with items
+ * @param template - FolderNode to import items into
+ * @param account - User's Account
+ * @returns Import result with statistics
+ */
+export async function importItemsFromJsonFile(
+  file: File,
+  template: InstanceOfSchema<typeof FolderNode>,
+  account: InstanceOfSchema<typeof Account>,
+): Promise<CsvImportResult> {
+  const result = await validateAndReadFile(file, ['json']);
+  if (!result.success) {
+    return { imported: 0, skipped: 0, errors: [result.error], duplicates: [] };
+  }
+  return importItemsFromJson(result.content, template, account);
 }
 
 /**
