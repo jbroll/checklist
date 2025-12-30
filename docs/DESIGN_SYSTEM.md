@@ -1,8 +1,8 @@
 # Design System Documentation
 
-**Project:** GroceryList Application
+**Project:** CheckList (kjekit)
 **Version:** 1.0
-**Last Updated:** 2025-11-03
+**Last Updated:** 2025-12
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## Overview
 
-The GroceryList design system provides a consistent, accessible, and maintainable foundation for the application's UI. All components are built using:
+The CheckList design system provides a consistent, accessible, and maintainable foundation for the application's UI. All components are built using:
 
 - **React 18** with TypeScript
 - **Tailwind CSS** for utility-first styling
