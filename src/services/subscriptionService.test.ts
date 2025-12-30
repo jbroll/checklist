@@ -5,14 +5,18 @@
  * Uses jazz-mock for CoValue mocking.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockCoList, createMockCoMap } from '../test/setup';
 import {
   canCreateList,
+  createCheckoutSession,
+  createPortalSession,
+  getBetaMessage,
   getEffectiveTier,
   getListsRemaining,
   getMaxLists,
   getSessionRetentionDays,
+  getSubscriptionInfo,
   getSubscriptionTier,
   getTierDisplayName,
   getTierPrice,
@@ -21,6 +25,11 @@ import {
   isAtListLimit,
   isBetaUser,
   isPaidTier,
+  needsSubscriptionSync,
+  recordUsageToBackend,
+  redirectToCheckout,
+  redirectToPortal,
+  syncSubscriptionFromBackend,
   TIER_LIMITS,
 } from './subscriptionService';
 
@@ -33,6 +42,7 @@ const createMockAccount = (settings: Record<string, any> = {}) => {
       maxLists: settings.maxLists,
       sessionRetentionDays: settings.sessionRetentionDays,
       subscriptionSyncedAt: settings.subscriptionSyncedAt,
+      subscriptionEndsAt: settings.subscriptionEndsAt,
     },
     { trackMutations: true },
   );
@@ -374,6 +384,294 @@ describe('SubscriptionService', () => {
       expect(isPaidTier('plus')).toBe(true);
       expect(isPaidTier('premium')).toBe(true);
       expect(isPaidTier('enterprise')).toBe(true);
+    });
+  });
+
+  describe('getBetaMessage', () => {
+    it('should return the beta message', () => {
+      expect(getBetaMessage()).toBe('During beta, all users have Plus features free!');
+    });
+  });
+
+  describe('getSubscriptionInfo', () => {
+    it('should return subscription info with defaults', () => {
+      const account = createMockAccount({});
+      const info = getSubscriptionInfo(account);
+
+      expect(info.tier).toBe('free');
+      expect(info.status).toBe('beta');
+      expect(info.limits).toEqual(TIER_LIMITS.plus); // Beta gets plus limits
+    });
+
+    it('should return subscription info for active user', () => {
+      const account = createMockAccount({
+        subscriptionTier: 'premium',
+        subscriptionStatus: 'active',
+      });
+      const info = getSubscriptionInfo(account);
+
+      expect(info.tier).toBe('premium');
+      expect(info.status).toBe('active');
+      expect(info.limits).toEqual(TIER_LIMITS.premium);
+    });
+
+    it('should include endsAt and syncedAt when available', () => {
+      const endsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const syncedAt = Date.now();
+      const account = createMockAccount({
+        subscriptionTier: 'plus',
+        subscriptionStatus: 'active',
+        subscriptionEndsAt: endsAt,
+        subscriptionSyncedAt: syncedAt,
+      });
+      const info = getSubscriptionInfo(account);
+
+      expect(info.endsAt).toBe(endsAt);
+      expect(info.syncedAt).toBe(syncedAt);
+    });
+  });
+
+  describe('needsSubscriptionSync', () => {
+    it('should return true if never synced', () => {
+      const account = createMockAccount({});
+      expect(needsSubscriptionSync(account)).toBe(true);
+    });
+
+    it('should return true if synced more than an hour ago', () => {
+      const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+      const account = createMockAccount({ subscriptionSyncedAt: twoHoursAgo });
+      expect(needsSubscriptionSync(account)).toBe(true);
+    });
+
+    it('should return false if synced recently', () => {
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      const account = createMockAccount({ subscriptionSyncedAt: fiveMinutesAgo });
+      expect(needsSubscriptionSync(account)).toBe(false);
+    });
+  });
+});
+
+describe('SubscriptionService - Backend Integration', () => {
+  const mockFetch = vi.fn();
+  const originalFetch = global.fetch;
+  const originalLocation = window.location;
+
+  beforeEach(() => {
+    global.fetch = mockFetch;
+    mockFetch.mockReset();
+    // Mock window.location
+    delete (window as any).location;
+    window.location = { href: '' } as Location;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    window.location = originalLocation;
+  });
+
+  describe('syncSubscriptionFromBackend', () => {
+    it('should sync subscription data on successful response', async () => {
+      const account = createMockAccount({});
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            subscription: {
+              tierSlug: 'plus',
+              status: 'active',
+              currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+              tier: { maxLists: 30, sessionRetentionDays: 30 },
+            },
+          }),
+      });
+
+      await syncSubscriptionFromBackend(account);
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/billing/subscription', {
+        credentials: 'include',
+      });
+      expect(account.root.userSettings.$jazz.set).toHaveBeenCalledWith('subscriptionTier', 'plus');
+      expect(account.root.userSettings.$jazz.set).toHaveBeenCalledWith(
+        'subscriptionStatus',
+        'active',
+      );
+    });
+
+    it('should handle failed response gracefully', async () => {
+      const account = createMockAccount({});
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      await syncSubscriptionFromBackend(account);
+
+      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+    });
+
+    it('should handle missing subscription data', async () => {
+      const account = createMockAccount({});
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      await syncSubscriptionFromBackend(account);
+
+      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+    });
+
+    it('should handle network error gracefully', async () => {
+      const account = createMockAccount({});
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      await syncSubscriptionFromBackend(account);
+
+      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('recordUsageToBackend', () => {
+    it('should send usage data to backend', async () => {
+      const account = createMockAccount({});
+      addTemplateFolders(account, 5);
+      mockFetch.mockResolvedValueOnce({ ok: true });
+
+      await recordUsageToBackend(account);
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/billing/usage', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listCount: 5 }),
+      });
+    });
+
+    it('should handle errors silently', async () => {
+      const account = createMockAccount({});
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      // Should not throw
+      await recordUsageToBackend(account);
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should return checkout URL on success', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ url: 'https://checkout.stripe.com/session123' }),
+      });
+
+      const url = await createCheckoutSession('plus');
+
+      expect(url).toBe('https://checkout.stripe.com/session123');
+      expect(mockFetch).toHaveBeenCalledWith('/api/billing/checkout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tierSlug: 'plus' }),
+      });
+    });
+
+    it('should return null on failed response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Payment failed' }),
+      });
+
+      const url = await createCheckoutSession('premium');
+
+      expect(url).toBeNull();
+    });
+
+    it('should return null on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      const url = await createCheckoutSession('plus');
+
+      expect(url).toBeNull();
+    });
+  });
+
+  describe('createPortalSession', () => {
+    it('should return portal URL on success', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ url: 'https://billing.stripe.com/portal123' }),
+      });
+
+      const url = await createPortalSession();
+
+      expect(url).toBe('https://billing.stripe.com/portal123');
+      expect(mockFetch).toHaveBeenCalledWith('/api/billing/portal', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    });
+
+    it('should return null on failed response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Session expired' }),
+      });
+
+      const url = await createPortalSession();
+
+      expect(url).toBeNull();
+    });
+
+    it('should return null on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      const url = await createPortalSession();
+
+      expect(url).toBeNull();
+    });
+  });
+
+  describe('redirectToCheckout', () => {
+    it('should redirect to checkout URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ url: 'https://checkout.stripe.com/session123' }),
+      });
+
+      await redirectToCheckout('plus');
+
+      expect(window.location.href).toBe('https://checkout.stripe.com/session123');
+    });
+
+    it('should not redirect if URL is null', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Failed' }),
+      });
+
+      await redirectToCheckout('plus');
+
+      expect(window.location.href).toBe('');
+    });
+  });
+
+  describe('redirectToPortal', () => {
+    it('should redirect to portal URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ url: 'https://billing.stripe.com/portal123' }),
+      });
+
+      await redirectToPortal();
+
+      expect(window.location.href).toBe('https://billing.stripe.com/portal123');
+    });
+
+    it('should not redirect if URL is null', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Failed' }),
+      });
+
+      await redirectToPortal();
+
+      expect(window.location.href).toBe('');
     });
   });
 });
