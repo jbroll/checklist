@@ -1,13 +1,15 @@
 /**
  * Component tests for SessionZone
  *
- * Tests the zone rendering, batch operations, and interaction modes
+ * Tests the zone rendering, batch operations, and interaction modes.
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { Package } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../../test/setup';
 import { SessionZone } from './SessionZone';
 
 // Mock the Jazz hook
@@ -48,13 +50,12 @@ function createMockItem(id: string, name: string, type: 'item' | 'category' = 'i
   };
 }
 
-// Helper to create mock template for edit tests
+// Helper to create mock template for edit tests using jazz-mock
 function createMockTemplate(id: string) {
-  return {
-    $jazz: { id },
-    items: [],
-    sessions: [],
-  };
+  return createMockCoMap(
+    { items: createMockCoList([]), sessions: createMockCoList([]) },
+    { id, trackMutations: true },
+  );
 }
 
 // Minimal props for SessionZone

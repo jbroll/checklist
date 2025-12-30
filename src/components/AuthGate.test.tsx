@@ -2,11 +2,13 @@
  * Tests for AuthGate component
  *
  * Tests authentication states, sign in/out flows, and account deletion.
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../test/setup';
 import { AuthGate } from './AuthGate';
 
 // Mock Jazz hooks
@@ -116,11 +118,9 @@ vi.mock('./ui/loading', () => ({
   LoadingScreen: () => <div data-testid="loading-screen">Loading...</div>,
 }));
 
-// Helper to create mock account
-const createMockAccount = (id = 'test-account-id') => ({
-  $jazz: { id },
-  root: { folders: [] },
-});
+// Helper to create mock account using jazz-mock
+const createMockAccount = (id = 'test-account-id') =>
+  createMockCoMap({ root: createMockCoMap({ folders: createMockCoList([]) }) }, { id });
 
 describe('AuthGate', () => {
   beforeEach(() => {

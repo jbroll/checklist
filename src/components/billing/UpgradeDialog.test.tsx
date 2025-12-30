@@ -1,10 +1,12 @@
 /**
  * Tests for UpgradeDialog component
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../../test/setup';
 import { UpgradeDialog } from './UpgradeDialog';
 
 // Mock subscription service
@@ -49,10 +51,10 @@ import {
 } from '../../services/subscriptionService';
 
 describe('UpgradeDialog', () => {
-  const mockAccount = {
-    $jazz: { id: 'test-account' },
-    root: { folders: [] },
-  } as any;
+  const mockAccount = createMockCoMap(
+    { root: createMockCoMap({ folders: createMockCoList([]) }) },
+    { id: 'test-account' },
+  ) as any;
 
   const defaultProps = {
     open: true,

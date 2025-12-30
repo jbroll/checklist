@@ -1,10 +1,12 @@
 /**
  * Tests for FolderNodeView component
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../../test/setup';
 import { FolderNodeView } from './FolderNodeView';
 
 // Mock dnd-kit
@@ -68,35 +70,36 @@ vi.mock('@/lib/categorization', () => ({
 
 import * as folderService from '@/services/folderService';
 
-// Helper to create mock folder
+// Helper to create mock folder using jazz-mock
 const createMockFolder = (
   name: string,
   isTemplate: boolean,
   options: { archived?: boolean } = {},
-) => ({
-  name,
-  expanded: false,
-  archived: options.archived ?? false,
-  items: isTemplate ? [] : undefined,
-  sessions: isTemplate ? [] : undefined,
-  showZoneHeadings: false,
-  children: !isTemplate ? [] : undefined,
-  $jazz: {
-    id: `folder-${Math.random().toString(36).slice(2)}`,
-    set: vi.fn(),
-  },
-});
-
-// Helper to create mock account
-const createMockAccount = () => ({
-  $jazz: { id: 'test-account' },
-  root: {
-    folders: [],
-    viewState: {
-      folderExpanded: {},
+) =>
+  createMockCoMap(
+    {
+      name,
+      expanded: false,
+      archived: options.archived ?? false,
+      items: isTemplate ? [] : undefined,
+      sessions: isTemplate ? [] : undefined,
+      showZoneHeadings: false,
+      children: !isTemplate ? [] : undefined,
     },
-  },
-});
+    { id: `folder-${Math.random().toString(36).slice(2)}`, trackMutations: true },
+  );
+
+// Helper to create mock account using jazz-mock
+const createMockAccount = () =>
+  createMockCoMap(
+    {
+      root: createMockCoMap({
+        folders: createMockCoList([]),
+        viewState: createMockCoMap({ folderExpanded: {} }),
+      }),
+    },
+    { id: 'test-account' },
+  );
 
 describe('FolderNodeView', () => {
   const mockAccount = createMockAccount();
