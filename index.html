@@ -24,7 +24,7 @@
     <!-- Prevent flash of wrong theme -->
     <script>
       (function() {
-        const stored = localStorage.getItem('kjekit-theme');
+        const stored = localStorage.getItem('checklist-theme');
         const theme = stored === 'light' || stored === 'dark' ? stored : 'system';
         const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (isDark) document.documentElement.classList.add('dark');

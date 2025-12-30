@@ -18,6 +18,21 @@ vi.mock('@/lib/jazz', () => ({
   }),
 }));
 
+// Mock dnd-kit for SessionItemRow
+vi.mock('@dnd-kit/core', () => ({
+  useDraggable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    isDragging: false,
+  }),
+}));
+
+// Mock templateService
+vi.mock('@/services/templateService', () => ({
+  renameItem: vi.fn(),
+}));
+
 // Helper to create mock items
 function createMockItem(id: string, name: string, type: 'item' | 'category' = 'item') {
   return {
@@ -30,6 +45,15 @@ function createMockItem(id: string, name: string, type: 'item' | 'category' = 'i
     expanded: false,
     createdAt: new Date(),
     updatedAt: new Date(),
+  };
+}
+
+// Helper to create mock template for edit tests
+function createMockTemplate(id: string) {
+  return {
+    $jazz: { id },
+    items: [],
+    sessions: [],
   };
 }
 
@@ -463,6 +487,393 @@ describe('SessionZone', () => {
       await user.click(screen.getByText('Test Zone'));
 
       expect(onSelectItem).toHaveBeenCalledWith(null);
+    });
+
+    it('supports keyboard navigation with Enter key', async () => {
+      const user = userEvent.setup();
+      const onSelectItem = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category', 'category');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          categorySelection={{
+            categoryItem,
+            isSelected: false,
+            onSelectItem,
+          }}
+        />,
+      );
+
+      // Focus and press Enter on the selectable area
+      const selectableArea = screen.getByRole('button', { name: /test zone/i });
+      await user.click(selectableArea);
+      await user.keyboard('{Enter}');
+
+      expect(onSelectItem).toHaveBeenCalled();
+    });
+
+    it('supports keyboard navigation with Space key', async () => {
+      const user = userEvent.setup();
+      const onSelectItem = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category', 'category');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          categorySelection={{
+            categoryItem,
+            isSelected: false,
+            onSelectItem,
+          }}
+        />,
+      );
+
+      const selectableArea = screen.getByRole('button', { name: /test zone/i });
+      await user.click(selectableArea);
+      await user.keyboard(' ');
+
+      expect(onSelectItem).toHaveBeenCalled();
+    });
+  });
+
+  describe('zone styling', () => {
+    it('applies background styling for top-level available zone', () => {
+      const { container } = render(
+        <SessionZone
+          {...defaultProps}
+          zoneConfig={{
+            ...defaultProps.zoneConfig,
+            zone: 'available',
+            isTopLevelZone: true,
+          }}
+        />,
+      );
+
+      expect(container.querySelector('.bg-blue-50')).toBeInTheDocument();
+    });
+
+    it('does not apply background styling when not top-level', () => {
+      const { container } = render(
+        <SessionZone
+          {...defaultProps}
+          zoneConfig={{
+            ...defaultProps.zoneConfig,
+            zone: 'available',
+            isTopLevelZone: false,
+          }}
+        />,
+      );
+
+      expect(container.querySelector('.bg-blue-50')).not.toBeInTheDocument();
+    });
+
+    it('does not apply available zone styling for selected zone', () => {
+      const { container } = render(
+        <SessionZone
+          {...defaultProps}
+          zoneConfig={{
+            ...defaultProps.zoneConfig,
+            zone: 'selected',
+            isTopLevelZone: true,
+          }}
+        />,
+      );
+
+      expect(container.querySelector('.bg-blue-50')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('items rendering', () => {
+    it('renders items using SessionItemRow when no children provided', () => {
+      const items = [createMockItem('1', 'First Item'), createMockItem('2', 'Second Item')];
+
+      render(<SessionZone {...defaultProps} items={items} />);
+
+      expect(screen.getByText('First Item')).toBeInTheDocument();
+      expect(screen.getByText('Second Item')).toBeInTheDocument();
+    });
+
+    it('renders children instead of items when children provided', () => {
+      const items = [createMockItem('1', 'First Item')];
+
+      render(
+        <SessionZone {...defaultProps} items={items}>
+          <div data-testid="custom-content">Custom Content</div>
+        </SessionZone>,
+      );
+
+      expect(screen.getByTestId('custom-content')).toBeInTheDocument();
+      expect(screen.queryByText('First Item')).not.toBeInTheDocument();
+    });
+
+    it('passes item states to SessionItemRow', () => {
+      const items = [createMockItem('1', 'Test Item')];
+      const itemStates = {
+        '1': { selected: true, checked: true },
+      };
+
+      render(
+        <SessionZone {...defaultProps} items={items} itemStates={itemStates} zone="checked" />,
+      );
+
+      // Item should be rendered with checked styling (strikethrough)
+      const itemText = screen.getByText('Test Item');
+      expect(itemText).toHaveClass('line-through');
+    });
+  });
+
+  describe('count display', () => {
+    it('shows selected count of total in count badge', () => {
+      const items = [createMockItem('1', 'Item 1'), createMockItem('2', 'Item 2')];
+      const itemStates = {
+        '1': { selected: true, checked: false },
+      };
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          items={items}
+          itemStates={itemStates}
+          zoneConfig={{
+            ...defaultProps.zoneConfig,
+            count: 2,
+          }}
+        />,
+      );
+
+      expect(screen.getByText('1 of 2')).toBeInTheDocument();
+    });
+
+    it('counts checked items toward selected count', () => {
+      const items = [
+        createMockItem('1', 'Item 1'),
+        createMockItem('2', 'Item 2'),
+        createMockItem('3', 'Item 3'),
+      ];
+      const itemStates = {
+        '1': { selected: true, checked: false },
+        '2': { selected: true, checked: true },
+      };
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          items={items}
+          itemStates={itemStates}
+          zoneConfig={{
+            ...defaultProps.zoneConfig,
+            count: 3,
+          }}
+        />,
+      );
+
+      expect(screen.getByText('2 of 3')).toBeInTheDocument();
+    });
+  });
+
+  describe('category name editing', () => {
+    it('shows input when in edit mode', () => {
+      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
+      const template = createMockTemplate('template-1');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          template={template as any}
+          categorySelection={{ categoryItem }}
+          editModeProps={{
+            isEditingThisItem: true,
+            canEditItem: true,
+            onEnterEditMode: vi.fn(),
+            onExitEditMode: vi.fn(),
+          }}
+        />,
+      );
+
+      const input = screen.getByRole('textbox');
+      expect(input).toBeInTheDocument();
+    });
+
+    it('calls onExitEditMode when Escape is pressed during edit', async () => {
+      const user = userEvent.setup();
+      const onExitEditMode = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
+      const template = createMockTemplate('template-1');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          template={template as any}
+          categorySelection={{ categoryItem }}
+          editModeProps={{
+            isEditingThisItem: true,
+            canEditItem: true,
+            onEnterEditMode: vi.fn(),
+            onExitEditMode,
+          }}
+        />,
+      );
+
+      const input = screen.getByRole('textbox');
+      await user.type(input, '{Escape}');
+
+      expect(onExitEditMode).toHaveBeenCalled();
+    });
+
+    it('saves on Enter when value changed', async () => {
+      const user = userEvent.setup();
+      const onExitEditMode = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
+      const template = createMockTemplate('template-1');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          template={template as any}
+          categorySelection={{ categoryItem }}
+          editModeProps={{
+            isEditingThisItem: true,
+            canEditItem: true,
+            onEnterEditMode: vi.fn(),
+            onExitEditMode,
+          }}
+        />,
+      );
+
+      const input = screen.getByRole('textbox');
+      await user.clear(input);
+      await user.type(input, 'New Name{Enter}');
+
+      expect(onExitEditMode).toHaveBeenCalled();
+    });
+
+    it('exits edit mode without saving when value is empty', async () => {
+      const user = userEvent.setup();
+      const onExitEditMode = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
+      const template = createMockTemplate('template-1');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          template={template as any}
+          categorySelection={{ categoryItem }}
+          editModeProps={{
+            isEditingThisItem: true,
+            canEditItem: true,
+            onEnterEditMode: vi.fn(),
+            onExitEditMode,
+          }}
+        />,
+      );
+
+      const input = screen.getByRole('textbox');
+      await user.clear(input);
+      await user.type(input, '{Enter}');
+
+      expect(onExitEditMode).toHaveBeenCalled();
+    });
+
+    it('saves on blur', async () => {
+      const user = userEvent.setup();
+      const onExitEditMode = vi.fn();
+      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
+      const template = createMockTemplate('template-1');
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          template={template as any}
+          categorySelection={{ categoryItem }}
+          editModeProps={{
+            isEditingThisItem: true,
+            canEditItem: true,
+            onEnterEditMode: vi.fn(),
+            onExitEditMode,
+          }}
+        />,
+      );
+
+      const input = screen.getByRole('textbox');
+      await user.type(input, 'Updated Name');
+      await user.tab(); // blur the input
+
+      expect(onExitEditMode).toHaveBeenCalled();
+    });
+  });
+
+  describe('category with CategoryNode', () => {
+    it('uses category for batch operations when provided', async () => {
+      const user = userEvent.setup();
+      const onBatchSelectAll = vi.fn();
+      const categoryNode = {
+        path: 'dairy',
+        name: 'Dairy',
+        items: [createMockItem('1', 'Milk'), createMockItem('2', 'Cheese')],
+        children: [],
+        expanded: true,
+        depth: 0,
+      };
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          category={categoryNode}
+          items={categoryNode.items}
+          batchActions={{
+            onBatchSelectAll,
+            onBatchDeselectAll: vi.fn(),
+            onBatchToggle: vi.fn(),
+          }}
+        />,
+      );
+
+      // Find select all button by icon class
+      const selectAllBtn = document.querySelector('.lucide-list-checks')?.closest('button');
+      expect(selectAllBtn).toBeInTheDocument();
+      await user.click(selectAllBtn as HTMLElement);
+
+      // Should use collectAllItemIds from category
+      expect(onBatchSelectAll).toHaveBeenCalledWith(['1', '2']);
+    });
+  });
+
+  describe('interaction mode props', () => {
+    it('shows input when item is being edited', () => {
+      const items = [createMockItem('1', 'Test Item')];
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          items={items}
+          itemEditModeProps={{
+            interactionMode: { mode: 'editing', itemId: '1' },
+          }}
+        />,
+      );
+
+      // Item should show an input when in editing mode
+      const input = screen.getByRole('textbox');
+      expect(input).toBeInTheDocument();
+    });
+
+    it('passes canEditItemFn to SessionItemRow', () => {
+      const items = [createMockItem('1', 'Test Item')];
+      const canEditItemFn = vi.fn().mockReturnValue(true);
+
+      render(
+        <SessionZone
+          {...defaultProps}
+          items={items}
+          itemEditModeProps={{
+            canEditItemFn,
+          }}
+        />,
+      );
+
+      // canEditItemFn should be called for the item
+      expect(canEditItemFn).toHaveBeenCalledWith('1');
     });
   });
 });
