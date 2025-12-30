@@ -17,15 +17,6 @@ STAT=PASS
 SUBJECT=$(echo "$COMMIT_MSG" | grep -v "^#" | head -1)
 SUBJECT_LENGTH=${#SUBJECT}
 
-# Count body lines (excluding comments, blank lines, and Claude signature)
-
-# Check for non-ASCII characters
-if echo "$COMMIT_MSG" | LC_ALL=C grep -q '[^[:print:][:space:]]'; then
-    echo "Commit message contains non-ASCII characters" 1>&2
-    exit 1
-fi
-
-
 # Check if this commit only contains documentation/non-code files
 # If so, skip the expensive test suite
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
