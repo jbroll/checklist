@@ -1,35 +1,33 @@
+/**
+ * Batch selection tests
+ *
+ * Tests for batch select, toggle all, and invert selection.
+ * Uses jazz-mock for CoValue mocking.
+ */
+
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Account, FolderNode, TemplateItem } from '../schemas';
 import type { SessionData } from '../schemas/tree';
+import { createMockCoMap } from '../test/setup';
 import { batchSelectItems, invertItemSelection, toggleSelectAllItems } from './sessionService';
 
-// Mock Jazz CoValues
-const createMockAccount = (): InstanceOfSchema<typeof Account> => {
-  return {
-    root: {
-      folders: [],
-    },
-  } as any;
-};
+// Helper to create mock session data (plain object, not a CoValue)
+const createMockSession = (): SessionData => ({
+  id: 'session-1',
+  itemStates: {},
+  archived: false,
+  categoryExpanded: {},
+  viewMode: 'zone-in-hierarchy',
+  selectedCount: 0,
+  checkedCount: 0,
+  remainingCount: 0,
+  createdAt: new Date(),
+  lastActivityAt: new Date(),
+});
 
-// Sessions are now plain JavaScript objects (SessionData), not CoValues
-const createMockSession = (): SessionData => {
-  return {
-    id: 'session-1',
-    itemStates: {},
-    archived: false,
-    categoryExpanded: {},
-    viewMode: 'zone-in-hierarchy',
-    selectedCount: 0,
-    checkedCount: 0,
-    remainingCount: 0,
-    createdAt: new Date(),
-    lastActivityAt: new Date(),
-  };
-};
-
-const createMockTemplate = (session: SessionData): InstanceOfSchema<typeof FolderNode> => {
+// Helper to create mock template using jazz-mock
+const createMockTemplate = (session: SessionData) => {
   const item1 = {
     id: 'item-1',
     name: 'Item 1',
@@ -57,26 +55,29 @@ const createMockTemplate = (session: SessionData): InstanceOfSchema<typeof Folde
     archived: false,
   } as InstanceOfSchema<typeof TemplateItem>;
 
-  const template: any = {
-    name: 'Test Template',
-    items: [item1, item2, item3],
-    sessions: [session],
-    showZoneHeadings: false,
-    archived: false,
-    expanded: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  template.$jazz = {
-    id: 'template-1',
-    set: (key: string, value: any) => {
-      template[key] = value;
+  return createMockCoMap(
+    {
+      name: 'Test Template',
+      items: [item1, item2, item3],
+      sessions: [session],
+      showZoneHeadings: false,
+      archived: false,
+      expanded: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
-  };
-
-  return template as InstanceOfSchema<typeof FolderNode>;
+    { id: 'template-1', trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof FolderNode>;
 };
+
+// Helper to create mock account using jazz-mock
+const createMockAccount = () =>
+  createMockCoMap(
+    {
+      root: createMockCoMap({ folders: [] as any[] }, { trackMutations: true }),
+    },
+    { trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof Account>;
 
 describe('Batch Selection Functions', () => {
   let account: InstanceOfSchema<typeof Account>;

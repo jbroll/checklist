@@ -2,12 +2,14 @@
  * Core session service tests
  *
  * Tests for session creation, item state management, and session counts.
+ * Uses jazz-mock for CoValue mocking.
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Account, FolderNode, TemplateItem } from '../schemas';
 import type { SessionData } from '../schemas/tree';
+import { createMockCoMap } from '../test/setup';
 import {
   clearSessionState,
   createSession,
@@ -23,7 +25,7 @@ import {
   updateViewMode,
 } from './sessionService';
 
-// Mock helpers
+// Helper to create mock template item (plain object, not a CoValue)
 const createMockItem = (
   id: string,
   name: string,
@@ -41,6 +43,7 @@ const createMockItem = (
     createdAt: new Date(),
   }) as TemplateItem;
 
+// Helper to create mock session data (plain object, not a CoValue)
 const createMockSession = (id: string, itemStates: Record<string, any> = {}): SessionData => ({
   id,
   itemStates,
@@ -54,41 +57,37 @@ const createMockSession = (id: string, itemStates: Record<string, any> = {}): Se
   lastActivityAt: new Date('2024-01-15T12:00:00Z'),
 });
 
+// Helper to create mock template using jazz-mock
 const createMockTemplate = (
   id: string,
   name: string,
   items: TemplateItem[] = [],
   sessions: SessionData[] = [],
   defaultItems: Record<string, boolean> = {},
-): InstanceOfSchema<typeof FolderNode> => {
-  const template: any = {
-    name,
-    items,
-    sessions,
-    defaultItems,
-    showZoneHeadings: false,
-    archived: false,
-    expanded: true,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-10'),
-  };
-  template.$jazz = {
-    id,
-    set: (key: string, value: any) => {
-      template[key] = value;
+) =>
+  createMockCoMap(
+    {
+      name,
+      items,
+      sessions,
+      defaultItems,
+      showZoneHeadings: false,
+      archived: false,
+      expanded: true,
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-10'),
     },
-  };
-  return template;
-};
+    { id, trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof FolderNode>;
 
-const createMockAccount = (
-  templates: InstanceOfSchema<typeof FolderNode>[] = [],
-): InstanceOfSchema<typeof Account> =>
-  ({
-    root: {
-      folders: templates,
+// Helper to create mock account using jazz-mock
+const createMockAccount = (templates: InstanceOfSchema<typeof FolderNode>[] = []) =>
+  createMockCoMap(
+    {
+      root: createMockCoMap({ folders: templates }, { trackMutations: true }),
     },
-  }) as any;
+    { trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof Account>;
 
 describe('sessionService - Core Functions', () => {
   describe('createSession', () => {
@@ -249,9 +248,10 @@ describe('sessionService - Core Functions', () => {
   describe('Item Selected State', () => {
     let account: InstanceOfSchema<typeof Account>;
     let template: InstanceOfSchema<typeof FolderNode>;
+    let items: TemplateItem[];
 
     beforeEach(() => {
-      const items = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
+      items = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
       const session = createMockSession('session-1', {
         'item-1': { selected: true, checked: false, selectedAt: new Date() },
       });

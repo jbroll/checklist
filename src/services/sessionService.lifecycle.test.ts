@@ -1,6 +1,15 @@
+/**
+ * Session lifecycle tests
+ *
+ * Tests for archive, unarchive, delete, category expansion, and notes.
+ * Uses jazz-mock for CoValue mocking.
+ */
+
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode, SessionData } from '../schemas';
+import type { Account, FolderNode } from '../schemas';
+import type { SessionData } from '../schemas/tree';
+import { createMockCoMap } from '../test/setup';
 import {
   archiveSession,
   deleteSession,
@@ -9,51 +18,44 @@ import {
   updateSessionItemNotes,
 } from './sessionService';
 
-// Mock Jazz CoValues
-const createMockAccount = (): InstanceOfSchema<typeof Account> => {
-  return {
-    root: {
-      folders: [],
+// Helper to create mock session data (plain object, not a CoValue)
+const createMockSession = (sessionId: string, archived = false): SessionData => ({
+  id: sessionId,
+  itemStates: {},
+  archived,
+  categoryExpanded: {},
+  viewMode: 'zone-in-hierarchy' as const,
+  selectedCount: 0,
+  checkedCount: 0,
+  remainingCount: 0,
+  createdAt: new Date(),
+  lastActivityAt: new Date(),
+});
+
+// Helper to create mock template using jazz-mock
+const createMockTemplate = (sessions: SessionData[]) =>
+  createMockCoMap(
+    {
+      name: 'Test Template',
+      items: [],
+      sessions,
+      showZoneHeadings: false,
+      archived: false,
+      expanded: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
-  } as any;
-};
+    { id: 'template-1', trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof FolderNode>;
 
-const createMockSession = (sessionId: string, archived = false): SessionData => {
-  return {
-    id: sessionId,
-    itemStates: {},
-    archived,
-    categoryExpanded: {},
-    viewMode: 'zone-in-hierarchy' as const,
-    selectedCount: 0,
-    checkedCount: 0,
-    remainingCount: 0,
-    createdAt: new Date(),
-    lastActivityAt: new Date(),
-  };
-};
-
-const createMockTemplate = (sessions: SessionData[]): InstanceOfSchema<typeof FolderNode> => {
-  const template: any = {
-    name: 'Test Template',
-    items: [],
-    sessions,
-    showZoneHeadings: false,
-    archived: false,
-    expanded: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  template.$jazz = {
-    id: 'template-1',
-    set: (key: string, value: any) => {
-      template[key] = value;
+// Helper to create mock account using jazz-mock
+const createMockAccount = () =>
+  createMockCoMap(
+    {
+      root: createMockCoMap({ folders: [] as any[] }, { trackMutations: true }),
     },
-  };
-
-  return template as InstanceOfSchema<typeof FolderNode>;
-};
+    { trackMutations: true },
+  ) as unknown as InstanceOfSchema<typeof Account>;
 
 describe('Session Lifecycle Functions', () => {
   let account: InstanceOfSchema<typeof Account>;
