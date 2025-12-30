@@ -282,7 +282,7 @@ describe('Folder Sharing API', () => {
 
       expect(response.status).toBe(403);
       expect(response.body.error).toBe('email_mismatch');
-      expect(response.body.message).toContain(testUser2.email);
+      expect(response.body.message).toBe('This invite is not associated with your account');
     });
 
     it('should accept invite with matching email', async () => {

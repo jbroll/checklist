@@ -16,14 +16,10 @@ INSERT OR IGNORE INTO subscription_tier (slug, name, price_cents, max_lists, ses
   ('premium', 'Premium', 1999, 300, 365, NULL),
   ('enterprise', 'Enterprise', 0, -1, -1, NULL);
 
--- Update existing tiers if limits changed (and handle rename from team to premium)
+-- Update existing tiers if limits changed
 UPDATE subscription_tier SET max_lists = 3, session_retention_days = 7 WHERE slug = 'free';
 UPDATE subscription_tier SET name = 'Plus', max_lists = 30, session_retention_days = 30, price_cents = 999 WHERE slug = 'plus';
 UPDATE subscription_tier SET name = 'Premium', max_lists = 300, session_retention_days = 365, price_cents = 1999 WHERE slug = 'premium';
-
--- Migration: rename old 'team' tier to 'premium' for existing users
-UPDATE user_subscription SET tier_slug = 'premium' WHERE tier_slug = 'team';
-DELETE FROM subscription_tier WHERE slug = 'team';
 
 -- User subscriptions (links user to their current tier)
 -- Note: status includes 'beta' for beta testing period (gives Plus tier limits)
@@ -38,6 +34,10 @@ CREATE TABLE IF NOT EXISTS user_subscription (
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch())
 );
+
+-- Migration: rename old 'team' tier to 'premium' for existing users (must run after table exists)
+UPDATE user_subscription SET tier_slug = 'premium' WHERE tier_slug = 'team';
+DELETE FROM subscription_tier WHERE slug = 'team';
 
 -- Set all existing users to beta status during beta period
 UPDATE user_subscription SET status = 'beta' WHERE status = 'active';
