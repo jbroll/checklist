@@ -1,5 +1,5 @@
 import type { TemplateItem } from '@/schemas';
-import { getParentPath } from './pathUtils';
+import { getParentPath, PATH_SEPARATOR } from './pathUtils';
 
 /**
  * Tree structure for template items (categories and items)
@@ -93,7 +93,7 @@ export function getDescendantItems(
 ): TemplateItem[] {
   return items.filter((item): item is TemplateItem => {
     if (!item || item.archived) return false;
-    return item.path.startsWith(`${categoryPath}/`);
+    return item.path.startsWith(`${categoryPath}${PATH_SEPARATOR}`);
   });
 }
 

@@ -21,6 +21,39 @@ import { importItemsFromText, parseTextMetadata, type TxtImportResult } from './
 import type { ImportFileType, ImportResult } from './types';
 
 /**
+ * Result of validating and reading a file
+ */
+type FileReadResult = { success: true; content: string } | { success: false; error: string };
+
+/**
+ * Validate and read a file, returning content or error
+ *
+ * @param file - File to validate and read
+ * @param extensions - Valid file extensions
+ * @returns Content string or error message
+ */
+async function validateAndReadFile(file: File, extensions: string[]): Promise<FileReadResult> {
+  try {
+    validateImportFile(file, extensions, MAX_FILE_SIZE_MB);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Validation failed',
+    };
+  }
+
+  try {
+    const content = await readFileAsText(file);
+    return { success: true, content };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+}
+
+/**
  * Detect file type from filename
  *
  * @param file - File object
@@ -125,24 +158,11 @@ export async function importItemsFromTxtFile(
   template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<TxtImportResult> {
-  // Validate file
-  try {
-    validateImportFile(file, ['txt'], MAX_FILE_SIZE_MB);
-  } catch (error) {
-    return {
-      imported: 0,
-      skipped: 0,
-      errors: [error instanceof Error ? error.message : 'Validation failed'],
-      duplicates: [],
-      metadata: {},
-    };
+  const result = await validateAndReadFile(file, ['txt']);
+  if (!result.success) {
+    return { imported: 0, skipped: 0, errors: [result.error], duplicates: [], metadata: {} };
   }
-
-  // Read file content
-  const content = await readFileAsText(file);
-
-  // Import items
-  return importItemsFromText(content, template, account);
+  return importItemsFromText(result.content, template, account);
 }
 
 /**
@@ -158,23 +178,11 @@ export async function importItemsFromCsvFile(
   template: InstanceOfSchema<typeof FolderNode>,
   account: InstanceOfSchema<typeof Account>,
 ): Promise<CsvImportResult> {
-  // Validate file
-  try {
-    validateImportFile(file, ['csv'], MAX_FILE_SIZE_MB);
-  } catch (error) {
-    return {
-      imported: 0,
-      skipped: 0,
-      errors: [error instanceof Error ? error.message : 'Validation failed'],
-      duplicates: [],
-    };
+  const result = await validateAndReadFile(file, ['csv']);
+  if (!result.success) {
+    return { imported: 0, skipped: 0, errors: [result.error], duplicates: [] };
   }
-
-  // Read file content
-  const content = await readFileAsText(file);
-
-  // Import items
-  return importItemsFromCsv(content, template, account);
+  return importItemsFromCsv(result.content, template, account);
 }
 
 /**
@@ -192,24 +200,17 @@ export async function importSessionFromCsvFile(
   account: InstanceOfSchema<typeof Account>,
   options: SessionImportOptions = {},
 ): Promise<SessionImportResult> {
-  // Validate file
-  try {
-    validateImportFile(file, ['csv'], MAX_FILE_SIZE_MB);
-  } catch (error) {
+  const result = await validateAndReadFile(file, ['csv']);
+  if (!result.success) {
     return {
       imported: false,
       matched: 0,
       unmatched: 0,
-      errors: [error instanceof Error ? error.message : 'Validation failed'],
+      errors: [result.error],
       unmatchedItems: [],
     };
   }
-
-  // Read file content
-  const content = await readFileAsText(file);
-
-  // Import session
-  return importSessionFromCsv(content, template, account, options);
+  return importSessionFromCsv(result.content, template, account, options);
 }
 
 /**
@@ -233,20 +234,11 @@ export async function importAsNewTemplate(
   fileType: 'txt' | 'csv',
   parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
-  // Validate file
-  try {
-    validateImportFile(file, [fileType], MAX_FILE_SIZE_MB);
-  } catch (error) {
-    return {
-      success: false,
-      errors: [error instanceof Error ? error.message : 'Validation failed'],
-      warnings: [],
-      stats: {},
-    };
+  const result = await validateAndReadFile(file, [fileType]);
+  if (!result.success) {
+    return { success: false, errors: [result.error], warnings: [], stats: {} };
   }
-
-  // Read file content
-  const content = await readFileAsText(file);
+  const content = result.content;
 
   // Determine the template name
   let finalTemplateName = templateName;
