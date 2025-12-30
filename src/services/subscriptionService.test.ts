@@ -2,9 +2,11 @@
  * SubscriptionService Unit Tests
  *
  * Tests for subscription tier logic and limit checking.
+ * Uses jazz-mock for CoValue mocking.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { createMockCoList, createMockCoMap } from '../test/setup';
 import {
   canCreateList,
   getEffectiveTier,
@@ -22,29 +24,27 @@ import {
   TIER_LIMITS,
 } from './subscriptionService';
 
-// Mock account with Jazz structure
+// Mock account with Jazz structure using jazz-mock
 const createMockAccount = (settings: Record<string, any> = {}) => {
-  const mockUserSettings: any = {
-    subscriptionTier: settings.subscriptionTier,
-    // Don't default to 'active' - let the service code provide the default
-    subscriptionStatus: settings.subscriptionStatus,
-    maxLists: settings.maxLists,
-    sessionRetentionDays: settings.sessionRetentionDays,
-    subscriptionSyncedAt: settings.subscriptionSyncedAt,
-    $jazz: { set: vi.fn() },
-  };
-
-  const folders: any[] = [];
-  folders.$jazz = { push: vi.fn() };
-
-  return {
-    root: {
-      userSettings: mockUserSettings,
-      folders,
-      $jazz: { set: vi.fn() },
+  const mockUserSettings = createMockCoMap(
+    {
+      subscriptionTier: settings.subscriptionTier,
+      subscriptionStatus: settings.subscriptionStatus,
+      maxLists: settings.maxLists,
+      sessionRetentionDays: settings.sessionRetentionDays,
+      subscriptionSyncedAt: settings.subscriptionSyncedAt,
     },
-    $jazz: { id: 'test-account' },
-  } as any;
+    { trackMutations: true },
+  );
+
+  const folders = createMockCoList([], { trackMutations: true });
+
+  const root = createMockCoMap(
+    { userSettings: mockUserSettings, folders },
+    { trackMutations: true },
+  );
+
+  return createMockCoMap({ root }, { id: 'test-account', trackMutations: true }) as any;
 };
 
 // Helper to add mock template folders
