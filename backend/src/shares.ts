@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
 import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
+import { ApiErrors } from './lib/api-error.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
 import { shareInviteLimiter, tokenValidationLimiter } from './lib/rate-limiter.js';
 import { validateBody, createInviteSchema, acceptInviteSchema, isValidCoValueId } from './lib/validation.js';
@@ -44,11 +45,11 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Generate invite link
   app.post('/api/shares/invite', validateBody(createInviteSchema), async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     // Rate limit by user email
     if (!shareInviteLimiter.check(session.user.email)) {
-      return res.status(429).json({ error: 'rate_limited', message: 'Too many invite requests. Please try again later.' });
+      return ApiErrors.rateLimited(res);
     }
 
     const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
@@ -56,15 +57,12 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     // Validate sender has access to the folder before creating invite
     const senderJazzAccountId = (session.user as any).accountID;
     if (!senderJazzAccountId) {
-      return res.status(400).json({
-        error: 'invalid_request',
-        message: 'Jazz account ID is required to share folders'
-      });
+      return ApiErrors.badRequest(res, 'Jazz account ID is required to share folders');
     }
 
     const hasAccess = await validateSenderAccess(folderCoValueId, senderJazzAccountId);
     if (!hasAccess) {
-      return res.status(403).json({ error: 'forbidden', message: 'You do not have access to share this folder' });
+      return ApiErrors.forbidden(res, 'You do not have access to share this folder');
     }
 
     const token = randomBytes(32).toString('hex');
@@ -98,7 +96,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     // Rate limit by IP to prevent brute-force attacks on tokens
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
     if (!tokenValidationLimiter.check(clientIp)) {
-      return res.status(429).json({ error: 'rate_limited', message: 'Too many requests. Please try again later.' });
+      return ApiErrors.rateLimited(res);
     }
 
     const invite = db.prepare(`
@@ -121,7 +119,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
   // Accept invite
   app.post('/api/shares/accept', validateBody(acceptInviteSchema), async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     const { token } = req.body;
 
@@ -129,10 +127,10 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       SELECT * FROM share_invites WHERE token = ? AND accepted_at IS NULL
     `).get(token) as any;
 
-    if (!invite) return res.status(400).json({ error: 'invalid_token' });
+    if (!invite) return ApiErrors.badRequest(res, 'Invalid or expired invite token');
 
     const now = Math.floor(Date.now() / 1000);
-    if (invite.expires_at < now) return res.status(400).json({ error: 'expired' });
+    if (invite.expires_at < now) return ApiErrors.badRequest(res, 'This invite has expired');
 
     // Validate: logged-in email matches invite (check primary + verified emails)
     const emailMatches = canUserAccessShareEmail(
@@ -143,19 +141,13 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     );
 
     if (!emailMatches) {
-      return res.status(403).json({
-        error: 'email_mismatch',
-        message: 'This invite is not associated with your account',
-      });
+      return ApiErrors.forbidden(res, 'This invite is not associated with your account');
     }
 
     // Get recipient's Jazz account ID from BetterAuth
     const recipientJazzAccountId = (session.user as any).accountID;
     if (!recipientJazzAccountId) {
-      return res.status(400).json({
-        error: 'no_jazz_account',
-        message: 'You do not have a Jazz account. Please try logging out and back in.'
-      });
+      return ApiErrors.badRequest(res, 'You do not have a Jazz account. Please try logging out and back in.');
     }
 
     // Note: We trust that the invite was created by someone with access at creation time
@@ -183,20 +175,20 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       });
     } catch (error) {
       console.error('Failed to add to group:', error);
-      res.status(500).json({ error: 'failed_to_grant_access' });
+      return ApiErrors.serverError(res, 'Failed to grant access');
     }
   });
 
   // Get pending invites for a folder
   app.get('/api/shares/folders/:folderId/invites', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     const { folderId } = req.params;
 
     // Validate folder ID format
     if (!isValidCoValueId(folderId)) {
-      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+      return ApiErrors.badRequest(res, 'Invalid folder ID format');
     }
 
     try {
@@ -220,7 +212,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       }
 
       if (!isAuthorized) {
-        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view invites for this folder' });
+        return ApiErrors.forbidden(res, 'You do not have access to view invites for this folder');
       }
 
       const invites = db.prepare(`
@@ -241,14 +233,14 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       });
     } catch (error) {
       console.error('Failed to get invites:', error);
-      res.status(500).json({ error: 'failed_to_get_invites' });
+      return ApiErrors.serverError(res, 'Failed to get invites');
     }
   });
 
   // Revoke an invite
   app.delete('/api/shares/invites/:token', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     const { token } = req.params;
 
@@ -258,12 +250,12 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       `).get(token) as any;
 
       if (!invite) {
-        return res.status(404).json({ error: 'not_found' });
+        return ApiErrors.notFound(res, 'Invite');
       }
 
       // Only the sender can revoke their own invites
       if (invite.sender_email !== session.user.email) {
-        return res.status(403).json({ error: 'forbidden' });
+        return ApiErrors.forbidden(res);
       }
 
       // Delete the invite (soft delete would be better, but this works)
@@ -272,20 +264,20 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to revoke invite:', error);
-      res.status(500).json({ error: 'failed_to_revoke' });
+      return ApiErrors.serverError(res, 'Failed to revoke invite');
     }
   });
 
   // Get collaborators for a folder
   app.get('/api/shares/folders/:folderId/collaborators', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     const { folderId } = req.params;
 
     // Validate folder ID format
     if (!isValidCoValueId(folderId)) {
-      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+      return ApiErrors.badRequest(res, 'Invalid folder ID format');
     }
 
     try {
@@ -293,7 +285,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       const userJazzAccountId = (session.user as any).accountID;
 
       if (!userJazzAccountId) {
-        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view collaborators for this folder' });
+        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this folder');
       }
 
       // Get Jazz group members
@@ -302,7 +294,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       // Check if requesting user is a member
       const isMember = members.some(m => m.id === userJazzAccountId);
       if (!isMember) {
-        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to view collaborators for this folder' });
+        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this folder');
       }
 
       // Map Jazz account IDs to user info from BetterAuth
@@ -334,25 +326,25 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       res.json({ collaborators });
     } catch (error) {
       console.error('Failed to get collaborators:', error);
-      res.status(500).json({ error: 'failed_to_get_collaborators' });
+      return ApiErrors.serverError(res, 'Failed to get collaborators');
     }
   });
 
   // Remove a collaborator
   app.delete('/api/shares/folders/:folderId/collaborators/:accountId', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
-    if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
+    if (!session?.user) return ApiErrors.unauthorized(res);
 
     const { folderId, accountId } = req.params;
 
     // Validate folder ID format
     if (!isValidCoValueId(folderId)) {
-      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+      return ApiErrors.badRequest(res, 'Invalid folder ID format');
     }
 
     // Validate account ID format (Jazz account IDs also use co_ prefix)
     if (!isValidCoValueId(accountId)) {
-      return res.status(400).json({ error: 'invalid_request', message: 'Invalid account ID format' });
+      return ApiErrors.badRequest(res, 'Invalid account ID format');
     }
 
     try {
@@ -362,7 +354,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
         const members = await getFolderGroupMembers(folderId);
         const requesterMember = members.find(m => m.id === requesterJazzAccountId);
         if (!requesterMember || requesterMember.role !== 'admin') {
-          return res.status(403).json({ error: 'forbidden', message: 'Only admins can remove collaborators' });
+          return ApiErrors.forbidden(res, 'Only admins can remove collaborators');
         }
       }
 
@@ -372,7 +364,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to remove collaborator:', error);
-      res.status(500).json({ error: 'failed_to_remove_collaborator' });
+      return ApiErrors.serverError(res, 'Failed to remove collaborator');
     }
   });
 }

@@ -13,6 +13,7 @@ import {
   recordUsage,
   getUsageHistory,
 } from './subscription.js';
+import { ApiErrors } from '../lib/api-error.js';
 import { RateLimiter } from '../lib/rate-limiter.js';
 
 // Rate limiter for billing endpoints (10 requests per hour per user)
@@ -56,7 +57,7 @@ export function setupBillingRoutes(
       res.json({ tiers });
     } catch (error) {
       console.error('[billing] Error fetching tiers:', error);
-      res.status(500).json({ error: 'Failed to fetch subscription tiers' });
+      return ApiErrors.serverError(res, 'Failed to fetch subscription tiers');
     }
   });
 
@@ -65,14 +66,14 @@ export function setupBillingRoutes(
     try {
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const subscription = getUserSubscriptionWithTier(db, session.user.id);
       res.json({ subscription });
     } catch (error) {
       console.error('[billing] Error fetching subscription:', error);
-      res.status(500).json({ error: 'Failed to fetch subscription' });
+      return ApiErrors.serverError(res, 'Failed to fetch subscription');
     }
   });
 
@@ -81,7 +82,7 @@ export function setupBillingRoutes(
     try {
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const subscription = getUserSubscriptionWithTier(db, session.user.id);
@@ -95,7 +96,7 @@ export function setupBillingRoutes(
       });
     } catch (error) {
       console.error('[billing] Error fetching usage:', error);
-      res.status(500).json({ error: 'Failed to fetch usage' });
+      return ApiErrors.serverError(res, 'Failed to fetch usage');
     }
   });
 
@@ -104,19 +105,19 @@ export function setupBillingRoutes(
     try {
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const { listCount } = req.body;
       if (typeof listCount !== 'number' || listCount < 0 || listCount > 10000) {
-        return res.status(400).json({ error: 'Invalid listCount' });
+        return ApiErrors.badRequest(res, 'Invalid listCount');
       }
 
       recordUsage(db, session.user.id, listCount);
       res.json({ success: true });
     } catch (error) {
       console.error('[billing] Error recording usage:', error);
-      res.status(500).json({ error: 'Failed to record usage' });
+      return ApiErrors.serverError(res, 'Failed to record usage');
     }
   });
 
@@ -124,22 +125,22 @@ export function setupBillingRoutes(
   app.post('/api/billing/checkout', async (req: Request, res: Response) => {
     try {
       if (!isStripeEnabled()) {
-        return res.status(503).json({ error: 'Billing is not configured' });
+        return ApiErrors.serviceUnavailable(res, 'Billing is not configured');
       }
 
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       // Rate limit billing requests
       if (!billingLimiter.check(session.user.id)) {
-        return res.status(429).json({ error: 'rate_limited', message: 'Too many billing requests. Please try again later.' });
+        return ApiErrors.rateLimited(res);
       }
 
       const { tierSlug } = req.body as { tierSlug?: string };
       if (!tierSlug || !['plus', 'premium'].includes(tierSlug)) {
-        return res.status(400).json({ error: 'Invalid tier' });
+        return ApiErrors.badRequest(res, 'Invalid tier');
       }
 
       const checkoutUrl = await createCheckoutSession(
@@ -152,13 +153,13 @@ export function setupBillingRoutes(
       );
 
       if (!checkoutUrl) {
-        return res.status(500).json({ error: 'Failed to create checkout session' });
+        return ApiErrors.serverError(res, 'Failed to create checkout session');
       }
 
       res.json({ url: checkoutUrl });
     } catch (error) {
       console.error('[billing] Error creating checkout:', error);
-      res.status(500).json({ error: 'Failed to create checkout session' });
+      return ApiErrors.serverError(res, 'Failed to create checkout session');
     }
   });
 
@@ -166,17 +167,17 @@ export function setupBillingRoutes(
   app.post('/api/billing/portal', async (req: Request, res: Response) => {
     try {
       if (!isStripeEnabled()) {
-        return res.status(503).json({ error: 'Billing is not configured' });
+        return ApiErrors.serviceUnavailable(res, 'Billing is not configured');
       }
 
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       // Rate limit billing requests
       if (!billingLimiter.check(session.user.id)) {
-        return res.status(429).json({ error: 'rate_limited', message: 'Too many billing requests. Please try again later.' });
+        return ApiErrors.rateLimited(res);
       }
 
       const portalUrl = await createPortalSession(
@@ -186,13 +187,13 @@ export function setupBillingRoutes(
       );
 
       if (!portalUrl) {
-        return res.status(500).json({ error: 'Failed to create portal session' });
+        return ApiErrors.serverError(res, 'Failed to create portal session');
       }
 
       res.json({ url: portalUrl });
     } catch (error) {
       console.error('[billing] Error creating portal session:', error);
-      res.status(500).json({ error: 'Failed to create portal session' });
+      return ApiErrors.serverError(res, 'Failed to create portal session');
     }
   });
 }

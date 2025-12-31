@@ -9,6 +9,7 @@ import {
   TOKEN_EXPIRY_HOURS,
 } from './lib/verification-token.js';
 import { emailVerificationLimiter } from './lib/rate-limiter.js';
+import { ApiErrors } from './lib/api-error.js';
 
 // Configure SMTP transporter (same as auth.ts)
 const smtpTransporter = nodemailer.createTransport({
@@ -70,19 +71,19 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
     try {
       const session = await auth.api.getSession({ headers: req.headers as Record<string, string> });
       if (!session?.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const { email } = req.body;
       if (!email || typeof email !== 'string') {
-        return res.status(400).json({ error: 'Email is required' });
+        return ApiErrors.badRequest(res, 'Email is required');
       }
 
       const normalizedEmail = email.toLowerCase().trim();
 
       // Check rate limit
       if (!emailVerificationLimiter.check(session.user.id)) {
-        return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        return ApiErrors.rateLimited(res);
       }
 
       // Check max verified emails limit
@@ -91,28 +92,25 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       ).get(session.user.id) as { count: number };
 
       if (existingCount.count >= MAX_VERIFIED_EMAILS_PER_USER) {
-        return res.status(400).json({
-          error: 'limit_exceeded',
-          message: `Maximum of ${MAX_VERIFIED_EMAILS_PER_USER} verified emails allowed`,
-        });
+        return ApiErrors.badRequest(res, `Maximum of ${MAX_VERIFIED_EMAILS_PER_USER} verified emails allowed`);
       }
 
       // Check if email is same as user's primary email
       if (session.user.email.toLowerCase() === normalizedEmail) {
-        return res.status(400).json({ error: 'This is already your primary email' });
+        return ApiErrors.badRequest(res, 'This is already your primary email');
       }
 
       // Check if email is already a primary email for another user
       const existingUser = db.prepare('SELECT id FROM user WHERE LOWER(email) = ?').get(normalizedEmail) as any;
       if (existingUser) {
         // Don't reveal that email exists - generic error
-        return res.status(400).json({ error: 'This email cannot be added' });
+        return ApiErrors.badRequest(res, 'This email cannot be added');
       }
 
       // Check if email is already verified for any user
       const existingVerified = db.prepare('SELECT id FROM verified_email WHERE LOWER(email) = ?').get(normalizedEmail) as any;
       if (existingVerified) {
-        return res.status(400).json({ error: 'This email cannot be added' });
+        return ApiErrors.badRequest(res, 'This email cannot be added');
       }
 
       // Create signed token
@@ -124,7 +122,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       res.json({ success: true });
     } catch (error) {
       console.error('[verified-emails] Error requesting verification:', error);
-      res.status(500).json({ error: 'Failed to send verification email' });
+      return ApiErrors.serverError(res, 'Failed to send verification email');
     }
   });
 
@@ -133,25 +131,23 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
     try {
       const session = await auth.api.getSession({ headers: req.headers as Record<string, string> });
       if (!session?.user) {
-        return res.status(401).json({ error: 'Please sign in to verify your email' });
+        return ApiErrors.unauthorized(res);
       }
 
       const { token } = req.body;
       if (!token || typeof token !== 'string') {
-        return res.status(400).json({ error: 'Token is required' });
+        return ApiErrors.badRequest(res, 'Token is required');
       }
 
       // Verify token
       const payload = verifyTokenWithSecret(token);
       if (!payload) {
-        return res.status(400).json({ error: 'Invalid or expired verification link' });
+        return ApiErrors.badRequest(res, 'Invalid or expired verification link');
       }
 
       // Check that logged-in user matches the token
       if (payload.userId !== session.user.id) {
-        return res.status(403).json({
-          error: 'Please sign in with the account that requested this verification'
-        });
+        return ApiErrors.forbidden(res, 'Please sign in with the account that requested this verification');
       }
 
       // Use transaction for race condition protection
@@ -180,7 +176,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
 
       const result = insertVerifiedEmail();
       if (result.error) {
-        return res.status(400).json({ error: result.error });
+        return ApiErrors.badRequest(res, result.error);
       }
 
       console.log(`[verified-emails] User ${session.user.email} verified additional email: ${payload.email}`);
@@ -188,7 +184,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       res.json({ success: true, email: payload.email });
     } catch (error) {
       console.error('[verified-emails] Error confirming verification:', error);
-      res.status(500).json({ error: 'Failed to verify email' });
+      return ApiErrors.serverError(res, 'Failed to verify email');
     }
   });
 
@@ -197,7 +193,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
     try {
       const session = await auth.api.getSession({ headers: req.headers as Record<string, string> });
       if (!session?.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const emails = db.prepare(`
@@ -213,7 +209,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       });
     } catch (error) {
       console.error('[verified-emails] Error listing emails:', error);
-      res.status(500).json({ error: 'Failed to get verified emails' });
+      return ApiErrors.serverError(res, 'Failed to get verified emails');
     }
   });
 
@@ -222,7 +218,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
     try {
       const session = await auth.api.getSession({ headers: req.headers as Record<string, string> });
       if (!session?.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return ApiErrors.unauthorized(res);
       }
 
       const { id } = req.params;
@@ -233,7 +229,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       `).get(id, session.user.id) as any;
 
       if (!email) {
-        return res.status(404).json({ error: 'Email not found' });
+        return ApiErrors.notFound(res, 'Email');
       }
 
       db.prepare('DELETE FROM verified_email WHERE id = ?').run(id);
@@ -243,7 +239,7 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       res.json({ success: true });
     } catch (error) {
       console.error('[verified-emails] Error deleting email:', error);
-      res.status(500).json({ error: 'Failed to remove email' });
+      return ApiErrors.serverError(res, 'Failed to remove email');
     }
   });
 }

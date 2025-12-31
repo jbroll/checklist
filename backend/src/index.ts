@@ -18,6 +18,7 @@ import crypto from 'node:crypto';
 import { auth, sqliteDb, getAuthForOrigin, getOriginFromRequest } from './auth.js';
 import { initDb } from './db.js';
 import { initAgent, isAgentReady } from './agent.js';
+import { ApiErrors } from './lib/api-error.js';
 import { setupSharingRoutes } from './shares.js';
 import { setupVerifiedEmailRoutes } from './verified-emails.js';
 import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
@@ -156,7 +157,7 @@ app.use((req, res, next) => {
     // Require X-Requested-With header for all other state-changing requests
     if (!req.headers['x-requested-with']) {
       console.warn(`[CSRF] Missing X-Requested-With header for ${req.method} ${req.url}`);
-      return res.status(403).json({ error: 'forbidden', message: 'Missing required header' });
+      return ApiErrors.forbidden(res, 'Missing required header');
     }
   }
   next();
@@ -198,7 +199,7 @@ app.delete('/api/account', async (req, res) => {
     });
 
     if (!session?.user?.id) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return ApiErrors.unauthorized(res);
     }
 
     const userId = session.user.id;
@@ -231,7 +232,7 @@ app.delete('/api/account', async (req, res) => {
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (error) {
     console.error('[account-deletion] Error deleting account:', error);
-    res.status(500).json({ error: 'Failed to delete account' });
+    return ApiErrors.serverError(res, 'Failed to delete account');
   }
 });
 

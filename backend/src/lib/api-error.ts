@@ -55,4 +55,7 @@ export const ApiErrors = {
 
   serverError: (res: Response, message = 'An unexpected error occurred') =>
     sendError(res, 500, 'server_error', message),
+
+  serviceUnavailable: (res: Response, message = 'Service temporarily unavailable') =>
+    sendError(res, 503, 'service_unavailable', message),
 } as const;
