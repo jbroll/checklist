@@ -94,7 +94,7 @@ if [[ "$ENV" == "prod" ]]; then
     # Deploy secrets
     echo "[5/6] Deploying Backend Secrets..."
     if [ -f "backend/secrets.env" ]; then
-        scp backend/secrets.env app.kjekit.com:/var/lib/kjekit-api-data/secrets.env
+        cat backend/secrets.env | ssh app.kjekit.com "sudo tee /var/lib/kjekit-api-data/secrets.env > /dev/null && sudo chown kjekit:kjekit /var/lib/kjekit-api-data/secrets.env && sudo chmod 600 /var/lib/kjekit-api-data/secrets.env"
         ssh app.kjekit.com "sudo systemctl restart kjekit-api"
         echo "✓ Secrets deployed and backend restarted"
     else
@@ -126,14 +126,7 @@ elif [[ "$ENV" == "test" ]]; then
         exit 1
     fi
 
-    # Backup and swap config
-    cp deploy.conf deploy.conf.prod.bak
-    cp deploy-test.conf deploy.conf
-
-    "$DEPLOY_SH" "$MODE" .
-
-    # Restore prod config
-    mv deploy.conf.prod.bak deploy.conf
+    DEPLOY_SH_CONF=deploy-test.conf "$DEPLOY_SH" "$MODE" .
     echo "✓ Test app frontend deployed (checklist-test.rkroll.com)"
     echo ""
 
@@ -145,13 +138,7 @@ elif [[ "$ENV" == "test" ]]; then
     fi
 
     cd backend
-    cp deploy.conf deploy.conf.prod.bak
-    cp deploy-test.conf deploy.conf
-
-    "../../deploy.sh/deploy.sh" "$MODE" .
-
-    # Restore prod config
-    mv deploy.conf.prod.bak deploy.conf
+    DEPLOY_SH_CONF=deploy-test.conf "../../deploy.sh/deploy.sh" "$MODE" .
     cd ..
     echo "✓ Test backend deployed"
     echo ""
@@ -159,7 +146,7 @@ elif [[ "$ENV" == "test" ]]; then
     # Deploy test secrets
     echo "[3/4] Deploying Test Backend Secrets..."
     if [ -f "backend/secrets-test.env" ]; then
-        scp backend/secrets-test.env checklist-test.rkroll.com:/var/lib/kjekit-api-test-data/secrets.env
+        cat backend/secrets-test.env | ssh checklist-test.rkroll.com "sudo tee /var/lib/kjekit-api-test-data/secrets.env > /dev/null && sudo chown kjekit:kjekit /var/lib/kjekit-api-test-data/secrets.env && sudo chmod 600 /var/lib/kjekit-api-test-data/secrets.env"
         ssh checklist-test.rkroll.com "sudo systemctl restart kjekit-api-test"
         echo "✓ Test secrets deployed and backend restarted"
     else
