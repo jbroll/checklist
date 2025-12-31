@@ -48,8 +48,8 @@ const brandScript = `
 <script>
 (function() {
   var hostname = window.location.hostname;
-  var isChecklist = hostname.includes('checklist');
-  var brand = isChecklist ? ${JSON.stringify(brands.checklist)} : ${JSON.stringify(brands.kjekit)};
+  var isKjekit = hostname.includes('kjekit');
+  var brand = isKjekit ? ${JSON.stringify(brands.kjekit)} : ${JSON.stringify(brands.checklist)};
 
   // Replace all brand placeholders
   document.querySelectorAll('[data-brand]').forEach(function(el) {
@@ -100,10 +100,10 @@ const styles = `
 function generateNavLinks(currentPage) {
   const links = [];
   if (currentPage !== 'index.html') {
-    links.push('<a href="index.html" class="text-gray-600 hover:text-gray-900">Home</a>');
+    links.push('<a href="index.html" class="text-lg text-gray-600 hover:text-gray-900">Home</a>');
   }
   if (currentPage !== 'about.html') {
-    links.push('<a href="about.html" class="text-gray-600 hover:text-gray-900">About</a>');
+    links.push('<a href="about.html" class="text-lg text-gray-600 hover:text-gray-900">About</a>');
   }
   return links.join('\n                    ');
 }
@@ -112,16 +112,16 @@ function generateNavLinks(currentPage) {
 function generateFooterLinks(currentPage) {
   const links = [];
   if (currentPage !== 'index.html') {
-    links.push('<a href="index.html" class="text-gray-400 hover:text-white mx-3">Home</a>');
+    links.push('<a href="index.html" class="text-lg text-gray-400 hover:text-white mx-3">Home</a>');
   }
   if (currentPage !== 'about.html') {
-    links.push('<a href="about.html" class="text-gray-400 hover:text-white mx-3">About</a>');
+    links.push('<a href="about.html" class="text-lg text-gray-400 hover:text-white mx-3">About</a>');
   }
   if (currentPage !== 'privacy.html') {
-    links.push('<a href="privacy.html" class="text-gray-400 hover:text-white mx-3">Privacy</a>');
+    links.push('<a href="privacy.html" class="text-lg text-gray-400 hover:text-white mx-3">Privacy</a>');
   }
   if (currentPage !== 'terms.html') {
-    links.push('<a href="terms.html" class="text-gray-400 hover:text-white mx-3">Terms</a>');
+    links.push('<a href="terms.html" class="text-lg text-gray-400 hover:text-white mx-3">Terms</a>');
   }
   return links.join('\n                ');
 }
@@ -203,7 +203,7 @@ function generatePage(mdFile, htmlFile, title) {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <p class="text-xs">&copy; 2025 rkroll.com</p>
+                    <p class="text-lg">&copy; 2025 <a href="http://rkroll.com" class="text-gray-400 hover:text-white">rkroll.com</a></p>
                     ${footerLinks}
                 </div>
                 <a href="https://app.kjekit.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
