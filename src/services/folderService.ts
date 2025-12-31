@@ -112,7 +112,8 @@ function findFolderRecursive(
   for (const f of folders) {
     if (!f) continue;
     if (f.$jazz.id === folderId) return f;
-    if (f.children) {
+    // Only recurse if children is actually iterable (not just truthy)
+    if (f.children && typeof f.children[Symbol.iterator] === 'function') {
       const found = findFolderRecursive(f.children, folderId, depth + 1);
       if (found) return found;
     }
@@ -340,7 +341,7 @@ export function deleteFolder(account: AccountType, folder: FolderType): void {
   assertAccountRoot(account);
 
   // Recursively delete children first
-  if (folder.children) {
+  if (folder.children && Array.isArray(folder.children)) {
     while (folder.children.length > 0) {
       const child = folder.children[0];
       if (child) {
@@ -457,7 +458,7 @@ export function getRootFolders(account: AccountType, showArchived = false): Fold
 }
 
 export function getChildFolders(folder: FolderType, showArchived = false): FolderType[] {
-  if (!folder.children) return [];
+  if (!folder.children || !Array.isArray(folder.children)) return [];
   return folder.children.filter((f: FolderType | null) => f && (showArchived || !f.archived));
 }
 

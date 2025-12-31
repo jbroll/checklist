@@ -594,5 +594,101 @@ Item2,Cat2`;
       // The import should succeed but may have duplicate warnings
       expect(result.success).toBe(true);
     });
+
+    it('sets defaultItems for all imported items', async () => {
+      const fileContent = 'Butter\nMilk\nBread\nEggs';
+      const file = createMockFile('groceries.txt', fileContent);
+      const account = createMockAccount();
+
+      // Create a mock template that tracks $jazz.set calls and updates items
+      const mockTemplate: {
+        name: string;
+        items: any[];
+        defaultItems?: Record<string, boolean>;
+        $jazz: { set: ReturnType<typeof vi.fn> };
+      } = {
+        name: 'Test Template',
+        items: [],
+        $jazz: {
+          set: vi.fn((key: string, value: any) => {
+            if (key === 'items') {
+              mockTemplate.items = value;
+            } else if (key === 'defaultItems') {
+              mockTemplate.defaultItems = value;
+            }
+          }),
+        },
+      };
+
+      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
+      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+
+      const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
+
+      // Should succeed
+      expect(result.success).toBe(true);
+      expect(result.stats?.itemsAdded).toBe(4);
+
+      // Verify defaultItems was set
+      expect(mockTemplate.$jazz.set).toHaveBeenCalledWith('defaultItems', expect.any(Object));
+
+      // Verify all 4 items are in defaultItems
+      expect(mockTemplate.defaultItems).toBeDefined();
+      expect(Object.keys(mockTemplate.defaultItems!).length).toBe(4);
+
+      // Each item should have defaultItems[id] = true
+      for (const item of mockTemplate.items) {
+        expect(mockTemplate.defaultItems![item.id]).toBe(true);
+      }
+    });
+
+    it('only sets defaultItems for items (not categories)', async () => {
+      // TXT with indentation creates both category and item nodes
+      const fileContent = 'Dairy\n  Butter\n  Milk';
+      const file = createMockFile('groceries.txt', fileContent);
+      const account = createMockAccount();
+
+      const mockTemplate: {
+        name: string;
+        items: any[];
+        defaultItems?: Record<string, boolean>;
+        $jazz: { set: ReturnType<typeof vi.fn> };
+      } = {
+        name: 'Test Template',
+        items: [],
+        $jazz: {
+          set: vi.fn((key: string, value: any) => {
+            if (key === 'items') {
+              mockTemplate.items = value;
+            } else if (key === 'defaultItems') {
+              mockTemplate.defaultItems = value;
+            }
+          }),
+        },
+      };
+
+      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
+      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+
+      const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
+
+      expect(result.success).toBe(true);
+
+      // Should have 3 items total: 1 category (Dairy) + 2 items (Butter, Milk)
+      expect(mockTemplate.items.length).toBe(3);
+
+      // But defaultItems should only have the 2 leaf items
+      expect(mockTemplate.defaultItems).toBeDefined();
+      expect(Object.keys(mockTemplate.defaultItems!).length).toBe(2);
+
+      // Verify only items (not categories) are in defaultItems
+      for (const item of mockTemplate.items) {
+        if (item.type === 'item') {
+          expect(mockTemplate.defaultItems![item.id]).toBe(true);
+        } else {
+          expect(mockTemplate.defaultItems![item.id]).toBeUndefined();
+        }
+      }
+    });
   });
 });

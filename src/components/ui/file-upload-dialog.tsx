@@ -118,10 +118,11 @@ export function FileUploadDialog<TResult>({
     try {
       const uploadResult = await onUpload(selectedFile, fileType);
       setResult(uploadResult);
-    } catch (_error) {
+    } catch (error) {
+      console.error('[FileUploadDialog] Upload failed:', error);
       await showAlert({
         title: 'Upload Failed',
-        message: 'Upload failed.',
+        message: error instanceof Error ? error.message : 'Upload failed.',
       });
     } finally {
       setIsUploading(false);

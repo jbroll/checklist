@@ -308,9 +308,31 @@ export async function importAsNewTemplate(
     importResult = importItemsFromCsv(content, newTemplate, account);
   }
 
-  // Check if import succeeded
+  // Check if import succeeded - if not, clean up the created template
   if (importResult.errors.length > 0 && importResult.imported === 0) {
+    // Delete the empty template we created
+    folderService.deleteFolder(account, newTemplate);
     return createErrorResult(importResult.errors[0]);
+  }
+
+  // Set all imported items as default items so they're selected when opening the list
+  try {
+    const items = newTemplate.items;
+    if (items && items.length > 0) {
+      const defaultItems: Record<string, boolean> = {};
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item && item.type === 'item' && !item.archived) {
+          defaultItems[item.id] = true;
+        }
+      }
+      if (Object.keys(defaultItems).length > 0) {
+        newTemplate.$jazz.set('defaultItems', defaultItems);
+      }
+    }
+  } catch (error) {
+    // Don't fail the import if setting default items fails
+    console.warn('[importService] Failed to set default items:', error);
   }
 
   return createSuccessResult(
