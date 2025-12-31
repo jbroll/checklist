@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { Account } from '../schemas';
 import { betterAuthClient } from './auth-client';
 
+// Jazz API key is intentionally public (like Firebase) - it identifies the project
+// but doesn't grant data access. Jazz uses end-to-end encryption with user keys.
 const apiKey = import.meta.env.VITE_JAZZ_API_KEY;
 const jazzPeer = import.meta.env.VITE_JAZZ_PEER || 'wss://cloud.jazz.tools';
 
