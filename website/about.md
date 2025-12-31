@@ -1,4 +1,4 @@
-# About {{brand.name}}
+# About {{brand.nameLink}}
 
 {{brand.aboutIntro}}
 

@@ -59,8 +59,8 @@
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
-            <h1>About <span data-brand="name">kjekit</span></h1>
-<p><span data-brand="aboutIntro">kjekit (pronounced "check it") is a checklist app designed for lists you use every day.</span></p>
+            <h1>About <a href="https://checklist.rkroll.com" data-brand="nameLink">CheckList</a></h1>
+<p><span data-brand="aboutIntro">CheckList is a checklist app designed for lists you use every day.</span></p>
 <p>Perfect for grocery shopping, packing lists, daily routines, and any recurring checklist.</p>
 <h2>Legal</h2>
 <ul>
@@ -70,7 +70,7 @@
 <hr>
 <p><strong>By</strong> <a href="https://rkroll.com">rkroll.com</a> — a software company located in Schenectady, New York.
 <br>
-Can contact us at <a href="mailto:support@kjekit.com" data-brand="supportEmail">support@kjekit.com</a>.</p>
+Can contact us at <a href="mailto:support@checklist.rkroll.com" data-brand="supportEmail">support@checklist.rkroll.com</a>.</p>
 
         </div>
     </div>
@@ -94,14 +94,23 @@ Can contact us at <a href="mailto:support@kjekit.com" data-brand="supportEmail">
 (function() {
   var hostname = window.location.hostname;
   var isKjekit = hostname.includes('kjekit');
-  var brand = isKjekit ? {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day."} : {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.rkroll.com","salesEmail":"sales@checklist.rkroll.com","logo":"checklist-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day."};
+  var brand = isKjekit ? {"name":"kjekit","tagline":"Nicely Shared Checklists","supportEmail":"support@kjekit.com","salesEmail":"sales@kjekit.com","logo":"kjekit-path.svg","aboutIntro":"kjekit (pronounced \"check it\") is a checklist app designed for lists you use every day.","appUrl":"https://app.kjekit.com"} : {"name":"CheckList","tagline":"Shared Checklists","supportEmail":"support@checklist.rkroll.com","salesEmail":"sales@checklist.rkroll.com","logo":"checklist-icon.svg","aboutIntro":"CheckList is a checklist app designed for lists you use every day.","appUrl":"https://checklist.rkroll.com"};
 
   // Replace all brand placeholders
   document.querySelectorAll('[data-brand]').forEach(function(el) {
     var key = el.getAttribute('data-brand');
-    if (brand[key]) {
+    // Special cases for composite brand values
+    if (key === 'appUrlHref') {
+      el.href = brand.appUrl;
+    } else if (key === 'nameLink') {
+      el.href = brand.appUrl;
+      el.textContent = brand.name;
+    } else if (brand[key]) {
       if (el.tagName === 'A' && key.includes('Email')) {
         el.href = 'mailto:' + brand[key];
+        el.textContent = brand[key];
+      } else if (el.tagName === 'A' && key === 'appUrl') {
+        el.href = brand[key];
         el.textContent = brand[key];
       } else if (el.tagName === 'IMG') {
         el.src = brand[key];

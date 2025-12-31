@@ -32,6 +32,7 @@ const brands = {
     salesEmail: 'sales@kjekit.com',
     logo: 'kjekit-path.svg',
     aboutIntro: 'kjekit (pronounced "check it") is a checklist app designed for lists you use every day.',
+    appUrl: 'https://app.kjekit.com',
   },
   checklist: {
     name: 'CheckList',
@@ -40,6 +41,7 @@ const brands = {
     salesEmail: 'sales@checklist.rkroll.com',
     logo: 'checklist-icon.svg',
     aboutIntro: 'CheckList is a checklist app designed for lists you use every day.',
+    appUrl: 'https://checklist.rkroll.com',
   },
 };
 
@@ -54,9 +56,18 @@ const brandScript = `
   // Replace all brand placeholders
   document.querySelectorAll('[data-brand]').forEach(function(el) {
     var key = el.getAttribute('data-brand');
-    if (brand[key]) {
+    // Special cases for composite brand values
+    if (key === 'appUrlHref') {
+      el.href = brand.appUrl;
+    } else if (key === 'nameLink') {
+      el.href = brand.appUrl;
+      el.textContent = brand.name;
+    } else if (brand[key]) {
       if (el.tagName === 'A' && key.includes('Email')) {
         el.href = 'mailto:' + brand[key];
+        el.textContent = brand[key];
+      } else if (el.tagName === 'A' && key === 'appUrl') {
+        el.href = brand[key];
         el.textContent = brand[key];
       } else if (el.tagName === 'IMG') {
         el.src = brand[key];
@@ -130,16 +141,20 @@ function generateFooterLinks(currentPage) {
 
 // Process markdown content to convert {{brand.X}} to data-brand elements
 function processBrandVariables(html) {
-  // Replace {{brand.name}} with span
-  html = html.replace(/\{\{brand\.name\}\}/g, '<span data-brand="name">kjekit</span>');
+  // Replace {{brand.name}} with span (default to CheckList)
+  html = html.replace(/\{\{brand\.name\}\}/g, '<span data-brand="name">CheckList</span>');
   // Replace {{brand.tagline}} with span
-  html = html.replace(/\{\{brand\.tagline\}\}/g, '<span data-brand="tagline">Nicely Shared Checklists</span>');
+  html = html.replace(/\{\{brand\.tagline\}\}/g, '<span data-brand="tagline">Shared Checklists</span>');
   // Replace {{brand.aboutIntro}} with span
-  html = html.replace(/\{\{brand\.aboutIntro\}\}/g, `<span data-brand="aboutIntro">${brands.kjekit.aboutIntro}</span>`);
+  html = html.replace(/\{\{brand\.aboutIntro\}\}/g, `<span data-brand="aboutIntro">${brands.checklist.aboutIntro}</span>`);
   // Replace {{brand.supportEmail}} with link
-  html = html.replace(/\{\{brand\.supportEmail\}\}/g, '<a href="mailto:support@kjekit.com" data-brand="supportEmail">support@kjekit.com</a>');
+  html = html.replace(/\{\{brand\.supportEmail\}\}/g, `<a href="mailto:${brands.checklist.supportEmail}" data-brand="supportEmail">${brands.checklist.supportEmail}</a>`);
   // Replace {{brand.salesEmail}} with link
-  html = html.replace(/\{\{brand\.salesEmail\}\}/g, '<a href="mailto:sales@kjekit.com" data-brand="salesEmail">sales@kjekit.com</a>');
+  html = html.replace(/\{\{brand\.salesEmail\}\}/g, `<a href="mailto:${brands.checklist.salesEmail}" data-brand="salesEmail">${brands.checklist.salesEmail}</a>`);
+  // Replace {{brand.appUrl}} with link (standalone)
+  html = html.replace(/\{\{brand\.appUrl\}\}/g, `<a href="${brands.checklist.appUrl}" data-brand="appUrl">${brands.checklist.appUrl}</a>`);
+  // Replace {{brand.nameLink}} with linked brand name
+  html = html.replace(/\{\{brand\.nameLink\}\}/g, `<a href="${brands.checklist.appUrl}" data-brand="nameLink">${brands.checklist.name}</a>`);
   return html;
 }
 
