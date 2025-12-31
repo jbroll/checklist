@@ -16,6 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="kjekit - About">
     <title>About - kjekit</title>
+    <link rel="icon" type="image/svg+xml" href="checklist-icon.svg" data-brand="logo">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
@@ -105,6 +106,8 @@ Can contact us at <a href="mailto:support@kjekit.com" data-brand="supportEmail">
       } else if (el.tagName === 'IMG') {
         el.src = brand[key];
         el.alt = brand.name;
+      } else if (el.tagName === 'LINK') {
+        el.href = brand[key];
       } else {
         el.textContent = brand[key];
       }

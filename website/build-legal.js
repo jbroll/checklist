@@ -61,6 +61,8 @@ const brandScript = `
       } else if (el.tagName === 'IMG') {
         el.src = brand[key];
         el.alt = brand.name;
+      } else if (el.tagName === 'LINK') {
+        el.href = brand[key];
       } else {
         el.textContent = brand[key];
       }
@@ -169,6 +171,7 @@ function generatePage(mdFile, htmlFile, title) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="kjekit - ${title}">
     <title>${title} - kjekit</title>
+    <link rel="icon" type="image/svg+xml" href="checklist-icon.svg" data-brand="logo">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>${styles}
     </style>
