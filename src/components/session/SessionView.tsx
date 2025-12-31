@@ -66,9 +66,11 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const sessions = template.sessions || [];
   const session = (sessions.find((s) => s?.id === sessionId) as SessionData | undefined) || null;
 
-  // Get items and partition them
-  const items = template.items || [];
-  const activeItems = items.filter((item) => item && !item.archived);
+  // Get active (non-archived) items - memoized for performance
+  const activeItems = useMemo(
+    () => (template.items || []).filter((item) => item && !item.archived),
+    [template.items],
+  );
 
   // Use hooks for partitioning items
   const { selectedItems, checkedItems } = useSessionItems({
