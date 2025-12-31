@@ -7,7 +7,7 @@
     "dev": "concurrently -n \"frontend,backend\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "vite",
     "dev:backend": "cd backend && npm run dev",
-    "build": "tsc --noEmit && vite build --mode production",
+    "build": "tsc --noEmit && npm run build:website && vite build --mode production",
     "build:website": "node website/build-legal.js",
     "build:backend": "cd backend && npm run build",
     "build:production": "npm run build && npm run build:backend && npm run prepare:deploy",
