@@ -33,6 +33,7 @@ const brands = {
     logo: 'kjekit-path.svg',
     aboutIntro: 'kjekit (pronounced "check it") is a checklist app designed for lists you use every day.',
     appUrl: 'https://app.kjekit.com',
+    websiteUrl: 'https://kjekit.com',
   },
   checklist: {
     name: 'CheckList',
@@ -41,7 +42,8 @@ const brands = {
     salesEmail: 'sales@checklist.rkroll.com',
     logo: 'checklist-icon.svg',
     aboutIntro: 'CheckList is a checklist app designed for lists you use every day.',
-    appUrl: 'https://checklist.rkroll.com',
+    appUrl: 'https://checklist-app.rkroll.com',
+    websiteUrl: 'https://checklist.rkroll.com',
   },
 };
 
@@ -60,7 +62,7 @@ const brandScript = `
     if (key === 'appUrlHref') {
       el.href = brand.appUrl;
     } else if (key === 'nameLink') {
-      el.href = brand.appUrl;
+      el.href = brand.websiteUrl;
       el.textContent = brand.name;
     } else if (brand[key]) {
       if (el.tagName === 'A' && key.includes('Email')) {
@@ -153,8 +155,8 @@ function processBrandVariables(html) {
   html = html.replace(/\{\{brand\.salesEmail\}\}/g, `<a href="mailto:${brands.checklist.salesEmail}" data-brand="salesEmail">${brands.checklist.salesEmail}</a>`);
   // Replace {{brand.appUrl}} with link (standalone)
   html = html.replace(/\{\{brand\.appUrl\}\}/g, `<a href="${brands.checklist.appUrl}" data-brand="appUrl">${brands.checklist.appUrl}</a>`);
-  // Replace {{brand.nameLink}} with linked brand name
-  html = html.replace(/\{\{brand\.nameLink\}\}/g, `<a href="${brands.checklist.appUrl}" data-brand="nameLink">${brands.checklist.name}</a>`);
+  // Replace {{brand.nameLink}} with linked brand name (links to website, not app)
+  html = html.replace(/\{\{brand\.nameLink\}\}/g, `<a href="${brands.checklist.websiteUrl}" data-brand="nameLink">${brands.checklist.name}</a>`);
   return html;
 }
 
