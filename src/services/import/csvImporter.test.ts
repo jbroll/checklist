@@ -49,6 +49,24 @@ Milk`;
         expect(template.items).toHaveLength(3);
       });
 
+      it('imports CSV with category,item format', () => {
+        const csv = `category,item
+Produce,Apples
+Produce,Bananas
+Dairy,Milk
+Dairy,Cheese`;
+        const template = createMockTemplate();
+        const account = createMockAccount();
+
+        const result = importItemsFromCsv(csv, template as any, account as any);
+
+        expect(result.imported).toBe(4);
+        expect(template.items[0].name).toBe('Apples');
+        expect(template.items[0].path).toBe('Produce/Apples');
+        expect(template.items[2].name).toBe('Milk');
+        expect(template.items[2].path).toBe('Dairy/Milk');
+      });
+
       it('imports CSV with all supported columns', () => {
         const csv = `name,defaultQuantity,icon,path
 Apples,5 lbs,,Produce/Apples

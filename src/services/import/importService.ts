@@ -238,6 +238,11 @@ export async function importSessionFromCsvFile(
   return importSessionFromCsv(result.content, template, account, options);
 }
 
+export interface ImportAsNewTemplateOptions {
+  /** Enable auto-categorization for the new template */
+  autoCategorize?: boolean;
+}
+
 /**
  * Import TXT/CSV file as a new template
  *
@@ -250,6 +255,7 @@ export async function importSessionFromCsvFile(
  * @param templateName - Name for the new template folder (optional for TXT files with metadata)
  * @param fileType - File type ('txt' or 'csv')
  * @param parentFolder - Optional parent folder (if not provided, creates at root)
+ * @param options - Import options (autoCategorize, etc.)
  * @returns Import result with statistics
  */
 export async function importAsNewTemplate(
@@ -258,6 +264,7 @@ export async function importAsNewTemplate(
   templateName: string | undefined,
   fileType: 'txt' | 'csv',
   parentFolder?: InstanceOfSchema<typeof FolderNode>,
+  options: ImportAsNewTemplateOptions = {},
 ): Promise<ImportResult> {
   const result = await validateAndReadFile(file, [fileType]);
   if (!result.success) {
@@ -286,6 +293,11 @@ export async function importAsNewTemplate(
 
   if (!newTemplate) {
     return createErrorResult('Failed to create template');
+  }
+
+  // Set auto-categorize if requested
+  if (options.autoCategorize) {
+    newTemplate.autoCategorizeEnabled = true;
   }
 
   // Import items into the new template

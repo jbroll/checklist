@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Indented List Format** is a new plain text format for importing and exporting hierarchical lists. It uses indentation (tabs or spaces) to represent category/item relationships.
+The **Indented List Format** is a plain text format for importing and exporting hierarchical lists. It uses indentation (tabs or spaces) to represent category/item relationships.
 
 ## Features
 
@@ -21,8 +21,8 @@ The **Indented List Format** is a new plain text format for importing and export
    - Indented items are children of the previous less-indented item
 
 2. **Types are automatic**
-   - Items with children → Categories
-   - Items without children → Items (leaf nodes)
+   - Items with children become categories
+   - Items without children become leaf items
 
 3. **Comments and blank lines**
    - Lines starting with `#` are comments (ignored for items)
@@ -30,9 +30,8 @@ The **Indented List Format** is a new plain text format for importing and export
 
 4. **Metadata in comments**
    - Use `# key: value` format to specify metadata
-   - `# name:` sets the list/template name on import
+   - `# name:` sets the list name on import
    - `# description:` sets an optional description
-   - Any key can be used; `name` and `description` are recognized by the importer
 
 ## Examples
 
@@ -49,13 +48,10 @@ Dairy
 ```
 
 **Result:**
-- "Produce" → Category
-  - "Apples" → Item
-  - "Bananas" → Item
-  - "Oranges" → Item
-- "Dairy" → Category
-  - "Milk" → Item
-  - "Cheese" → Item
+- "Produce" becomes a category
+  - "Apples", "Bananas", "Oranges" become items
+- "Dairy" becomes a category
+  - "Milk", "Cheese" become items
 
 ### Three-Level Hierarchy
 
@@ -73,20 +69,7 @@ Grocery Store
     Cheese
 ```
 
-**Result:**
-- "Grocery Store" → Category
-  - "Produce" → Category
-    - "Fruits" → Category
-      - "Apples" → Item
-      - "Bananas" → Item
-    - "Vegetables" → Category
-      - "Carrots" → Item
-      - "Broccoli" → Item
-  - "Dairy" → Category
-    - "Milk" → Item
-    - "Cheese" → Item
-
-### With Comments and Blank Lines
+### With Comments
 
 ```
 # My Shopping List
@@ -115,24 +98,7 @@ Dairy
   Cheese
 ```
 
-When imported, this creates a template named "Weekly Groceries" instead of using the filename.
-
-### Mixed Root-Level Items
-
-```
-Category1
-  Item1
-  Item2
-Item3
-Item4
-```
-
-**Result:**
-- "Category1" → Category
-  - "Item1" → Item
-  - "Item2" → Item
-- "Item3" → Item (root level)
-- "Item4" → Item (root level)
+When imported, this creates a list named "Weekly Groceries" instead of using the filename.
 
 ## Indentation Detection
 
@@ -142,72 +108,26 @@ The system automatically detects:
 - **Space count**: Finds the greatest common divisor of all indentation levels
 - **Mixed indentation**: Normalizes mixed tabs/spaces
 
-### Tab Indentation
-
-```
-Category1
-→Item1
-→Item2
-```
-(→ represents a tab character)
-
-### 2-Space Indentation
-
-```
-Category1
-  Item1
-  Item2
-```
-
-### 4-Space Indentation
-
-```
-Category1
-    Item1
-    Item2
-```
-
-## Importing
-
-1. **From Dashboard**: Click "Import" → Select `.txt` file
-2. **Auto-detection**: System detects flat vs indented format
-3. **Hierarchy**: Categories and items are created based on structure
-
-## Exporting
-
-1. **From Template**: Click "Export" → Select "TXT"
-2. **Auto-format**:
-   - If template has categories → Exports as indented format
-   - If template has only items → Exports as flat format
-3. **Indentation**: Uses 2-space indentation by default
-
 ## Tips
 
 1. **Consistent indentation**: Use consistent spacing (all 2-space or all 4-space)
 2. **Comments for organization**: Use `#` comments to document your lists
-3. **Use metadata for names**: Add `# name: My List` to set the template name on import
-4. **Round-trip editing**: Export → Edit in text editor → Re-import
+3. **Use metadata for names**: Add `# name: My List` to set the list name on import
+4. **Round-trip editing**: Export, edit in text editor, re-import
 
 ## Comparison with Other Formats
 
 | Feature | Flat TXT | Indented TXT | CSV | JSON |
 |---------|----------|--------------|-----|------|
-| Hierarchy | ❌ | ✅ | ✅ | ✅ |
-| Human-readable | ✅ | ✅ | ⚠️ | ❌ |
-| Comments | ❌ | ✅ | ❌ | ❌ |
-| Metadata | ❌ | ✅ | ✅ | ✅ |
-| Quick editing | ✅ | ✅ | ⚠️ | ❌ |
+| Hierarchy | No | Yes | Yes | Yes |
+| Human-readable | Yes | Yes | Somewhat | No |
+| Comments | No | Yes | No | No |
+| Metadata | No | Yes | No | Yes |
+| Quick editing | Yes | Yes | Somewhat | No |
 
 ## Technical Details
 
 - **Path generation**: Paths are auto-generated from item names
-- **Normalization**: Names are normalized to lowercase paths (e.g., "Fresh Fruits" → "fresh-fruits")
+- **Normalization**: Names are normalized to lowercase paths (e.g., "Fresh Fruits" -> "fresh-fruits")
 - **Duplicate detection**: Duplicate paths are skipped during import
 - **Sort order**: Items maintain the order from the file
-
-## Example Use Cases
-
-1. **Quick list creation**: Type a hierarchical list in any text editor
-2. **Sharing templates**: Share human-readable grocery templates
-3. **Version control**: Store templates in Git with clear diffs
-4. **Batch editing**: Edit multiple items quickly in your favorite editor

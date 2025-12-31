@@ -14,11 +14,11 @@ export type CsvImportResult = BaseImportResult;
 /**
  * Import template items from CSV
  *
- * Expected CSV format (new schema):
- * name,defaultQuantity,icon,path
+ * Expected CSV format:
+ * category,item
  *
  * All imported items are created as leaf items (type='item').
- * If path is not provided, items are created at top level.
+ * Items with the same category are grouped together.
  *
  * @param csvContent - CSV content string
  * @param template - FolderNode to import items into
@@ -49,19 +49,30 @@ export function importItemsFromCsv(
     const row = rows[i];
     const rowNum = i + 2; // +2 because row 1 is header, and humans count from 1
 
+    // Support both formats: category,item (new) and name,path (legacy)
+    const itemName = row.item?.trim() || row.name?.trim();
+    const category = row.category?.trim();
+    const explicitPath = row.path?.trim();
+
     // Validate required fields
-    if (!row || !row.name || row.name.trim().length === 0) {
-      continue; // Skip invalid rows - let base importer handle the empty check
+    if (!row || !itemName || itemName.length === 0) {
+      continue; // Skip invalid rows
     }
 
-    const name = row.name.trim();
-    const path = row.path?.trim() || name;
-    const defaultQuantity = row.defaultQuantity?.trim() || '';
+    // Build path: explicit path > category/item > item name
+    let path: string;
+    if (explicitPath) {
+      path = explicitPath;
+    } else if (category) {
+      path = `${category}/${itemName}`;
+    } else {
+      path = itemName;
+    }
 
     itemsToImport.push({
-      name,
+      name: itemName,
       path,
-      defaultQuantity,
+      defaultQuantity: row.defaultQuantity?.trim() || '',
       context: `Row ${rowNum}`,
     });
   }

@@ -5,6 +5,7 @@ import type { Account, FolderNode } from '@/schemas';
 import { generateUniqueFolderName } from '@/services/folderService';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
+  type ImportAsNewTemplateOptions,
   importAsNewTemplate,
   importFromFile,
   importItemsFromCsvFile,
@@ -47,6 +48,7 @@ export function useImportDialog({
 }: UseImportDialogProps) {
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
+  const [autoCategorize, setAutoCategorize] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const lastFileIdRef = useRef<string>('null');
 
@@ -55,6 +57,7 @@ export function useImportDialog({
   const resetState = () => {
     setFileType(null);
     setTemplateName('');
+    setAutoCategorize(false);
     setSelectedFile(null);
     lastFileIdRef.current = 'null';
   };
@@ -143,12 +146,16 @@ export function useImportDialog({
         if (!templateName.trim()) {
           throw new Error('Please enter a list name');
         }
+        const options: ImportAsNewTemplateOptions = {
+          autoCategorize,
+        };
         result = await importAsNewTemplate(
           file,
           account,
           templateName.trim(),
           detectedType,
           parentFolder,
+          options,
         );
       }
 
@@ -202,7 +209,12 @@ export function useImportDialog({
 
     // Show template name input only for top-level TXT/CSV and when no result
     return file && !isFolderLevel && fileType !== 'json' && !result ? (
-      <ImportFormFields templateName={templateName} onTemplateNameChange={setTemplateName} />
+      <ImportFormFields
+        templateName={templateName}
+        onTemplateNameChange={setTemplateName}
+        autoCategorize={autoCategorize}
+        onAutoCategorizeChange={setAutoCategorize}
+      />
     ) : null;
   };
 
