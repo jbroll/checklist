@@ -4,6 +4,23 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Custom plugin to relax CSP in development mode for Vite HMR
+function relaxCspForDev(): Plugin {
+  return {
+    name: 'relax-csp-for-dev',
+    transformIndexHtml(html, ctx) {
+      if (ctx.server) {
+        // In dev mode, remove CSP entirely to allow Vite HMR and WASM
+        return html.replace(
+          /<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/,
+          '<!-- CSP disabled in dev mode for Vite HMR -->',
+        );
+      }
+      return html;
+    },
+  };
+}
+
 // Custom plugin to serve static website files in development
 function serveWebsiteFiles(): Plugin {
   return {
@@ -87,6 +104,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    relaxCspForDev(),
     serveWebsiteFiles(),
     VitePWA({
       registerType: 'autoUpdate',
