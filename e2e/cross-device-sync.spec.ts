@@ -45,8 +45,8 @@ async function isAuthenticated(page) {
 
 // Helper to sign out
 async function signOut(page) {
-  // Look for sign out in dropdown menu
-  const moreOptions = page.getByLabel('More options');
+  // Look for sign out in dropdown menu (in header)
+  const moreOptions = page.locator('header').getByLabel('More options');
   if (await moreOptions.isVisible()) {
     await moreOptions.click();
     const signOutButton = page.getByRole('menuitem', { name: /sign out/i });

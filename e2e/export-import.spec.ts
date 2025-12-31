@@ -14,7 +14,7 @@ test.describe('Export Functionality', () => {
     });
 
     // Open More options dropdown and click Export
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
 
     // Check dialog is visible with new title and description
@@ -30,7 +30,7 @@ test.describe('Export Functionality', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -47,7 +47,7 @@ test.describe('Export Functionality', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
 
     // Export & Download button should be enabled for top-level export
@@ -64,7 +64,7 @@ test.describe('Import Functionality', () => {
     });
 
     // Open More options dropdown and click Import
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
 
     // Check dialog is visible with new title and description
@@ -84,7 +84,7 @@ test.describe('Import Functionality', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
 
     const dialog = page.getByRole('dialog');
@@ -97,7 +97,7 @@ test.describe('Import Functionality', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -114,7 +114,7 @@ test.describe('Import Functionality', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
 
     // Import button should be disabled
@@ -130,7 +130,7 @@ test.describe('Export/Import Dialog Interactions', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -147,7 +147,7 @@ test.describe('Export/Import Dialog Interactions', () => {
       timeout: 10000,
     });
 
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -165,7 +165,7 @@ test.describe('Export/Import Dialog Interactions', () => {
     });
 
     // Open Export dialog
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
     await expect(page.getByRole('heading', { name: /^export$/i })).toBeVisible();
 
@@ -174,7 +174,7 @@ test.describe('Export/Import Dialog Interactions', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
 
     // Open Import dialog
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
     await expect(page.getByRole('heading', { name: /^import$/i })).toBeVisible();
 

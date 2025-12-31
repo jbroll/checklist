@@ -44,7 +44,7 @@ test.describe('Application Smoke Tests', () => {
     });
 
     // Open the More options dropdown
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // Check for Export option in dropdown
     await expect(page.getByRole('menuitem', { name: /export/i })).toBeVisible();
@@ -62,7 +62,7 @@ test.describe('Application Smoke Tests', () => {
     });
 
     // Open the More options dropdown
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // Click Export menu item
     await page.getByRole('menuitem', { name: /export/i }).click();
@@ -81,7 +81,7 @@ test.describe('Application Smoke Tests', () => {
     });
 
     // Open the More options dropdown
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // Click Import menu item
     await page.getByRole('menuitem', { name: /import/i }).click();
@@ -100,7 +100,7 @@ test.describe('Application Smoke Tests', () => {
     });
 
     // Open the More options dropdown and click Export
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /export/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -120,7 +120,7 @@ test.describe('Application Smoke Tests', () => {
     });
 
     // Open the More options dropdown and click Import
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 

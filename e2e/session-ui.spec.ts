@@ -8,7 +8,7 @@
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
-  test('should show empty state when no templates exist', async ({ page }) => {
+  test('should show default Quick Errands list for new users', async ({ page }) => {
     await page.goto('/');
 
     // Wait for page to load
@@ -16,8 +16,8 @@ test.describe('UI - Template Selection', () => {
       timeout: 10000,
     });
 
-    // Should show TreeView empty state
-    await expect(page.getByText(/no lists yet/i)).toBeVisible();
+    // Should show the default Quick Errands list
+    await expect(page.getByText(/quick errands/i)).toBeVisible();
   });
 
   test('should navigate to session view when selecting a template', async ({ page }) => {

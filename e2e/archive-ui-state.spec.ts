@@ -37,8 +37,8 @@ test.describe('Archive UI State Management', () => {
     await expect(page.getByRole('button', { name: /new folder/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /new list/i })).toBeVisible();
 
-    // Open the More options dropdown
-    await page.getByLabel('More options').click();
+    // Open the More options dropdown (in header)
+    await page.locator('header').getByLabel('More options').click();
 
     // Enable "Show Archived Lists" view
     await page.getByRole('menuitemcheckbox', { name: /show archived lists/i }).click();
@@ -50,14 +50,14 @@ test.describe('Archive UI State Management', () => {
   });
 
   test('should toggle archived lists view', async ({ page }) => {
-    // Open menu and enable archived view
-    await page.getByLabel('More options').click();
+    // Open menu and enable archived view (in header)
+    await page.locator('header').getByLabel('More options').click();
     const checkbox = page.getByRole('menuitemcheckbox', { name: /show archived lists/i });
     await expect(checkbox).toHaveAttribute('aria-checked', 'false');
     await checkbox.click();
 
     // Re-open menu and verify it's now checked
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await expect(
       page.getByRole('menuitemcheckbox', { name: /show archived lists/i }),
     ).toHaveAttribute('aria-checked', 'true');
@@ -66,7 +66,7 @@ test.describe('Archive UI State Management', () => {
     await page.getByRole('menuitemcheckbox', { name: /show archived lists/i }).click();
 
     // Re-open menu and verify it's unchecked
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await expect(
       page.getByRole('menuitemcheckbox', { name: /show archived lists/i }),
     ).toHaveAttribute('aria-checked', 'false');

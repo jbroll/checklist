@@ -299,7 +299,7 @@ test.describe('Core Functionality', () => {
 
   test('export/import UI - dialogs open correctly', async ({ page }) => {
     // Open More options menu
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // Click Export
     await page.getByRole('menuitem', { name: /export/i }).click();
@@ -313,7 +313,7 @@ test.describe('Core Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
 
     // Open Import dialog
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     await page.getByRole('menuitem', { name: /import/i }).click();
 
     // Import dialog should open

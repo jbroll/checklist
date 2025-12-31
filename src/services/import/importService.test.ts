@@ -634,11 +634,11 @@ Item2,Cat2`;
 
       // Verify all 4 items are in defaultItems
       expect(mockTemplate.defaultItems).toBeDefined();
-      expect(Object.keys(mockTemplate.defaultItems!).length).toBe(4);
+      expect(Object.keys(mockTemplate.defaultItems ?? {}).length).toBe(4);
 
       // Each item should have defaultItems[id] = true
       for (const item of mockTemplate.items) {
-        expect(mockTemplate.defaultItems![item.id]).toBe(true);
+        expect(mockTemplate.defaultItems?.[item.id]).toBe(true);
       }
     });
 
@@ -679,14 +679,14 @@ Item2,Cat2`;
 
       // But defaultItems should only have the 2 leaf items
       expect(mockTemplate.defaultItems).toBeDefined();
-      expect(Object.keys(mockTemplate.defaultItems!).length).toBe(2);
+      expect(Object.keys(mockTemplate.defaultItems ?? {}).length).toBe(2);
 
       // Verify only items (not categories) are in defaultItems
       for (const item of mockTemplate.items) {
         if (item.type === 'item') {
-          expect(mockTemplate.defaultItems![item.id]).toBe(true);
+          expect(mockTemplate.defaultItems?.[item.id]).toBe(true);
         } else {
-          expect(mockTemplate.defaultItems![item.id]).toBeUndefined();
+          expect(mockTemplate.defaultItems?.[item.id]).toBeUndefined();
         }
       }
     });

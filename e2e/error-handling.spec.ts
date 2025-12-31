@@ -28,7 +28,7 @@ async function waitForPageLoad(page) {
  * Open import dialog
  */
 async function openImportDialog(page) {
-  await page.getByLabel('More options').click();
+  await page.locator('header').getByLabel('More options').click();
   await page.getByRole('menuitem', { name: /import/i }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
@@ -59,7 +59,7 @@ test.describe('Network Errors', () => {
     });
 
     // Try to open upgrade dialog (which normally fetches subscription data)
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // App should still be functional even if billing API fails
     const moreMenu = page.getByRole('menu');
@@ -367,7 +367,7 @@ test.describe('Subscription Limits', () => {
     await waitForPageLoad(page);
 
     // Open more menu and look for upgrade option
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     const upgradeOption = page.getByRole('menuitem', { name: /upgrade|subscription/i });
     const upgradeVisible = await upgradeOption.isVisible().catch(() => false);
@@ -564,7 +564,7 @@ test.describe('General Error Recovery', () => {
     });
 
     // Try actions that might trigger API calls
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
 
     // UI should still be responsive
     await expect(page.getByRole('menu')).toBeVisible();
@@ -590,7 +590,7 @@ test.describe('General Error Recovery', () => {
     });
 
     // Try to trigger checkout (if upgrade dialog is available)
-    await page.getByLabel('More options').click();
+    await page.locator('header').getByLabel('More options').click();
     const menuItems = await page.getByRole('menuitem').all();
 
     // Look for upgrade option

@@ -167,6 +167,57 @@ export const Account = co
       );
       root.$jazz.set('userSettings', userSettings);
     }
+
+    // Step 6: Create default "Quick Errands" list for new users with no lists
+    if (root.folders.length === 0) {
+      const now = new Date();
+      const errands = [
+        'Bank',
+        'Dry cleaning',
+        'Grocery store',
+        'Post office',
+        'Gas station',
+        'Pharmacy',
+      ];
+
+      // Create items with unique IDs
+      const items = errands.map((name, index) => ({
+        id: crypto.randomUUID(),
+        name,
+        type: 'item' as const,
+        path: name,
+        expanded: false,
+        sortOrder: index,
+        archived: false,
+        defaultQuantity: '',
+        createdAt: now,
+      }));
+
+      // Set all items as default (pre-selected)
+      const defaultItems: Record<string, boolean> = {};
+      for (const item of items) {
+        defaultItems[item.id] = true;
+      }
+
+      // Create the template folder
+      const quickErrands = FolderNode.create(
+        {
+          name: 'Quick Errands',
+          expanded: false,
+          archived: false,
+          items,
+          sessions: [],
+          showZoneHeadings: false,
+          defaultItems,
+          owner: account,
+          createdAt: now,
+          updatedAt: now,
+        },
+        { owner: account },
+      );
+
+      root.folders.$jazz.push(quickErrands);
+    }
   });
 
 // Wire up the forward reference from tree.ts to Account
