@@ -23,24 +23,18 @@
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline';
+      script-src 'self';
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: blob:;
       font-src 'self';
       connect-src 'self' wss://cloud.jazz.tools https://api.stripe.com https://*.googleapis.com;
       frame-src https://js.stripe.com https://accounts.google.com https://appleid.apple.com;
+      frame-ancestors 'none';
     " />
 
     <title>kjekit</title>
-    <!-- Prevent flash of wrong theme -->
-    <script>
-      (function() {
-        const stored = localStorage.getItem('checklist-theme');
-        const theme = stored === 'light' || stored === 'dark' ? stored : 'system';
-        const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (isDark) document.documentElement.classList.add('dark');
-      })();
-    </script>
+    <!-- Prevent flash of wrong theme - external script for CSP compliance -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
