@@ -164,7 +164,8 @@ describe('Verified Emails API', () => {
         .send({});
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Email is required');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('Email is required');
     });
 
     it('should reject primary email as alias', async () => {
@@ -178,7 +179,8 @@ describe('Verified Emails API', () => {
         .send({ email: 'primary@example.com' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('This is already your primary email');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('This is already your primary email');
     });
 
     it('should reject primary email case-insensitively', async () => {
@@ -192,7 +194,8 @@ describe('Verified Emails API', () => {
         .send({ email: 'PRIMARY@EXAMPLE.COM' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('This is already your primary email');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('This is already your primary email');
     });
 
     it('should reject email already used as primary by another user', async () => {
@@ -206,7 +209,8 @@ describe('Verified Emails API', () => {
         .send({ email: testUser2.email });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('This email cannot be added');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('This email cannot be added');
     });
 
     it('should reject email already verified by another user', async () => {
@@ -226,7 +230,8 @@ describe('Verified Emails API', () => {
         .send({ email: 'taken@company.com' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('This email cannot be added');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('This email cannot be added');
     });
 
     it('should enforce rate limiting', async () => {
@@ -242,7 +247,8 @@ describe('Verified Emails API', () => {
         .send({ email: 'work@company.com' });
 
       expect(response.status).toBe(429);
-      expect(response.body.error).toContain('Too many requests');
+      expect(response.body.error).toBe('rate_limited');
+      expect(response.body.message).toContain('Too many requests');
     });
 
     it('should normalize email to lowercase', async () => {
@@ -278,7 +284,7 @@ describe('Verified Emails API', () => {
         .send({ email: 'one-more@company.com' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('limit_exceeded');
+      expect(response.body.error).toBe('bad_request');
       expect(response.body.message).toContain('Maximum of 10');
     });
 
@@ -349,7 +355,8 @@ describe('Verified Emails API', () => {
         .send({});
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Token is required');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('Token is required');
     });
 
     it('should reject invalid token', async () => {
@@ -363,7 +370,8 @@ describe('Verified Emails API', () => {
         .send({ token: 'invalid-token' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid or expired verification link');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('Invalid or expired verification link');
     });
 
     it('should reject expired token', async () => {
@@ -377,7 +385,8 @@ describe('Verified Emails API', () => {
         .send({ token: 'expired_token' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid or expired verification link');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('Invalid or expired verification link');
     });
 
     it('should reject token belonging to different user', async () => {
@@ -391,7 +400,8 @@ describe('Verified Emails API', () => {
         .send({ token: 'wrong_user_token' });
 
       expect(response.status).toBe(403);
-      expect(response.body.error).toContain('sign in with the account');
+      expect(response.body.error).toBe('forbidden');
+      expect(response.body.message).toContain('sign in with the account');
     });
 
     it('should reject if email was taken during verification window', async () => {
@@ -411,7 +421,8 @@ describe('Verified Emails API', () => {
         .send({ token: `token_${testUser.id}_race@company.com` });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('This email is no longer available');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toBe('This email is no longer available');
     });
   });
 
@@ -551,7 +562,8 @@ describe('Verified Emails API', () => {
         .delete('/api/verified-emails/ve-other-del');
 
       expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Email not found');
+      expect(response.body.error).toBe('not_found');
+      expect(response.body.message).toBe('Email not found');
 
       // Verify not deleted
       const entry = sqliteDb.prepare(
@@ -570,7 +582,8 @@ describe('Verified Emails API', () => {
         .delete('/api/verified-emails/non-existent-id');
 
       expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Email not found');
+      expect(response.body.error).toBe('not_found');
+      expect(response.body.message).toBe('Email not found');
     });
 
     it('should require authentication', async () => {

@@ -184,7 +184,7 @@ describe('Billing Routes', () => {
 
       const response = await request(app).get('/api/billing/subscription').expect(401);
 
-      expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.error).toBe('unauthorized');
     });
 
     it('should return user subscription when authenticated', async () => {
@@ -222,7 +222,7 @@ describe('Billing Routes', () => {
 
       const response = await request(app).get('/api/billing/usage').expect(401);
 
-      expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.error).toBe('unauthorized');
     });
 
     it('should return usage info when authenticated', async () => {
@@ -252,7 +252,7 @@ describe('Billing Routes', () => {
 
       const response = await request(app).post('/api/billing/usage').send({ listCount: 5 }).expect(401);
 
-      expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.error).toBe('unauthorized');
     });
 
     it('should record usage when authenticated', async () => {
@@ -323,7 +323,8 @@ describe('Billing Routes', () => {
 
       const response = await request(app).post('/api/billing/checkout').send({ tierSlug: 'plus' }).expect(503);
 
-      expect(response.body.error).toBe('Billing is not configured');
+      expect(response.body.error).toBe('service_unavailable');
+      expect(response.body.message).toBe('Billing is not configured');
     });
   });
 
@@ -333,7 +334,8 @@ describe('Billing Routes', () => {
 
       const response = await request(app).post('/api/billing/portal').expect(503);
 
-      expect(response.body.error).toBe('Billing is not configured');
+      expect(response.body.error).toBe('service_unavailable');
+      expect(response.body.message).toBe('Billing is not configured');
     });
   });
 });
@@ -357,7 +359,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/checkout').send({ tierSlug: 'plus' }).expect(401);
 
-      expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.error).toBe('unauthorized');
     });
 
     it('should return 400 for invalid tier', async () => {
@@ -439,7 +441,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/checkout').send({ tierSlug: 'plus' }).expect(500);
 
-      expect(response.body.error).toBe('Failed to create checkout session');
+      expect(response.body.error).toBe('server_error');
     });
 
     it('should return 500 if checkout session throws', async () => {
@@ -454,7 +456,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/checkout').send({ tierSlug: 'plus' }).expect(500);
 
-      expect(response.body.error).toBe('Failed to create checkout session');
+      expect(response.body.error).toBe('server_error');
     });
   });
 
@@ -464,7 +466,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/portal').expect(401);
 
-      expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.error).toBe('unauthorized');
     });
 
     it('should create portal session', async () => {
@@ -495,7 +497,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/portal').expect(500);
 
-      expect(response.body.error).toBe('Failed to create portal session');
+      expect(response.body.error).toBe('server_error');
     });
 
     it('should return 500 if portal session throws', async () => {
@@ -510,7 +512,7 @@ describe('Billing Routes (Stripe enabled)', () => {
 
       const response = await request(app).post('/api/billing/portal').expect(500);
 
-      expect(response.body.error).toBe('Failed to create portal session');
+      expect(response.body.error).toBe('server_error');
     });
   });
 });

@@ -183,7 +183,7 @@ describe('Folder Sharing API', () => {
 
       expect(response.status).toBe(429);
       expect(response.body.error).toBe('rate_limited');
-      expect(response.body.message).toContain('Too many invite requests');
+      expect(response.body.message).toContain('Too many requests');
     });
   });
 
@@ -285,7 +285,7 @@ describe('Folder Sharing API', () => {
         .send({ token });
 
       expect(response.status).toBe(403);
-      expect(response.body.error).toBe('email_mismatch');
+      expect(response.body.error).toBe('forbidden');
       expect(response.body.message).toBe('This invite is not associated with your account');
     });
 
@@ -360,7 +360,7 @@ describe('Folder Sharing API', () => {
         .send({ token });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_token');
+      expect(response.body.error).toBe('bad_request');
     });
   });
 
@@ -592,7 +592,7 @@ describe('Folder Sharing API', () => {
         .send({ token });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('no_jazz_account');
+      expect(response.body.error).toBe('bad_request');
     });
 
     it('should reject expired invite on accept', async () => {
@@ -627,7 +627,8 @@ describe('Folder Sharing API', () => {
         .send({ token: expiredToken });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('expired');
+      expect(response.body.error).toBe('bad_request');
+      expect(response.body.message).toContain('expired');
     });
 
     it('should handle Jazz addToFolderGroup failure gracefully', async () => {
@@ -664,7 +665,7 @@ describe('Folder Sharing API', () => {
         .send({ token });
 
       expect(response.status).toBe(500);
-      expect(response.body.error).toBe('failed_to_grant_access');
+      expect(response.body.error).toBe('server_error');
 
       // Invite should NOT be marked as accepted
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(token) as any;
@@ -753,7 +754,7 @@ describe('Folder Sharing API', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.error).toBe('bad_request');
       expect(response.body.message).toContain('Jazz account ID is required');
     });
   });
@@ -793,7 +794,7 @@ describe('Folder Sharing API', () => {
         .get('/api/shares/folders/invalid-id-format/invites');
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.error).toBe('bad_request');
       expect(response.body.message).toContain('Invalid folder ID');
     });
 
@@ -807,7 +808,7 @@ describe('Folder Sharing API', () => {
         .get('/api/shares/folders/not-a-coid/collaborators');
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.error).toBe('bad_request');
     });
 
     it('should reject invalid folder ID format in DELETE collaborator', async () => {
@@ -820,7 +821,7 @@ describe('Folder Sharing API', () => {
         .delete('/api/shares/folders/bad-folder/collaborators/co_zvalidaccount');
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.error).toBe('bad_request');
     });
 
     it('should reject invalid account ID format in DELETE collaborator', async () => {
@@ -833,7 +834,7 @@ describe('Folder Sharing API', () => {
         .delete('/api/shares/folders/co_zvalidfolder/collaborators/bad-account');
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.error).toBe('bad_request');
     });
 
     it('should accept valid Jazz CoValue ID format', async () => {
@@ -932,7 +933,7 @@ describe('Folder Sharing API', () => {
         .get('/api/shares/folders/co_ztesterror/collaborators');
 
       expect(response.status).toBe(500);
-      expect(response.body.error).toBe('failed_to_get_collaborators');
+      expect(response.body.error).toBe('server_error');
     });
   });
 
@@ -1021,7 +1022,7 @@ describe('Folder Sharing API', () => {
         .delete(`/api/shares/folders/co_ztestowner/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(500);
-      expect(response.body.error).toBe('failed_to_remove_collaborator');
+      expect(response.body.error).toBe('server_error');
     });
 
     it('should require authentication', async () => {
