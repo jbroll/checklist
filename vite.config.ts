@@ -59,6 +59,10 @@ export default defineConfig({
   build: {
     // Enable source maps in production for better debugging
     sourcemap: true,
+    // Strip console.log/warn in production (keeps some from vendor libs)
+    esbuild: {
+      drop: ['debugger', 'console'],
+    },
     rollupOptions: {
       output: {
         manualChunks: {
