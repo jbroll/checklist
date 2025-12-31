@@ -88,19 +88,12 @@ export const SessionItemRow = memo(function SessionItemRow({
 
       // Check if editing is allowed in current mode
       if (!canEditItem) {
-        const timestamp = (performance.now() / 1000).toFixed(3);
-        console.log(`[${timestamp}s] [SessionItemRow] Cannot edit - canEditItem is false`);
         return;
       }
 
       // Don't trigger if clicking on buttons
       if ((e.target as HTMLElement).closest('button')) return;
 
-      const timestamp = (performance.now() / 1000).toFixed(3);
-      console.log(
-        `[${timestamp}s] [SessionItemRow] Double-tap detected, entering edit mode for:`,
-        item.name,
-      );
       setEditValue(item.name);
       justEnteredEditMode.current = true;
       onEnterEditMode?.();
@@ -132,13 +125,9 @@ export const SessionItemRow = memo(function SessionItemRow({
 
     // Ignore blur events that happen immediately after entering edit mode
     if (justEnteredEditMode.current) {
-      const timestamp = (performance.now() / 1000).toFixed(3);
-      console.log(`[${timestamp}s] [SessionItemRow] Ignoring premature blur`);
       return;
     }
 
-    const timestamp = (performance.now() / 1000).toFixed(3);
-    console.log(`[${timestamp}s] [SessionItemRow] Saving edit for:`, item.name);
     const trimmedValue = editValue.trim();
 
     // Validate non-empty
@@ -346,15 +335,7 @@ export const SessionItemRow = memo(function SessionItemRow({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            const timestamp = (performance.now() / 1000).toFixed(3);
-            console.log(
-              `[${timestamp}s] [SessionItemRow] Right button clicked on:`,
-              item.name,
-              '- isAnyItemBeingEditedOrDragged:',
-              isAnyItemBeingEditedOrDragged,
-            );
             if (isAnyItemBeingEditedOrDragged) {
-              console.log(`[${timestamp}s] [SessionItemRow] BLOCKED - button disabled`);
               return; // Disable during edit/drag
             }
             if (showDeleteIcon && onDeleteItem) {

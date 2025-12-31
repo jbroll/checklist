@@ -102,11 +102,14 @@ const sqliteDb = new Database(dbPath);
 export { sqliteDb };
 
 // Allowed origins for multi-domain OAuth
+// Only include localhost origins in development
 const allowedOrigins = [
   'https://app.kjekit.com',
   'https://checklist-app.rkroll.com',
-  'http://localhost:5173',
-  'http://localhost:8765',
+  ...(process.env.NODE_ENV !== 'production' ? [
+    'http://localhost:5173',
+    'http://localhost:8765',
+  ] : []),
 ];
 
 // Shared auth configuration (everything except baseURL)

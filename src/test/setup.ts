@@ -90,5 +90,6 @@ vi.mock('@/lib/auth-client', () => ({
         },
       }),
     ),
+    requestPasswordReset: vi.fn(),
   },
 }));

@@ -179,7 +179,9 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
         return ApiErrors.badRequest(res, result.error);
       }
 
-      console.log(`[verified-emails] User ${session.user.email} verified additional email: ${payload.email}`);
+      // Log with masked emails for privacy
+      const maskEmail = (e: string) => e.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+      console.log(`[verified-emails] User ${maskEmail(session.user.email)} verified additional email: ${maskEmail(payload.email)}`);
 
       res.json({ success: true, email: payload.email });
     } catch (error) {
@@ -234,7 +236,9 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
 
       db.prepare('DELETE FROM verified_email WHERE id = ?').run(id);
 
-      console.log(`[verified-emails] User ${session.user.email} removed verified email: ${email.email}`);
+      // Log with masked emails for privacy
+      const maskEmail = (e: string) => e.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+      console.log(`[verified-emails] User ${maskEmail(session.user.email)} removed verified email: ${maskEmail(email.email)}`);
 
       res.json({ success: true });
     } catch (error) {

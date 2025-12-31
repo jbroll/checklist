@@ -97,12 +97,11 @@ export function useViewStateCleanup(account: InstanceOfSchema<typeof Account> | 
         const totalRemoved =
           result.foldersRemoved + result.templatesRemoved + result.sessionsRemoved;
 
-        if (totalRemoved > 0) {
+        if (import.meta.env.DEV && totalRemoved > 0) {
           console.log(`[ViewState Cleanup] Removed ${totalRemoved} stale entries:`, result);
         }
-      } catch (error) {
-        // Don't crash the app if cleanup fails
-        console.error('[ViewState Cleanup] Error during cleanup:', error);
+      } catch {
+        // Don't crash the app if cleanup fails - silently ignore
       }
     };
 

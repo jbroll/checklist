@@ -135,7 +135,10 @@ app.use(
 
 // Request logging middleware with request ID
 app.use((req, res, next) => {
-  const requestId = req.headers['x-request-id'] as string || crypto.randomUUID();
+  // Validate client-provided request ID format (UUID only) to prevent log injection
+  const clientRequestId = req.headers['x-request-id'] as string;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const requestId = (clientRequestId && uuidRegex.test(clientRequestId)) ? clientRequestId : crypto.randomUUID();
   req.id = requestId;
   res.setHeader('x-request-id', requestId);
   const timestamp = new Date().toISOString();
@@ -205,7 +208,9 @@ app.delete('/api/account', async (req, res) => {
     const userId = session.user.id;
     const userEmail = session.user.email;
 
-    console.log(`[account-deletion] Deleting account for user ${userId} (${userEmail})`);
+    // Log with masked email for privacy
+    const maskedEmail = userEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+    console.log(`[account-deletion] Deleting account for user ${userId.slice(0, 8)}... (${maskedEmail})`);
 
     // Use a transaction to ensure atomic deletion
     const deleteAccount = sqliteDb.transaction(() => {
@@ -227,7 +232,7 @@ app.delete('/api/account', async (req, res) => {
 
     deleteAccount();
 
-    console.log(`[account-deletion] Successfully deleted account for user ${userId}`);
+    console.log(`[account-deletion] Successfully deleted account for user ${userId.slice(0, 8)}...`);
 
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (error) {

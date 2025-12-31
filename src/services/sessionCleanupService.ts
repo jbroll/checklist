@@ -88,7 +88,7 @@ export function cleanupExpiredSessions(account: AccountParam): number {
 
   markCleanupRun();
 
-  if (archivedCount > 0) {
+  if (import.meta.env.DEV && archivedCount > 0) {
     console.log(`[session-cleanup] Archived ${archivedCount} expired sessions`);
   }
 
@@ -108,7 +108,7 @@ export function runCleanupIfNeeded(account: AccountParam): void {
     try {
       cleanupExpiredSessions(account);
     } catch (error) {
-      console.error('[session-cleanup] Error during cleanup:', error);
+      if (import.meta.env.DEV) console.error('[session-cleanup] Error during cleanup:', error);
     }
   }, 5000); // Delay 5 seconds after app load
 }

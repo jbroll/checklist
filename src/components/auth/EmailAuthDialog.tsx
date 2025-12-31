@@ -117,7 +117,7 @@ export function EmailAuthDialog({ open, onOpenChange }: EmailAuthDialogProps) {
     setError(null);
 
     try {
-      await betterAuthClient.forgetPassword({
+      await betterAuthClient.requestPasswordReset({
         email,
         redirectTo: `${window.location.origin}/reset-password`,
       });

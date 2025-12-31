@@ -41,8 +41,9 @@ export async function initAgent() {
 
     worker = result.worker;
     console.log('✅ Jazz agent initialized');
-    console.log(`   Account ID: ${accountId}`);
-    console.log(`   Sync server: ${syncServer}`);
+    console.log(`   Account ID: ${accountId.slice(0, 12)}...`);
+    // Don't log sync server URL - it may contain API key
+    console.log(`   Sync server: ${jazzPeer}`);
   } catch (error) {
     console.error('❌ Failed to initialize Jazz agent:', error);
     throw error;
@@ -96,7 +97,8 @@ export async function validateSenderAccess(
       member.id === senderJazzAccountId
     );
 
-    console.log(`Access validation: ${senderJazzAccountId} ${isMember ? 'HAS' : 'DOES NOT HAVE'} access to ${folderCoValueId}`);
+    // Log with truncated IDs for privacy
+    console.log(`Access validation: ${senderJazzAccountId.slice(0, 12)}... ${isMember ? 'HAS' : 'DOES NOT HAVE'} access to ${folderCoValueId.slice(0, 12)}...`);
 
     return isMember;
   } catch (error) {
@@ -153,13 +155,13 @@ export async function addToFolderGroup(
     );
 
     if (existingMember) {
-      console.log(`⚠️ User ${recipientJazzAccountId} is already a member of ${folderCoValueId} - skipping`);
+      console.log(`⚠️ User ${recipientJazzAccountId.slice(0, 12)}... is already a member of ${folderCoValueId.slice(0, 12)}... - skipping`);
       return { alreadyMember: true };
     }
 
     ownerGroup.addMember(recipientAccount, jazzRole);
 
-    console.log(`✅ Added ${recipientJazzAccountId} to ${folderCoValueId} with role ${jazzRole}`);
+    console.log(`✅ Added ${recipientJazzAccountId.slice(0, 12)}... to ${folderCoValueId.slice(0, 12)}... with role ${jazzRole}`);
 
     // Wait for sync to ensure the change is persisted
     await ownerGroup.$jazz.waitForSync();
@@ -257,7 +259,7 @@ export async function removeFromFolderGroup(
     // Remove member from folder's owner group
     ownerGroup.removeMember(userAccount);
 
-    console.log(`✅ Removed ${userJazzAccountId} from ${folderCoValueId}`);
+    console.log(`✅ Removed ${userJazzAccountId.slice(0, 12)}... from ${folderCoValueId.slice(0, 12)}...`);
 
     // Wait for sync
     await ownerGroup.$jazz.waitForSync();

@@ -1,11 +1,5 @@
 import { useCallback, useState } from 'react';
 
-// Helper to get timestamp in seconds with milliseconds
-const getTimestamp = () => {
-  const now = performance.now() / 1000;
-  return now.toFixed(3);
-};
-
 /**
  * Interaction modes for SessionView
  *
@@ -66,60 +60,23 @@ export function useSessionInteractionMode(): {
 
   // Mode transition functions
   const enterAddMode = useCallback(() => {
-    setInteractionMode((prev) => {
-      if (prev.mode !== 'adding') {
-        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ ADDING');
-      }
-      return { mode: 'adding' };
-    });
+    setInteractionMode(() => ({ mode: 'adding' }));
   }, []);
 
   const enterEditMode = useCallback((itemId: string) => {
-    setInteractionMode((prev) => {
-      if (prev.mode !== 'editing' || (prev.mode === 'editing' && prev.itemId !== itemId)) {
-        console.log(
-          `[${getTimestamp()}s] [InteractionMode] State changed:`,
-          prev.mode,
-          '→ EDITING (item:',
-          itemId,
-          ')',
-        );
-      }
-      return { mode: 'editing', itemId };
-    });
+    setInteractionMode(() => ({ mode: 'editing', itemId }));
   }, []);
 
   const enterDragMode = useCallback((itemId: string) => {
-    setInteractionMode((prev) => {
-      if (prev.mode !== 'dragging' || (prev.mode === 'dragging' && prev.itemId !== itemId)) {
-        console.log(
-          `[${getTimestamp()}s] [InteractionMode] State changed:`,
-          prev.mode,
-          '→ DRAGGING (item:',
-          itemId,
-          ')',
-        );
-      }
-      return { mode: 'dragging', itemId };
-    });
+    setInteractionMode(() => ({ mode: 'dragging', itemId }));
   }, []);
 
   const exitToNormal = useCallback(() => {
-    setInteractionMode((prev) => {
-      if (prev.mode !== 'normal') {
-        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ NORMAL');
-      }
-      return { mode: 'normal' };
-    });
+    setInteractionMode(() => ({ mode: 'normal' }));
   }, []);
 
   const exitToAdding = useCallback(() => {
-    setInteractionMode((prev) => {
-      if (prev.mode !== 'adding') {
-        console.log(`[${getTimestamp()}s] [InteractionMode] State changed:`, prev.mode, '→ ADDING');
-      }
-      return { mode: 'adding' };
-    });
+    setInteractionMode(() => ({ mode: 'adding' }));
   }, []);
 
   // Helper: Exit edit/drag mode - returns to previous mode (ADDING or NORMAL)

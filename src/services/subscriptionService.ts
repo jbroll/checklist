@@ -307,9 +307,10 @@ export async function syncSubscriptionFromBackend(account: AccountParam): Promis
     );
     userSettings.$jazz.set('subscriptionSyncedAt', Date.now());
 
-    console.log('[subscription] Synced from backend:', subscription.tierSlug);
+    if (import.meta.env.DEV)
+      console.log('[subscription] Synced from backend:', subscription.tierSlug);
   } catch (error) {
-    console.error('[subscription] Error syncing from backend:', error);
+    if (import.meta.env.DEV) console.error('[subscription] Error syncing from backend:', error);
   }
 }
 
