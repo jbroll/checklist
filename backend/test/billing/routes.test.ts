@@ -586,7 +586,8 @@ describe('Stripe Webhook', () => {
         .send(JSON.stringify({ type: 'test' }))
         .expect(400);
 
-      expect(response.text).toContain('Webhook Error');
+      expect(response.body.error).toBe('webhook_error');
+      expect(response.body.message).toBe('Invalid webhook signature');
     });
 
     it('should handle checkout.session.completed event', async () => {

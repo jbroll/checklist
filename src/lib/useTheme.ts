@@ -29,7 +29,13 @@ function applyTheme(theme: Theme) {
   }
 }
 
-export function useTheme() {
+export function useTheme(): {
+  theme: Theme;
+  effectiveTheme: 'light' | 'dark';
+  setTheme: (newTheme: Theme) => void;
+  toggleTheme: () => void;
+  isDark: boolean;
+} {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
 
   const setTheme = useCallback((newTheme: Theme) => {

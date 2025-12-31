@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from 'react';
  * Hook to provide visual feedback during long press drag activation.
  * Returns true when user is holding but drag hasn't started yet.
  */
-export function useLongPressIndicator(isDragging: boolean) {
+export function useLongPressIndicator(isDragging: boolean): {
+  isHolding: boolean;
+  longPressHandlers: {
+    onPointerDown: () => void;
+    onPointerUp: () => void;
+    onPointerCancel: () => void;
+  };
+} {
   const [isHolding, setIsHolding] = useState(false);
   const timeoutRef = useRef<number | null>(null);
 

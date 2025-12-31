@@ -66,7 +66,12 @@ function stateToHash(state: NavState): string {
  * - Deep linking via URL hash
  * - Programmatic navigation
  */
-export function useNavigationHistory() {
+export function useNavigationHistory(): {
+  navState: NavState;
+  navigateTo: (newState: NavState) => void;
+  goBack: () => void;
+  replaceState: (newState: NavState) => void;
+} {
   const [navState, setNavState] = useState<NavState>(() => parseHash(window.location.hash));
 
   // Listen for browser back/forward

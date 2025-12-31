@@ -258,6 +258,51 @@ describe('Verified Emails API', () => {
       expect(response.status).toBe(200);
       // The token should be created with lowercase email
     });
+
+    it('should reject when user has reached max verified emails limit', async () => {
+      // Add 10 verified emails (the max limit)
+      for (let i = 0; i < 10; i++) {
+        sqliteDb.prepare(`
+          INSERT INTO verified_email (id, user_id, email, verified_at, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(`ve-limit-${i}`, testUser.id, `limit${i}@company.com`, Date.now(), Date.now());
+      }
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/verified-emails/request')
+        .send({ email: 'one-more@company.com' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('limit_exceeded');
+      expect(response.body.message).toContain('Maximum of 10');
+    });
+
+    it('should allow adding email when under the limit', async () => {
+      // Add 9 verified emails (under the limit)
+      for (let i = 0; i < 9; i++) {
+        sqliteDb.prepare(`
+          INSERT INTO verified_email (id, user_id, email, verified_at, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(`ve-under-${i}`, testUser.id, `under${i}@company.com`, Date.now(), Date.now());
+      }
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/verified-emails/request')
+        .send({ email: 'tenth@company.com' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
   });
 
   describe('POST /api/verified-emails/confirm', () => {

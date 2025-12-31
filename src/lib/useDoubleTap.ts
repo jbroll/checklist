@@ -12,7 +12,10 @@ interface UseDoubleTapOptions {
  * onDoubleClick doesn't work consistently on mobile, especially iOS Safari.
  * This hook handles both click and touch events properly.
  */
-export function useDoubleTap({ onDoubleTap, delay = 300 }: UseDoubleTapOptions) {
+export function useDoubleTap({ onDoubleTap, delay = 300 }: UseDoubleTapOptions): {
+  onClick: (e: React.MouseEvent | React.TouchEvent) => void;
+  onTouchEnd: (e: React.MouseEvent | React.TouchEvent) => void;
+} {
   const lastTapTime = useRef<number>(0);
   const lastTouchTime = useRef<number>(0);
 

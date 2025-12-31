@@ -61,6 +61,9 @@ If you didn't request this, you can ignore this email.
 }
 
 
+// Maximum number of verified emails per user (prevents abuse)
+const MAX_VERIFIED_EMAILS_PER_USER = 10;
+
 export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
   // Request email verification
   app.post('/api/verified-emails/request', async (req, res) => {
@@ -80,6 +83,18 @@ export function setupVerifiedEmailRoutes(app: Express, db: Database.Database) {
       // Check rate limit
       if (!emailVerificationLimiter.check(session.user.id)) {
         return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      }
+
+      // Check max verified emails limit
+      const existingCount = db.prepare(
+        'SELECT COUNT(*) as count FROM verified_email WHERE user_id = ?'
+      ).get(session.user.id) as { count: number };
+
+      if (existingCount.count >= MAX_VERIFIED_EMAILS_PER_USER) {
+        return res.status(400).json({
+          error: 'limit_exceeded',
+          message: `Maximum of ${MAX_VERIFIED_EMAILS_PER_USER} verified emails allowed`,
+        });
       }
 
       // Check if email is same as user's primary email

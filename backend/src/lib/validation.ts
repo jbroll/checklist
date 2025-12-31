@@ -34,3 +34,18 @@ export const acceptInviteSchema = z.object({
 
 export type CreateInviteInput = z.infer<typeof createInviteSchema>;
 export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
+
+// Jazz CoValue ID validation
+// CoValue IDs follow the pattern: co_z followed by alphanumeric characters
+const JAZZ_COID_REGEX = /^co_z[a-zA-Z0-9]+$/;
+
+/**
+ * Validates a Jazz CoValue ID format.
+ * Returns true if the ID matches the expected pattern.
+ */
+export function isValidCoValueId(id: string): boolean {
+  return typeof id === 'string' &&
+         id.length > 3 &&
+         id.length < 100 &&
+         JAZZ_COID_REGEX.test(id);
+}

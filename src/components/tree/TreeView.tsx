@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
 import { legacyStorageKey } from '@/lib/brand';
 import { useDialog } from '@/lib/dialog-context';
+import { iterateSessions } from '@/lib/jazz-types';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account, FolderNode, SessionData } from '@/schemas';
 import * as folderService from '@/services/folderService';
@@ -254,12 +255,7 @@ export function TreeView({
 
   const handleToggleArchiveSession = useCallback(
     (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
-      const sessions = templateFolder.sessions
-        ? Array.isArray(templateFolder.sessions)
-          ? templateFolder.sessions
-          : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-            Array.from(templateFolder.sessions as any)
-        : [];
+      const sessions = iterateSessions<SessionData>(templateFolder.sessions);
       const session = sessions.find((s: SessionData) => s?.id === sessionId);
       if (session) {
         if (session.archived) {
@@ -419,10 +415,7 @@ export function TreeView({
     // For templates, always show sessions
     let sessionChildren: React.ReactNode[] = [];
     if (isTemplate && folder.sessions) {
-      const sessions = Array.isArray(folder.sessions)
-        ? folder.sessions
-        : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-          Array.from(folder.sessions as any);
+      const sessions = iterateSessions<SessionData>(folder.sessions);
       const activeSessions = sessions
         .filter((s: SessionData) => {
           if (!s || !s.id) return false; // Filter out sessions without IDs

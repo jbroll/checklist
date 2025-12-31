@@ -104,6 +104,9 @@ export const emailVerificationLimiter = new RateLimiter(3, 60 * 60 * 1000);
 // Rate limiter for share invites (prevents spam to random emails)
 export const shareInviteLimiter = new RateLimiter(30, 60 * 60 * 1000); // 30 invites per hour
 
+// Rate limiter for share token validation (prevents brute-force on tokens)
+export const tokenValidationLimiter = new RateLimiter(10, 60 * 1000); // 10 requests per minute per IP
+
 /**
  * Persistent rate limiter using SQLite.
  * Survives server restarts and can be shared across instances (with same DB).

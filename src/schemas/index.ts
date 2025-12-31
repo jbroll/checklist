@@ -178,10 +178,20 @@ export { FolderNode, Template, type SessionData, type TemplateItem, type ItemSta
 // Alias for backwards compatibility
 export type Session = SessionData;
 
+// Re-export Jazz type utilities
+export type { LoadedAccount, MaybeLoadedAccount } from '../lib/jazz-types';
+export {
+  getValidTier,
+  isAccountLoaded,
+  isIterableSessions,
+  isValidTier,
+  iterateSessions,
+} from '../lib/jazz-types';
+
 /**
  * Type alias for Account instances used in service functions.
  *
- * Jazz v0.18.x has TypeScript inference issues where:
+ * Jazz v0.18.x/0.19.x has TypeScript inference issues where:
  * - useAccount<typeof Account>() returns a slightly different type
  * - InstanceOfSchema<typeof Account> doesn't match the runtime type
  *
@@ -193,6 +203,9 @@ export type Session = SessionData;
  *
  * The `any` is isolated here rather than scattered across the codebase.
  * When Jazz fixes these inference issues, we can update this single type.
+ *
+ * Note: For runtime type checking, use the isAccountLoaded() type guard
+ * from jazz-types.ts to verify the account is fully loaded before use.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference workaround - isolated here
+// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x/0.19.x TypeScript inference workaround - isolated here
 export type AccountParam = InstanceOfSchema<typeof Account> | any;

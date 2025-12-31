@@ -16,6 +16,9 @@ vi.mock('../src/lib/rate-limiter.js', () => ({
   shareInviteLimiter: {
     check: vi.fn().mockReturnValue(true),
   },
+  tokenValidationLimiter: {
+    check: vi.fn().mockReturnValue(true),
+  },
 }));
 
 // Mock the auth module completely to avoid BetterAuth initialization
@@ -43,7 +46,7 @@ vi.mock('../src/agent.js', () => ({
 }));
 
 import { auth, sqliteDb } from '../src/auth.js';
-import { shareInviteLimiter } from '../src/lib/rate-limiter.js';
+import { shareInviteLimiter, tokenValidationLimiter } from '../src/lib/rate-limiter.js';
 
 // Test app setup
 const app = express();
@@ -60,14 +63,14 @@ const testUser1 = {
   id: 'test-user-1-id',
   email: 'test1@example.com',
   name: 'Test User 1',
-  accountID: 'co_test_jazz_account_1',
+  accountID: 'co_ztestjazzaccount1',
 };
 
 const testUser2 = {
   id: 'test-user-2-id',
   email: 'test2@example.com',
   name: 'Test User 2',
-  accountID: 'co_test_jazz_account_2',
+  accountID: 'co_ztestjazzaccount2',
 };
 
 describe('Folder Sharing API', () => {
@@ -110,6 +113,7 @@ describe('Folder Sharing API', () => {
     // Reset mocks
     vi.clearAllMocks();
     vi.mocked(shareInviteLimiter.check).mockReturnValue(true);
+    vi.mocked(tokenValidationLimiter.check).mockReturnValue(true);
   });
 
   describe('POST /api/shares/invite', () => {
@@ -124,7 +128,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test_folder_123',
+          folderCoValueId: 'co_ztestfolder123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -137,7 +141,7 @@ describe('Folder Sharing API', () => {
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(response.body.token) as any;
       expect(invite).toBeDefined();
       expect(invite.recipient_email).toBe(testUser2.email);
-      expect(invite.folder_covalue_id).toBe('co_test_folder_123');
+      expect(invite.folder_covalue_id).toBe('co_ztestfolder123');
       expect(invite.permission).toBe('edit');
       expect(invite.sender_email).toBe(testUser1.email);
     });
@@ -150,7 +154,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -172,7 +176,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -196,7 +200,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -241,7 +245,7 @@ describe('Folder Sharing API', () => {
         testUser1.email,
         testUser1.accountID,
         testUser2.email,
-        'co_test123',
+        'co_ztest123',
         'edit',
         twoDaysAgo,
         yesterday
@@ -268,7 +272,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -296,7 +300,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -315,7 +319,7 @@ describe('Folder Sharing API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.folderId).toBe('co_test123');
+      expect(response.body.folderId).toBe('co_ztest123');
 
       // Check database - invite should be marked as accepted
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(token) as any;
@@ -339,7 +343,7 @@ describe('Folder Sharing API', () => {
         testUser1.email,
         testUser1.accountID,
         testUser2.email,
-        'co_test123',
+        'co_ztest123',
         'edit',
         now,
         now + 7 * 24 * 60 * 60,
@@ -362,7 +366,7 @@ describe('Folder Sharing API', () => {
 
   describe('GET /api/shares/folders/:folderId/invites', () => {
     it('should list pending invites for a folder', async () => {
-      const folderId = 'co_test_folder_invites';
+      const folderId = 'co_ztestfolderinvites';
 
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: testUser1,
@@ -403,7 +407,7 @@ describe('Folder Sharing API', () => {
     });
 
     it('should not show expired invites', async () => {
-      const folderId = 'co_test_expired_invites';
+      const folderId = 'co_ztestexpiredinvites';
       const now = Math.floor(Date.now() / 1000);
 
       // Create expired invite
@@ -449,7 +453,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -479,7 +483,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test123',
+          folderCoValueId: 'co_ztest123',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -533,7 +537,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: 'user2-work@company.com',
-          folderCoValueId: 'co_test_alias',
+          folderCoValueId: 'co_ztestalias',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -570,7 +574,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test_no_jazz',
+          folderCoValueId: 'co_ztestnojazz',
           permission: 'view',
           expiresInDays: 7,
         });
@@ -607,7 +611,7 @@ describe('Folder Sharing API', () => {
         testUser1.email,
         testUser1.accountID,
         testUser2.email,
-        'co_test_expired',
+        'co_ztestexpired',
         'edit',
         now - (10 * 24 * 60 * 60),
         now - (3 * 24 * 60 * 60) // Expired 3 days ago
@@ -642,7 +646,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test_jazz_fail',
+          folderCoValueId: 'co_ztestjazzfail',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -683,7 +687,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_test_already_member',
+          folderCoValueId: 'co_ztestalreadymember',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -722,7 +726,7 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_folder_no_access',
+          folderCoValueId: 'co_zfoldernoaccess',
           permission: 'edit',
           expiresInDays: 7,
         });
@@ -730,6 +734,125 @@ describe('Folder Sharing API', () => {
       expect(response.status).toBe(403);
       expect(response.body.error).toBe('forbidden');
       expect(response.body.message).toContain('do not have access');
+    });
+
+    it('should reject invite when sender has no Jazz account ID', async () => {
+      // User with no accountID
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { ...testUser1, accountID: undefined },
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .post('/api/shares/invite')
+        .send({
+          recipientEmail: testUser2.email,
+          folderCoValueId: 'co_ztest123',
+          permission: 'edit',
+          expiresInDays: 7,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.message).toContain('Jazz account ID is required');
+    });
+  });
+
+  describe('GET /api/shares/validate/:token - rate limiting', () => {
+    it('should reject when rate limited', async () => {
+      // Mock rate limiter to reject
+      vi.mocked(tokenValidationLimiter.check).mockReturnValue(false);
+
+      const response = await request(app)
+        .get('/api/shares/validate/some-token');
+
+      expect(response.status).toBe(429);
+      expect(response.body.error).toBe('rate_limited');
+    });
+
+    it('should allow when not rate limited', async () => {
+      vi.mocked(tokenValidationLimiter.check).mockReturnValue(true);
+
+      const response = await request(app)
+        .get('/api/shares/validate/invalid-token');
+
+      // Should return 200 with valid: false (token doesn't exist, but not rate limited)
+      expect(response.status).toBe(200);
+      expect(response.body.valid).toBe(false);
+    });
+  });
+
+  describe('Folder ID validation', () => {
+    it('should reject invalid folder ID format in GET invites', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/invalid-id-format/invites');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_request');
+      expect(response.body.message).toContain('Invalid folder ID');
+    });
+
+    it('should reject invalid folder ID format in GET collaborators', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .get('/api/shares/folders/not-a-coid/collaborators');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_request');
+    });
+
+    it('should reject invalid folder ID format in DELETE collaborator', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete('/api/shares/folders/bad-folder/collaborators/co_zvalidaccount');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_request');
+    });
+
+    it('should reject invalid account ID format in DELETE collaborator', async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      const response = await request(app)
+        .delete('/api/shares/folders/co_zvalidfolder/collaborators/bad-account');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_request');
+    });
+
+    it('should accept valid Jazz CoValue ID format', async () => {
+      const { getFolderGroupMembers } = await import('../src/agent.js');
+
+      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+        { id: testUser1.accountID, role: 'admin' },
+      ]);
+
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: testUser1,
+        session: { id: 'session-1' },
+      } as any);
+
+      // Valid format: co_z followed by alphanumeric
+      const response = await request(app)
+        .get('/api/shares/folders/co_zABC123def456/collaborators');
+
+      expect(response.status).toBe(200);
     });
   });
 
@@ -749,7 +872,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_test_collab/collaborators');
+        .get('/api/shares/folders/co_ztestcollab/collaborators');
 
       expect(response.status).toBe(200);
       expect(response.body.collaborators).toHaveLength(2);
@@ -769,7 +892,7 @@ describe('Folder Sharing API', () => {
       // Mock Jazz group with unknown member
       vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
-        { id: 'co_unknown_user', role: 'reader' },
+        { id: 'co_zunknownuser', role: 'reader' },
       ]);
 
       vi.mocked(auth.api.getSession).mockResolvedValue({
@@ -778,7 +901,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_test_unknown/collaborators');
+        .get('/api/shares/folders/co_ztestunknown/collaborators');
 
       expect(response.status).toBe(200);
       // Should only return the known user
@@ -790,7 +913,7 @@ describe('Folder Sharing API', () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_test/collaborators');
+        .get('/api/shares/folders/co_ztest/collaborators');
 
       expect(response.status).toBe(401);
     });
@@ -806,7 +929,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_test_error/collaborators');
+        .get('/api/shares/folders/co_ztesterror/collaborators');
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('failed_to_get_collaborators');
@@ -831,11 +954,11 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_test_remove/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/folders/co_ztestremove/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(removeFromFolderGroup).toHaveBeenCalledWith('co_test_remove', testUser2.accountID);
+      expect(removeFromFolderGroup).toHaveBeenCalledWith('co_ztestremove', testUser2.accountID);
     });
 
     it('should reject when requester is not admin', async () => {
@@ -853,7 +976,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_test_noadmin/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/folders/co_ztestnoadmin/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(403);
       expect(response.body.error).toBe('forbidden');
@@ -874,7 +997,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_test_reader/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/folders/co_ztestreader/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(403);
       expect(removeFromFolderGroup).not.toHaveBeenCalled();
@@ -895,7 +1018,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_test_owner/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/folders/co_ztestowner/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('failed_to_remove_collaborator');
@@ -905,7 +1028,7 @@ describe('Folder Sharing API', () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
 
       const response = await request(app)
-        .delete('/api/shares/folders/co_test/collaborators/co_user');
+        .delete('/api/shares/folders/co_ztest/collaborators/co_zuser');
 
       expect(response.status).toBe(401);
     });

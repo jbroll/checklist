@@ -41,7 +41,19 @@ export function useItemInteraction({
   // @ts-expect-error - Reserved for future use
   // biome-ignore lint/correctness/noUnusedFunctionParameters: Reserved for future drag functionality
   dragEnabled = false,
-}: UseItemInteractionOptions) {
+}: UseItemInteractionOptions): {
+  state: InteractionState;
+  isEditing: boolean;
+  isDraggingState: boolean;
+  handlers: {
+    onPointerDown: (e: React.PointerEvent) => void;
+    onPointerMove: (e: React.PointerEvent) => void;
+    onPointerUp: (e: React.PointerEvent) => void;
+    onPointerCancel: () => void;
+  };
+  exitEditMode: () => void;
+  handleDragChange: () => void;
+} {
   const [state, setStateRaw] = useState<InteractionState>('idle');
   const stateRef = useRef<InteractionState>('idle');
   const pressStartTime = useRef<number | null>(null);

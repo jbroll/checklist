@@ -75,9 +75,14 @@ app.use(
         imgSrc: ["'self'", 'data:', 'https:'],
         fontSrc: ["'self'", 'data:'],
         frameSrc: ["'none'"],
+        frameAncestors: ["'self'"], // Clickjacking protection
         objectSrc: ["'none'"],
         upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
       },
+    },
+    // Clickjacking protection via X-Frame-Options
+    frameguard: {
+      action: 'sameorigin',
     },
     hsts: {
       maxAge: 31536000,

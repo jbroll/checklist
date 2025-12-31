@@ -32,7 +32,24 @@ export type InteractionMode =
  * - DRAGGING to NORMAL/ADDING (drop item)
  * - ADDING to NORMAL (close add form)
  */
-export function useSessionInteractionMode() {
+export function useSessionInteractionMode(): {
+  interactionMode: InteractionMode;
+  isEditing: boolean;
+  isDragging: boolean;
+  isAdding: boolean;
+  isNormal: boolean;
+  activeItemId: string | null;
+  enterAddMode: () => void;
+  enterEditMode: (itemId: string) => void;
+  enterDragMode: (itemId: string) => void;
+  exitToNormal: () => void;
+  exitToAdding: () => void;
+  exitCurrentMode: (wasInAddMode: boolean) => void;
+  canEdit: (itemId: string) => boolean;
+  canDrag: (itemId: string) => boolean;
+  canSelectForInsertion: () => boolean;
+  canOpenAddForm: () => boolean;
+} {
   const [interactionMode, setInteractionMode] = useState<InteractionMode>({ mode: 'normal' });
 
   // Computed flags for easy consumption by child components

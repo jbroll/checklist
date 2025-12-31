@@ -26,7 +26,13 @@ declare global {
  * - triggerInstall: function to trigger native install prompt (only works if hasNativePrompt)
  * - platformInfo: detected platform information for showing appropriate instructions
  */
-export function usePWAInstall() {
+export function usePWAInstall(): {
+  showInstallOption: boolean;
+  hasNativePrompt: boolean;
+  isInstalled: boolean;
+  triggerInstall: () => Promise<boolean>;
+  platformInfo: ReturnType<typeof detectPlatform>;
+} {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 

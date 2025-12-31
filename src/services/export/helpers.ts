@@ -3,6 +3,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
+import { iterateSessions } from '../../lib/jazz-types';
 import type { FolderNode, SessionData } from '../../schemas';
 
 /**
@@ -18,7 +19,6 @@ export function findSessionById(
 ): SessionData | null {
   if (!template.sessions) return null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-  const sessions: SessionData[] = Array.from(template.sessions as any);
+  const sessions = iterateSessions<SessionData>(template.sessions);
   return sessions.find((s: SessionData) => s?.id === sessionId) ?? null;
 }

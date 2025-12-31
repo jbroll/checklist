@@ -73,7 +73,7 @@ export {
  * Typed wrapper for useAccount that returns our Account schema type
  * This provides proper typing for account.root and other custom fields
  */
-export function useTypedAccount() {
+export function useTypedAccount(): ReturnType<typeof useAccount<typeof Account>> {
   const account = useAccount<typeof Account>();
   return account;
 }

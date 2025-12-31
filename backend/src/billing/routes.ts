@@ -230,7 +230,11 @@ export function setupStripeWebhook(app: Express, db: Database.Database): void {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         console.error('[webhook] Signature verification failed:', message);
-        return res.status(400).send(`Webhook Error: ${message}`);
+        // Don't expose internal error details to client
+        return res.status(400).json({
+          error: 'webhook_error',
+          message: 'Invalid webhook signature'
+        });
       }
 
       console.log(`[webhook] Received event: ${event.type}`);

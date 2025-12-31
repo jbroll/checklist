@@ -4,10 +4,43 @@ import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
 import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
-import { shareInviteLimiter } from './lib/rate-limiter.js';
-import { validateBody, createInviteSchema, acceptInviteSchema } from './lib/validation.js';
+import { shareInviteLimiter, tokenValidationLimiter } from './lib/rate-limiter.js';
+import { validateBody, createInviteSchema, acceptInviteSchema, isValidCoValueId } from './lib/validation.js';
+
+// Cleanup interval for expired share invites (1 hour)
+const INVITE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+/**
+ * Cleanup expired share invites that haven't been accepted.
+ * This prevents the database from growing indefinitely.
+ */
+function cleanupExpiredInvites(db: Database.Database) {
+  try {
+    const result = db.prepare(`
+      DELETE FROM share_invites
+      WHERE expires_at < ?
+      AND accepted_at IS NULL
+    `).run(Math.floor(Date.now() / 1000));
+
+    if (result.changes > 0) {
+      console.log(`[shares] Cleaned up ${result.changes} expired share invites`);
+    }
+  } catch (error) {
+    console.error('[shares] Failed to cleanup expired invites:', error);
+  }
+}
 
 export function setupSharingRoutes(app: Express, db: Database.Database) {
+  // Run cleanup immediately on startup
+  cleanupExpiredInvites(db);
+
+  // Schedule periodic cleanup
+  const cleanupInterval = setInterval(() => cleanupExpiredInvites(db), INVITE_CLEANUP_INTERVAL_MS);
+  // Don't block process exit
+  if (cleanupInterval.unref) {
+    cleanupInterval.unref();
+  }
+
   // Generate invite link
   app.post('/api/shares/invite', validateBody(createInviteSchema), async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
@@ -22,11 +55,16 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     // Validate sender has access to the folder before creating invite
     const senderJazzAccountId = (session.user as any).accountID;
-    if (senderJazzAccountId) {
-      const hasAccess = await validateSenderAccess(folderCoValueId, senderJazzAccountId);
-      if (!hasAccess) {
-        return res.status(403).json({ error: 'forbidden', message: 'You do not have access to share this folder' });
-      }
+    if (!senderJazzAccountId) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        message: 'Jazz account ID is required to share folders'
+      });
+    }
+
+    const hasAccess = await validateSenderAccess(folderCoValueId, senderJazzAccountId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'forbidden', message: 'You do not have access to share this folder' });
     }
 
     const token = randomBytes(32).toString('hex');
@@ -57,6 +95,12 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
   // Validate token (for preview)
   app.get('/api/shares/validate/:token', (req, res) => {
+    // Rate limit by IP to prevent brute-force attacks on tokens
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!tokenValidationLimiter.check(clientIp)) {
+      return res.status(429).json({ error: 'rate_limited', message: 'Too many requests. Please try again later.' });
+    }
+
     const invite = db.prepare(`
       SELECT * FROM share_invites WHERE token = ? AND accepted_at IS NULL
     `).get(req.params.token) as any;
@@ -150,6 +194,11 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     const { folderId } = req.params;
 
+    // Validate folder ID format
+    if (!isValidCoValueId(folderId)) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+    }
+
     try {
       // Authorization check: verify user owns invites for this folder OR is a collaborator
       const userJazzAccountId = (session.user as any).accountID;
@@ -234,6 +283,11 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     const { folderId } = req.params;
 
+    // Validate folder ID format
+    if (!isValidCoValueId(folderId)) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+    }
+
     try {
       // Authorization check: verify user is a member of this folder's group
       const userJazzAccountId = (session.user as any).accountID;
@@ -290,6 +344,16 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     if (!session?.user) return res.status(401).json({ error: 'unauthorized' });
 
     const { folderId, accountId } = req.params;
+
+    // Validate folder ID format
+    if (!isValidCoValueId(folderId)) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Invalid folder ID format' });
+    }
+
+    // Validate account ID format (Jazz account IDs also use co_ prefix)
+    if (!isValidCoValueId(accountId)) {
+      return res.status(400).json({ error: 'invalid_request', message: 'Invalid account ID format' });
+    }
 
     try {
       // Verify the requesting user has admin permission on this folder

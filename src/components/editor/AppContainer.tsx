@@ -1,36 +1,23 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { UpgradeBanner, UpgradeDialog } from '@/components/billing';
+import { UpgradeBanner } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
 import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
+import { useDialogManager } from '@/lib/useDialogManager';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
-import type { Account, FolderNode, SessionData } from '@/schemas';
+import { useTemplateNavigation } from '@/lib/useTemplateNavigation';
+import type { Account, FolderNode } from '@/schemas';
 import * as folderService from '@/services/folderService';
 import { ListLimitExceededError } from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import * as subscriptionService from '@/services/subscriptionService';
-import * as userSettingsService from '@/services/userSettingsService';
-import { AddFolderDialog } from './AddFolderDialog';
+import { DialogManager, type SessionExportData } from './DialogManager';
 
 // Lazy load heavy components to reduce initial bundle
 const SessionView = lazy(() =>
   import('@/components/session/SessionView').then((m) => ({ default: m.SessionView })),
-);
-const ProfileDialog = lazy(() =>
-  import('@/components/auth/ProfileDialog').then((m) => ({ default: m.ProfileDialog })),
-);
-const ExportDialog = lazy(() =>
-  import('@/components/export/ExportDialog').then((m) => ({ default: m.ExportDialog })),
-);
-const SessionExportDialog = lazy(() =>
-  import('@/components/export/SessionExportDialog').then((m) => ({
-    default: m.SessionExportDialog,
-  })),
-);
-const ImportDialog = lazy(() =>
-  import('@/components/import/ImportDialog').then((m) => ({ default: m.ImportDialog })),
 );
 
 interface AppContainerProps {
@@ -52,6 +39,19 @@ export function AppContainer({
   const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
   const { showAlert } = useDialog();
 
+  // Centralized dialog management
+  const { dialogs, openDialog, setDialogOpen } = useDialogManager();
+
+  // Template and folder selection state
+  const { selectedTemplateId, selectedFolderId, selectTemplate, selectFolder, clearSelection } =
+    useTemplateNavigation();
+
+  // Upgrade dialog reason state (separate from dialog manager for the message)
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
+
+  // Session export data state
+  const [sessionExportData, setSessionExportData] = useState<SessionExportData | null>(null);
+
   // Dynamically load and expose services to window for E2E tests (only when __PLAYWRIGHT__ flag is set)
   useEffect(() => {
     if (me && (window as { __PLAYWRIGHT__?: boolean }).__PLAYWRIGHT__) {
@@ -60,28 +60,6 @@ export function AppContainer({
       });
     }
   }, [me]);
-
-  const [showAddFolder, setShowAddFolder] = useState(false);
-  const [showAddTemplate, setShowAddTemplate] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showSessionExportDialog, setShowSessionExportDialog] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
-  const [sessionExportData, setSessionExportData] = useState<{
-    templateId: string;
-    sessionId: string;
-  } | null>(null);
-
-  // Selection state - tracks currently selected template
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  // Selection state - tracks currently selected folder (organizational or template)
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-
-  // Derive navigation state from history hook
-  const activeSessionTemplateId = navState.view === 'session' ? navState.templateId : null;
-  const activeSessionId = navState.view === 'session' ? navState.sessionId : null;
 
   // Find selected folder for import (must be before early return)
   const selectedFolder = useMemo(() => {
@@ -95,6 +73,10 @@ export function AppContainer({
     // Only use organizational folders as import parents
     return folderService.isOrganizationalFolder(selectedFolder) ? selectedFolder : undefined;
   }, [selectedFolder]);
+
+  // Derive navigation state from history hook
+  const activeSessionTemplateId = navState.view === 'session' ? navState.templateId : null;
+  const activeSessionId = navState.view === 'session' ? navState.sessionId : null;
 
   if (!me) {
     return (
@@ -181,23 +163,32 @@ export function AppContainer({
     }
 
     // Navigate to session view (with browser history)
-    setSelectedTemplateId(templateId);
+    selectTemplate(templateId);
     navigateTo({ view: 'session', templateId, sessionId });
   };
 
   const handleFolderSelect = (folderId: string) => {
-    setSelectedFolderId(folderId);
+    selectFolder(folderId);
   };
 
   const handleHeaderClick = () => {
     // Clicking on header deselects everything
-    setSelectedTemplateId(null);
-    setSelectedFolderId(null);
+    clearSelection();
   };
 
   const handleExportSession = (templateId: string, sessionId: string) => {
     setSessionExportData({ templateId, sessionId });
-    setShowSessionExportDialog(true);
+    openDialog('showSessionExport');
+  };
+
+  const handleAddTemplateClick = () => {
+    if (subscriptionService.isAtListLimit(me)) {
+      const maxLists = subscriptionService.getMaxLists(me);
+      setUpgradeReason(`${maxLists} list limit reached`);
+      openDialog('showUpgrade');
+    } else {
+      openDialog('showAddTemplate');
+    }
   };
 
   // If viewing a shopping session, show SessionView
@@ -221,10 +212,11 @@ export function AppContainer({
   // Otherwise show Tree View
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
   const accountAsAny = me as any;
+
   return (
     <div className="h-screen bg-neutral-50 dark:bg-neutral-900 flex flex-col">
       {/* Upgrade banner - shows when approaching list limit */}
-      <UpgradeBanner account={me} onUpgradeClick={() => setShowUpgradeDialog(true)} />
+      <UpgradeBanner account={me} onUpgradeClick={() => openDialog('showUpgrade')} />
       <main
         id="main-content"
         className="mx-auto max-w-full sm:max-w-3xl lg:max-w-4xl w-full flex-1 flex flex-col min-h-0 p-3 sm:p-4 lg:p-6"
@@ -243,26 +235,18 @@ export function AppContainer({
           }}
           headerActions={{
             onHeaderClick: handleHeaderClick,
-            onAddFolder: () => setShowAddFolder(true),
-            onAddTemplate: () => {
-              if (subscriptionService.isAtListLimit(me)) {
-                const maxLists = subscriptionService.getMaxLists(me);
-                setUpgradeReason(`${maxLists} list limit reached`);
-                setShowUpgradeDialog(true);
-              } else {
-                setShowAddTemplate(true);
-              }
-            },
-            onExport: () => setShowExportDialog(true),
-            onImport: () => setShowImportDialog(true),
+            onAddFolder: () => openDialog('showAddFolder'),
+            onAddTemplate: handleAddTemplateClick,
+            onExport: () => openDialog('showExport'),
+            onImport: () => openDialog('showImport'),
           }}
           authProps={{
             onSignOut,
             onSignIn,
             onDeleteAccount,
             isAuthenticated,
-            showProfileDialog,
-            onShowProfileDialogChange: setShowProfileDialog,
+            showProfileDialog: dialogs.showProfile,
+            onShowProfileDialogChange: (show) => setDialogOpen('showProfile', show),
           }}
           subscriptionInfo={{
             subscriptionTier: subscriptionService.getTierDisplayName(
@@ -270,114 +254,26 @@ export function AppContainer({
             ),
             listCount: subscriptionService.countUserLists(me),
             maxLists: subscriptionService.getMaxLists(me),
-            onUpgradeClick: () => setShowUpgradeDialog(true),
+            onUpgradeClick: () => openDialog('showUpgrade'),
           }}
         />
 
-        <AddFolderDialog
-          open={showAddFolder}
-          onOpenChange={setShowAddFolder}
-          onAdd={handleAddFolder}
-        />
-
-        <AddFolderDialog
-          open={showAddTemplate}
-          onOpenChange={setShowAddTemplate}
-          onAdd={handleAddFolder}
-          defaultIsTemplate={true}
-          title="New List"
-          description="Create a new list folder for frequently purchased items."
-        />
-
-        <Suspense fallback={null}>
-          <ExportDialog
-            open={showExportDialog}
-            onOpenChange={setShowExportDialog}
-            account={accountAsAny}
-          />
-        </Suspense>
-
-        <Suspense fallback={null}>
-          <ImportDialog
-            open={showImportDialog}
-            onOpenChange={setShowImportDialog}
-            account={accountAsAny}
-            parentFolder={importParentFolder}
-          />
-        </Suspense>
-
-        {/* Upgrade Dialog */}
-        <UpgradeDialog
-          open={showUpgradeDialog}
-          onOpenChange={(open) => {
-            setShowUpgradeDialog(open);
-            if (!open) setUpgradeReason(undefined);
-          }}
+        {/* All dialogs rendered via DialogManager */}
+        <DialogManager
+          dialogs={dialogs}
+          setDialogOpen={setDialogOpen}
           account={me}
-          message={upgradeReason}
+          importParentFolder={importParentFolder}
+          onAddFolder={handleAddFolder}
+          upgradeReason={upgradeReason}
+          onUpgradeDialogClose={() => setUpgradeReason(undefined)}
+          sessionExportData={sessionExportData}
+          templates={templates}
+          authCallbacks={{
+            onSignOut,
+            onDeleteAccount,
+          }}
         />
-
-        {/* Session Export Dialog */}
-        {sessionExportData &&
-          (() => {
-            const template = templates.find((t) => t?.$jazz.id === sessionExportData.templateId);
-            const sessions = template?.sessions
-              ? Array.isArray(template.sessions)
-                ? template.sessions
-                : // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x sessions may be CoList or array
-                  Array.from(template.sessions as any)
-              : [];
-            const session = sessions.find(
-              (s: SessionData) => s?.id === sessionExportData.sessionId,
-            );
-            if (template && session) {
-              // Generate session name from createdAt
-              const sessionName = new Date(session.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
-              return (
-                <Suspense fallback={null}>
-                  <SessionExportDialog
-                    open={showSessionExportDialog}
-                    onOpenChange={setShowSessionExportDialog}
-                    // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-                    template={template as any}
-                    sessionId={sessionExportData.sessionId}
-                    sessionName={sessionName}
-                    account={accountAsAny}
-                  />
-                </Suspense>
-              );
-            }
-            return null;
-          })()}
-
-        {/* Profile Dialog */}
-        {onSignOut && onDeleteAccount && (
-          <Suspense fallback={null}>
-            <ProfileDialog
-              open={showProfileDialog}
-              onOpenChange={setShowProfileDialog}
-              onSignOut={onSignOut}
-              onDeleteAccount={onDeleteAccount}
-              defaultAutocompleteDomain={userSettingsService.getDefaultAutocompleteDomain(me)}
-              enableAutoCategorization={userSettingsService.getEnableAutoCategorization(me)}
-              onChangeDefaultAutocompleteDomain={(domain) =>
-                userSettingsService.setDefaultAutocompleteDomain(me, domain)
-              }
-              onToggleAutoCategorization={() =>
-                userSettingsService.toggleEnableAutoCategorization(me)
-              }
-              subscriptionTier={subscriptionService.getSubscriptionTier(me)}
-              listCount={subscriptionService.countUserLists(me)}
-              maxLists={subscriptionService.getMaxLists(me)}
-              isBeta={subscriptionService.isBetaUser(me)}
-              onUpgradeClick={() => {
-                setShowProfileDialog(false);
-                setShowUpgradeDialog(true);
-              }}
-              onManageBillingClick={() => subscriptionService.redirectToPortal()}
-            />
-          </Suspense>
-        )}
       </main>
     </div>
   );
