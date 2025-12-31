@@ -203,7 +203,7 @@ function generatePage(mdFile, htmlFile, title) {
                 </div>
                 <div class="flex items-center space-x-8">
                     ${navLinks}
-                    <a href="https://app.kjekit.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                    <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
                 </div>
             </div>
         </div>
@@ -224,7 +224,7 @@ function generatePage(mdFile, htmlFile, title) {
                     <p class="text-lg">&copy; 2025 <a href="http://rkroll.com" class="text-gray-400 hover:text-white">rkroll.com</a></p>
                     ${footerLinks}
                 </div>
-                <a href="https://app.kjekit.com" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
             </div>
         </div>
     </footer>
