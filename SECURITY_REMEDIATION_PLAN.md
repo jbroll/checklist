@@ -32,13 +32,14 @@ This document tracks security issues identified during code review and their rem
 ### 4. Jazz API key in client bundle
 - **Location:** `src/lib/jazz.tsx:7-12`
 - **Risk:** API key embedded in mobile bundle, extractable via reverse engineering
-- **Fix:** Move API key to backend, proxy Jazz connections through server
-- **Status:** [ ] DEFERRED - Requires architectural change
-- **Notes:** This is a larger architectural change. Consider:
-  - Backend authenticates with Jazz using API key
-  - Frontend connects without key or uses user-scoped tokens
-  - May require Jazz.tools documentation review
-  - Current mitigation: Key is only useful with valid user authentication
+- **Status:** [x] RESOLVED - By design, not a vulnerability
+- **Analysis:** Jazz is a local-first database with end-to-end encryption:
+  - Data is encrypted on the client before being sent to sync servers
+  - The API key is used for **billing/rate limiting**, not data security
+  - Security comes from E2E encryption + user authentication, not the API key
+  - This is similar to Firebase/Supabase "anon" keys designed for client use
+  - The key can be domain-restricted in Jazz Cloud dashboard if needed
+- **Recommendation:** Consider domain restriction in Jazz Cloud settings
 
 ### 5. Overly permissive Android file provider paths
 - **Location:** `android/app/src/main/res/xml/file_paths.xml:3-4`
@@ -169,17 +170,19 @@ After completing fixes, verify with:
 
 | Priority | Total | Done | Remaining |
 |----------|-------|------|-----------|
-| Critical | 5 | 4 | 1 |
+| Critical | 5 | 5 | 0 |
 | High | 5 | 5 | 0 |
 | Moderate | 4 | 3 | 1 |
 | Low | 4 | 1 | 3 |
-| **Total** | **18** | **13** | **5** |
+| **Total** | **18** | **14** | **4** |
 
 ### Deferred Items
 
-1. **Critical #4 (Jazz API key):** Requires architectural change to proxy Jazz connections through backend. Current risk is mitigated by requiring user authentication.
+1. **Moderate #12 (Capacitor URL):** Low risk since production URL is hardcoded correctly. Environment variable approach would require build-time configuration.
 
-2. **Moderate #12 (Capacitor URL):** Low risk since production URL is hardcoded correctly. Environment variable approach would require build-time configuration.
+### Resolved by Design
+
+1. **Critical #4 (Jazz API key):** Jazz is a local-first E2E encrypted database. The API key is used for billing/rate limiting, not data security. This is the intended architecture, similar to Firebase/Supabase client keys.
 
 ---
 
