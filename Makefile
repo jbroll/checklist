@@ -1,4 +1,4 @@
-.PHONY: setup install install-frontend install-backend install-playwright deploy count icons smoke-local smoke-test smoke-prod
+.PHONY: setup install install-frontend install-backend install-playwright deploy count icons smoke-local smoke-test smoke-prod monitor-test monitor-prod watch-test watch-prod
 
 # Setup targets
 setup: install install-playwright
@@ -49,3 +49,17 @@ smoke-test:
 
 smoke-prod:
 	npm run test:smoke:prod
+
+# Health monitoring (single check)
+monitor-test:
+	npm run monitor:test
+
+monitor-prod:
+	npm run monitor:prod
+
+# Interactive watch monitoring (refreshes every 60s)
+watch-test:
+	watch -n 60 -c 'npm run monitor:test'
+
+watch-prod:
+	watch -n 60 -c 'npm run monitor:prod'
