@@ -124,14 +124,10 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // In production, require origin header (except for same-origin requests)
+      // Allow requests without Origin header (OAuth callbacks, same-origin navigation)
+      // Security is enforced via CSRF tokens and cookie settings, not Origin
       if (!origin) {
-        if (process.env.NODE_ENV === 'development') {
-          return callback(null, true);
-        }
-        // Production: reject requests without origin
-        console.warn('[CORS] Rejected request without origin header');
-        return callback(new Error('Origin header required'), false);
+        return callback(null, true);
       }
 
       // Use exact match instead of startsWith to prevent subdomain attacks
