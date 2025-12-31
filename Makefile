@@ -1,4 +1,4 @@
-.PHONY: setup install install-frontend install-backend install-playwright deploy count icons
+.PHONY: setup install install-frontend install-backend install-playwright deploy count icons smoke-local smoke-test smoke-prod
 
 # Setup targets
 setup: install install-playwright
@@ -39,3 +39,13 @@ icons: public/checklist.svg
 	convert public/checklist.svg -resize 512x512 checklist.png
 	convert public/checklist.svg -resize 512x512 -background white -flatten public/icon-512-maskable.png
 	convert public/checklist.svg -resize 192x192 -background white -flatten public/icon-192-maskable.png
+
+# Smoke tests
+smoke-local:
+	npm run test:smoke:local
+
+smoke-test:
+	npm run test:smoke:test
+
+smoke-prod:
+	npm run test:smoke:prod

@@ -3,12 +3,22 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright configuration for E2E testing
  * @see https://playwright.dev/docs/test-configuration
+ *
+ * Supports two modes:
+ * 1. Normal mode: Starts local dev server, uses mock OAuth
+ * 2. Smoke test mode (SMOKE_TEST=true): No server, no OAuth, uses BASE_URL
  */
+
+const isSmokeTest = process.env.SMOKE_TEST === 'true';
+const baseURL = isSmokeTest
+  ? process.env.BASE_URL || 'http://localhost:8765'
+  : 'http://localhost:8765';
+
 export default defineConfig({
   testDir: './e2e',
 
-  // Global setup to start mock OAuth server
-  globalSetup: './playwright-global-setup.ts',
+  // Global setup to start mock OAuth server (disabled for smoke tests)
+  globalSetup: isSmokeTest ? undefined : './playwright-global-setup.ts',
 
   // Run tests in files in parallel
   fullyParallel: true,
@@ -16,8 +26,8 @@ export default defineConfig({
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
 
-  // Retry on CI only
-  retries: process.env.CI ? 2 : 0,
+  // Retry on CI only (and smoke tests)
+  retries: process.env.CI || isSmokeTest ? 2 : 0,
 
   // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
@@ -28,7 +38,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: 'http://localhost:8765',
+    baseURL,
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -45,11 +55,13 @@ export default defineConfig({
     },
   ],
 
-  // Run your local dev server before starting the tests
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:8765',
-    reuseExistingServer: false,
-    timeout: 120000,
-  },
+  // Run your local dev server before starting the tests (disabled for smoke tests)
+  webServer: isSmokeTest
+    ? undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:8765',
+        reuseExistingServer: false,
+        timeout: 120000,
+      },
 });

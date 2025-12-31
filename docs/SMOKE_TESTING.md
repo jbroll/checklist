@@ -8,7 +8,7 @@ Playwright-based smoke tests that run against deployed test/prod environments wi
 
 | Environment | URL |
 |-------------|-----|
-| Local | `http://localhost:5173` |
+| Local | `http://localhost:8765` |
 | Test | `https://checklist-test.rkroll.com` |
 | Production | `https://app.kjekit.com` |
 
