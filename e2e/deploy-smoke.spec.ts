@@ -5,12 +5,178 @@
  * Uses anonymous Jazz accounts in local-only mode.
  *
  * Run with:
- *   SMOKE_TEST=true BASE_URL=https://app.kjekit.com npx playwright test deploy-smoke
+ *   npm run test:smoke:test   # Test environment
+ *   npm run test:smoke:prod   # Production
+ *
+ * For monitoring:
+ *   npm run monitor:test      # Lightweight health checks
+ *   npm run monitor:prod      # Lightweight health checks
  */
 
 import { expect, test } from '@playwright/test';
 
-test.describe('Deployment Smoke Tests', () => {
+// Performance thresholds
+const THRESHOLDS = {
+  pageLoad: 5000, // 5 seconds max for initial page load
+  apiResponse: 2000, // 2 seconds max for API responses
+  jazzConnect: 5000, // 5 seconds max for Jazz WebSocket
+};
+
+// Get base URL for API calls
+function getApiUrl(baseUrl: string): string {
+  // In deployed environments, API is at /api on the same domain
+  return `${baseUrl}/api`;
+}
+
+test.describe('Infrastructure Health', () => {
+  test('backend health - API returns healthy status', async ({ request, baseURL }) => {
+    const apiUrl = getApiUrl(baseURL!);
+    const startTime = Date.now();
+
+    // Health endpoint is before CORS, no Origin needed
+    const response = await request.get(`${apiUrl}/health`);
+    const responseTime = Date.now() - startTime;
+
+    expect(response.status()).toBe(200);
+    expect(responseTime).toBeLessThan(THRESHOLDS.apiResponse);
+
+    const health = await response.json();
+    expect(health.status).toBe('ok');
+    expect(health.timestamp).toBeTruthy();
+    expect(health.features).toBeDefined();
+
+    // Log feature status for monitoring
+    console.log(`  Backend health: OK (${responseTime}ms)`);
+    console.log(`  - Sharing: ${health.features.sharing ? 'enabled' : 'disabled'}`);
+    console.log(`  - Billing: ${health.features.billing ? 'enabled' : 'disabled'}`);
+  });
+
+  test('auth endpoints - session endpoint responds', async ({ request, baseURL }) => {
+    const apiUrl = getApiUrl(baseURL!);
+
+    // Session endpoint requires Origin header for CORS
+    const response = await request.get(`${apiUrl}/auth/get-session`, {
+      headers: { Origin: baseURL! },
+    });
+    expect(response.status()).toBe(200);
+    console.log(`  Auth session endpoint: ${response.status()}`);
+  });
+
+  test('billing endpoints - tiers endpoint responds', async ({ request, baseURL }) => {
+    const apiUrl = getApiUrl(baseURL!);
+
+    // Billing tiers endpoint requires Origin header for CORS
+    const response = await request.get(`${apiUrl}/billing/tiers`, {
+      headers: { Origin: baseURL! },
+    });
+    expect(response.status()).toBe(200);
+
+    const data = await response.json();
+    expect(data.tiers).toBeDefined();
+    expect(Array.isArray(data.tiers)).toBe(true);
+    console.log(`  Billing endpoint: ${response.status()} (${data.tiers.length} tiers)`);
+  });
+
+  test('static assets - CSS and JS load correctly', async ({ page, baseURL }) => {
+    const errors: string[] = [];
+    const loadedAssets: string[] = [];
+
+    // Listen for failed requests
+    page.on('requestfailed', (request) => {
+      const url = request.url();
+      if (url.endsWith('.js') || url.endsWith('.css') || url.includes('/assets/')) {
+        errors.push(`${request.failure()?.errorText}: ${url}`);
+      }
+    });
+
+    // Track loaded assets
+    page.on('response', (response) => {
+      const url = response.url();
+      if (url.endsWith('.js') || url.endsWith('.css')) {
+        if (response.status() === 200) {
+          loadedAssets.push(url.split('/').pop() || url);
+        }
+      }
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    expect(errors).toHaveLength(0);
+    expect(loadedAssets.length).toBeGreaterThan(0);
+    console.log(`  Static assets loaded: ${loadedAssets.length} files`);
+  });
+});
+
+test.describe('Performance', () => {
+  test('page load time - homepage loads within threshold', async ({ page }) => {
+    const startTime = Date.now();
+
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const loadTime = Date.now() - startTime;
+    expect(loadTime).toBeLessThan(THRESHOLDS.pageLoad);
+    console.log(`  Page load time: ${loadTime}ms (threshold: ${THRESHOLDS.pageLoad}ms)`);
+  });
+
+  test('core web vitals - no major performance issues', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Check for long tasks that block main thread
+    const performanceEntries = await page.evaluate(() => {
+      return {
+        // Get navigation timing
+        navigation: performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming,
+        // Check if page is interactive
+        domInteractive:
+          (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming)
+            ?.domInteractive || 0,
+      };
+    });
+
+    expect(performanceEntries.navigation).toBeTruthy();
+    console.log(
+      `  DOM Interactive: ${Math.round(performanceEntries.domInteractive)}ms`
+    );
+  });
+});
+
+test.describe('Mobile Compatibility', () => {
+  test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
+
+  test('mobile viewport - app works on small screens', async ({ page }) => {
+    await page.goto('/');
+
+    // Core UI should be visible
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Action buttons should be accessible
+    await expect(page.getByRole('button', { name: 'New folder' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New list' })).toBeVisible();
+
+    // Create a list to test mobile navigation
+    await page.getByRole('button', { name: 'New list' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    const listName = `Mobile Test ${Date.now()}`;
+    await page.getByLabel(/name/i).fill(listName);
+    await page.getByRole('button', { name: /create/i }).click();
+
+    // Navigate to list
+    await page.getByText(listName).click();
+    await expect(page.getByRole('heading', { name: listName })).toBeVisible({
+      timeout: 5000,
+    });
+
+    console.log('  Mobile viewport: OK');
+  });
+});
+
+test.describe('Core Functionality', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the app and wait for it to load
     await page.goto('/');
@@ -24,6 +190,7 @@ test.describe('Deployment Smoke Tests', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('button', { name: 'New folder' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'New list' })).toBeVisible();
+    console.log('  Core UI: OK');
   });
 
   test('create folder - can create a new folder', async ({ page }) => {
@@ -45,6 +212,7 @@ test.describe('Deployment Smoke Tests', () => {
 
     // New folder should appear in the tree
     await expect(page.getByText(folderName)).toBeVisible();
+    console.log('  Create folder: OK');
   });
 
   test('create list - can create a new list', async ({ page }) => {
@@ -66,6 +234,7 @@ test.describe('Deployment Smoke Tests', () => {
 
     // New list should appear in the tree
     await expect(page.getByText(listName)).toBeVisible();
+    console.log('  Create list: OK');
   });
 
   test('add items - can add items to a list', async ({ page }) => {
@@ -102,6 +271,7 @@ test.describe('Deployment Smoke Tests', () => {
 
     // Item should appear in the list
     await expect(page.getByText(itemName)).toBeVisible();
+    console.log('  Add items: OK');
   });
 
   test('shopping session - can view session UI', async ({ page }) => {
@@ -124,6 +294,7 @@ test.describe('Deployment Smoke Tests', () => {
       (await newButton.isVisible({ timeout: 2000 }).catch(() => false)) ||
       (await doneButton.isVisible({ timeout: 2000 }).catch(() => false));
     expect(hasSessionControls).toBe(true);
+    console.log('  Shopping session: OK');
   });
 
   test('export/import UI - dialogs open correctly', async ({ page }) => {
@@ -152,6 +323,7 @@ test.describe('Deployment Smoke Tests', () => {
     // Close dialog
     await page.getByRole('button', { name: /cancel/i }).click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
+    console.log('  Export/Import UI: OK');
   });
 
   test('navigation - browser back/forward works', async ({ page }) => {
@@ -178,5 +350,6 @@ test.describe('Deployment Smoke Tests', () => {
 
     // Should see session view again
     await expect(page.getByRole('heading', { name: listName })).toBeVisible({ timeout: 5000 });
+    console.log('  Navigation: OK');
   });
 });

@@ -94,6 +94,20 @@ app.use(
   }),
 );
 
+// Health check endpoint (before CORS for monitoring accessibility)
+// This allows health checks from load balancers, monitoring systems, etc.
+// Available at both /health and /api/health for flexibility
+app.get(['/health', '/api/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    features: {
+      sharing: isAgentReady(),
+      billing: !!process.env.STRIPE_SECRET_KEY,
+    },
+  });
+});
+
 // CORS configuration (MUST come before Better Auth handler)
 // Allow multiple localhost ports for development + production domains
 const allowedOrigins = [
@@ -239,18 +253,6 @@ app.delete('/api/account', async (req, res) => {
     console.error('[account-deletion] Error deleting account:', error);
     return ApiErrors.serverError(res, 'Failed to delete account');
   }
-});
-
-// Health check with feature status
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    features: {
-      sharing: isAgentReady(),
-      billing: !!process.env.STRIPE_SECRET_KEY,
-    },
-  });
 });
 
 const PORT = process.env.PORT || 3001;
