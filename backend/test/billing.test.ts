@@ -333,3 +333,62 @@ describe('Usage Tracking', () => {
     expect(history).toHaveLength(10);
   });
 });
+
+describe('Webhook Idempotency', () => {
+  beforeEach(() => {
+    // Clean up processed events table between tests
+    db.exec('DELETE FROM processed_webhook_events');
+  });
+
+  it('should record processed webhook events', () => {
+    const eventId = 'evt_test_123';
+
+    // Insert a processed event
+    db.prepare(
+      'INSERT INTO processed_webhook_events (event_id, processed_at) VALUES (?, ?)'
+    ).run(eventId, new Date().toISOString());
+
+    // Verify it was recorded
+    const row = db
+      .prepare('SELECT * FROM processed_webhook_events WHERE event_id = ?')
+      .get(eventId) as { event_id: string; processed_at: string };
+
+    expect(row).toBeDefined();
+    expect(row.event_id).toBe(eventId);
+  });
+
+  it('should detect duplicate events', () => {
+    const eventId = 'evt_duplicate_456';
+
+    // First insertion should succeed
+    const insert = db.prepare(
+      'INSERT INTO processed_webhook_events (event_id, processed_at) VALUES (?, ?)'
+    );
+    insert.run(eventId, new Date().toISOString());
+
+    // Second insertion should fail (PRIMARY KEY constraint)
+    expect(() => {
+      insert.run(eventId, new Date().toISOString());
+    }).toThrow();
+  });
+
+  it('should allow checking for existing events', () => {
+    const eventId = 'evt_check_789';
+
+    // Before insertion
+    let existing = db
+      .prepare('SELECT event_id FROM processed_webhook_events WHERE event_id = ?')
+      .get(eventId);
+    expect(existing).toBeUndefined();
+
+    // After insertion
+    db.prepare(
+      'INSERT INTO processed_webhook_events (event_id, processed_at) VALUES (?, ?)'
+    ).run(eventId, new Date().toISOString());
+
+    existing = db
+      .prepare('SELECT event_id FROM processed_webhook_events WHERE event_id = ?')
+      .get(eventId);
+    expect(existing).toBeDefined();
+  });
+});

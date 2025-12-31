@@ -362,6 +362,7 @@ describe('AuthGate', () => {
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith('/api/account', {
           method: 'DELETE',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
           credentials: 'include',
         });
       });

@@ -338,8 +338,8 @@ export function TreeView({
         try {
           // Use moveFolderToIndex which handles both cross-parent moves and same-parent reorders
           folderService.moveFolderToIndex(account, draggedFolder, targetParent, newIndex);
-        } catch {
-          // Silently ignore errors
+        } catch (error) {
+          console.error('[TreeView] Error moving folder to index:', error);
         }
         return;
       }
@@ -369,8 +369,11 @@ export function TreeView({
 
       try {
         folderService.moveFolder(account, draggedFolder, newParent);
-      } catch {
-        // Silently ignore expected validation errors
+      } catch (error) {
+        // Log unexpected errors (not circular move validation)
+        if (!(error instanceof Error && error.message.includes('Cannot move folder into itself'))) {
+          console.error('[TreeView] Error moving folder:', error);
+        }
       }
     },
     [account],

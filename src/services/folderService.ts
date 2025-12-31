@@ -93,18 +93,27 @@ function validateNotCircular(folder: FolderType, target: FolderType | null | und
   }
 }
 
+// Maximum depth for recursive folder searches to prevent stack overflow
+const MAX_FOLDER_DEPTH = 20;
+
 /**
  * Recursively find a folder by ID in a folder tree
  */
 function findFolderRecursive(
   folders: FolderType[] | Iterable<FolderType | null>,
   folderId: string,
+  depth = 0,
 ): FolderType | null {
+  if (depth > MAX_FOLDER_DEPTH) {
+    console.warn('[folderService] Max folder depth reached');
+    return null;
+  }
+
   for (const f of folders) {
     if (!f) continue;
     if (f.$jazz.id === folderId) return f;
     if (f.children) {
-      const found = findFolderRecursive(f.children, folderId);
+      const found = findFolderRecursive(f.children, folderId, depth + 1);
       if (found) return found;
     }
   }
@@ -569,7 +578,8 @@ export function emptyTrash(account: AccountType): number {
     try {
       deleteFolder(account, folder);
       deletedCount++;
-    } catch {
+    } catch (error) {
+      console.error('[folderService] Error deleting folder during emptyTrash:', error);
       // Continue with other deletions if one fails
     }
   }
@@ -585,17 +595,20 @@ export function deleteAllUserData(account: AccountType): void {
     if (folder) {
       try {
         deleteFolder(account, folder);
-      } catch {
+      } catch (error) {
+        console.error('[folderService] Error during deleteAllUserData:', error);
         try {
           account.root.folders.$jazz.splice(0, 1);
-        } catch {
+        } catch (spliceError) {
+          console.error('[folderService] Failed to splice folder:', spliceError);
           break;
         }
       }
     } else {
       try {
         account.root.folders.$jazz.splice(0, 1);
-      } catch {
+      } catch (error) {
+        console.error('[folderService] Failed to splice null folder:', error);
         break;
       }
     }

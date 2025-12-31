@@ -126,6 +126,26 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   // Must be called before early returns to satisfy hooks rules
   const itemTree = useMemo(() => buildItemTree(activeItems), [activeItems]);
 
+  // Shared props for view mode renderers (read-only mode)
+  // Must be called before early returns to satisfy hooks rules
+  const toggleZoneExpanded = useCallback(
+    (zone: 'selected' | 'checked') => setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] })),
+    [],
+  );
+
+  // Memoize viewer props to prevent unnecessary re-renders
+  const viewerCommonProps = useMemo(
+    () => ({
+      showDeleteIcon: false as const,
+      interactionMode: { mode: 'normal' as const },
+      onEnterEditMode: () => {},
+      onExitEditMode: () => {},
+      canEdit: () => false,
+      canDrag: () => false,
+    }),
+    [],
+  );
+
   // Early returns after all hooks
   if (!me || !me.root) {
     return (
@@ -161,19 +181,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
   const isCategoryExpanded = (itemId: string): boolean => {
     return templateCategoryExpanded[itemId] ?? true;
-  };
-
-  // Shared props for view mode renderers (read-only mode)
-  const toggleZoneExpanded = (zone: 'selected' | 'checked') =>
-    setZoneExpanded((prev) => ({ ...prev, [zone]: !prev[zone] }));
-
-  const viewerCommonProps = {
-    showDeleteIcon: false as const,
-    interactionMode: { mode: 'normal' as const },
-    onEnterEditMode: () => {},
-    onExitEditMode: () => {},
-    canEdit: () => false,
-    canDrag: () => false,
   };
 
   return (

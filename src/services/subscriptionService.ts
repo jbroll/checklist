@@ -323,7 +323,10 @@ export async function recordUsageToBackend(account: AccountParam): Promise<void>
     await fetch('/api/billing/usage', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: JSON.stringify({ listCount }),
     });
   } catch {
@@ -343,7 +346,10 @@ export async function createCheckoutSession(tierSlug: 'plus' | 'premium'): Promi
     const response = await fetch('/api/billing/checkout', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: JSON.stringify({ tierSlug }),
     });
 
@@ -369,6 +375,7 @@ export async function createPortalSession(): Promise<string | null> {
     const response = await fetch('/api/billing/portal', {
       method: 'POST',
       credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
 
     if (!response.ok) {

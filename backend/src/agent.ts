@@ -5,6 +5,13 @@ import { Account, type ID, CoMap } from 'jazz-tools';
 let worker: Account | null = null;
 
 /**
+ * Check if the Jazz agent is ready for operations
+ */
+export function isAgentReady(): boolean {
+  return worker !== null;
+}
+
+/**
  * Initialize the Jazz agent/worker
  *
  * Uses startWorker to create a server-side account that can load CoValues

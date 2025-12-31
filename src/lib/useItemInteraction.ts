@@ -1,4 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+// Constants for interaction timing
+const LONG_PRESS_DELAY_MS = 1500;
 
 /**
  * State machine for item interactions in SessionView edit mode.
@@ -51,6 +54,15 @@ export function useItemInteraction({
     setStateRaw(newState);
   }, []);
 
+  // Cleanup timer on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
+
   // Clean up timer
   const clearTimer = useCallback(() => {
     if (longPressTimer.current) {
@@ -96,7 +108,7 @@ export function useItemInteraction({
             setState('editing');
             onStartEdit();
           }
-        }, 1500); // 1.5 seconds
+        }, LONG_PRESS_DELAY_MS);
       }
     },
     [editModeEnabled, onStartEdit, clearTimer, isDragging, setState],
@@ -130,7 +142,7 @@ export function useItemInteraction({
       if (state === 'pressing' && !hasMovedRef.current) {
         const pressDuration = pressStartTime.current ? Date.now() - pressStartTime.current : 0;
 
-        if (pressDuration < 1500 && onSelect) {
+        if (pressDuration < LONG_PRESS_DELAY_MS && onSelect) {
           onSelect();
         }
       }

@@ -54,3 +54,22 @@ CREATE TABLE IF NOT EXISTS usage_snapshot (
 );
 
 CREATE INDEX IF NOT EXISTS idx_usage_user_date ON usage_snapshot(user_id, recorded_at);
+
+-- Processed webhook events for idempotency (prevents duplicate processing)
+CREATE TABLE IF NOT EXISTS processed_webhook_events (
+  event_id TEXT PRIMARY KEY,
+  processed_at TEXT NOT NULL
+);
+
+-- Clean up old processed events (keep last 7 days)
+DELETE FROM processed_webhook_events WHERE processed_at < datetime('now', '-7 days');
+
+-- Rate limits table for persistent storage across server restarts
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  reset_at INTEGER NOT NULL
+);
+
+-- Clean up expired rate limits
+DELETE FROM rate_limits WHERE reset_at < unixepoch();

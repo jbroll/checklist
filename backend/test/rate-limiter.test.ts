@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { RateLimiter } from '../src/lib/rate-limiter.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import Database from 'better-sqlite3';
+import { RateLimiter, PersistentRateLimiter } from '../src/lib/rate-limiter.js';
 
 describe('RateLimiter', () => {
   let limiter: RateLimiter;
@@ -183,6 +184,131 @@ describe('RateLimiter', () => {
 
       // After short window
       expect(customLimiter.check('user-1', now + shortWindow + 1)).toBe(true);
+    });
+  });
+});
+
+describe('PersistentRateLimiter', () => {
+  let db: Database.Database;
+  let limiter: PersistentRateLimiter;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+
+    // Create the rate_limits table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        key TEXT PRIMARY KEY,
+        count INTEGER NOT NULL,
+        reset_at INTEGER NOT NULL
+      )
+    `);
+
+    limiter = new PersistentRateLimiter(db, 3, 60 * 60 * 1000, 'test'); // 3 requests per hour
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  describe('check', () => {
+    it('should allow first request', () => {
+      expect(limiter.check('user-1')).toBe(true);
+    });
+
+    it('should allow requests up to the limit', () => {
+      expect(limiter.check('user-1')).toBe(true);
+      expect(limiter.check('user-1')).toBe(true);
+      expect(limiter.check('user-1')).toBe(true);
+    });
+
+    it('should block requests after limit is reached', () => {
+      limiter.check('user-1');
+      limiter.check('user-1');
+      limiter.check('user-1');
+      expect(limiter.check('user-1')).toBe(false);
+    });
+
+    it('should track different users independently', () => {
+      limiter.check('user-1');
+      limiter.check('user-1');
+      limiter.check('user-1');
+      expect(limiter.check('user-1')).toBe(false);
+
+      // user-2 should still be allowed
+      expect(limiter.check('user-2')).toBe(true);
+    });
+  });
+
+  describe('persistence', () => {
+    it('should persist data in database', () => {
+      limiter.check('user-1');
+      limiter.check('user-1');
+
+      const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get('test:user-1') as {
+        key: string;
+        count: number;
+        reset_at: number;
+      };
+
+      expect(row).toBeDefined();
+      expect(row.count).toBe(2);
+    });
+
+    it('should use prefix for keys', () => {
+      const limiter1 = new PersistentRateLimiter(db, 3, 1000, 'billing');
+      const limiter2 = new PersistentRateLimiter(db, 3, 1000, 'shares');
+
+      limiter1.check('user-1');
+      limiter1.check('user-1');
+      limiter1.check('user-1');
+      expect(limiter1.check('user-1')).toBe(false);
+
+      // Different prefix should have separate limit
+      expect(limiter2.check('user-1')).toBe(true);
+    });
+  });
+
+  describe('cleanup', () => {
+    it('should cleanup expired entries', () => {
+      // Insert an expired entry
+      const expiredTime = Math.floor(Date.now() / 1000) - 100;
+      db.prepare('INSERT INTO rate_limits (key, count, reset_at) VALUES (?, ?, ?)').run(
+        'test:expired',
+        5,
+        expiredTime
+      );
+
+      limiter.cleanup();
+
+      const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get('test:expired');
+      expect(row).toBeUndefined();
+    });
+
+    it('should not cleanup non-expired entries', () => {
+      limiter.check('user-1');
+
+      limiter.cleanup();
+
+      const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get('test:user-1');
+      expect(row).toBeDefined();
+    });
+  });
+
+  describe('window expiry', () => {
+    it('should allow requests after window expires', () => {
+      // Exhaust the limit
+      limiter.check('user-1');
+      limiter.check('user-1');
+      limiter.check('user-1');
+      expect(limiter.check('user-1')).toBe(false);
+
+      // Manually expire the entry
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare('UPDATE rate_limits SET reset_at = ? WHERE key = ?').run(now - 1, 'test:user-1');
+
+      // Should allow again
+      expect(limiter.check('user-1')).toBe(true);
     });
   });
 });

@@ -539,7 +539,7 @@ describe('SubscriptionService - Backend Integration', () => {
       expect(mockFetch).toHaveBeenCalledWith('/api/billing/usage', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ listCount: 5 }),
       });
     });
@@ -566,7 +566,7 @@ describe('SubscriptionService - Backend Integration', () => {
       expect(mockFetch).toHaveBeenCalledWith('/api/billing/checkout', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ tierSlug: 'plus' }),
       });
     });
@@ -604,6 +604,7 @@ describe('SubscriptionService - Backend Integration', () => {
       expect(mockFetch).toHaveBeenCalledWith('/api/billing/portal', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
       });
     });
 

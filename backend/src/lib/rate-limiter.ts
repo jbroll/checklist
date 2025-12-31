@@ -1,3 +1,5 @@
+import type Database from 'better-sqlite3';
+
 /**
  * Simple in-memory rate limiter with automatic cleanup.
  * Resets on server restart.
@@ -101,3 +103,66 @@ export const emailVerificationLimiter = new RateLimiter(3, 60 * 60 * 1000);
 
 // Rate limiter for share invites (prevents spam to random emails)
 export const shareInviteLimiter = new RateLimiter(30, 60 * 60 * 1000); // 30 invites per hour
+
+/**
+ * Persistent rate limiter using SQLite.
+ * Survives server restarts and can be shared across instances (with same DB).
+ */
+export class PersistentRateLimiter {
+  private readonly db: Database.Database;
+  private readonly maxRequests: number;
+  private readonly windowMs: number;
+  private readonly prefix: string;
+
+  constructor(
+    db: Database.Database,
+    maxRequests: number = 10,
+    windowMs: number = 60 * 60 * 1000,
+    prefix = 'rate'
+  ) {
+    this.db = db;
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+    this.prefix = prefix;
+  }
+
+  /**
+   * Check if a request is allowed for the given key.
+   * Returns true if allowed, false if rate limited.
+   */
+  check(key: string): boolean {
+    const now = Math.floor(Date.now() / 1000);
+    const fullKey = `${this.prefix}:${key}`;
+    const windowSeconds = Math.floor(this.windowMs / 1000);
+
+    // Get or create entry
+    const entry = this.db
+      .prepare('SELECT count, reset_at FROM rate_limits WHERE key = ?')
+      .get(fullKey) as { count: number; reset_at: number } | undefined;
+
+    // If no entry or entry expired, create new entry
+    if (!entry || entry.reset_at < now) {
+      this.db
+        .prepare('INSERT OR REPLACE INTO rate_limits (key, count, reset_at) VALUES (?, 1, ?)')
+        .run(fullKey, now + windowSeconds);
+      return true;
+    }
+
+    // If within limit, increment and allow
+    if (entry.count < this.maxRequests) {
+      this.db.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?').run(fullKey);
+      return true;
+    }
+
+    // Rate limited
+    return false;
+  }
+
+  /**
+   * Cleanup expired entries
+   */
+  cleanup(): void {
+    const now = Math.floor(Date.now() / 1000);
+    this.db.prepare('DELETE FROM rate_limits WHERE reset_at < ?').run(now);
+  }
+}

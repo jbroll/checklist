@@ -93,6 +93,7 @@ export function NoteEditorDialog({
             value={editedNote}
             onChange={(e) => setEditedNote(e.target.value)}
             onKeyDown={handleKeyDown}
+            maxLength={2000}
             placeholder={
               noteType === 'template'
                 ? 'Add a note (e.g., brand preference, location, tips...)'

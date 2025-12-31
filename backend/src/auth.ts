@@ -123,6 +123,10 @@ function createAuthConfig(baseURL: string) {
 
     // Session configuration
     session: {
+      // Session expires after 30 days of inactivity
+      expiresIn: 30 * 24 * 60 * 60, // 30 days in seconds
+      // Session must be refreshed within 7 days of last activity
+      updateAge: 7 * 24 * 60 * 60, // 7 days in seconds
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60, // 5 minutes

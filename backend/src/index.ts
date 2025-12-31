@@ -14,9 +14,10 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+import crypto from 'node:crypto';
 import { auth, sqliteDb, getAuthForOrigin, getOriginFromRequest } from './auth.js';
 import { initDb } from './db.js';
-import { initAgent } from './agent.js';
+import { initAgent, isAgentReady } from './agent.js';
 import { setupSharingRoutes } from './shares.js';
 import { setupVerifiedEmailRoutes } from './verified-emails.js';
 import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
@@ -126,10 +127,33 @@ app.use(
   }),
 );
 
-// Request logging middleware
+// Request logging middleware with request ID
 app.use((req, res, next) => {
+  const requestId = req.headers['x-request-id'] as string || crypto.randomUUID();
+  req.id = requestId;
+  res.setHeader('x-request-id', requestId);
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  console.log(`[${timestamp}] [${requestId}] ${req.method} ${req.url}`);
+  next();
+});
+
+// CSRF protection middleware for state-changing requests
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    // Skip CSRF check for BetterAuth routes (handled separately)
+    if (req.url.startsWith('/api/auth')) {
+      return next();
+    }
+    // Skip CSRF check for Stripe webhook (verified via signature)
+    if (req.url === '/api/webhooks/stripe') {
+      return next();
+    }
+    // Require X-Requested-With header for all other state-changing requests
+    if (!req.headers['x-requested-with']) {
+      console.warn(`[CSRF] Missing X-Requested-With header for ${req.method} ${req.url}`);
+      return res.status(403).json({ error: 'forbidden', message: 'Missing required header' });
+    }
+  }
   next();
 });
 
@@ -206,9 +230,16 @@ app.delete('/api/account', async (req, res) => {
   }
 });
 
-// Health check
+// Health check with feature status
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    features: {
+      sharing: isAgentReady(),
+      billing: !!process.env.STRIPE_SECRET_KEY,
+    },
+  });
 });
 
 const PORT = process.env.PORT || 3001;

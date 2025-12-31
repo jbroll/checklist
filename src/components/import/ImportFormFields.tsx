@@ -15,6 +15,7 @@ export function ImportFormFields({ templateName, onTemplateNameChange }: ImportF
         value={templateName}
         onChange={(e) => onTemplateNameChange(e.target.value)}
         placeholder="Enter list name..."
+        maxLength={100}
       />
     </FormField>
   );

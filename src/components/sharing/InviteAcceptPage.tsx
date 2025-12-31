@@ -96,6 +96,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'include',
         body: JSON.stringify({ token }),
@@ -201,16 +202,20 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
   const [showSignIn, setShowSignIn] = useState(false);
 
   const handleGoogleSignIn = () => {
+    // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
+    sessionStorage.setItem('pending-invite-token', token);
     betterAuthClient.signIn.social({
       provider: 'google',
-      callbackURL: `${window.location.origin}?inviteToken=${token}`,
+      callbackURL: window.location.origin,
     });
   };
 
   const handleAppleSignIn = () => {
+    // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
+    sessionStorage.setItem('pending-invite-token', token);
     betterAuthClient.signIn.social({
       provider: 'apple',
-      callbackURL: `${window.location.origin}?inviteToken=${token}`,
+      callbackURL: window.location.origin,
     });
   };
 

@@ -29,7 +29,7 @@ vi.mock('../../src/billing/subscription.js', async (importOriginal) => {
   };
 });
 
-import { setupBillingRoutes, setupStripeWebhook } from '../../src/billing/routes.js';
+import { setupBillingRoutes, setupStripeWebhook, billingLimiter } from '../../src/billing/routes.js';
 import { stripe, isStripeEnabled } from '../../src/billing/stripe.js';
 import { createCheckoutSession, createPortalSession } from '../../src/billing/subscription.js';
 
@@ -103,6 +103,14 @@ function initTestDb() {
     )
   `);
 
+  // Create processed webhook events table (for idempotency)
+  db.exec(`
+    CREATE TABLE processed_webhook_events (
+      event_id TEXT PRIMARY KEY,
+      processed_at TEXT NOT NULL
+    )
+  `);
+
   return db;
 }
 
@@ -139,6 +147,7 @@ describe('Billing Routes', () => {
     app = setupTestApp();
     vi.clearAllMocks();
     stripeEnabled = false;
+    billingLimiter.clear(); // Reset rate limiter between tests
   });
 
   afterEach(() => {
@@ -335,6 +344,7 @@ describe('Billing Routes (Stripe enabled)', () => {
     app = setupTestApp();
     vi.clearAllMocks();
     stripeEnabled = true;
+    billingLimiter.clear(); // Reset rate limiter between tests
   });
 
   afterEach(() => {

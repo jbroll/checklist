@@ -61,12 +61,29 @@ export function AuthGate() {
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
 
-      // Check for invite token in URL parameters after OAuth redirect
+      // Check for pending invite token in sessionStorage (from pre-OAuth flow)
+      const pendingToken = sessionStorage.getItem('pending-invite-token');
+      if (pendingToken) {
+        sessionStorage.removeItem('pending-invite-token');
+        // Validate token format before redirect to prevent open redirect
+        const TOKEN_REGEX = /^[a-zA-Z0-9_-]+$/;
+        const MAX_TOKEN_LENGTH = 128;
+        if (TOKEN_REGEX.test(pendingToken) && pendingToken.length <= MAX_TOKEN_LENGTH) {
+          window.location.href = `/invite/${pendingToken}`;
+          return;
+        }
+      }
+
+      // Also check for invite token in URL parameters (legacy/fallback)
       const urlParams = new URLSearchParams(window.location.search);
       const inviteToken = urlParams.get('inviteToken');
       if (inviteToken) {
-        // Redirect to the invite page and clean up URL
-        window.location.href = `/invite/${inviteToken}`;
+        // Validate token format before redirect to prevent open redirect
+        const TOKEN_REGEX = /^[a-zA-Z0-9_-]+$/;
+        const MAX_TOKEN_LENGTH = 128;
+        if (TOKEN_REGEX.test(inviteToken) && inviteToken.length <= MAX_TOKEN_LENGTH) {
+          window.location.href = `/invite/${inviteToken}`;
+        }
       }
     }
   }, [isAuthenticated]);
@@ -112,16 +129,16 @@ export function AuthGate() {
     // Sign out from BetterAuth first (clear server session)
     try {
       await betterAuthClient.signOut();
-    } catch {
-      // Silently ignore signOut errors
+    } catch (error) {
+      console.error('[AuthGate] Sign out from BetterAuth failed:', error);
     }
 
     // Sign out from Jazz (this clears the local account and triggers state change)
     // The state change will automatically show the login screen, no reload needed
     try {
       await logOut();
-    } catch {
-      // Silently ignore logOut errors
+    } catch (error) {
+      console.error('[AuthGate] Sign out from Jazz failed:', error);
     }
   };
 
@@ -144,6 +161,7 @@ export function AuthGate() {
       // This order ensures we don't lose Jazz data if the API call fails
       const response = await fetch('/api/account', {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'include',
       });
 

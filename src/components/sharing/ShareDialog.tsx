@@ -92,19 +92,23 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
   }, [open, loadAccessData]);
 
-  // Validation: Check if recipient input is valid (basic email or phone number pattern)
+  // Validation: Check if recipient input is valid email
   const isRecipientValid = () => {
     const trimmed = recipientEmail.trim();
     if (!trimmed) return false;
 
-    // Simple email pattern (contains @ and .)
-    const hasEmailPattern = trimmed.includes('@') && trimmed.includes('.');
+    // RFC-compliant email regex
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const MAX_EMAIL_LENGTH = 254;
 
-    // Simple phone pattern (starts with + or digit, has at least 10 digits)
+    if (trimmed.length > MAX_EMAIL_LENGTH) return false;
+
+    // Check email pattern
+    if (EMAIL_REGEX.test(trimmed)) return true;
+
+    // Also allow phone pattern (starts with + or digit, has at least 10 digits)
     const phoneDigits = trimmed.replace(/\D/g, '');
-    const hasPhonePattern = phoneDigits.length >= 10;
-
-    return hasEmailPattern || hasPhonePattern;
+    return phoneDigits.length >= 10;
   };
 
   const handleGenerateInvite = async () => {
@@ -116,6 +120,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -202,6 +207,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
         `/api/shares/folders/${folder.$jazz.id}/collaborators/${accountId}`,
         {
           method: 'DELETE',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
           credentials: 'include',
         },
       );
@@ -227,6 +233,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     try {
       const response = await fetch(`/api/shares/invites/${token}`, {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'include',
       });
 
@@ -360,6 +367,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
               <div className="flex gap-2">
                 <Input
                   id="email"
+                  maxLength={254}
                   type="text"
                   placeholder="colleague@example.com or +1234567890"
                   value={recipientEmail}

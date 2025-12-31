@@ -32,7 +32,10 @@ export function VerifyEmailPage() {
       try {
         const response = await fetch('/api/verified-emails/confirm', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
           credentials: 'include',
           body: JSON.stringify({ token }),
         });

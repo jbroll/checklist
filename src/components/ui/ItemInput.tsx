@@ -230,6 +230,7 @@ export function ItemInput({
               onKeyDown={handleKeyDown}
               placeholder={defaultPlaceholder}
               autoComplete="off"
+              maxLength={200}
               role="combobox"
               aria-autocomplete="list"
               aria-expanded={visibleSuggestions.length > 0}
@@ -338,6 +339,7 @@ export function ItemInput({
             value={defaultQuantity}
             onChange={(e) => setDefaultQuantity(e.target.value)}
             placeholder="Qty (optional)"
+            maxLength={50}
             className={`rounded border border-divider-primary bg-surface-elevated px-3 py-2 text-base text-content-primary placeholder:text-content-disabled focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ${
               isStacked ? '' : 'w-32 shrink-0'
             }`}

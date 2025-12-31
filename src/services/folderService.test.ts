@@ -638,6 +638,21 @@ describe('FolderService', () => {
 
       expect(found).toBeNull();
     });
+
+    it('should find folders within depth limit', () => {
+      // Create a moderately deep hierarchy (10 levels - well within limit)
+      let parent: any = null;
+      const pathParts: string[] = [];
+
+      for (let i = 1; i <= 10; i++) {
+        const name = `Level ${i}`;
+        pathParts.push(name);
+        parent = createFolder(account, name, i === 10, parent);
+      }
+
+      const found = findFolderByPath(account, pathParts);
+      expect(found).toBe(parent);
+    });
   });
 
   describe('reorderFolder', () => {

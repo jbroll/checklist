@@ -1,5 +1,5 @@
 import { AuthProvider } from 'jazz-tools/better-auth/auth/react';
-import { JazzReactProvider } from 'jazz-tools/react';
+import { JazzReactProvider, useAccount } from 'jazz-tools/react';
 import type { ReactNode } from 'react';
 import { Account } from '../schemas';
 import { betterAuthClient } from './auth-client';
@@ -68,3 +68,12 @@ export {
   useIsAuthenticated,
   useLogOut,
 } from 'jazz-tools/react';
+
+/**
+ * Typed wrapper for useAccount that returns our Account schema type
+ * This provides proper typing for account.root and other custom fields
+ */
+export function useTypedAccount() {
+  const account = useAccount<typeof Account>();
+  return account;
+}

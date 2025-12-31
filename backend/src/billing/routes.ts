@@ -13,6 +13,11 @@ import {
   recordUsage,
   getUsageHistory,
 } from './subscription.js';
+import { RateLimiter } from '../lib/rate-limiter.js';
+
+// Rate limiter for billing endpoints (10 requests per hour per user)
+// Exported for testing purposes
+export const billingLimiter = new RateLimiter(10, 60 * 60 * 1000);
 
 // Auth session type
 interface AuthSession {
@@ -127,6 +132,11 @@ export function setupBillingRoutes(
         return res.status(401).json({ error: 'Not authenticated' });
       }
 
+      // Rate limit billing requests
+      if (!billingLimiter.check(session.user.id)) {
+        return res.status(429).json({ error: 'rate_limited', message: 'Too many billing requests. Please try again later.' });
+      }
+
       const { tierSlug } = req.body as { tierSlug?: string };
       if (!tierSlug || !['plus', 'premium'].includes(tierSlug)) {
         return res.status(400).json({ error: 'Invalid tier' });
@@ -162,6 +172,11 @@ export function setupBillingRoutes(
       const session = await getAuthSession(req, auth);
       if (!session?.user?.id) {
         return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      // Rate limit billing requests
+      if (!billingLimiter.check(session.user.id)) {
+        return res.status(429).json({ error: 'rate_limited', message: 'Too many billing requests. Please try again later.' });
       }
 
       const portalUrl = await createPortalSession(
@@ -219,6 +234,16 @@ export function setupStripeWebhook(app: Express, db: Database.Database): void {
       }
 
       console.log(`[webhook] Received event: ${event.type}`);
+
+      // Check for duplicate event (idempotency)
+      const existingEvent = db.prepare(
+        'SELECT event_id FROM processed_webhook_events WHERE event_id = ?'
+      ).get(event.id);
+
+      if (existingEvent) {
+        console.log(`[webhook] Skipping duplicate event: ${event.id}`);
+        return res.json({ received: true, skipped: 'duplicate' });
+      }
 
       try {
         switch (event.type) {
@@ -294,6 +319,11 @@ export function setupStripeWebhook(app: Express, db: Database.Database): void {
           default:
             console.log(`[webhook] Unhandled event type: ${event.type}`);
         }
+
+        // Record event as processed (idempotency)
+        db.prepare(
+          'INSERT INTO processed_webhook_events (event_id, processed_at) VALUES (?, ?)'
+        ).run(event.id, new Date().toISOString());
 
         res.json({ received: true });
       } catch (error) {

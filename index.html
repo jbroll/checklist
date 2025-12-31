@@ -20,6 +20,17 @@
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob:;
+      font-src 'self';
+      connect-src 'self' wss://cloud.jazz.tools https://api.stripe.com https://*.googleapis.com;
+      frame-src https://js.stripe.com https://accounts.google.com https://appleid.apple.com;
+    " />
+
     <title>kjekit</title>
     <!-- Prevent flash of wrong theme -->
     <script>
