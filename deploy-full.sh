@@ -64,13 +64,13 @@ if [[ "$ENV" == "prod" ]]; then
     # Production deployment - all three components
 
     # Build website pages from markdown
-    echo "[1/5] Building Website Pages..."
+    echo "[1/6] Building Website Pages..."
     npm run build:website
     echo "✓ Website pages built"
     echo ""
 
     # Deploy marketing website
-    echo "[2/5] Deploying Marketing Website..."
+    echo "[2/6] Deploying Marketing Website..."
     cd website
     "../../deploy.sh/deploy.sh" "$MODE" .
     cd ..
@@ -78,13 +78,13 @@ if [[ "$ENV" == "prod" ]]; then
     echo ""
 
     # Deploy app frontend
-    echo "[3/5] Deploying App Frontend..."
+    echo "[3/6] Deploying App Frontend..."
     "$DEPLOY_SH" "$MODE" .
     echo "✓ App frontend deployed (app.kjekit.com)"
     echo ""
 
     # Deploy backend
-    echo "[4/5] Deploying Backend..."
+    echo "[4/6] Deploying Backend..."
     cd backend
     "../../deploy.sh/deploy.sh" "$MODE" .
     cd ..
@@ -92,13 +92,23 @@ if [[ "$ENV" == "prod" ]]; then
     echo ""
 
     # Deploy secrets
-    echo "[5/5] Deploying Backend Secrets..."
+    echo "[5/6] Deploying Backend Secrets..."
     if [ -f "backend/secrets.env" ]; then
         scp backend/secrets.env app.kjekit.com:/var/lib/kjekit-api-data/secrets.env
         ssh app.kjekit.com "sudo systemctl restart kjekit-api"
         echo "✓ Secrets deployed and backend restarted"
     else
         echo "⚠ backend/secrets.env not found, skipping secrets deployment"
+    fi
+    echo ""
+
+    # Run smoke tests
+    echo "[6/6] Running Smoke Tests..."
+    if npm run test:smoke:prod; then
+        echo "✓ Smoke tests passed"
+    else
+        echo "✗ Smoke tests FAILED - deployment may have issues"
+        exit 1
     fi
     echo ""
 
@@ -110,7 +120,7 @@ elif [[ "$ENV" == "test" ]]; then
     # Test deployment - app + backend only (no marketing site)
 
     # Deploy app frontend with test config
-    echo "[1/3] Deploying Test App Frontend..."
+    echo "[1/4] Deploying Test App Frontend..."
     if [[ ! -f "deploy-test.conf" ]]; then
         echo "ERROR: deploy-test.conf not found"
         exit 1
@@ -128,7 +138,7 @@ elif [[ "$ENV" == "test" ]]; then
     echo ""
 
     # Deploy backend with test config
-    echo "[2/3] Deploying Test Backend..."
+    echo "[2/4] Deploying Test Backend..."
     if [[ ! -f "backend/deploy-test.conf" ]]; then
         echo "ERROR: backend/deploy-test.conf not found"
         exit 1
@@ -147,13 +157,23 @@ elif [[ "$ENV" == "test" ]]; then
     echo ""
 
     # Deploy test secrets
-    echo "[3/3] Deploying Test Backend Secrets..."
+    echo "[3/4] Deploying Test Backend Secrets..."
     if [ -f "backend/secrets-test.env" ]; then
         scp backend/secrets-test.env checklist-test.rkroll.com:/var/lib/kjekit-api-test-data/secrets.env
         ssh checklist-test.rkroll.com "sudo systemctl restart kjekit-api-test"
         echo "✓ Test secrets deployed and backend restarted"
     else
         echo "⚠ backend/secrets-test.env not found, skipping secrets deployment"
+    fi
+    echo ""
+
+    # Run smoke tests
+    echo "[4/4] Running Smoke Tests..."
+    if npm run test:smoke:test; then
+        echo "✓ Smoke tests passed"
+    else
+        echo "✗ Smoke tests FAILED - deployment may have issues"
+        exit 1
     fi
     echo ""
 
