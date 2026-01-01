@@ -1,12 +1,5 @@
 import { co, type InstanceOfSchema, z } from 'jazz-tools';
-import {
-  FolderNode,
-  type ItemState,
-  type SessionData,
-  setAccountReference,
-  Template,
-  type TemplateItem,
-} from './tree';
+import { FolderNode, type ItemState, type SessionData, Template, type TemplateItem } from './tree';
 
 /**
  * ViewState - Per-user UI state (not shared with collaborators)
@@ -219,9 +212,6 @@ export const Account = co
       root.folders.$jazz.push(quickErrands);
     }
   });
-
-// Wire up the forward reference from tree.ts to Account
-setAccountReference(Account);
 
 // Re-export tree schemas and types for easy importing
 export { FolderNode, Template, type SessionData, type TemplateItem, type ItemState };

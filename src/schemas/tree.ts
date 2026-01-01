@@ -1,16 +1,5 @@
 import { co, z } from 'jazz-tools';
 
-// Forward reference to Account (defined in index.ts)
-// Use getter pattern for forward references
-// biome-ignore lint/suspicious/noExplicitAny: Forward reference pattern requires any
-let Account: any;
-
-// Helper to set the account reference (called from index.ts)
-// biome-ignore lint/suspicious/noExplicitAny: This accepts any account schema type
-export function setAccountReference(account: any) {
-  Account = account;
-}
-
 /**
  * TemplateItem - Plain JSON object (not a CoValue)
  * Represents a hierarchical category or item node within a template.
@@ -150,8 +139,10 @@ export const FolderNode: any = co.map({
   },
 
   // Ownership and timestamps
+  // Use co.account() for the creator reference - Jazz's recommended pattern
+  // This avoids circular import issues while still typing the field correctly
   get owner() {
-    return Account;
+    return co.account();
   },
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -221,8 +212,9 @@ export const Template = co.map({
   autoCategorizeEnabled: z.optional(z.boolean()),
 
   // Ownership and timestamps
+  // Use co.account() for the creator reference - Jazz's recommended pattern
   get owner() {
-    return Account;
+    return co.account();
   },
   createdAt: z.date(),
   updatedAt: z.date(),

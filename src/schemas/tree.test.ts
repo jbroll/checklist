@@ -6,24 +6,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  FolderNode,
-  type ItemState,
-  type SessionData,
-  setAccountReference,
-  Template,
-  type TemplateItem,
-} from './tree';
+import { FolderNode, type ItemState, type SessionData, Template, type TemplateItem } from './tree';
 
 describe('schemas/tree', () => {
-  describe('setAccountReference', () => {
-    it('should accept an account reference', () => {
-      // Should not throw when setting account reference
-      const mockAccount = { id: 'test-account' };
-      expect(() => setAccountReference(mockAccount)).not.toThrow();
-    });
-  });
-
   describe('type exports', () => {
     it('should export TemplateItem type with correct shape', () => {
       const item: TemplateItem = {
