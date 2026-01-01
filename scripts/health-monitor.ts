@@ -10,7 +10,7 @@
  *
  * Environments:
  *   test    - https://checklist-test.rkroll.com
- *   prod    - https://app.kjekit.com (default)
+ *   prod    - https://checklist-app.rkroll.com (default)
  *   local   - http://localhost:5173
  *
  * Options:
@@ -55,8 +55,8 @@ interface MonitorResult {
 // Environment configurations
 const ENVIRONMENTS: Record<string, { appUrl: string; backendUrl: string; apiPrefix: string }> = {
   prod: {
-    appUrl: 'https://app.kjekit.com',
-    backendUrl: 'https://app.kjekit.com',
+    appUrl: 'https://checklist-app.rkroll.com',
+    backendUrl: 'https://checklist-app.rkroll.com',
     apiPrefix: '/api',
   },
   test: {

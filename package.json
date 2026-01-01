@@ -26,7 +26,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:smoke:local": "SMOKE_TEST=true BASE_URL=http://localhost:8765 playwright test deploy-smoke",
     "test:smoke:test": "SMOKE_TEST=true BASE_URL=https://checklist-test.rkroll.com playwright test deploy-smoke",
-    "test:smoke:prod": "SMOKE_TEST=true BASE_URL=https://app.kjekit.com playwright test deploy-smoke",
+    "test:smoke:prod": "SMOKE_TEST=true BASE_URL=https://checklist-app.rkroll.com playwright test deploy-smoke",
     "monitor:local": "tsx scripts/health-monitor.ts local",
     "monitor:test": "tsx scripts/health-monitor.ts test",
     "monitor:prod": "tsx scripts/health-monitor.ts prod",

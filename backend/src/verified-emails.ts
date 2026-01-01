@@ -44,9 +44,9 @@ async function sendVerificationEmail(to: string, token: string) {
 
   try {
     await smtpTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'kjekit <invite@kjekit.com>',
+      from: process.env.EMAIL_FROM || 'CheckList <invite@checklist.rkroll.com>',
       to,
-      subject: 'Verify your additional email for kjekit',
+      subject: 'Verify your additional email for CheckList',
       text: `Click to verify this email address: ${verifyUrl}
 
 This link expires in ${TOKEN_EXPIRY_HOURS} hours.

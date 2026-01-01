@@ -114,9 +114,7 @@ const allowedOrigins = [
   'http://localhost:8765',
   'http://localhost:8766',
   'http://localhost:5173',
-  'https://app.kjekit.com',
-  'https://kjekit.com',
-  'https://checklist-app.rkroll.com',  // Brand alias
+  'https://checklist-app.rkroll.com',
   process.env.FRONTEND_URL,
   'https://appleid.apple.com',  // Apple OAuth callback
 ].filter(Boolean);

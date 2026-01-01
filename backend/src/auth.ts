@@ -71,7 +71,7 @@ async function sendEmail(to: string, subject: string, text: string) {
 
   try {
     await smtpTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'kjekit <invite@kjekit.com>',
+      from: process.env.EMAIL_FROM || 'CheckList <invite@checklist.rkroll.com>',
       to,
       subject,
       text,
@@ -104,7 +104,6 @@ export { sqliteDb };
 // Allowed origins for multi-domain OAuth
 // Only include localhost origins in development
 const allowedOrigins = [
-  'https://app.kjekit.com',
   'https://checklist-app.rkroll.com',
   ...(process.env.NODE_ENV !== 'production' ? [
     'http://localhost:5173',
@@ -229,7 +228,7 @@ export function getOriginFromRequest(headers: Record<string, string | string[] |
   let host: string | undefined;
 
   if (typeof forwardedHost === 'string') {
-    // Handle comma-separated values (e.g., "app.kjekit.com, app.kjekit.com")
+    // Handle comma-separated values from X-Forwarded-Host header
     host = forwardedHost.split(',')[0].trim();
   } else if (Array.isArray(forwardedHost)) {
     host = forwardedHost[0];
@@ -247,4 +246,4 @@ export function getOriginFromRequest(headers: Record<string, string | string[] |
 }
 
 // Default auth instance (for backwards compatibility with non-HTTP contexts)
-export const auth = getAuthForOrigin('https://app.kjekit.com');
+export const auth = getAuthForOrigin('https://checklist-app.rkroll.com');
