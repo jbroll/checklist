@@ -80,7 +80,7 @@ export function useCategorization(options: UseCategorization = {}): UseCategoriz
   const [isReady, setIsReady] = useState(autocompleteDomain === 'none');
   const [isLoading, setIsLoading] = useState(false);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastInputRef = useRef<string>('');
   const mountedRef = useRef(true);
 

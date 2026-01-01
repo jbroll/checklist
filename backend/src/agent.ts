@@ -70,8 +70,8 @@ export async function validateSenderAccess(
       loadAs: worker,
     });
 
-    if (!folder) {
-      console.warn(`Folder ${folderCoValueId} not found`);
+    if (!folder || !('_owner' in folder)) {
+      console.warn(`Folder ${folderCoValueId} not found or not loaded`);
       return false;
     }
 
@@ -80,13 +80,14 @@ export async function validateSenderAccess(
       loadAs: worker,
     });
 
-    if (!senderAccount) {
+    if (!senderAccount || !('id' in senderAccount) || 'loadingState' in senderAccount) {
       console.warn(`Sender account ${senderJazzAccountId} not found`);
       return false;
     }
 
     // Check if sender is in the folder's owner group
-    const ownerGroup = folder.$jazz.owner;
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
+    const ownerGroup = (folder as any)._owner;
 
     // Get all members of the group
     const members = ownerGroup.members;
@@ -127,7 +128,7 @@ export async function addToFolderGroup(
       loadAs: worker,
     });
 
-    if (!folder) {
+    if (!folder || !('_owner' in folder)) {
       throw new Error(`Folder ${folderCoValueId} not found`);
     }
 
@@ -136,7 +137,7 @@ export async function addToFolderGroup(
       loadAs: worker,
     });
 
-    if (!recipientAccount) {
+    if (!recipientAccount || !('id' in recipientAccount) || 'loadingState' in recipientAccount) {
       throw new Error(`Recipient account ${recipientJazzAccountId} not found`);
     }
 
@@ -147,7 +148,8 @@ export async function addToFolderGroup(
     const jazzRole = permission === 'view' ? 'reader' : permission === 'edit' ? 'writer' : 'admin';
 
     // Add member to folder's owner group
-    const ownerGroup = folder.$jazz.owner;
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
+    const ownerGroup = (folder as any)._owner;
 
     // Check if already a member
     const existingMember = ownerGroup.members.find(
@@ -164,7 +166,7 @@ export async function addToFolderGroup(
     console.log(`✅ Added ${recipientJazzAccountId.slice(0, 12)}... to ${folderCoValueId.slice(0, 12)}... with role ${jazzRole}`);
 
     // Wait for sync to ensure the change is persisted
-    await ownerGroup.$jazz.waitForSync();
+    await ownerGroup.waitForSync();
 
     return { alreadyMember: false };
   } catch (error) {
@@ -191,12 +193,13 @@ export async function getFolderGroupMembers(
       loadAs: worker,
     });
 
-    if (!folder) {
+    if (!folder || !('_owner' in folder)) {
       throw new Error(`Folder ${folderCoValueId} not found`);
     }
 
     // Get all members of the group
-    const ownerGroup = folder.$jazz.owner;
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
+    const ownerGroup = (folder as any)._owner;
 
     // Check if owner is a Group (has members property)
     if (!ownerGroup.members) {
@@ -234,13 +237,14 @@ export async function removeFromFolderGroup(
       loadAs: worker,
     });
 
-    if (!folder) {
+    if (!folder || !('_owner' in folder)) {
       throw new Error(`Folder ${folderCoValueId} not found`);
     }
 
     // Prevent removing the group owner (they should always have access)
-    const ownerGroup = folder.$jazz.owner;
-    const groupOwner = ownerGroup?.$jazz?.owner as { id: string } | undefined;
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
+    const ownerGroup = (folder as any)._owner;
+    const groupOwner = ownerGroup?._owner as { id: string } | undefined;
     const groupOwnerId = groupOwner?.id;
 
     if (groupOwnerId === userJazzAccountId) {
@@ -252,7 +256,7 @@ export async function removeFromFolderGroup(
       loadAs: worker,
     });
 
-    if (!userAccount) {
+    if (!userAccount || !('id' in userAccount) || 'loadingState' in userAccount) {
       throw new Error(`User account ${userJazzAccountId} not found`);
     }
 
@@ -262,7 +266,7 @@ export async function removeFromFolderGroup(
     console.log(`✅ Removed ${userJazzAccountId.slice(0, 12)}... from ${folderCoValueId.slice(0, 12)}...`);
 
     // Wait for sync
-    await ownerGroup.$jazz.waitForSync();
+    await ownerGroup.waitForSync();
   } catch (error) {
     console.error('Error removing member from folder group:', error);
     throw error;
