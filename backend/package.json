@@ -8,6 +8,8 @@
     "start": "node dist/migrate-auth.js && node dist/index.js",
     "migrate": "node dist/migrate.js",
     "migrate-auth": "node dist/migrate-auth.js",
+    "rotate-better-auth-secret": "tsx scripts/rotate-better-auth-secret.ts",
+    "rotate-jazz-agent": "tsx scripts/rotate-agent.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
