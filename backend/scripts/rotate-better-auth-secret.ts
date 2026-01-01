@@ -22,7 +22,9 @@
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { createHash } from '@better-auth/utils/hash';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
+import { bytesToHex, hexToBytes, managedNonce, utf8ToBytes } from '@noble/ciphers/utils.js';
 
 // Configuration
 const DB_PATH = process.env.AUTH_DB_PATH || './data/auth.db';
@@ -59,64 +61,26 @@ function getNewSecret(): string {
   return newSecret;
 }
 
-// BetterAuth encryption uses chacha20-poly1305 via @noble/ciphers
-// We need to replicate the encryption/decryption logic
-// The actual implementation is in better-auth/dist/crypto-*.mjs
-
-// Derive key from secret (matches BetterAuth's implementation)
-function deriveKey(secret: string): Buffer {
-  // BetterAuth uses the secret directly as hex, or derives from it
-  // This matches their symmetricEncrypt/symmetricDecrypt
-  return scryptSync(secret, 'better-auth-salt', 32);
-}
+// BetterAuth encryption uses xchacha20poly1305 via @noble/ciphers
+// This matches the implementation in better-auth/dist/crypto-*.mjs
 
 // Decrypt using the same algorithm as BetterAuth
-function decrypt(encrypted: string, secret: string): string {
+async function decrypt(encrypted: string, secret: string): Promise<string> {
   try {
-    // BetterAuth stores as hex string: nonce (24 bytes) + ciphertext + tag (16 bytes)
-    const data = Buffer.from(encrypted, 'hex');
-    const nonce = data.subarray(0, 12);
-    const ciphertext = data.subarray(12);
-
-    const key = deriveKey(secret);
-    const decipher = createDecipheriv('chacha20-poly1305', key, nonce, {
-      authTagLength: 16,
-    });
-
-    // Last 16 bytes are the auth tag
-    const tag = ciphertext.subarray(ciphertext.length - 16);
-    const actualCiphertext = ciphertext.subarray(0, ciphertext.length - 16);
-
-    decipher.setAuthTag(tag);
-    const decrypted = Buffer.concat([
-      decipher.update(actualCiphertext),
-      decipher.final(),
-    ]);
-
-    return decrypted.toString('utf-8');
+    const keyAsBytes = await createHash('SHA-256').digest(secret);
+    const dataAsBytes = hexToBytes(encrypted);
+    const chacha = managedNonce(xchacha20poly1305)(new Uint8Array(keyAsBytes));
+    return new TextDecoder().decode(chacha.decrypt(dataAsBytes));
   } catch (error) {
     throw new Error(`Decryption failed: ${error}`);
   }
 }
 
 // Encrypt using the same algorithm as BetterAuth
-function encrypt(plaintext: string, secret: string): string {
-  const key = deriveKey(secret);
-  const nonce = randomBytes(12);
-
-  const cipher = createCipheriv('chacha20-poly1305', key, nonce, {
-    authTagLength: 16,
-  });
-
-  const encrypted = Buffer.concat([
-    cipher.update(plaintext, 'utf-8'),
-    cipher.final(),
-  ]);
-
-  const tag = cipher.getAuthTag();
-
-  // Combine: nonce + ciphertext + tag
-  return Buffer.concat([nonce, encrypted, tag]).toString('hex');
+async function encrypt(plaintext: string, secret: string): Promise<string> {
+  const keyAsBytes = await createHash('SHA-256').digest(secret);
+  const dataAsBytes = utf8ToBytes(plaintext);
+  return bytesToHex(managedNonce(xchacha20poly1305)(new Uint8Array(keyAsBytes)).encrypt(dataAsBytes));
 }
 
 async function main() {
@@ -166,10 +130,10 @@ async function main() {
   for (const user of users) {
     try {
       // Decrypt with old secret
-      const decrypted = decrypt(user.encryptedCredentials, oldSecret);
+      const decrypted = await decrypt(user.encryptedCredentials, oldSecret);
 
       // Re-encrypt with new secret
-      const reencrypted = encrypt(decrypted, newSecret);
+      const reencrypted = await encrypt(decrypted, newSecret);
 
       if (!DRY_RUN) {
         updateStmt.run(reencrypted, user.id);
