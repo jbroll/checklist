@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
-import { addToFolderGroup, validateSenderAccess, getFolderGroupMembers, removeFromFolderGroup } from './agent.js';
+import { addToGroup, validateSenderAccess, getGroupMembers, removeFromGroup } from './agent.js';
 import { ApiErrors } from './lib/api-error.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
 import { shareInviteLimiter, tokenValidationLimiter } from './lib/rate-limiter.js';
@@ -52,17 +52,17 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       return ApiErrors.rateLimited(res);
     }
 
-    const { recipientEmail, folderCoValueId, permission, expiresInDays } = req.body;
+    const { recipientEmail, targetId, permission, expiresInDays } = req.body;
 
-    // Validate sender has access to the folder before creating invite
+    // Validate sender has access to the target before creating invite
     const senderJazzAccountId = (session.user as any).accountID;
     if (!senderJazzAccountId) {
-      return ApiErrors.badRequest(res, 'Jazz account ID is required to share folders');
+      return ApiErrors.badRequest(res, 'Jazz account ID is required to share');
     }
 
-    const hasAccess = await validateSenderAccess(folderCoValueId, senderJazzAccountId);
+    const hasAccess = await validateSenderAccess(targetId, senderJazzAccountId);
     if (!hasAccess) {
-      return ApiErrors.forbidden(res, 'You do not have access to share this folder');
+      return ApiErrors.forbidden(res, 'You do not have access to share this item');
     }
 
     const token = randomBytes(32).toString('hex');
@@ -70,20 +70,20 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     db.prepare(`
       INSERT INTO share_invites (token, sender_email, sender_jazz_account_id,
-        recipient_email, folder_covalue_id, permission, expires_at, created_at)
+        recipient_email, target_covalue_id, permission, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       token,
       session.user.email,
       senderJazzAccountId,
       recipientEmail,
-      folderCoValueId,
+      targetId,
       permission,
       expiresAt,
       Math.floor(Date.now() / 1000)
     );
 
-    // Return agent account ID so frontend can add it to the folder
+    // Return agent account ID so frontend can add it to the target
     res.json({
       token,
       shareUrl: `${process.env.FRONTEND_URL}/invite/${token}`,
@@ -152,13 +152,13 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     // Note: We trust that the invite was created by someone with access at creation time
     // The sender_jazz_account_id is stored for audit purposes
-    // Validating current access would require the agent to be a member of all folders,
+    // Validating current access would require the agent to be a member of all targets,
     // which isn't practical
 
     // Add recipient to Jazz group
     try {
-      const result = await addToFolderGroup(
-        invite.folder_covalue_id,
+      const result = await addToGroup(
+        invite.target_covalue_id,
         recipientJazzAccountId,
         invite.permission
       );
@@ -170,7 +170,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       // Return success - if already a member, they still have access which is the goal
       res.json({
         success: true,
-        folderId: invite.folder_covalue_id,
+        targetId: invite.target_covalue_id,
         alreadyMember: result?.alreadyMember || false
       });
     } catch (error) {
@@ -179,48 +179,48 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     }
   });
 
-  // Get pending invites for a folder
-  app.get('/api/shares/folders/:folderId/invites', async (req, res) => {
+  // Get pending invites for a target
+  app.get('/api/shares/targets/:targetId/invites', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return ApiErrors.unauthorized(res);
 
-    const { folderId } = req.params;
+    const { targetId } = req.params;
 
-    // Validate folder ID format
-    if (!isValidCoValueId(folderId)) {
-      return ApiErrors.badRequest(res, 'Invalid folder ID format');
+    // Validate target ID format
+    if (!isValidCoValueId(targetId)) {
+      return ApiErrors.badRequest(res, 'Invalid target ID format');
     }
 
     try {
-      // Authorization check: verify user owns invites for this folder OR is a collaborator
+      // Authorization check: verify user owns invites for this target OR is a collaborator
       const userJazzAccountId = (session.user as any).accountID;
 
-      // Check if user is the owner (has sent invites for this folder)
+      // Check if user is the owner (has sent invites for this target)
       const ownerInvite = db.prepare(`
         SELECT 1 FROM share_invites
-        WHERE folder_covalue_id = ? AND sender_email = ?
+        WHERE target_covalue_id = ? AND sender_email = ?
         LIMIT 1
-      `).get(folderId, session.user.email);
+      `).get(targetId, session.user.email);
 
       let isAuthorized = !!ownerInvite;
 
       // If not owner, check if user is a collaborator
       if (!isAuthorized && userJazzAccountId) {
-        const members = await getFolderGroupMembers(folderId);
+        const members = await getGroupMembers(targetId);
         const isMember = members.some(m => m.id === userJazzAccountId);
         isAuthorized = isMember;
       }
 
       if (!isAuthorized) {
-        return ApiErrors.forbidden(res, 'You do not have access to view invites for this folder');
+        return ApiErrors.forbidden(res, 'You do not have access to view invites for this item');
       }
 
       const invites = db.prepare(`
         SELECT token, recipient_email, permission, created_at, expires_at
         FROM share_invites
-        WHERE folder_covalue_id = ? AND accepted_at IS NULL AND (expires_at > ? OR expires_at IS NULL)
+        WHERE target_covalue_id = ? AND accepted_at IS NULL AND (expires_at > ? OR expires_at IS NULL)
         ORDER BY created_at DESC
-      `).all(folderId, Math.floor(Date.now() / 1000)) as any[];
+      `).all(targetId, Math.floor(Date.now() / 1000)) as any[];
 
       res.json({
         invites: invites.map(invite => ({
@@ -268,33 +268,33 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     }
   });
 
-  // Get collaborators for a folder
-  app.get('/api/shares/folders/:folderId/collaborators', async (req, res) => {
+  // Get collaborators for a target
+  app.get('/api/shares/targets/:targetId/collaborators', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return ApiErrors.unauthorized(res);
 
-    const { folderId } = req.params;
+    const { targetId } = req.params;
 
-    // Validate folder ID format
-    if (!isValidCoValueId(folderId)) {
-      return ApiErrors.badRequest(res, 'Invalid folder ID format');
+    // Validate target ID format
+    if (!isValidCoValueId(targetId)) {
+      return ApiErrors.badRequest(res, 'Invalid target ID format');
     }
 
     try {
-      // Authorization check: verify user is a member of this folder's group
+      // Authorization check: verify user is a member of this target's group
       const userJazzAccountId = (session.user as any).accountID;
 
       if (!userJazzAccountId) {
-        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this folder');
+        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this item');
       }
 
       // Get Jazz group members
-      const members = await getFolderGroupMembers(folderId);
+      const members = await getGroupMembers(targetId);
 
       // Check if requesting user is a member
       const isMember = members.some(m => m.id === userJazzAccountId);
       if (!isMember) {
-        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this folder');
+        return ApiErrors.forbidden(res, 'You do not have access to view collaborators for this item');
       }
 
       // Map Jazz account IDs to user info from BetterAuth
@@ -307,17 +307,12 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
         `).get(member.id) as any;
 
         if (user) {
-          // Map Jazz role back to permission level
-          const permission =
-            member.role === 'reader' ? 'view' :
-            member.role === 'writer' ? 'edit' : 'admin';
-
           collaborators.push({
             userId: user.id,
             accountId: member.id,
             email: user.email,
             name: user.name || user.email,
-            permission,
+            permission: member.role,
             role: member.role,
           });
         }
@@ -331,15 +326,15 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
   });
 
   // Remove a collaborator
-  app.delete('/api/shares/folders/:folderId/collaborators/:accountId', async (req, res) => {
+  app.delete('/api/shares/targets/:targetId/collaborators/:accountId', async (req, res) => {
     const session = await auth.api.getSession({ headers: req.headers as any });
     if (!session?.user) return ApiErrors.unauthorized(res);
 
-    const { folderId, accountId } = req.params;
+    const { targetId, accountId } = req.params;
 
-    // Validate folder ID format
-    if (!isValidCoValueId(folderId)) {
-      return ApiErrors.badRequest(res, 'Invalid folder ID format');
+    // Validate target ID format
+    if (!isValidCoValueId(targetId)) {
+      return ApiErrors.badRequest(res, 'Invalid target ID format');
     }
 
     // Validate account ID format (Jazz account IDs also use co_ prefix)
@@ -348,10 +343,10 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
     }
 
     try {
-      // Verify the requesting user has admin permission on this folder
+      // Verify the requesting user has admin permission on this target
       const requesterJazzAccountId = (session.user as any).accountID;
       if (requesterJazzAccountId) {
-        const members = await getFolderGroupMembers(folderId);
+        const members = await getGroupMembers(targetId);
         const requesterMember = members.find(m => m.id === requesterJazzAccountId);
         if (!requesterMember || requesterMember.role !== 'admin') {
           return ApiErrors.forbidden(res, 'Only admins can remove collaborators');
@@ -359,7 +354,7 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
       }
 
       // Remove from Jazz group
-      await removeFromFolderGroup(folderId, accountId);
+      await removeFromGroup(targetId, accountId);
 
       res.json({ success: true });
     } catch (error) {

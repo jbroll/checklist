@@ -17,6 +17,10 @@ const baseURL = isSmokeTest
 export default defineConfig({
   testDir: './e2e',
 
+  // Ignore deploy-smoke tests in normal mode (they're for deployed environments)
+  // Run them separately with: SMOKE_TEST=true npm run test:e2e
+  testIgnore: isSmokeTest ? undefined : ['**/deploy-smoke.spec.ts'],
+
   // Global setup to start mock OAuth server (disabled for smoke tests)
   globalSetup: isSmokeTest ? undefined : './playwright-global-setup.ts',
 

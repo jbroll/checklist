@@ -51,12 +51,12 @@ export async function initAgent() {
 }
 
 /**
- * Validate that sender still has access to folder
+ * Validate that sender still has access to target CoValue
  *
- * Loads the folder and checks if sender account is a member of the folder's owner group
+ * Loads the target and checks if sender account is a member of the target's owner group
  */
 export async function validateSenderAccess(
-  folderCoValueId: string,
+  targetId: string,
   senderJazzAccountId: string
 ): Promise<boolean> {
   if (!worker) {
@@ -65,13 +65,13 @@ export async function validateSenderAccess(
   }
 
   try {
-    // Load the folder CoValue as a generic CoMap
-    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+    // Load the target CoValue as a generic CoMap
+    const target = await CoMap.load(targetId as ID<CoMap>, {
       loadAs: worker,
     });
 
-    if (!folder || !('_owner' in folder)) {
-      console.warn(`Folder ${folderCoValueId} not found or not loaded`);
+    if (!target || !('_owner' in target)) {
+      console.warn(`Target ${targetId} not found or not loaded`);
       return false;
     }
 
@@ -85,9 +85,9 @@ export async function validateSenderAccess(
       return false;
     }
 
-    // Check if sender is in the folder's owner group
+    // Check if sender is in the target's owner group
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (folder as any)._owner;
+    const ownerGroup = (target as any)._owner;
 
     // Get all members of the group
     const members = ownerGroup.members;
@@ -99,7 +99,7 @@ export async function validateSenderAccess(
     );
 
     // Log with truncated IDs for privacy
-    console.log(`Access validation: ${senderJazzAccountId.slice(0, 12)}... ${isMember ? 'HAS' : 'DOES NOT HAVE'} access to ${folderCoValueId.slice(0, 12)}...`);
+    console.log(`Access validation: ${senderJazzAccountId.slice(0, 12)}... ${isMember ? 'HAS' : 'DOES NOT HAVE'} access to ${targetId.slice(0, 12)}...`);
 
     return isMember;
   } catch (error) {
@@ -109,27 +109,28 @@ export async function validateSenderAccess(
 }
 
 /**
- * Add a user to a folder's access group
+ * Add a user to a target's access group
  *
- * Loads the folder and adds the recipient to the folder's owner group with the specified role
+ * Loads the target and adds the recipient to the target's owner group with the specified role.
+ * Uses Jazz native role names: reader, writer, admin
  */
-export async function addToFolderGroup(
-  folderCoValueId: string,
+export async function addToGroup(
+  targetId: string,
   recipientJazzAccountId: string,
-  permission: 'view' | 'edit' | 'admin'
+  permission: 'reader' | 'writer' | 'admin'
 ): Promise<{ alreadyMember: boolean }> {
   if (!worker) {
     throw new Error('Jazz agent not initialized - cannot add member to group');
   }
 
   try {
-    // Load the folder CoValue as a generic CoMap
-    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+    // Load the target CoValue as a generic CoMap
+    const target = await CoMap.load(targetId as ID<CoMap>, {
       loadAs: worker,
     });
 
-    if (!folder || !('_owner' in folder)) {
-      throw new Error(`Folder ${folderCoValueId} not found`);
+    if (!target || !('_owner' in target)) {
+      throw new Error(`Target ${targetId} not found`);
     }
 
     // Load recipient's account
@@ -141,15 +142,9 @@ export async function addToFolderGroup(
       throw new Error(`Recipient account ${recipientJazzAccountId} not found`);
     }
 
-    // Map permission to Jazz role
-    // 'view' -> 'reader' (can read only)
-    // 'edit' -> 'writer' (can read and write)
-    // 'admin' -> 'admin' (can read, write, and manage group)
-    const jazzRole = permission === 'view' ? 'reader' : permission === 'edit' ? 'writer' : 'admin';
-
-    // Add member to folder's owner group
+    // Add member to target's owner group
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (folder as any)._owner;
+    const ownerGroup = (target as any)._owner;
 
     // Check if already a member
     const existingMember = ownerGroup.members.find(
@@ -157,54 +152,54 @@ export async function addToFolderGroup(
     );
 
     if (existingMember) {
-      console.log(`⚠️ User ${recipientJazzAccountId.slice(0, 12)}... is already a member of ${folderCoValueId.slice(0, 12)}... - skipping`);
+      console.log(`⚠️ User ${recipientJazzAccountId.slice(0, 12)}... is already a member of ${targetId.slice(0, 12)}... - skipping`);
       return { alreadyMember: true };
     }
 
-    ownerGroup.addMember(recipientAccount, jazzRole);
+    ownerGroup.addMember(recipientAccount, permission);
 
-    console.log(`✅ Added ${recipientJazzAccountId.slice(0, 12)}... to ${folderCoValueId.slice(0, 12)}... with role ${jazzRole}`);
+    console.log(`✅ Added ${recipientJazzAccountId.slice(0, 12)}... to ${targetId.slice(0, 12)}... with role ${permission}`);
 
     // Wait for sync to ensure the change is persisted
     await ownerGroup.waitForSync();
 
     return { alreadyMember: false };
   } catch (error) {
-    console.error('Error adding member to folder group:', error);
+    console.error('Error adding member to group:', error);
     throw error;
   }
 }
 
 /**
- * Get all members of a folder's access group
+ * Get all members of a target's access group
  *
  * Returns list of members with their roles
  */
-export async function getFolderGroupMembers(
-  folderCoValueId: string
+export async function getGroupMembers(
+  targetId: string
 ): Promise<Array<{ id: string; role: string }>> {
   if (!worker) {
     throw new Error('Jazz agent not initialized - cannot get group members');
   }
 
   try {
-    // Load the folder CoValue as a generic CoMap
-    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+    // Load the target CoValue as a generic CoMap
+    const target = await CoMap.load(targetId as ID<CoMap>, {
       loadAs: worker,
     });
 
-    if (!folder || !('_owner' in folder)) {
-      throw new Error(`Folder ${folderCoValueId} not found`);
+    if (!target || !('_owner' in target)) {
+      throw new Error(`Target ${targetId} not found`);
     }
 
     // Get all members of the group
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (folder as any)._owner;
+    const ownerGroup = (target as any)._owner;
 
     // Check if owner is a Group (has members property)
     if (!ownerGroup.members) {
-      console.error(`Folder ${folderCoValueId} owner is not a Group (likely an Account from old code)`);
-      throw new Error(`Folder ${folderCoValueId} was created with account ownership. Please create a new folder to enable sharing.`);
+      console.error(`Target ${targetId} owner is not a Group (likely an Account from old code)`);
+      throw new Error(`Target ${targetId} was created with account ownership. Please create a new item to enable sharing.`);
     }
 
     const members = ownerGroup.members;
@@ -215,16 +210,16 @@ export async function getFolderGroupMembers(
       role: member.role,
     }));
   } catch (error) {
-    console.error('Error getting folder group members:', error);
+    console.error('Error getting group members:', error);
     throw error;
   }
 }
 
 /**
- * Remove a user from a folder's access group
+ * Remove a user from a target's access group
  */
-export async function removeFromFolderGroup(
-  folderCoValueId: string,
+export async function removeFromGroup(
+  targetId: string,
   userJazzAccountId: string
 ): Promise<void> {
   if (!worker) {
@@ -232,23 +227,23 @@ export async function removeFromFolderGroup(
   }
 
   try {
-    // Load the folder CoValue as a generic CoMap
-    const folder = await CoMap.load(folderCoValueId as ID<CoMap>, {
+    // Load the target CoValue as a generic CoMap
+    const target = await CoMap.load(targetId as ID<CoMap>, {
       loadAs: worker,
     });
 
-    if (!folder || !('_owner' in folder)) {
-      throw new Error(`Folder ${folderCoValueId} not found`);
+    if (!target || !('_owner' in target)) {
+      throw new Error(`Target ${targetId} not found`);
     }
 
     // Prevent removing the group owner (they should always have access)
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (folder as any)._owner;
+    const ownerGroup = (target as any)._owner;
     const groupOwner = ownerGroup?._owner as { id: string } | undefined;
     const groupOwnerId = groupOwner?.id;
 
     if (groupOwnerId === userJazzAccountId) {
-      throw new Error('Cannot remove the folder owner from collaborators. Transfer ownership first.');
+      throw new Error('Cannot remove the owner from collaborators. Transfer ownership first.');
     }
 
     // Load user's account
@@ -260,15 +255,15 @@ export async function removeFromFolderGroup(
       throw new Error(`User account ${userJazzAccountId} not found`);
     }
 
-    // Remove member from folder's owner group
+    // Remove member from target's owner group
     ownerGroup.removeMember(userAccount);
 
-    console.log(`✅ Removed ${userJazzAccountId.slice(0, 12)}... from ${folderCoValueId.slice(0, 12)}...`);
+    console.log(`✅ Removed ${userJazzAccountId.slice(0, 12)}... from ${targetId.slice(0, 12)}...`);
 
     // Wait for sync
     await ownerGroup.waitForSync();
   } catch (error) {
-    console.error('Error removing member from folder group:', error);
+    console.error('Error removing member from group:', error);
     throw error;
   }
 }

@@ -24,7 +24,7 @@ type PageState =
   | { type: 'email_mismatch'; inviteEmail: string; userEmail: string }
   | { type: 'valid'; invite: InviteValidation }
   | { type: 'accepting' }
-  | { type: 'success'; folderId: string }
+  | { type: 'success'; targetId: string }
   | { type: 'error'; message: string };
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
@@ -110,10 +110,10 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       const data = await response.json();
 
       // Load the shared folder and add it to root.folders if not already present
-      if (me?.root?.folders && data.folderId) {
+      if (me?.root?.folders && data.targetId) {
         try {
           // Load the folder CoValue using the ID from the accept response
-          const folder = await FolderNode.load(data.folderId as ID<CoMap>, {
+          const folder = await FolderNode.load(data.targetId as ID<CoMap>, {
             loadAs: me,
           });
 
@@ -133,7 +133,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
         }
       }
 
-      setState({ type: 'success', folderId: data.folderId });
+      setState({ type: 'success', targetId: data.targetId });
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
@@ -237,21 +237,7 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
           {invite.senderEmail} has invited you to collaborate
         </p>
 
-        <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-content-secondary">Permission Level:</span>
-            <span className="font-medium text-content-primary">
-              {invite.permission === 'view' && 'View Only'}
-              {invite.permission === 'edit' && 'Can Edit'}
-              {invite.permission === 'admin' && 'Admin'}
-            </span>
-          </div>
-          <div className="text-sm text-content-secondary">
-            {invite.permission === 'view' && 'You can view items in this folder'}
-            {invite.permission === 'edit' && 'You can view and modify items in this folder'}
-            {invite.permission === 'admin' && 'You have full control including sharing permissions'}
-          </div>
-        </div>
+        <PermissionDetails permission={invite.permission} />
 
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1" onClick={handleDecline}>
@@ -388,21 +374,7 @@ function ValidInviteState({
         {invite.senderEmail} has invited you to collaborate
       </p>
 
-      <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-content-secondary">Permission Level:</span>
-          <span className="font-medium text-content-primary">
-            {invite.permission === 'view' && 'View Only'}
-            {invite.permission === 'edit' && 'Can Edit'}
-            {invite.permission === 'admin' && 'Admin'}
-          </span>
-        </div>
-        <div className="text-sm text-content-secondary">
-          {invite.permission === 'view' && 'You can view items in this folder'}
-          {invite.permission === 'edit' && 'You can view and modify items in this folder'}
-          {invite.permission === 'admin' && 'You have full control including sharing permissions'}
-        </div>
-      </div>
+      <PermissionDetails permission={invite.permission} />
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-3">
@@ -475,6 +447,29 @@ function ErrorState({ message }: { message: string }) {
       >
         Go to Dashboard
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Display permission level with Jazz role names (reader/writer/admin)
+ */
+function PermissionDetails({ permission }: { permission?: string }) {
+  const labels: Record<string, { name: string; description: string }> = {
+    reader: { name: 'Reader', description: 'You can view items in this folder' },
+    writer: { name: 'Writer', description: 'You can view and modify items in this folder' },
+    admin: { name: 'Admin', description: 'You have full control including sharing permissions' },
+  };
+
+  const info = labels[permission || ''] || { name: permission, description: '' };
+
+  return (
+    <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-content-secondary">Permission Level:</span>
+        <span className="font-medium text-content-primary">{info.name}</span>
+      </div>
+      <div className="text-sm text-content-secondary">{info.description}</div>
     </div>
   );
 }

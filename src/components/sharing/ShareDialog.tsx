@@ -19,14 +19,15 @@ interface ShareDialogProps {
   folder: InstanceOfSchema<typeof FolderNode>;
 }
 
-type PermissionLevel = 'view' | 'edit' | 'admin';
+// Permission levels match Jazz native role names
+type PermissionLevel = 'reader' | 'writer' | 'admin';
 
 interface Collaborator {
   userId: string;
   accountId: string;
   email: string;
   name: string;
-  permission: 'view' | 'edit' | 'admin';
+  permission: 'reader' | 'writer' | 'admin';
   role: string;
 }
 
@@ -41,7 +42,7 @@ interface PendingInvite {
 export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
   // Invite form state
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [permission, setPermission] = useState<PermissionLevel>('edit');
+  const [permission, setPermission] = useState<PermissionLevel>('writer');
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -59,8 +60,8 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     setError(null);
 
     try {
-      // Load collaborators
-      const collabResponse = await fetch(`/api/shares/folders/${folder.$jazz.id}/collaborators`, {
+      // Load collaborators (uses /targets/ path for jbr-jazz compatibility)
+      const collabResponse = await fetch(`/api/shares/targets/${folder.$jazz.id}/collaborators`, {
         credentials: 'include',
       });
 
@@ -70,7 +71,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       }
 
       // Load pending invites
-      const invitesResponse = await fetch(`/api/shares/folders/${folder.$jazz.id}/invites`, {
+      const invitesResponse = await fetch(`/api/shares/targets/${folder.$jazz.id}/invites`, {
         credentials: 'include',
       });
 
@@ -125,7 +126,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
         credentials: 'include',
         body: JSON.stringify({
           recipientEmail: recipientEmail.trim(),
-          folderCoValueId: folder.$jazz.id,
+          targetId: folder.$jazz.id,
           permission,
           expiresInDays,
         }),
@@ -195,7 +196,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
     try {
       const response = await fetch(
-        `/api/shares/folders/${folder.$jazz.id}/collaborators/${accountId}`,
+        `/api/shares/targets/${folder.$jazz.id}/collaborators/${accountId}`,
         {
           method: 'DELETE',
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -297,7 +298,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
   const handleClose = () => {
     setRecipientEmail('');
-    setPermission('edit');
+    setPermission('writer');
     setExpiresInDays(7);
     setShareUrl(null);
     setCopied(false);
@@ -307,14 +308,14 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
   const getPermissionBadge = (permission: string) => {
     const colors = {
-      view: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-      edit: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+      reader: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+      writer: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
       admin: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
     };
 
     const labels = {
-      view: 'View',
-      edit: 'Edit',
+      reader: 'Reader',
+      writer: 'Writer',
       admin: 'Admin',
     };
 
@@ -390,8 +391,8 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   disabled={isGenerating}
                   className="flex h-10 w-full rounded-md border border-divider-primary bg-surface-primary px-3 py-2 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="view">View</option>
-                  <option value="edit">Edit</option>
+                  <option value="reader">Reader</option>
+                  <option value="writer">Writer</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>

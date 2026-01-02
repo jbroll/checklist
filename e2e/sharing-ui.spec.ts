@@ -22,7 +22,7 @@ const mockCollaborators = [
     accountId: 'co_user_2',
     email: 'editor@example.com',
     name: 'Editor User',
-    permission: 'edit',
+    permission: 'writer',
     role: 'writer',
   },
 ];
@@ -31,14 +31,14 @@ const mockPendingInvites = [
   {
     token: 'pending-token-1',
     recipientEmail: 'pending1@example.com',
-    permission: 'view',
+    permission: 'reader',
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     token: 'pending-token-2',
     recipientEmail: 'pending2@example.com',
-    permission: 'edit',
+    permission: 'writer',
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -47,7 +47,7 @@ const mockPendingInvites = [
 test.describe('Share Dialog UI', () => {
   test.beforeEach(async ({ page }) => {
     // Mock the collaborators and invites endpoints
-    await page.route('**/api/shares/folders/*/collaborators', (route) => {
+    await page.route('**/api/shares/targets/*/collaborators', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -55,7 +55,7 @@ test.describe('Share Dialog UI', () => {
       });
     });
 
-    await page.route('**/api/shares/folders/*/invites', (route) => {
+    await page.route('**/api/shares/targets/*/invites', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -199,7 +199,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible();
   });
 
-  test('should have permission dropdown with view/edit/admin options', async ({ page }) => {
+  test('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -207,9 +207,9 @@ test.describe('Share Dialog UI', () => {
     const permissionSelect = page.locator('select#permission');
     await expect(permissionSelect).toBeVisible();
 
-    // Verify options exist
-    await expect(permissionSelect.locator('option[value="view"]')).toHaveText('View');
-    await expect(permissionSelect.locator('option[value="edit"]')).toHaveText('Edit');
+    // Verify options exist (using Jazz native role names)
+    await expect(permissionSelect.locator('option[value="reader"]')).toHaveText('Reader');
+    await expect(permissionSelect.locator('option[value="writer"]')).toHaveText('Writer');
     await expect(permissionSelect.locator('option[value="admin"]')).toHaveText('Admin');
   });
 
@@ -250,7 +250,7 @@ test.describe('Invite Accept Page UI', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ valid: true, senderEmail: 'sender@example.com', recipientEmail: 'recipient@example.com', permission: 'edit' }),
+        body: JSON.stringify({ valid: true, senderEmail: 'sender@example.com', recipientEmail: 'recipient@example.com', permission: 'writer' }),
       });
     });
 
@@ -301,7 +301,7 @@ test.describe('Invite Accept Page UI', () => {
           valid: true,
           senderEmail: 'alice@example.com',
           recipientEmail: 'bob@example.com',
-          permission: 'edit',
+          permission: 'writer',
         }),
       });
     });
@@ -311,7 +311,7 @@ test.describe('Invite Accept Page UI', () => {
     // Should show invite details
     await expect(page.locator('text=Folder Invitation')).toBeVisible();
     await expect(page.locator('text=alice@example.com has invited you to collaborate')).toBeVisible();
-    await expect(page.locator('text=Can Edit')).toBeVisible();
+    await expect(page.locator('text=Writer')).toBeVisible();
 
     // Should show accept/decline buttons
     await expect(page.locator('button:has-text("Accept Invite")')).toBeVisible();
@@ -327,7 +327,7 @@ test.describe('Invite Accept Page UI', () => {
           valid: true,
           senderEmail: 'alice@example.com',
           recipientEmail: 'bob@example.com',
-          permission: 'view',
+          permission: 'reader',
         }),
       });
     });
@@ -343,7 +343,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=Continue with Apple')).toBeVisible();
   });
 
-  test('should show view permission description', async ({ page }) => {
+  test('should show reader permission description', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -352,18 +352,18 @@ test.describe('Invite Accept Page UI', () => {
           valid: true,
           senderEmail: 'sender@example.com',
           recipientEmail: 'recipient@example.com',
-          permission: 'view',
+          permission: 'reader',
         }),
       });
     });
 
-    await page.goto('/invite/view-token');
+    await page.goto('/invite/reader-token');
 
-    await expect(page.locator('text=View Only')).toBeVisible();
+    await expect(page.locator('text=Reader')).toBeVisible();
     await expect(page.locator('text=You can view items in this folder')).toBeVisible();
   });
 
-  test('should show edit permission description', async ({ page }) => {
+  test('should show writer permission description', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -372,14 +372,14 @@ test.describe('Invite Accept Page UI', () => {
           valid: true,
           senderEmail: 'sender@example.com',
           recipientEmail: 'recipient@example.com',
-          permission: 'edit',
+          permission: 'writer',
         }),
       });
     });
 
-    await page.goto('/invite/edit-token');
+    await page.goto('/invite/writer-token');
 
-    await expect(page.locator('text=Can Edit')).toBeVisible();
+    await expect(page.locator('text=Writer')).toBeVisible();
     await expect(page.locator('text=You can view and modify items in this folder')).toBeVisible();
   });
 
@@ -428,7 +428,7 @@ test.describe('Invite Accept Page UI', () => {
           valid: true,
           senderEmail: 'sender@example.com',
           recipientEmail: 'recipient@example.com',
-          permission: 'edit',
+          permission: 'writer',
         }),
       });
     });
@@ -446,7 +446,7 @@ test.describe('Invite Accept Page UI', () => {
 test.describe('Share Dialog - Empty States', () => {
   test('should show empty collaborators message', async ({ page }) => {
     // Mock empty collaborators
-    await page.route('**/api/shares/folders/*/collaborators', (route) => {
+    await page.route('**/api/shares/targets/*/collaborators', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -454,7 +454,7 @@ test.describe('Share Dialog - Empty States', () => {
       });
     });
 
-    await page.route('**/api/shares/folders/*/invites', (route) => {
+    await page.route('**/api/shares/targets/*/invites', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',

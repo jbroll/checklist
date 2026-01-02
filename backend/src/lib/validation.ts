@@ -20,10 +20,11 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
 }
 
 // Schema for creating share invites
+// Uses 'targetId' to match jbr-jazz conventions (generic, works for folders/maps/etc.)
 export const createInviteSchema = z.object({
   recipientEmail: z.string().email().max(255),
-  folderCoValueId: z.string().min(1).max(255),
-  permission: z.enum(['view', 'edit', 'admin']),
+  targetId: z.string().regex(/^co_z[a-zA-Z0-9]+$/, 'Invalid Jazz CoValue ID format'),
+  permission: z.enum(['reader', 'writer', 'admin']),
   expiresInDays: z.number().int().min(1).max(30).optional().default(7),
 });
 

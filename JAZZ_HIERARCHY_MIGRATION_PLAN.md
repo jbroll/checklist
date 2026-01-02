@@ -9,7 +9,7 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 | **Phase 0** | Package restructuring | **COMPLETE** |
 | **Phase 1** | Schema alignment | **COMPLETE** |
 | **Phase 2** | Backend consolidation | **COMPLETE** |
-| Phase 3 | Frontend migration | Pending |
+| **Phase 3** | Frontend migration | **ASSESSED - DEFERRED** |
 | Phase 4 | SharedReference implementation | Pending |
 | Phase 5 | Publication system | Pending |
 
@@ -49,6 +49,40 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 - Unify API paths (requires frontend changes)
 - Extract common auth configuration patterns
 - Share agent logic with configurable naming
+
+### Phase 3 Assessment (Deferred)
+
+**Analysis of jbr-jazz client packages:**
+
+1. **useHierarchy hook** - Generic hook for folder CRUD, move, archive, subscription limits
+   - CheckList uses `folderService.ts` (plain functions, not a hook)
+   - Migration would require refactoring all components that call folderService
+   - Assessment: Low value, high effort
+
+2. **useSharing hook** - API client for sharing operations
+   - jbr-jazz uses `/api/shares/targets/*` endpoints
+   - CheckList uses `/api/shares/folders/*` endpoints
+   - Assessment: Cannot use without backend API path changes
+
+3. **useSubscription hook** - Subscription tier checking
+   - CheckList's `subscriptionService.ts` is more comprehensive
+   - Includes TIERS config, beta mode, Stripe checkout/portal integration
+   - Assessment: CheckList's version is better suited to its needs
+
+4. **UI Components** - Button, Dialog, TreeView, etc.
+   - CheckList already has these via Radix UI
+   - Different styling/branding needs
+   - Assessment: Keep separate for flexibility
+
+**Conclusion:** Full frontend migration provides low value for high effort. The apps have:
+- Different API paths (folder vs target naming)
+- Different service architectures (hooks vs plain functions)
+- Different styling/branding requirements
+
+**Deferred work (if needed later):**
+- Unify API paths to enable useSharing hook adoption
+- Refactor folderService to useHierarchy hook pattern
+- Create shared component library with brand theming
 
 ### Phase 1 Completed Work
 
