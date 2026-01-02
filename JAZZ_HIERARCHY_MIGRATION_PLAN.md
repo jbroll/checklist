@@ -8,7 +8,7 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 |-------|-------------|--------|
 | **Phase 0** | Package restructuring | **COMPLETE** |
 | **Phase 1** | Schema alignment | **COMPLETE** |
-| Phase 2 | Backend consolidation | Pending |
+| **Phase 2** | Backend consolidation | **IN PROGRESS** |
 | Phase 3 | Frontend migration | Pending |
 | Phase 4 | SharedReference implementation | Pending |
 | Phase 5 | Publication system | Pending |
@@ -22,6 +22,25 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 5. Updated jazz-hierarchy base fields to use Date objects
 6. Removed billing/registry exports from jazz-hierarchy
 7. Updated wicketmap root package.json with new workspaces
+
+### Phase 2 In Progress
+
+1. Contributed CheckList security features to jbr-jazz:
+   - Enhanced RateLimiter with cleanup interval and destroy()
+   - Added PersistentRateLimiter for SQLite-backed rate limiting
+   - Added ApiErrors helper for consistent error responses
+   - Added request ID and CSRF protection middleware
+   - Added webhook idempotency checking to billing
+
+2. CheckList backend now uses jbr-jazz packages:
+   - Added @jbr-jazz/hierarchy-backend as dependency
+   - Re-exported shared utilities (RateLimiter, ApiErrors, etc.)
+   - Kept CheckList-specific auth/billing for branding/features
+
+**Remaining Phase 2 work:**
+- Migrate CheckList to use `createHierarchyServer()` factory
+- Unify sharing routes
+- Unify verified email routes
 
 ### Phase 1 Completed Work
 
