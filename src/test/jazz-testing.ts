@@ -347,12 +347,15 @@ export class JazzTestContext {
       const now = new Date();
       const baseData = {
         name,
+        type: isTemplate ? 'template-folder' : 'folder',
+        sharingMode: 'private' as const,
         expanded: !isTemplate,
         archived: false,
-        parent: parent.node,
-        owner: this.account,
+        createdBy: this.account.$jazz.id,
         createdAt: now,
         updatedAt: now,
+        parent: parent.node,
+        owner: this.account,
       };
 
       const node = isTemplate

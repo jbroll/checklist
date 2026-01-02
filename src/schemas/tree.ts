@@ -1,3 +1,4 @@
+import { hierarchyNodeBaseFields } from '@jbr-jazz/hierarchy-shared';
 import { co, z } from 'jazz-tools';
 
 /**
@@ -51,32 +52,34 @@ export type SessionData = {
  * FolderNode - Hierarchical folder/template CoValue
  *
  * Represents both organizational folders and template folders.
- * Uses optional fields instead of discriminated unions (Jazz limitation).
+ * Uses jbr-jazz hierarchyNodeBaseFields for compatibility with useHierarchy.
+ *
+ * Type discriminator:
+ *   - "folder": Organizational folder containing other folders
+ *   - "template-folder": Template folder with items, sessions, etc.
  *
  * For organizational folders:
- *   - name, expanded, archived, createdAt, updatedAt are set
  *   - children contains nested FolderNodes
- *   - parent points to parent folder (if not root)
  *
  * For template folders:
- *   - name, expanded, archived, createdAt, updatedAt are set
  *   - items contains template items (plain JSON array)
  *   - sessions contains shopping sessions
  *   - showZoneHeadings controls UI display
- *   - parent points to parent folder (if not root)
  */
 // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x requires any for recursive types with forward references
 export const FolderNode: any = co.map({
-  name: z.string(),
-  expanded: z.boolean(),
-  archived: z.boolean(),
-  archivedAt: z.optional(z.date()), // When the folder was archived (for retention policies)
+  // jbr-jazz base fields (name, sharingMode, expanded, archived, archivedAt, createdBy, createdAt, updatedAt)
+  ...hierarchyNodeBaseFields,
 
-  // Optional fields - use as required for different types
+  // Type discriminator - required by jbr-jazz useHierarchy
+  type: z.enum(['folder', 'template-folder']),
 
-  // For organizational folders: nested child folders
+  // Parent/children for hierarchy
   get children() {
     return co.optional(co.list(FolderNode));
+  },
+  get parent() {
+    return co.optional(FolderNode);
   },
 
   // For template folders: template data
@@ -124,28 +127,16 @@ export const FolderNode: any = co.map({
   showZoneHeadings: z.optional(z.boolean()),
 
   // Default items - which items are pre-selected when creating new sessions
-  // Maps itemId -> true for items that should be selected by default
   defaultItems: z.optional(z.record(z.string(), z.boolean())),
 
-  // Per-template autocomplete/categorization settings (override global user settings)
-  // undefined = inherit from global user settings
-  // autocompleteDomain: 'none' | 'grocery' | 'hardware' | 'outdoor' | 'all' (or undefined to inherit)
+  // Per-template autocomplete/categorization settings
   autocompleteDomain: z.optional(z.enum(['none', 'grocery', 'hardware', 'outdoor', 'all'])),
   autoCategorizeEnabled: z.optional(z.boolean()),
 
-  // Parent back-reference for breadcrumbs and path computation
-  get parent() {
-    return co.optional(FolderNode);
-  },
-
-  // Ownership and timestamps
-  // Use co.account() for the creator reference - Jazz's recommended pattern
-  // This avoids circular import issues while still typing the field correctly
+  // Owner reference (kept for backwards compatibility, createdBy from base fields is the canonical ID)
   get owner() {
     return co.account();
   },
-  createdAt: z.date(),
-  updatedAt: z.date(),
 });
 
 /**

@@ -427,19 +427,22 @@ async function importTemplateFolder(
   // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
   folderGroup.addMember(account, 'admin');
 
-  // Create FolderNode for template
+  // Create FolderNode for template with jbr-jazz required fields
   const folder = FolderNode.create(
     {
       name,
+      type: 'template-folder',
+      sharingMode: 'private' as const,
       expanded: false,
       archived: false,
+      createdBy: account.$jazz.id,
+      createdAt: new Date(exportedFolder.createdAt),
+      updatedAt: new Date(exportedFolder.updatedAt),
       items,
       sessions: sessionsList,
       showZoneHeadings: false, // Hide zone headings by default
       parent: parentFolder,
       owner: account,
-      createdAt: new Date(exportedFolder.createdAt),
-      updatedAt: new Date(exportedFolder.updatedAt),
     },
     { owner: folderGroup },
   );

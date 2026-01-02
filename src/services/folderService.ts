@@ -266,14 +266,18 @@ export function createFolder(
   const now = new Date();
   const folderGroup = createFolderGroup(account, parent);
 
+  // Base data with jbr-jazz required fields
   const baseData = {
     name,
+    type: isTemplate ? 'template-folder' : 'folder',
+    sharingMode: 'private' as const,
     expanded: !isTemplate,
     archived: false,
-    parent: parent || undefined,
-    owner: account,
+    createdBy: account.$jazz.id,
     createdAt: now,
     updatedAt: now,
+    parent: parent || undefined,
+    owner: account,
   };
 
   const folder = isTemplate
@@ -637,15 +641,18 @@ export function duplicateTemplate(account: AccountType, folder: FolderType): Fol
   const duplicatedFolder = FolderNode.create(
     {
       name: uniqueName,
+      type: 'template-folder',
+      sharingMode: 'private' as const,
       expanded: false,
       archived: false,
+      createdBy: account.$jazz.id,
+      createdAt: now,
+      updatedAt: now,
       items: copiedItems,
       sessions: [],
       showZoneHeadings: folder.showZoneHeadings ?? false,
       parent: folder.parent || undefined,
       owner: account,
-      createdAt: now,
-      updatedAt: now,
     },
     { owner: folderGroup },
   );

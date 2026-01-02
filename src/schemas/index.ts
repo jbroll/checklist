@@ -192,19 +192,22 @@ export const Account = co
         defaultItems[item.id] = true;
       }
 
-      // Create the template folder
+      // Create the template folder with jbr-jazz required fields
       const quickErrands = FolderNode.create(
         {
           name: 'Quick Errands',
+          type: 'template-folder',
+          sharingMode: 'private',
           expanded: false,
           archived: false,
+          createdBy: account.$jazz.id,
+          createdAt: now,
+          updatedAt: now,
           items,
           sessions: [],
           showZoneHeadings: false,
           defaultItems,
           owner: account,
-          createdAt: now,
-          updatedAt: now,
         },
         { owner: account },
       );
