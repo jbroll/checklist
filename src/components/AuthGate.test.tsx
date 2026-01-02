@@ -47,19 +47,9 @@ vi.mock('@/lib/auth-client', () => ({
   },
 }));
 
-// Mock folder service (need all exports that the hook uses internally)
+// Mock folder service
 vi.mock('@/services/folderService', () => ({
   deleteAllUserData: vi.fn(),
-  getAllTemplateFolders: vi.fn().mockReturnValue([]),
-  getArchivedFolders: vi.fn().mockReturnValue([]),
-  isTemplateFolder: vi.fn().mockReturnValue(false),
-  isOrganizationalFolder: vi.fn().mockReturnValue(true),
-}));
-
-// Mock subscription service (used by the hook)
-vi.mock('@/services/subscriptionService', () => ({
-  canCreateList: vi.fn().mockReturnValue(true),
-  getMaxLists: vi.fn().mockReturnValue(10),
 }));
 
 import * as folderService from '@/services/folderService';

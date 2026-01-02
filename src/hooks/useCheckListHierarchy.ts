@@ -1,37 +1,41 @@
 /**
- * useCheckListHierarchy - React hook wrapper around folderService
+ * useCheckListHierarchy - CheckList-specific wrapper around jbr-jazz useHierarchy
  *
- * This hook provides memoized folder operations for React components.
- * The underlying logic lives in folderService.ts as standalone functions
- * that can be used by non-React code (services, utilities).
- *
- * Pattern:
- * - folderService.ts = standalone functions (for services)
- * - useCheckListHierarchy = React hook wrapper (for components)
+ * Provides folder hierarchy operations with CheckList-specific folder creation.
+ * This hook integrates with CheckList's FolderNode schema and subscription system.
  *
  * @example
  * ```tsx
- * // In React components - use the hook
  * function MyComponent() {
  *   const { me } = useAccount(Account);
- *   const { addFolder, deleteFolder } = useCheckListHierarchy(me);
- *   // Functions are memoized and close over account
- * }
+ *   const { folders, addFolder, archiveNode } = useCheckListHierarchy(me);
  *
- * // In services - use folderService directly
- * import * as folderService from '@/services/folderService';
- * folderService.createFolder(account, name, isTemplate, parent);
+ *   const handleCreate = () => {
+ *     addFolder('New List', undefined, true); // isTemplate = true
+ *   };
+ * }
  * ```
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { useCallback, useMemo } from 'react';
-import type { Account, FolderNode } from '../schemas';
-import * as folderService from '../services/folderService';
-import * as subscriptionService from '../services/subscriptionService';
+import type { SubscriptionStatus, SubscriptionTier } from '@jbr-jazz/billing-shared';
+import { type UseHierarchyResult, useHierarchy } from '@jbr-jazz/hierarchy-client';
+import { ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
+import { co, Group, type InstanceOfSchema } from 'jazz-tools';
+import { useCallback } from 'react';
+import { type Account, FolderNode } from '../schemas';
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;
+
+// Jazz root with folders list
+interface CheckListRoot {
+  folders?: FolderType[];
+  viewState?: unknown;
+  userSettings?: {
+    subscriptionTier?: SubscriptionTier;
+    subscriptionStatus?: SubscriptionStatus;
+  };
+}
 
 /**
  * Options for useCheckListHierarchy
@@ -42,47 +46,133 @@ export interface UseCheckListHierarchyOptions {
 }
 
 /**
- * Result from useCheckListHierarchy
+ * Result from useCheckListHierarchy - extends jbr-jazz useHierarchy result
+ * with CheckList-specific operations
  */
-export interface UseCheckListHierarchyResult {
-  // Query operations
-  findById: (folderId: string) => FolderType | null;
-  getAllTemplateFolders: () => FolderType[];
-  archivedFolders: FolderType[];
-
-  // CRUD operations
+export interface UseCheckListHierarchyResult
+  extends Omit<UseHierarchyResult<FolderType>, 'addFolder' | 'duplicateNode'> {
+  /**
+   * Create a new folder (organizational or template)
+   * @param name - Folder name
+   * @param parent - Optional parent folder
+   * @param isTemplate - If true, creates a template-folder with items/sessions (default: true)
+   */
   addFolder: (name: string, parent?: FolderType, isTemplate?: boolean) => FolderType | null;
-  renameNode: (folder: FolderType, newName: string) => void;
-  deleteNode: (folder: FolderType) => void;
+
+  /**
+   * Duplicate a template folder with all items (no sessions)
+   */
   duplicateTemplate: (folder: FolderType) => FolderType | null;
 
-  // Archive operations
-  archiveNode: (folder: FolderType) => void;
-  unarchiveNode: (folder: FolderType) => void;
-  emptyTrash: () => number;
+  /**
+   * Get all template folders (for subscription counting)
+   */
+  getAllTemplateFolders: () => FolderType[];
 
-  // Move operations
-  moveNode: (folder: FolderType, newParent?: FolderType | null) => void;
-  moveNodeToIndex: (
-    folder: FolderType,
-    newParent: FolderType | null | undefined,
-    index: number,
-  ) => void;
+  /**
+   * Check if a folder is a template folder
+   */
+  isTemplateFolder: (folder: FolderType) => boolean;
 
-  // Utilities
-  generateUniqueName: (baseName: string, parent?: FolderType | null) => string;
+  /**
+   * Delete all user data (for account deletion)
+   */
   deleteAllUserData: () => void;
-
-  // Subscription info (from subscriptionService)
-  canCreate: boolean;
-  maxItems: number;
 }
 
 /**
- * useCheckListHierarchy - React hook for folder hierarchy management
+ * Create a Jazz Group for a new folder with proper permission inheritance
+ */
+function createFolderGroup(account: AccountType, parent: FolderType | undefined): Group {
+  const folderGroup = Group.create({ owner: account });
+  folderGroup.addMember(account, 'admin');
+
+  if (parent) {
+    const parentGroup = parent.$jazz.owner as Group;
+    folderGroup.addMember(parentGroup);
+  }
+
+  return folderGroup;
+}
+
+/**
+ * Create a new CheckList folder node
+ */
+function createFolderNode(
+  name: string,
+  account: AccountType,
+  parent: FolderType | undefined,
+  isTemplate: boolean,
+): FolderType {
+  const now = new Date();
+  const folderGroup = createFolderGroup(account, parent);
+
+  const baseData = {
+    name,
+    type: isTemplate ? 'template-folder' : 'folder',
+    sharingMode: 'private' as const,
+    expanded: !isTemplate,
+    archived: false,
+    createdBy: account.$jazz.id,
+    createdAt: now,
+    updatedAt: now,
+    parent: parent || undefined,
+    owner: account,
+  };
+
+  return isTemplate
+    ? FolderNode.create(
+        { ...baseData, items: [], sessions: [], showZoneHeadings: false },
+        { owner: folderGroup },
+      )
+    : FolderNode.create(
+        { ...baseData, children: co.list(FolderNode).create([], { owner: folderGroup }) },
+        { owner: folderGroup },
+      );
+}
+
+/**
+ * Check if a folder is a template folder
+ */
+export function isTemplateFolder(folder: FolderType): boolean {
+  return folder.type === 'template-folder' || folder.items !== undefined;
+}
+
+/**
+ * Check if a folder is an organizational folder (has children)
+ */
+export function isOrganizationalFolder(folder: FolderType): boolean {
+  return folder.type === 'folder' || folder.children !== undefined;
+}
+
+/**
+ * Recursively collect all template folders
+ */
+function collectTemplateFolders(
+  folders: (FolderType | null | undefined)[],
+  showArchived = false,
+): FolderType[] {
+  const templates: FolderType[] = [];
+
+  for (const folder of folders) {
+    if (!folder) continue;
+    if (!showArchived && folder.archived) continue;
+
+    if (isTemplateFolder(folder)) {
+      templates.push(folder);
+    } else if (folder.children && Array.isArray(folder.children)) {
+      templates.push(...collectTemplateFolders([...folder.children], showArchived));
+    }
+  }
+
+  return templates;
+}
+
+/**
+ * useCheckListHierarchy - CheckList-specific hierarchy management hook
  *
- * Wraps folderService functions with useCallback for React optimization.
- * All operations close over the account parameter so callers don't need to pass it.
+ * Wraps jbr-jazz's useHierarchy with CheckList-specific folder creation
+ * and template management.
  *
  * @param account - The user's account (must have root loaded)
  * @param options - Additional options
@@ -93,135 +183,149 @@ export function useCheckListHierarchy(
 ): UseCheckListHierarchyResult {
   const { showArchived = false } = options;
 
-  // Subscription info
-  const canCreate = account ? subscriptionService.canCreateList(account) : false;
-  const maxItems = account ? subscriptionService.getMaxLists(account) : 0;
+  // Get subscription tier from account settings
+  const root = account?.root as CheckListRoot | undefined;
+  const subscriptionTier = root?.userSettings?.subscriptionTier ?? 'free';
+  const subscriptionStatus = root?.userSettings?.subscriptionStatus;
 
-  // Query operations
-  const findById = useCallback(
-    (folderId: string): FolderType | null => {
-      if (!account) return null;
-      return folderService.findFolderById(account, folderId);
+  // Create a stable createNode function for templates (default)
+  const createNode = useCallback(
+    (name: string, _owner: unknown, parent?: FolderType) => {
+      if (!account) throw new Error('Account not loaded');
+      return createFolderNode(name, account, parent, true); // Default to template
     },
     [account],
   );
 
-  const getAllTemplateFolders = useCallback((): FolderType[] => {
-    if (!account) return [];
-    return folderService.getAllTemplateFolders(account, showArchived);
-  }, [account, showArchived]);
+  // Call the base useHierarchy hook with type assertion for cross-package compatibility
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz type compatibility between packages
+  const baseResult = useHierarchy<FolderType, any>({
+    root: root as unknown as { folders?: unknown },
+    // biome-ignore lint/suspicious/noExplicitAny: Jazz type compatibility between packages
+    owner: account as any,
+    subscriptionTier,
+    subscriptionStatus,
+    createNode,
+  });
 
-  const archivedFolders = useMemo((): FolderType[] => {
-    if (!account) return [];
-    return folderService.getArchivedFolders(account);
-  }, [account]);
-
-  // CRUD operations
+  // Override addFolder to support isTemplate parameter
   const addFolder = useCallback(
     (name: string, parent?: FolderType, isTemplate = true): FolderType | null => {
-      if (!account) return null;
-      return folderService.createFolder(account, name, isTemplate, parent);
+      if (!account?.root?.folders) return null;
+
+      // Check subscription limit
+      if (!baseResult.canCreate) {
+        throw new ItemLimitExceededError(baseResult.maxItems);
+      }
+
+      const newFolder = createFolderNode(name, account, parent, isTemplate);
+
+      if (parent?.children) {
+        parent.children.$jazz.push(newFolder);
+      } else {
+        account.root.folders.$jazz.push(newFolder);
+      }
+
+      return newFolder;
     },
-    [account],
+    [account, baseResult.canCreate, baseResult.maxItems],
   );
 
-  const renameNode = useCallback((folder: FolderType, newName: string): void => {
-    folderService.renameFolder(folder, newName);
-  }, []);
-
-  const deleteNode = useCallback(
-    (folder: FolderType): void => {
-      if (!account) return;
-      folderService.deleteFolder(account, folder);
-    },
-    [account],
-  );
-
+  // Duplicate template folder with deep copy of items
   const duplicateTemplate = useCallback(
     (folder: FolderType): FolderType | null => {
-      if (!account) return null;
-      return folderService.duplicateTemplate(account, folder);
+      if (!account?.root?.folders) return null;
+      if (!isTemplateFolder(folder)) {
+        throw new Error('Can only duplicate template folders');
+      }
+
+      const baseName = `${folder.name} (Copy)`;
+      const uniqueName = baseResult.generateUniqueName(baseName, folder.parent);
+      const now = new Date();
+      const folderGroup = createFolderGroup(account, folder.parent);
+
+      // Deep copy non-archived items with new IDs
+      const copiedItems = (folder.items || [])
+        .filter((item: { archived?: boolean } | null) => item && !item.archived)
+        .map((item: NonNullable<(typeof folder.items)[number]>) => ({
+          ...item,
+          id: crypto.randomUUID(),
+          createdAt: now,
+        }));
+
+      const duplicatedFolder = FolderNode.create(
+        {
+          name: uniqueName,
+          type: 'template-folder',
+          sharingMode: 'private' as const,
+          expanded: false,
+          archived: false,
+          createdBy: account.$jazz.id,
+          createdAt: now,
+          updatedAt: now,
+          items: copiedItems,
+          sessions: [],
+          showZoneHeadings: folder.showZoneHeadings ?? false,
+          parent: folder.parent || undefined,
+          owner: account,
+        },
+        { owner: folderGroup },
+      );
+
+      // Add to parent
+      if (folder.parent?.children) {
+        folder.parent.children.$jazz.push(duplicatedFolder);
+      } else {
+        account.root.folders.$jazz.push(duplicatedFolder);
+      }
+
+      return duplicatedFolder;
     },
-    [account],
+    [account, baseResult.generateUniqueName],
   );
 
-  // Archive operations
-  const archiveNode = useCallback((folder: FolderType): void => {
-    folderService.archiveFolder(folder);
-  }, []);
+  // Get all template folders (for subscription counting, etc.)
+  const getAllTemplateFolders = useCallback((): FolderType[] => {
+    if (!account?.root?.folders) return [];
+    return collectTemplateFolders([...account.root.folders], showArchived);
+  }, [account, showArchived]);
 
-  const unarchiveNode = useCallback((folder: FolderType): void => {
-    folderService.unarchiveFolder(folder);
-  }, []);
+  // Delete all user data
+  const deleteAllUserData = useCallback(() => {
+    if (!account?.root?.folders) return;
 
-  const emptyTrash = useCallback((): number => {
-    if (!account) return 0;
-    return folderService.emptyTrash(account);
-  }, [account]);
-
-  // Move operations
-  const moveNode = useCallback(
-    (folder: FolderType, newParent?: FolderType | null): void => {
-      if (!account) return;
-      folderService.moveFolder(account, folder, newParent);
-    },
-    [account],
-  );
-
-  const moveNodeToIndex = useCallback(
-    (folder: FolderType, newParent: FolderType | null | undefined, index: number): void => {
-      if (!account) return;
-      folderService.moveFolderToIndex(account, folder, newParent, index);
-    },
-    [account],
-  );
-
-  // Utilities
-  const generateUniqueName = useCallback(
-    (baseName: string, parent?: FolderType | null): string => {
-      if (!account) return baseName;
-      return folderService.generateUniqueFolderName(baseName, account, parent);
-    },
-    [account],
-  );
-
-  const deleteAllUserData = useCallback((): void => {
-    if (!account) return;
-    folderService.deleteAllUserData(account);
-  }, [account]);
+    while (account.root.folders.length > 0) {
+      const folder = account.root.folders[0];
+      if (folder) {
+        try {
+          baseResult.deleteNode(folder);
+        } catch {
+          // Force remove if delete fails
+          try {
+            account.root.folders.$jazz.splice(0, 1);
+          } catch {
+            break;
+          }
+        }
+      } else {
+        try {
+          account.root.folders.$jazz.splice(0, 1);
+        } catch {
+          break;
+        }
+      }
+    }
+  }, [account, baseResult.deleteNode]);
 
   return {
-    // Query
-    findById,
-    getAllTemplateFolders,
-    archivedFolders,
-    // CRUD
+    ...baseResult,
     addFolder,
-    renameNode,
-    deleteNode,
     duplicateTemplate,
-    // Archive
-    archiveNode,
-    unarchiveNode,
-    emptyTrash,
-    // Move
-    moveNode,
-    moveNodeToIndex,
-    // Utilities
-    generateUniqueName,
+    getAllTemplateFolders,
+    isTemplateFolder,
     deleteAllUserData,
-    // Subscription
-    canCreate,
-    maxItems,
   };
 }
 
-// Re-export standalone functions for convenience
-// Components can import from @/hooks, services import from @/services/folderService
-// Re-export as ItemLimitExceededError for jbr-jazz compatibility
-export {
-  isOrganizationalFolder,
-  isTemplateFolder,
-  ListLimitExceededError,
-  ListLimitExceededError as ItemLimitExceededError,
-} from '../services/folderService';
+// Re-export error types for convenience
+export { CircularReferenceError, ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
