@@ -1,9 +1,8 @@
 /// <reference types="vitest/globals" />
 import '@testing-library/jest-dom';
-import { createJazzReactModuleMocks } from 'jazz-mock/react';
-import { createJazzConsoleFilter, createJazzToolsMock } from 'jazz-mock/vitest';
+import { createJazzConsoleFilter } from 'jazz-mock/vitest';
 
-// Re-export jazz-mock utilities for use in tests (legacy compatibility)
+// Re-export jazz-mock utilities for use in tests
 export {
   createMockAccount,
   createMockCoList,
@@ -13,15 +12,8 @@ export {
   resetIdCounter,
 } from 'jazz-mock';
 
-// Re-export jazz-testing utilities for real Jazz behavior tests
-export {
-  createMockAccount as createTestAccount,
-  createMockCoList as createTestCoList,
-  // Compatibility shims (use JazzTestContext for new tests)
-  createMockCoMap as createTestCoMap,
-  JazzTestContext,
-  setupJazzTesting,
-} from './jazz-testing';
+// Re-export jazz-testing utilities
+export { JazzTestContext, setupJazzTesting } from './jazz-testing';
 
 // Mock window.alert for components that use alert() for error messages
 global.alert = vi.fn();
@@ -76,22 +68,6 @@ global.console = {
   log: process.env.VITEST_DEBUG ? console.log : vi.fn(),
   info: process.env.VITEST_DEBUG ? console.info : vi.fn(),
 };
-
-// Mock jazz-tools conditionally based on JAZZ_TEST_BACKEND
-// When JAZZ_TEST_BACKEND=jazz, use real jazz-tools for permission testing
-vi.mock('jazz-tools', async (importOriginal) => {
-  if (process.env.JAZZ_TEST_BACKEND === 'jazz') {
-    return importOriginal();
-  }
-  return createJazzToolsMock();
-});
-
-vi.mock('jazz-react', async (importOriginal) => {
-  if (process.env.JAZZ_TEST_BACKEND === 'jazz') {
-    return importOriginal();
-  }
-  return createJazzReactModuleMocks();
-});
 
 // Mock better-auth client
 vi.mock('@/lib/auth-client', () => ({

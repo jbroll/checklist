@@ -1,12 +1,32 @@
 /**
  * Jazz Testing Utilities
  *
- * Fluent test helpers with swappable backends:
- * - 'jazz': Real Jazz behavior (Groups, permissions, sync) via jazz-tools/testing
- * - 'mock': Fast mocks via jazz-mock (no real Jazz runtime)
+ * Provides a unified API for testing Jazz-based code with swappable backends:
  *
- * Set JAZZ_TEST_BACKEND=mock or JAZZ_TEST_BACKEND=jazz to control backend.
- * Default: 'jazz' for checklist tests (uses real Jazz).
+ * ## Backend Types
+ * - 'mock': Fast mocks via jazz-mock (default) - no real Jazz runtime
+ * - 'jazz': Real Jazz behavior via jazz-tools/testing - Groups, permissions, sync
+ *
+ * ## How It Works
+ *
+ * Backend loading is deferred until JazzTestContext.create() is called.
+ * This allows each test file to choose its backend without global configuration.
+ *
+ * The JAZZ_TEST_BACKEND environment variable sets the default, but can be
+ * overridden per-test via the `backend` option.
+ *
+ * ## Usage
+ *
+ * ```typescript
+ * // Uses default backend (mock, or JAZZ_TEST_BACKEND env var)
+ * ctx = await JazzTestContext.create();
+ *
+ * // Explicitly use mock backend (fast)
+ * ctx = await JazzTestContext.create('Owner', { backend: 'mock' });
+ *
+ * // Explicitly use real Jazz backend (for permission/sync tests)
+ * ctx = await JazzTestContext.create('Owner', { backend: 'jazz' });
+ * ```
  *
  * @example
  * ```typescript
@@ -16,17 +36,12 @@
  *   let ctx: JazzTestContext;
  *
  *   beforeEach(async () => {
- *     // Uses JAZZ_TEST_BACKEND env var, defaults to 'jazz'
  *     ctx = await JazzTestContext.create();
- *
- *     // Or explicitly specify backend:
- *     ctx = await JazzTestContext.create('Owner', { backend: 'mock' });
  *   });
  *
  *   it('should allow writer to edit folder', async () => {
  *     const folder = await ctx.createFolder('Shared');
  *     const writer = await ctx.createAccount('Writer');
- *
  *     ctx.shareFolder(folder, writer, 'writer');
  *     expect(ctx.canWrite(folder, writer)).toBe(true);
  *   });
@@ -41,20 +56,14 @@ import {
   type TestBackend as MockTestBackend,
   type TestGroup as MockTestGroup,
 } from 'jazz-mock';
-import type { Group, InstanceOfSchema } from 'jazz-tools';
-import {
-  createJazzTestAccount,
-  linkAccounts,
-  setActiveAccount,
-  setupJazzTestSync,
-} from 'jazz-tools/testing';
+import type { Group } from 'jazz-tools';
 import { vi, beforeEach as vitestBeforeEach } from 'vitest';
-import { Account, FolderNode } from '../schemas';
 
-// folderService is dynamically imported to avoid import order issues with vi.mock
-
-// Re-export jazz-tools/testing utilities
-export { linkAccounts, setActiveAccount, setupJazzTestSync } from 'jazz-tools/testing';
+// Types for dynamically loaded modules
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic module types
+type AccountType = any;
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic module types
+type FolderNodeType = any;
 
 /** Backend type */
 export type BackendType = 'mock' | 'jazz';
@@ -69,7 +78,7 @@ export type Role = 'reader' | 'writer' | 'admin';
  */
 export interface TestFolder {
   /** The FolderNode CoValue */
-  node: InstanceOfSchema<typeof FolderNode>;
+  node: FolderNodeType;
   /** The Group that owns this folder */
   group: Group;
   /** Folder ID */
@@ -99,21 +108,40 @@ export interface CreateContextOptions {
 }
 
 /**
- * Get the default backend from environment variable
+ * Get the default backend from JAZZ_TEST_BACKEND environment variable.
+ * Returns 'mock' if not set or invalid.
  */
 function getDefaultBackend(): BackendType {
-  if (typeof process !== 'undefined' && process.env?.JAZZ_TEST_BACKEND) {
-    const backend = process.env.JAZZ_TEST_BACKEND.toLowerCase();
-    if (backend === 'jazz' || backend === 'mock') {
-      return backend;
-    }
-    console.warn(
-      `Invalid JAZZ_TEST_BACKEND value: "${backend}". Using 'mock'. Valid values: 'mock', 'jazz'`,
-    );
-  }
-  // Default to 'mock' for fast tests (consistent with setup.ts mock behavior)
-  // Use JAZZ_TEST_BACKEND=jazz for real Jazz behavior tests
+  const envValue = process.env?.JAZZ_TEST_BACKEND?.toLowerCase();
+  if (envValue === 'jazz') return 'jazz';
+  if (envValue === 'mock') return 'mock';
   return 'mock';
+}
+
+// Cached module references (loaded on demand)
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic module cache
+let jazzTestingModule: any = null;
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic module cache
+let schemasModule: any = null;
+
+/**
+ * Load jazz-tools/testing module (deferred)
+ */
+async function getJazzTesting() {
+  if (!jazzTestingModule) {
+    jazzTestingModule = await import('jazz-tools/testing');
+  }
+  return jazzTestingModule;
+}
+
+/**
+ * Load schemas module (deferred)
+ */
+async function getSchemas() {
+  if (!schemasModule) {
+    schemasModule = await import('../schemas');
+  }
+  return schemasModule;
 }
 
 /**
@@ -128,10 +156,10 @@ function getDefaultBackend(): BackendType {
  */
 export class JazzTestContext {
   /** Primary test account (owner) */
-  public account: InstanceOfSchema<typeof Account>;
+  public account: AccountType;
 
   /** All created accounts for cleanup */
-  private accounts: InstanceOfSchema<typeof Account>[] = [];
+  private accounts: AccountType[] = [];
 
   /** Mock backend (when using 'mock' backend) */
   private mockBackend: MockTestBackend | null = null;
@@ -140,7 +168,7 @@ export class JazzTestContext {
   public readonly backendType: BackendType;
 
   private constructor(
-    account: InstanceOfSchema<typeof Account>,
+    account: AccountType,
     backendType: BackendType,
     mockBackend?: MockTestBackend,
   ) {
@@ -153,7 +181,8 @@ export class JazzTestContext {
   /**
    * Create a new test context
    *
-   * Sets up Jazz sync and creates the primary account.
+   * Loads the appropriate backend on demand based on the backend option
+   * or JAZZ_TEST_BACKEND environment variable.
    *
    * @param name - Account name (default: 'Test Owner')
    * @param options - Context options including backend selection
@@ -171,15 +200,18 @@ export class JazzTestContext {
       const mockAccount = await mockBackend.createPrimaryAccount(name);
 
       // Wrap mock account to match our interface
-      const account = mockAccount.raw as unknown as InstanceOfSchema<typeof Account>;
+      const account = mockAccount.raw as AccountType;
       return new JazzTestContext(account, 'mock', mockBackend);
     }
 
-    // Use real Jazz backend
-    await setupJazzTestSync();
+    // Use real Jazz backend - load modules dynamically
+    const jazzTesting = await getJazzTesting();
+    const schemas = await getSchemas();
 
-    const account = await createJazzTestAccount({
-      AccountSchema: Account,
+    await jazzTesting.setupJazzTestSync();
+
+    const account = await jazzTesting.createJazzTestAccount({
+      AccountSchema: schemas.Account,
       isCurrentActiveAccount: true,
       creationProps: { name },
     });
@@ -192,24 +224,27 @@ export class JazzTestContext {
    *
    * Accounts are automatically linked for sync.
    */
-  async createAccount(name: string): Promise<InstanceOfSchema<typeof Account>> {
+  async createAccount(name: string): Promise<AccountType> {
     if (this.mockBackend) {
       // Use mock backend
       const mockAccount = await this.mockBackend.createAccount(name);
-      const account = mockAccount.raw as unknown as InstanceOfSchema<typeof Account>;
+      const account = mockAccount.raw as AccountType;
       this.accounts.push(account);
       return account;
     }
 
     // Use real Jazz backend
-    const account = await createJazzTestAccount({
-      AccountSchema: Account,
+    const jazzTesting = await getJazzTesting();
+    const schemas = await getSchemas();
+
+    const account = await jazzTesting.createJazzTestAccount({
+      AccountSchema: schemas.Account,
       creationProps: { name },
     });
 
     // Link all accounts together for sync
     for (const existing of this.accounts) {
-      await linkAccounts(existing, account);
+      await jazzTesting.linkAccounts(existing, account);
     }
 
     this.accounts.push(account);
@@ -219,12 +254,13 @@ export class JazzTestContext {
   /**
    * Switch the active account for subsequent operations
    */
-  setActiveAccount(account: InstanceOfSchema<typeof Account>): void {
+  async setActiveAccount(account: AccountType): Promise<void> {
     if (this.mockBackend) {
       // Mock backend doesn't need active account tracking
       return;
     }
-    setActiveAccount(account);
+    const jazzTesting = await getJazzTesting();
+    jazzTesting.setActiveAccount(account);
   }
 
   /**
@@ -288,14 +324,14 @@ export class JazzTestContext {
 
       // Create a Group-like proxy for TestFolder
       const groupProxy = {
-        addMember: (account: InstanceOfSchema<typeof Account>, role: Role) => {
+        addMember: (account: AccountType, role: Role) => {
           mockGroup.addMember({ id: account.$jazz?.id ?? 'mock', name: '', raw: account }, role);
         },
         getRoleOf: (accountId: string) => mockGroup.getRoleOf(accountId),
       } as unknown as Group;
 
       return {
-        node: mockNode as unknown as InstanceOfSchema<typeof FolderNode>,
+        node: mockNode as FolderNodeType,
         group: groupProxy,
         id: folderId,
         _mockGroup: mockGroup,
@@ -303,9 +339,10 @@ export class JazzTestContext {
     }
 
     // Use real Jazz backend
+    const schemas = await getSchemas();
+
     if (inheritGroup && parent) {
       // Special case: reuse parent's exact group for testing shared group permissions
-      // This tests Jazz's group permission model directly (not how the app works)
       const group = parent.group;
       const now = new Date();
       const baseData = {
@@ -319,11 +356,11 @@ export class JazzTestContext {
       };
 
       const node = isTemplate
-        ? FolderNode.create(
+        ? schemas.FolderNode.create(
             { ...baseData, items: [], sessions: [], showZoneHeadings: false },
             { owner: group },
           )
-        : FolderNode.create({ ...baseData, children: [] }, { owner: group });
+        : schemas.FolderNode.create({ ...baseData, children: [] }, { owner: group });
 
       parent.node.children?.$jazz.push(node);
 
@@ -335,7 +372,6 @@ export class JazzTestContext {
     }
 
     // Use actual folderService for realistic app behavior
-    // Dynamic import to handle mock/real jazz-tools based on JAZZ_TEST_BACKEND
     const { createFolder } = await import('../services/folderService');
     const folder = createFolder(this.account, name, isTemplate, parent?.node ?? null);
     const group = folder.$jazz.owner as Group;
@@ -349,30 +385,15 @@ export class JazzTestContext {
 
   /**
    * Share a folder with another account
-   *
-   * @example
-   * ```typescript
-   * const folder = await ctx.createFolder('Shared');
-   * const collaborator = await ctx.createAccount('Bob');
-   *
-   * ctx.shareFolder(folder, collaborator, 'writer');
-   *
-   * // Verify permission
-   * expect(folder.group.getRoleOf(collaborator.$jazz.id)).toBe('writer');
-   * ```
    */
-  shareFolder(
-    folder: TestFolder,
-    account: InstanceOfSchema<typeof Account>,
-    role: Role = 'writer',
-  ): void {
+  shareFolder(folder: TestFolder, account: AccountType, role: Role = 'writer'): void {
     folder.group.addMember(account, role);
   }
 
   /**
    * Check if an account can read a folder
    */
-  canRead(folder: TestFolder, account: InstanceOfSchema<typeof Account>): boolean {
+  canRead(folder: TestFolder, account: AccountType): boolean {
     const role = folder.group.getRoleOf(account.$jazz?.id ?? '');
     return role !== undefined;
   }
@@ -380,7 +401,7 @@ export class JazzTestContext {
   /**
    * Check if an account can write to a folder
    */
-  canWrite(folder: TestFolder, account: InstanceOfSchema<typeof Account>): boolean {
+  canWrite(folder: TestFolder, account: AccountType): boolean {
     const role = folder.group.getRoleOf(account.$jazz?.id ?? '');
     return role === 'writer' || role === 'admin';
   }
@@ -388,7 +409,7 @@ export class JazzTestContext {
   /**
    * Check if an account has admin access to a folder
    */
-  canAdmin(folder: TestFolder, account: InstanceOfSchema<typeof Account>): boolean {
+  canAdmin(folder: TestFolder, account: AccountType): boolean {
     const role = folder.group.getRoleOf(account.$jazz?.id ?? '');
     return role === 'admin';
   }
@@ -396,26 +417,14 @@ export class JazzTestContext {
   /**
    * Wait for all accounts to sync their CoValues
    *
-   * This is essential for reliable tests when using the 'jazz' backend.
-   * For the 'mock' backend, this is a no-op since everything is synchronous.
-   *
-   * Call this after operations that modify shared data to ensure
-   * all accounts have the latest state before making assertions.
-   *
-   * @example
-   * ```typescript
-   * ctx.shareFolder(folder, collaborator, 'writer');
-   * await ctx.waitForSync();  // Ensure sync is complete
-   * expect(ctx.canWrite(folder, collaborator)).toBe(true);
-   * ```
+   * Essential for reliable tests with 'jazz' backend.
+   * No-op for 'mock' backend (synchronous).
    */
   async waitForSync(): Promise<void> {
     if (this.mockBackend) {
-      // Mock backend is synchronous, no need to wait
       return;
     }
 
-    // Wait for all accounts to sync their CoValues
     for (const account of this.accounts) {
       await account.$jazz.waitForAllCoValuesSync();
     }
@@ -426,25 +435,12 @@ export class JazzTestContext {
  * Setup Jazz testing for a test suite
  *
  * Call this in beforeEach to get a fresh context for each test.
- *
- * @example
- * ```typescript
- * describe('My Tests', () => {
- *   const getContext = setupJazzTesting();
- *
- *   it('creates folders', async () => {
- *     const ctx = getContext();
- *     const folder = await ctx.createFolder('Test');
- *     expect(folder.node.name).toBe('Test');
- *   });
- * });
- * ```
  */
-export function setupJazzTesting(): () => JazzTestContext {
+export function setupJazzTesting(options?: CreateContextOptions): () => JazzTestContext {
   let context: JazzTestContext;
 
   vitestBeforeEach(async () => {
-    context = await JazzTestContext.create();
+    context = await JazzTestContext.create('Test Owner', options);
   });
 
   return () => {
@@ -464,7 +460,7 @@ export function setupJazzTesting(): () => JazzTestContext {
  */
 export interface MockJazzAPI {
   id: string;
-  owner?: Group | InstanceOfSchema<typeof Account>;
+  owner?: Group | AccountType;
   set: (key: string, value: unknown) => void;
   has: (key: string) => boolean;
   push?: (value: unknown) => void;
@@ -473,9 +469,6 @@ export interface MockJazzAPI {
 
 /**
  * Create a mock CoMap with Jazz metadata
- *
- * This is a compatibility shim for tests migrating from jazz-mock.
- * For new tests, prefer using JazzTestContext.
  */
 export function createLocalMockCoMap<T extends object>(
   data: T,
@@ -503,9 +496,6 @@ export function createLocalMockCoMap<T extends object>(
 
 /**
  * Create a mock CoList with Jazz metadata
- *
- * This is a compatibility shim for tests migrating from jazz-mock.
- * For new tests, prefer using JazzTestContext.
  */
 export function createLocalMockCoList<T>(
   items: T[] = [],
@@ -535,13 +525,8 @@ export function createLocalMockCoList<T>(
 
 /**
  * Create a mock Account
- *
- * This is a compatibility shim for tests migrating from jazz-mock.
- * For new tests, prefer using JazzTestContext.createAccount().
  */
-export function createLocalMockAccount(
-  options: { id?: string; name?: string } = {},
-): InstanceOfSchema<typeof Account> {
+export function createLocalMockAccount(options: { id?: string; name?: string } = {}): AccountType {
   const id = options.id ?? `account-${Math.random().toString(36).slice(2, 9)}`;
   const folders = createLocalMockCoList([], { trackMutations: true });
   const root = createLocalMockCoMap({ folders }, { trackMutations: true });
@@ -550,7 +535,7 @@ export function createLocalMockAccount(
   const account = createLocalMockCoMap(
     { root, profile },
     { id, trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof Account>;
+  ) as AccountType;
 
   return account;
 }

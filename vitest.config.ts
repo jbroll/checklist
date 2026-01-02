@@ -19,12 +19,9 @@ export default defineConfig({
     // Limit concurrency to prevent crashes
     maxConcurrency: 5,
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        maxThreads: 4,
-        minThreads: 1,
-      },
-    },
+    // Vitest 4: poolOptions moved to top-level
+    maxThreads: 4,
+    minThreads: 1,
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [

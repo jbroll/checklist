@@ -1,18 +1,18 @@
 /**
  * Folder Permissions Tests
  *
- * Tests for hierarchical folder permissions using Jazz testing utilities.
- * These tests verify the permission structure for sharing folders.
+ * Tests for hierarchical folder permissions using JazzTestContext.
  *
  * Permission hierarchy:
  * - admin: Full control (read, write, manage members)
  * - writer: Can read and write, cannot manage members
  * - reader: Can only read
  *
- * By default uses mock backend (fast). Run with JAZZ_TEST_BACKEND=jazz for real Jazz.
+ * Backend selection via JAZZ_TEST_BACKEND env var:
+ * - Default (mock): Fast tests using jazz-mock
+ * - JAZZ_TEST_BACKEND=jazz: Real Jazz behavior for permission/sync testing
  *
- * Note: Uses ctx.waitForSync() after sharing operations to ensure data is
- * synced across accounts before assertions. This is reliable for both backends.
+ * Uses ctx.waitForSync() after sharing operations to ensure reliable assertions.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -22,7 +22,6 @@ describe('Folder Permissions', () => {
   let ctx: JazzTestContext;
 
   beforeEach(async () => {
-    // Uses JAZZ_TEST_BACKEND env var, defaults to mock (fast)
     ctx = await JazzTestContext.create('Owner');
   });
 
