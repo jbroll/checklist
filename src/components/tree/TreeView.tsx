@@ -355,7 +355,7 @@ export function TreeView({
       }
 
       // Handle hierarchy changes (move into folders)
-      let newParent: InstanceOfSchema<typeof FolderNode> | undefined = undefined;
+      let newParent: InstanceOfSchema<typeof FolderNode> | undefined;
 
       if (overData?.path === '__ROOT_DROP_ZONE__') {
         newParent = undefined; // Move to root level
