@@ -40,10 +40,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { isOrganizationalFolder, isTemplateFolder, useCheckListHierarchy } from '@/hooks';
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import { useDialog } from '@/lib/dialog-context';
 import type { Account, FolderNode, TemplateItem } from '@/schemas';
-import * as folderService from '@/services/folderService';
 import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { IndentedRow } from './IndentedRow';
@@ -83,8 +83,11 @@ export const FolderNodeView = memo(function FolderNodeView({
   account,
   hideArchiveAction = false,
 }: FolderNodeViewProps) {
-  const isTemplate = folderService.isTemplateFolder(folder);
-  const isOrganizational = folderService.isOrganizationalFolder(folder);
+  // Use hierarchy hook for folder operations
+  const { duplicateTemplate } = useCheckListHierarchy(account);
+
+  const isTemplate = isTemplateFolder(folder);
+  const isOrganizational = isOrganizationalFolder(folder);
   const itemCount = isTemplate
     ? (folder.items?.filter((i: TemplateItem) => !i?.archived).length ?? 0)
     : 0;
@@ -214,8 +217,10 @@ export const FolderNodeView = memo(function FolderNodeView({
 
   const handleDuplicate = () => {
     if (isTemplate) {
-      const newFolder = folderService.duplicateTemplate(account, folder);
-      onDuplicated?.(newFolder);
+      const newFolder = duplicateTemplate(folder);
+      if (newFolder) {
+        onDuplicated?.(newFolder);
+      }
     }
   };
 

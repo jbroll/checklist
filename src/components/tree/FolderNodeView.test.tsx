@@ -42,11 +42,13 @@ vi.mock('@/lib/dialog-context', () => ({
   }),
 }));
 
-// Mock folder service
-vi.mock('@/services/folderService', () => ({
+// Mock hooks
+vi.mock('@/hooks', () => ({
   isTemplateFolder: vi.fn(),
   isOrganizationalFolder: vi.fn(),
-  duplicateTemplate: vi.fn(),
+  useCheckListHierarchy: () => ({
+    duplicateTemplate: vi.fn().mockReturnValue({ $jazz: { id: 'new-folder-id' } }),
+  }),
 }));
 
 // Mock view state service
@@ -68,7 +70,7 @@ vi.mock('@/lib/categorization', () => ({
   getImplementedDomains: vi.fn().mockReturnValue(['grocery']),
 }));
 
-import * as folderService from '@/services/folderService';
+import * as hooks from '@/hooks';
 
 // Helper to create mock folder using jazz-mock
 const createMockFolder = (
@@ -105,8 +107,8 @@ describe('FolderNodeView', () => {
   const mockAccount = createMockAccount();
 
   beforeEach(() => {
-    vi.mocked(folderService.isTemplateFolder).mockReturnValue(false);
-    vi.mocked(folderService.isOrganizationalFolder).mockReturnValue(true);
+    vi.mocked(hooks.isTemplateFolder).mockReturnValue(false);
+    vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -128,8 +130,8 @@ describe('FolderNodeView', () => {
     });
 
     it('renders folder icon for organizational folders', () => {
-      vi.mocked(folderService.isTemplateFolder).mockReturnValue(false);
-      vi.mocked(folderService.isOrganizationalFolder).mockReturnValue(true);
+      vi.mocked(hooks.isTemplateFolder).mockReturnValue(false);
+      vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(true);
 
       render(<FolderNodeView {...defaultProps} />);
 
@@ -139,8 +141,8 @@ describe('FolderNodeView', () => {
     });
 
     it('renders template folder with list icon', () => {
-      vi.mocked(folderService.isTemplateFolder).mockReturnValue(true);
-      vi.mocked(folderService.isOrganizationalFolder).mockReturnValue(false);
+      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
+      vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(false);
 
       const templateFolder = createMockFolder('My List', true);
       render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
@@ -156,7 +158,7 @@ describe('FolderNodeView', () => {
     });
 
     it('shows item count badge for template folders with items', () => {
-      vi.mocked(folderService.isTemplateFolder).mockReturnValue(true);
+      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
 
       const templateFolder = createMockFolder('Shopping List', true);
       (templateFolder as any).items = [
@@ -223,7 +225,7 @@ describe('FolderNodeView', () => {
 
     it('shows duplicate option for template folders', async () => {
       const user = userEvent.setup();
-      vi.mocked(folderService.isTemplateFolder).mockReturnValue(true);
+      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
 
       const templateFolder = createMockFolder('My List', true);
       render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
@@ -292,7 +294,7 @@ describe('FolderNodeView', () => {
 
     it('shows import/export options for template folders', async () => {
       const user = userEvent.setup();
-      vi.mocked(folderService.isTemplateFolder).mockReturnValue(true);
+      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
 
       const templateFolder = createMockFolder('My List', true);
       render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);

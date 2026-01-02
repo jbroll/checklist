@@ -12,6 +12,7 @@ export type {
 export {
   CircularReferenceError,
   ItemLimitExceededError,
+  isOrganizationalFolder,
   isTemplateFolder,
   useCheckListHierarchy,
 } from './useCheckListHierarchy';

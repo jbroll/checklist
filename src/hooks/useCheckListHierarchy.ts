@@ -139,6 +139,13 @@ export function isTemplateFolder(folder: FolderType): boolean {
 }
 
 /**
+ * Check if a folder is an organizational folder (has children)
+ */
+export function isOrganizationalFolder(folder: FolderType): boolean {
+  return folder.type === 'folder' || folder.children !== undefined;
+}
+
+/**
  * Recursively collect all template folders
  */
 function collectTemplateFolders(
