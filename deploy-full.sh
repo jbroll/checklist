@@ -32,7 +32,7 @@ fi
 
 DEPLOY_SH="../deploy.sh/deploy.sh"
 
-echo "=== Kjekit Full Deployment ==="
+echo "=== CheckList Full Deployment ==="
 echo "Environment: $ENV"
 echo "Mode: $MODE"
 echo ""
@@ -132,7 +132,7 @@ elif [[ "$ENV" == "test" ]]; then
         echo "    ✓ Backend health check passed"
     else
         echo "    ✗ Backend health check FAILED"
-        ssh checklist-test.rkroll.com "sudo journalctl -u kjekit-api-test -n 10 --no-pager" || true
+        ssh checklist-test.rkroll.com "sudo journalctl -u checkit-api-test -n 10 --no-pager" || true
         exit 1
     fi
     echo ""
