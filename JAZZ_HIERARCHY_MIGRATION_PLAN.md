@@ -8,7 +8,7 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 |-------|-------------|--------|
 | **Phase 0** | Package restructuring | **COMPLETE** |
 | **Phase 1** | Schema alignment | **COMPLETE** |
-| **Phase 2** | Backend consolidation | **IN PROGRESS** |
+| **Phase 2** | Backend consolidation | **COMPLETE** |
 | Phase 3 | Frontend migration | Pending |
 | Phase 4 | SharedReference implementation | Pending |
 | Phase 5 | Publication system | Pending |
@@ -23,24 +23,32 @@ This document outlines the plan to migrate CheckList and WicketMap to use a unif
 6. Removed billing/registry exports from jazz-hierarchy
 7. Updated wicketmap root package.json with new workspaces
 
-### Phase 2 In Progress
+### Phase 2 Completed
 
 1. Contributed CheckList security features to jbr-jazz:
    - Enhanced RateLimiter with cleanup interval and destroy()
    - Added PersistentRateLimiter for SQLite-backed rate limiting
-   - Added ApiErrors helper for consistent error responses
+   - Added ApiErrors helper for consistent error responses (with generic types)
    - Added request ID and CSRF protection middleware
    - Added webhook idempotency checking to billing
+   - Added token validation rate limiting to shares
+   - Added periodic expired invite cleanup to shares
 
-2. CheckList backend now uses jbr-jazz packages:
+2. CheckList backend now uses jbr-jazz shared utilities:
    - Added @jbr-jazz/hierarchy-backend as dependency
-   - Re-exported shared utilities (RateLimiter, ApiErrors, etc.)
-   - Kept CheckList-specific auth/billing for branding/features
+   - Re-exported: RateLimiter, PersistentRateLimiter, ApiErrors
+   - Re-exported: verification-token utilities, email-matching utilities
 
-**Remaining Phase 2 work:**
-- Migrate CheckList to use `createHierarchyServer()` factory
-- Unify sharing routes
-- Unify verified email routes
+3. App-specific modules remain in CheckList (by design):
+   - `auth.ts` - CheckList-specific branding/email templates
+   - `agent.ts` - Uses "folder" naming vs jbr-jazz "target" naming
+   - `shares.ts` - Uses `/folders/` API paths vs `/targets/`
+   - `verified-emails.ts` - Direct SMTP config vs config object
+
+**Future consolidation opportunities:**
+- Unify API paths (requires frontend changes)
+- Extract common auth configuration patterns
+- Share agent logic with configurable naming
 
 ### Phase 1 Completed Work
 
