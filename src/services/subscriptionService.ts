@@ -15,6 +15,11 @@
  * actual tier. This allows soft enforcement during beta testing.
  */
 
+import {
+  getEffectiveTier as getEffectiveTierFromBilling,
+  getTierDisplayName,
+  isPaidTier,
+} from '@jbr-jazz/billing-shared';
 import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { isTemplateFolder } from '../hooks';
@@ -25,6 +30,9 @@ import {
   type SubscriptionTier,
   UserSettings,
 } from '../schemas';
+
+// Re-export display helpers from billing-shared
+export { getTierDisplayName, isPaidTier };
 
 // ============================================================================
 // Types
@@ -144,12 +152,12 @@ export function isBetaUser(account: AccountParam): boolean {
 /**
  * Get effective tier for limit calculations
  * During beta, all users get Plus tier limits regardless of actual tier.
+ * Uses billing-shared getEffectiveTier logic.
  */
 export function getEffectiveTier(account: AccountParam): SubscriptionTier {
-  if (isBetaUser(account)) {
-    return 'plus';
-  }
-  return getSubscriptionTier(account);
+  const tier = getSubscriptionTier(account);
+  const status = getSubscriptionStatus(account);
+  return getEffectiveTierFromBilling(tier, status);
 }
 
 /**
@@ -451,32 +459,12 @@ function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof User
 }
 
 // ============================================================================
-// Display Helpers
+// Display Helpers (CheckList-specific)
 // ============================================================================
 
 /**
- * Get human-readable tier name
- */
-export function getTierDisplayName(tier: SubscriptionTier): string {
-  const names: Record<SubscriptionTier, string> = {
-    free: 'Free',
-    plus: 'Plus',
-    premium: 'Premium',
-    enterprise: 'Enterprise',
-  };
-  return names[tier];
-}
-
-/**
- * Get tier price display
+ * Get tier price display (CheckList-specific, uses local TIERS config)
  */
 export function getTierPrice(tier: SubscriptionTier): string {
   return TIERS[tier].priceDisplay;
-}
-
-/**
- * Check if tier is a paid tier
- */
-export function isPaidTier(tier: SubscriptionTier): boolean {
-  return tier !== 'free';
 }

@@ -22,6 +22,7 @@ import { ApiErrors } from './lib/api-error.js';
 import { setupSharingRoutes } from './shares.js';
 import { setupVerifiedEmailRoutes } from './verified-emails.js';
 import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
+import { setupLimitCheckRoute } from '@jbr-jazz/billing-backend';
 
 // Load environment variables from both root .env and backend .env
 // Root .env first (shared config like JAZZ_API_KEY)
@@ -198,6 +199,40 @@ setupVerifiedEmailRoutes(app, sqliteDb);
 
 // Billing routes
 setupBillingRoutes(app, sqliteDb, auth);
+
+// Limit check route (uses jbr-jazz billing-backend with app-specific callback)
+setupLimitCheckRoute(app, sqliteDb, auth, {
+  getUsage: (db, userId, tier, status) => {
+    // CheckList counts template folders (lists) from usage_snapshot
+    // The frontend periodically records usage via POST /api/billing/usage
+    const result = db.prepare(`
+      SELECT list_count FROM usage_snapshot
+      WHERE user_id = ?
+      ORDER BY recorded_at DESC
+      LIMIT 1
+    `).get(userId) as { list_count: number } | undefined;
+
+    return {
+      currentCount: result?.list_count ?? 0,
+      resourceName: 'lists',
+    };
+  },
+  formatMessage: (response) => {
+    if (response.status === 'beta') {
+      return `Beta: ${response.currentCount} of ${response.maxAllowed} lists (Plus tier limits during beta)`;
+    }
+    if (response.atLimit) {
+      return `You've reached your limit of ${response.maxAllowed} lists. Upgrade your plan to create more.`;
+    }
+    if (response.approachingLimit) {
+      return `${response.remaining} lists remaining. Consider upgrading for more.`;
+    }
+    if (response.maxAllowed === -1) {
+      return `${response.currentCount} lists (unlimited)`;
+    }
+    return `${response.currentCount} of ${response.maxAllowed} lists`;
+  },
+});
 
 // Account deletion endpoint
 // Deletes the user's BetterAuth account and all associated data

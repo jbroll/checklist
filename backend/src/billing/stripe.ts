@@ -1,4 +1,9 @@
 import Stripe from 'stripe';
+import type {
+  SubscriptionTier as BaseTier,
+  SubscriptionStatus,
+  UserSubscription as BaseUserSubscription,
+} from '@jbr-jazz/billing-shared';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Warning: STRIPE_SECRET_KEY not set. Billing features will be disabled.');
@@ -16,8 +21,11 @@ export function isStripeEnabled(): boolean {
 // They are synced from STRIPE_PRICE_PLUS and STRIPE_PRICE_PREMIUM env vars on startup
 // See: backend/src/db.ts syncStripePriceIds()
 
-export type TierSlug = 'free' | 'plus' | 'premium' | 'enterprise';
+// Re-export base types from billing-shared
+export type TierSlug = BaseTier;
+export type { SubscriptionStatus };
 
+// CheckList-specific tier interface (uses maxLists instead of generic maxItems)
 export interface SubscriptionTier {
   slug: TierSlug;
   name: string;
@@ -27,12 +35,5 @@ export interface SubscriptionTier {
   stripePriceId: string | null;
 }
 
-export interface UserSubscription {
-  userId: string;
-  tierSlug: TierSlug;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  status: 'active' | 'past_due' | 'cancelled' | 'trialing' | 'beta';
-  currentPeriodEnd: number | null;
-  cancelAtPeriodEnd: boolean;
-}
+// CheckList uses the same UserSubscription structure as billing-shared
+export type UserSubscription = BaseUserSubscription;
