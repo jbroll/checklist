@@ -105,9 +105,10 @@ test.describe('Share Dialog UI', () => {
   test('should display collaborators list in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
-    // Wait for dialog and data to load
+    // Wait for dialog and loading to complete
     await expect(page.getByRole('dialog')).toBeVisible();
-    await page.waitForSelector('text=Collaborators (2)', { timeout: 5000 });
+    await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('text=Collaborators (2)', { timeout: 10000 });
 
     // Verify collaborators are shown
     await expect(page.locator('text=Owner User')).toBeVisible();
@@ -119,9 +120,10 @@ test.describe('Share Dialog UI', () => {
   test('should display pending invites in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
-    // Wait for dialog and data to load
+    // Wait for dialog and loading to complete
     await expect(page.getByRole('dialog')).toBeVisible();
-    await page.waitForSelector('text=Pending Invites (2)', { timeout: 5000 });
+    await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('text=Pending Invites (2)', { timeout: 10000 });
 
     // Verify pending invites are shown
     await expect(page.locator('text=pending1@example.com')).toBeVisible();
@@ -191,12 +193,15 @@ test.describe('Share Dialog UI', () => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
+    // Wait for loading to complete
+    await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Enter email and click Get Link
     await page.locator('input#email').fill('newuser@example.com');
     await page.getByRole('button', { name: 'Get Link' }).click();
 
-    // Verify error message
-    await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible();
+    // Verify error message (with longer timeout to allow for API call)
+    await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible({ timeout: 10000 });
   });
 
   test('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
@@ -244,9 +249,9 @@ test.describe('Share Dialog UI', () => {
 
 test.describe('Invite Accept Page UI', () => {
   test('should show loading state initially', async ({ page }) => {
-    // Delay the API response to see loading state
+    // Delay the API response significantly to ensure loading state is visible
     await page.route('**/api/shares/validate/*', async (route) => {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 2000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -256,8 +261,8 @@ test.describe('Invite Accept Page UI', () => {
 
     await page.goto('/invite/test-token-123');
 
-    // Should show loading state
-    await expect(page.locator('text=Loading invite...')).toBeVisible();
+    // Should show loading state - use a short timeout since we expect it to appear quickly
+    await expect(page.locator('text=Loading invite...')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show error for invalid token', async ({ page }) => {
@@ -486,8 +491,11 @@ test.describe('Share Dialog - Empty States', () => {
     // Wait for dialog
     await expect(page.getByRole('dialog')).toBeVisible();
 
+    // Wait for loading to complete (spinner to disappear)
+    await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Verify empty states
-    await expect(page.locator('text=Collaborators (0)')).toBeVisible();
+    await expect(page.locator('text=Collaborators (0)')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=No collaborators yet')).toBeVisible();
     await expect(page.locator('text=Pending Invites (0)')).toBeVisible();
     await expect(page.locator('text=No pending invites')).toBeVisible();

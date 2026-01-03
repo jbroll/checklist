@@ -1,3 +1,4 @@
+import { type Permission, useSharing } from '@jbr-jazz/hierarchy-client';
 import { Account, type ID, type InstanceOfSchema } from 'jazz-tools';
 import { Check, Clock, Contact, Copy, Loader2, Mail, Share2, Trash2, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -19,9 +20,6 @@ interface ShareDialogProps {
   folder: InstanceOfSchema<typeof FolderNode>;
 }
 
-// Permission levels match Jazz native role names
-type PermissionLevel = 'reader' | 'writer' | 'admin';
-
 interface Collaborator {
   userId: string;
   accountId: string;
@@ -39,46 +37,46 @@ interface PendingInvite {
   expiresAt: string | null;
 }
 
+// CSRF header for API requests
+const getAuthHeaders = async (): Promise<Record<string, string>> => ({
+  'X-Requested-With': 'XMLHttpRequest',
+});
+
 export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
+  // Initialize useSharing hook
+  const sharing = useSharing({
+    apiBaseUrl: '',
+    getAuthHeaders,
+  });
+
   // Invite form state
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [permission, setPermission] = useState<PermissionLevel>('writer');
+  const [permission, setPermission] = useState<Permission>('writer');
   const [expiresInDays, setExpiresInDays] = useState(7);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
 
   // Access management state
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sharing methods are stable via useCallback
   const loadAccessData = useCallback(async () => {
     setIsLoadingData(true);
     setError(null);
 
     try {
-      // Load collaborators (uses /targets/ path for jbr-jazz compatibility)
-      const collabResponse = await fetch(`/api/shares/targets/${folder.$jazz.id}/collaborators`, {
-        credentials: 'include',
-      });
+      const [collabs, invites] = await Promise.all([
+        sharing.getCollaborators(folder.$jazz.id),
+        sharing.getPendingInvites(folder.$jazz.id),
+      ]);
 
-      if (collabResponse.ok) {
-        const collabData = await collabResponse.json();
-        setCollaborators(collabData.collaborators || []);
-      }
-
-      // Load pending invites
-      const invitesResponse = await fetch(`/api/shares/targets/${folder.$jazz.id}/invites`, {
-        credentials: 'include',
-      });
-
-      if (invitesResponse.ok) {
-        const invitesData = await invitesResponse.json();
-        setPendingInvites(invitesData.invites || []);
-      }
+      setCollaborators(collabs as Collaborator[]);
+      setPendingInvites(invites as unknown as PendingInvite[]);
     } catch (_err) {
       console.error('Failed to load access data:', _err);
       setError('Failed to load collaborators');
@@ -114,42 +112,27 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
   const handleGenerateInvite = async () => {
     setError(null);
+    setIsCreatingInvite(true);
 
-    setIsGenerating(true);
     try {
-      const response = await fetch('/api/shares/invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          recipientEmail: recipientEmail.trim(),
-          targetId: folder.$jazz.id,
-          permission,
-          expiresInDays,
-        }),
-      });
+      const result = await sharing.createInvite(folder.$jazz.id, recipientEmail.trim(), permission);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to generate invite');
+      // Hook throws on error, so result should always be non-null here
+      if (!result) {
+        throw new Error('Failed to create invite');
       }
 
-      const data = await response.json();
-
       // Add the agent to the folder so it can manage future accepts
-      if (data.agentAccountId) {
+      if (result.agentAccountId) {
         try {
-          const agentAccount = await Account.load(data.agentAccountId as ID<Account>, {
+          const agentAccount = await Account.load(result.agentAccountId as ID<Account>, {
             loadAs: folder.$jazz.owner,
           });
 
           if (agentAccount) {
             // Check if agent is already a member
             const isMember = folder.$jazz.owner.members.some(
-              (m: { id: string }) => m.id === data.agentAccountId,
+              (m: { id: string }) => m.id === result.agentAccountId,
             );
 
             if (!isMember) {
@@ -165,7 +148,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
         }
       }
 
-      setShareUrl(data.shareUrl);
+      setShareUrl(result.shareUrl);
       setRecipientEmail('');
       // Refresh the pending invites list
       loadAccessData();
@@ -173,7 +156,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       console.error('Failed to generate invite:', err);
       setError(err instanceof Error ? err.message : 'Failed to create invite');
     } finally {
-      setIsGenerating(false);
+      setIsCreatingInvite(false);
     }
   };
 
@@ -195,20 +178,12 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
 
     try {
-      const response = await fetch(
-        `/api/shares/targets/${folder.$jazz.id}/collaborators/${accountId}`,
-        {
-          method: 'DELETE',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-          credentials: 'include',
-        },
-      );
+      const success = await sharing.removeCollaborator(folder.$jazz.id, accountId);
 
-      if (response.ok) {
+      if (success) {
         loadAccessData();
       } else {
-        const error = await response.json();
-        setError(error.message || 'Failed to remove collaborator');
+        setError(sharing.error?.message || 'Failed to remove collaborator');
       }
     } catch (_err) {
       setError('Failed to remove collaborator');
@@ -223,21 +198,16 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     }
 
     try {
-      const response = await fetch(`/api/shares/invites/${token}`, {
-        method: 'DELETE',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        credentials: 'include',
-      });
+      const success = await sharing.revokeInvite(token);
 
-      if (response.ok) {
+      if (success) {
         loadAccessData();
         // Clear shareUrl if it matches the revoked invite
         if (shareUrl?.includes(token)) {
           setShareUrl(null);
         }
       } else {
-        const error = await response.json();
-        setError(error.message || 'Failed to revoke invite');
+        setError(sharing.error?.message || 'Failed to revoke invite');
       }
     } catch (_err) {
       setError('Failed to revoke invite');
@@ -303,6 +273,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     setShareUrl(null);
     setCopied(false);
     setError(null);
+    setIsCreatingInvite(false);
     onOpenChange(false);
   };
 
@@ -363,7 +334,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   placeholder="colleague@example.com or +1234567890"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  disabled={isGenerating}
+                  disabled={isCreatingInvite}
                   className="flex-1"
                 />
                 {hasContactPicker && (
@@ -371,7 +342,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                     size="sm"
                     variant="outline"
                     onClick={handleContactPicker}
-                    disabled={isGenerating}
+                    disabled={isCreatingInvite}
                     title="Pick from contacts"
                     className="shrink-0"
                   >
@@ -387,8 +358,8 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                 <select
                   id="permission"
                   value={permission}
-                  onChange={(e) => setPermission(e.target.value as PermissionLevel)}
-                  disabled={isGenerating}
+                  onChange={(e) => setPermission(e.target.value as Permission)}
+                  disabled={isCreatingInvite}
                   className="flex h-10 w-full rounded-md border border-divider-primary bg-surface-primary px-3 py-2 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="reader">Reader</option>
@@ -403,7 +374,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   id="expiration"
                   value={expiresInDays.toString()}
                   onChange={(e) => setExpiresInDays(Number(e.target.value))}
-                  disabled={isGenerating}
+                  disabled={isCreatingInvite}
                   className="flex h-10 w-full rounded-md border border-divider-primary bg-surface-primary px-3 py-2 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="1">1 day</option>
@@ -415,10 +386,10 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
 
               <Button
                 onClick={handleGenerateInvite}
-                disabled={isGenerating || !isRecipientValid()}
+                disabled={isCreatingInvite || !isRecipientValid()}
                 className="h-10"
               >
-                {isGenerating ? 'Getting...' : 'Get Link'}
+                {isCreatingInvite ? 'Getting...' : 'Get Link'}
               </Button>
             </div>
 

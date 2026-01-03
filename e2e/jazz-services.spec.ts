@@ -546,7 +546,7 @@ test.describe('Jazz Services - Folder Move Operations', () => {
       }
     }, folderId);
 
-    expect(error).toContain('Cannot move folder into itself');
+    expect(error).toContain('Cannot move folder into itself or its descendants');
   });
 
   test('should prevent moving folder into its descendant', async ({ page }) => {

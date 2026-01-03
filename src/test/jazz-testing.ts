@@ -374,8 +374,8 @@ export class JazzTestContext {
       };
     }
 
-    // Use actual folderService for realistic app behavior
-    const { createFolder } = await import('../services/folderService');
+    // Use actual CheckListFolder factory for realistic app behavior
+    const { createFolder } = await import('../services/checklistFolderFactory');
     const folder = createFolder(this.account, name, isTemplate, parent?.node ?? null);
     const group = folder.$jazz.owner as Group;
 

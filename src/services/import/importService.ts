@@ -7,7 +7,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode } from '../../schemas';
 import { readFileAsText } from '../../utils/fileUpload';
-import * as folderService from '../folderService';
+import * as CheckListFolder from '../checklistFolderFactory';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
 import { importItemsFromJson, importJson } from './jsonImporter';
@@ -288,8 +288,8 @@ export async function importAsNewTemplate(
     finalTemplateName = file.name.replace(/\.(txt|csv)$/i, '');
   }
 
-  // Create new template using folderService
-  const newTemplate = folderService.createFolder(account, finalTemplateName, true, parentFolder);
+  // Create new template using CheckListFolder factory
+  const newTemplate = CheckListFolder.createFolder(account, finalTemplateName, true, parentFolder);
 
   if (!newTemplate) {
     return createErrorResult('Failed to create template');
@@ -311,7 +311,7 @@ export async function importAsNewTemplate(
   // Check if import succeeded - if not, clean up the created template
   if (importResult.errors.length > 0 && importResult.imported === 0) {
     // Delete the empty template we created
-    folderService.deleteFolder(account, newTemplate);
+    CheckListFolder.deleteFolder(account, newTemplate);
     return createErrorResult(importResult.errors[0]);
   }
 

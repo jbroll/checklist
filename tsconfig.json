@@ -32,7 +32,9 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "jazz-tools": ["./node_modules/jazz-tools"],
+      "jazz-tools/*": ["./node_modules/jazz-tools/*"]
     }
   },
   "include": ["src"],

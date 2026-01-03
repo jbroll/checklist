@@ -8,11 +8,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as folderService from '../folderService';
+import * as CheckListFolder from '../checklistFolderFactory';
 import { parseTextMetadata } from './txtImporter';
 
-// Mock folderService
-vi.mock('../folderService', () => ({
+// Mock checklistFolderFactory
+vi.mock('../checklistFolderFactory', () => ({
   createFolder: vi.fn(),
 }));
 
@@ -96,12 +96,12 @@ Item2
         const mockTemplate = createMockTemplate();
 
         vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
         await importAsNewTemplate(file, account as any, undefined, 'txt');
 
         // Should use metadata name, not filename
-        expect(folderService.createFolder).toHaveBeenCalledWith(
+        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
           account,
           'My Custom List',
           true,
@@ -121,12 +121,12 @@ Item1
         const mockTemplate = createMockTemplate();
 
         vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
         await importAsNewTemplate(file, account as any, 'Explicit Name', 'txt');
 
         // Should use explicit name, not metadata
-        expect(folderService.createFolder).toHaveBeenCalledWith(
+        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
           account,
           'Explicit Name',
           true,
@@ -145,12 +145,12 @@ Item2
         const mockTemplate = createMockTemplate();
 
         vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
         await importAsNewTemplate(file, account as any, undefined, 'txt');
 
         // Should use filename without extension
-        expect(folderService.createFolder).toHaveBeenCalledWith(
+        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
           account,
           'my-shopping-list',
           true,
@@ -168,12 +168,12 @@ Item2,Cat2`;
         const mockTemplate = createMockTemplate();
 
         vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
         await importAsNewTemplate(file, account as any, undefined, 'csv');
 
         // Should use filename, not try to parse CSV for metadata
-        expect(folderService.createFolder).toHaveBeenCalledWith(account, 'data', true, undefined);
+        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(account, 'data', true, undefined);
       });
     });
 
@@ -184,7 +184,7 @@ Item2,Cat2`;
         const account = createMockAccount();
 
         vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(folderService.createFolder).mockReturnValue(null as any);
+        vi.mocked(CheckListFolder.createFolder).mockReturnValue(null as any);
 
         const result = await importAsNewTemplate(file, account as any, undefined, 'txt');
 
@@ -572,7 +572,7 @@ Item2,Cat2`;
       const mockTemplate = createMockTemplate();
 
       vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
       const result = await importAsNewTemplate(file, account as any, 'Single', 'txt');
 
@@ -587,7 +587,7 @@ Item2,Cat2`;
       const mockTemplate = createMockTemplate();
 
       vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
       const result = await importAsNewTemplate(file, account as any, 'Test', 'csv');
 
@@ -621,7 +621,7 @@ Item2,Cat2`;
       };
 
       vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
       const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
 
@@ -668,7 +668,7 @@ Item2,Cat2`;
       };
 
       vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(folderService.createFolder).mockReturnValue(mockTemplate as any);
+      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
 
       const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
 

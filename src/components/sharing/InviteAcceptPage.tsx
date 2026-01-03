@@ -1,3 +1,4 @@
+import { useSharing } from '@jbr-jazz/hierarchy-client';
 import type { CoMap, ID } from 'jazz-tools';
 import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -5,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
 import { Account, FolderNode } from '@/schemas';
+
+// CSRF header for API requests
+const getAuthHeaders = async (): Promise<Record<string, string>> => ({
+  'X-Requested-With': 'XMLHttpRequest',
+});
 
 interface InviteAcceptPageProps {
   token: string;
@@ -28,6 +34,12 @@ type PageState =
   | { type: 'error'; message: string };
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
+  // Initialize useSharing hook
+  const sharing = useSharing({
+    apiBaseUrl: '',
+    getAuthHeaders,
+  });
+
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount(Account) as any;
   const [state, setState] = useState<PageState>({ type: 'loading' });
@@ -45,8 +57,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
     async function doValidation() {
       try {
-        const response = await fetch(`/api/shares/validate/${token}`);
-        const data: InviteValidation = await response.json();
+        const data = await sharing.validateInvite(token);
 
         if (!data.valid) {
           setState({
@@ -61,7 +72,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
         // Check if user is authenticated
         if (!sessionResult?.data?.user || !me) {
-          setState({ type: 'not_authenticated', invite: data });
+          setState({ type: 'not_authenticated', invite: data as InviteValidation });
           return;
         }
 
@@ -76,7 +87,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
           return;
         }
 
-        setState({ type: 'valid', invite: data });
+        setState({ type: 'valid', invite: data as InviteValidation });
       } catch (error) {
         console.error('Failed to validate invite:', error);
         setState({ type: 'error', message: 'Failed to load invite. Please try again.' });
@@ -84,7 +95,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     }
 
     doValidation();
-  }, [token, me]);
+  }, [token, me, sharing]);
 
   const handleAccept = async () => {
     // Mark that we've started accepting - prevents re-validation on me changes
@@ -92,28 +103,17 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     setState({ type: 'accepting' });
 
     try {
-      const response = await fetch('/api/shares/accept', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ token }),
-      });
+      const result = await sharing.acceptInvite(token);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to accept invite');
+      if (!result) {
+        throw new Error(sharing.error?.message || 'Failed to accept invite');
       }
 
-      const data = await response.json();
-
       // Load the shared folder and add it to root.folders if not already present
-      if (me?.root?.folders && data.targetId) {
+      if (me?.root?.folders && result.targetId) {
         try {
           // Load the folder CoValue using the ID from the accept response
-          const folder = await FolderNode.load(data.targetId as ID<CoMap>, {
+          const folder = await FolderNode.load(result.targetId as ID<CoMap>, {
             loadAs: me,
           });
 
@@ -133,7 +133,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
         }
       }
 
-      setState({ type: 'success', targetId: data.targetId });
+      setState({ type: 'success', targetId: result.targetId });
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {

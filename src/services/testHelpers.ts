@@ -7,10 +7,17 @@
  * Rewritten for FolderNode hierarchy (folder migration).
  */
 
+import {
+  archiveNode,
+  getFolderDisplayPath,
+  moveNode,
+  renameNode,
+  unarchiveNode,
+} from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { Account, FolderNode, SessionData, TemplateItem } from '../schemas';
+import * as CheckListFolder from './checklistFolderFactory';
 import * as ExportService from './export/exportService';
-import * as FolderService from './folderService';
 import { importJson } from './import/jsonImporter';
 import type { TxtImportResult } from './import/txtImporter';
 import { importItemsFromText } from './import/txtImporter';
@@ -47,52 +54,52 @@ export function exposeServicesToWindow(
       create: (name: string, isTemplate: boolean, parentFolderId?: string | null) =>
         withAccount((acc) => {
           const parent = parentFolderId ? findFolderById(acc, parentFolderId) : null;
-          const folder = FolderService.createFolder(acc, name, isTemplate, parent);
+          const folder = CheckListFolder.createFolder(acc, name, isTemplate, parent);
           return {
             folderId: folder.$jazz.id,
-            path: FolderService.getFolderDisplayPath(folder),
+            path: getFolderDisplayPath(folder),
           };
         }),
       get: (folderId: string) => withAccount((acc) => findFolderById(acc, folderId)),
-      getAll: () => withAccount((acc) => FolderService.getRootFolders(acc)),
-      getAllTemplates: () => withAccount((acc) => FolderService.getAllTemplateFolders(acc)),
+      getAll: () => withAccount((acc) => CheckListFolder.getRootFolders(acc)),
+      getAllTemplates: () => withAccount((acc) => CheckListFolder.getAllTemplateFolders(acc)),
       rename: (folderId: string, newName: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
-          FolderService.renameFolder(folder, newName);
+          renameNode(folder, newName);
         }),
       archive: (folderId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
-          FolderService.archiveFolder(folder);
+          archiveNode(folder);
         }),
       unarchive: (folderId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
-          FolderService.unarchiveFolder(folder);
+          unarchiveNode(folder);
         }),
       delete: (folderId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
-          FolderService.deleteFolder(acc, folder);
+          CheckListFolder.deleteFolder(acc, folder);
         }),
       move: (folderId: string, newParentId?: string | null) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
           const newParent = newParentId ? findFolderById(acc, newParentId) : null;
-          FolderService.moveFolder(acc, folder, newParent);
+          moveNode(acc.root, folder, newParent ?? undefined);
         }),
       exists: (folderId: string) => withAccount((acc) => findFolderById(acc, folderId) !== null),
       getPath: (folderId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, folderId);
           if (!folder) throw new Error(`Folder ${folderId} not found`);
-          return FolderService.getFolderDisplayPath(folder);
+          return getFolderDisplayPath(folder);
         }),
     },
 
@@ -104,17 +111,17 @@ export function exposeServicesToWindow(
           let parent: InstanceOfSchema<typeof FolderNode> | null = null;
           if (parentPath) {
             const segments = parentPath.split('/').filter((s) => s.length > 0);
-            parent = FolderService.findFolderByPath(acc, segments);
+            parent = CheckListFolder.findFolderByPath(acc, segments);
             if (!parent) {
               throw new Error(`Parent folder not found: ${parentPath}`);
             }
           }
 
-          const folder = FolderService.createFolder(acc, name, isTemplate, parent);
+          const folder = CheckListFolder.createFolder(acc, name, isTemplate, parent);
           return {
             entryId: folder.$jazz.id,
             templateId: isTemplate ? folder.$jazz.id : undefined,
-            path: FolderService.getFolderDisplayPath(folder),
+            path: getFolderDisplayPath(folder),
           };
         }),
       get: (entryId: string) =>
@@ -124,9 +131,9 @@ export function exposeServicesToWindow(
           return {
             id: folder.$jazz.id,
             name: folder.name,
-            type: FolderService.isTemplateFolder(folder) ? 'template-ref' : 'folder',
+            type: CheckListFolder.isTemplateFolder(folder) ? 'template-ref' : 'folder',
             archived: folder.archived || false,
-            path: FolderService.getFolderDisplayPath(folder),
+            path: getFolderDisplayPath(folder),
             parentId: folder.parent?.$jazz.id,
           };
         }),
@@ -138,50 +145,50 @@ export function exposeServicesToWindow(
         }),
       getAll: () =>
         withAccount((acc) => {
-          const folders = FolderService.getRootFolders(acc);
+          const folders = CheckListFolder.getRootFolders(acc);
           return folders.map((f) => ({
             id: f.$jazz.id,
             name: f.name,
-            type: FolderService.isTemplateFolder(f) ? 'template-ref' : 'folder',
-            path: FolderService.getFolderDisplayPath(f),
+            type: CheckListFolder.isTemplateFolder(f) ? 'template-ref' : 'folder',
+            path: getFolderDisplayPath(f),
           }));
         }),
       rename: (entryId: string, newName: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
-          FolderService.renameFolder(folder, newName);
+          renameNode(folder, newName);
         }),
       archive: (entryId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
-          FolderService.archiveFolder(folder);
+          archiveNode(folder);
         }),
       unarchive: (entryId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
-          FolderService.unarchiveFolder(folder);
+          unarchiveNode(folder);
         }),
       delete: (entryId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
-          FolderService.deleteFolder(acc, folder);
+          CheckListFolder.deleteFolder(acc, folder);
         }),
       move: (entryId: string, newParentId?: string | null) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
           const newParent = newParentId ? findFolderById(acc, newParentId) : null;
-          FolderService.moveFolder(acc, folder, newParent);
+          moveNode(acc.root, folder, newParent ?? undefined);
         }),
       getPath: (entryId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, entryId);
           if (!folder) throw new Error(`Folder ${entryId} not found`);
-          return FolderService.getFolderDisplayPath(folder);
+          return getFolderDisplayPath(folder);
         }),
     },
 
@@ -197,17 +204,17 @@ export function exposeServicesToWindow(
         let parent: InstanceOfSchema<typeof FolderNode> | null = null;
         if (parentPath) {
           const segments = parentPath.split('/').filter((s) => s.length > 0);
-          parent = FolderService.findFolderByPath(account, segments);
+          parent = CheckListFolder.findFolderByPath(account, segments);
           if (!parent) {
             throw new Error(`Parent folder not found: ${parentPath}`);
           }
         }
 
-        const folder = FolderService.createFolder(account, name, isTemplate, parent);
+        const folder = CheckListFolder.createFolder(account, name, isTemplate, parent);
         return {
           entryId: folder.$jazz.id,
           templateId: isTemplate ? folder.$jazz.id : undefined,
-          path: FolderService.getFolderDisplayPath(folder),
+          path: getFolderDisplayPath(folder),
         };
       },
     },
@@ -217,16 +224,16 @@ export function exposeServicesToWindow(
       get: (templateId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, templateId);
-          if (!folder || !FolderService.isTemplateFolder(folder)) {
+          if (!folder || !CheckListFolder.isTemplateFolder(folder)) {
             return null;
           }
           return folder;
         }),
-      getAll: () => withAccount((acc) => FolderService.getAllTemplateFolders(acc)),
+      getAll: () => withAccount((acc) => CheckListFolder.getAllTemplateFolders(acc)),
       exists: (templateId: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, templateId);
-          return folder !== null && FolderService.isTemplateFolder(folder);
+          return folder !== null && CheckListFolder.isTemplateFolder(folder);
         }),
       createItem: (
         account: InstanceOfSchema<typeof Account>,
@@ -237,7 +244,7 @@ export function exposeServicesToWindow(
         defaultQuantity?: string,
       ) => {
         const folder = findFolderById(account, templateId);
-        if (!folder || !FolderService.isTemplateFolder(folder)) {
+        if (!folder || !CheckListFolder.isTemplateFolder(folder)) {
           throw new Error(`Template ${templateId} not found`);
         }
         if (type === 'category') {
@@ -284,7 +291,7 @@ export function exposeServicesToWindow(
       itemsFromTxt: async (templateId: string, txtContent: string) =>
         withAccount((acc) => {
           const folder = findFolderById(acc, templateId);
-          if (!folder || !FolderService.isTemplateFolder(folder)) {
+          if (!folder || !CheckListFolder.isTemplateFolder(folder)) {
             throw new Error(`Template ${templateId} not found`);
           }
           return importItemsFromText(txtContent, folder, acc);
