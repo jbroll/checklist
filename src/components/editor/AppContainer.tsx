@@ -3,14 +3,18 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { UpgradeBanner } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
+import {
+  ItemLimitExceededError,
+  isOrganizationalFolder,
+  isTemplateFolder,
+  useCheckListHierarchy,
+} from '@/hooks';
 import { useDialog } from '@/lib/dialog-context';
 import { useAccount } from '@/lib/jazz';
 import { useDialogManager } from '@/lib/useDialogManager';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import { useTemplateNavigation } from '@/lib/useTemplateNavigation';
 import type { Account, FolderNode } from '@/schemas';
-import * as folderService from '@/services/folderService';
-import { ListLimitExceededError } from '@/services/folderService';
 import * as SessionService from '@/services/sessionService';
 import * as subscriptionService from '@/services/subscriptionService';
 import { DialogManager, type SessionExportData } from './DialogManager';
@@ -46,6 +50,9 @@ export function AppContainer({
   const { selectedTemplateId, selectedFolderId, selectTemplate, selectFolder, clearSelection } =
     useTemplateNavigation();
 
+  // Hierarchy management hook
+  const { findById, addFolder, getAllTemplateFolders } = useCheckListHierarchy(me);
+
   // Upgrade dialog reason state (separate from dialog manager for the message)
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
 
@@ -64,14 +71,14 @@ export function AppContainer({
   // Find selected folder for import (must be before early return)
   const selectedFolder = useMemo(() => {
     if (!me || !selectedFolderId) return null;
-    return folderService.findFolderById(me, selectedFolderId);
-  }, [selectedFolderId, me]);
+    return findById(selectedFolderId);
+  }, [selectedFolderId, me, findById]);
 
   // Compute parent folder for import based on selected folder
   const importParentFolder = useMemo(() => {
     if (!selectedFolder) return undefined;
     // Only use organizational folders as import parents
-    return folderService.isOrganizationalFolder(selectedFolder) ? selectedFolder : undefined;
+    return isOrganizationalFolder(selectedFolder) ? selectedFolder : undefined;
   }, [selectedFolder]);
 
   // Derive navigation state from history hook
@@ -90,32 +97,30 @@ export function AppContainer({
   }
 
   // Get all template folders from the hierarchy
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-  const templates = folderService.getAllTemplateFolders(me as any);
+  const templates = getAllTemplateFolders();
 
   const handleAddFolder = (name: string, isTemplate: boolean) => {
     if (!me.root) return;
 
     // Determine parent folder based on selection
-    let parent: InstanceOfSchema<typeof FolderNode> | null = null;
+    let parent: InstanceOfSchema<typeof FolderNode> | undefined;
     if (selectedFolder) {
-      if (folderService.isOrganizationalFolder(selectedFolder)) {
+      if (isOrganizationalFolder(selectedFolder)) {
         // If selected folder is organizational, create inside it
         parent = selectedFolder;
-      } else if (folderService.isTemplateFolder(selectedFolder)) {
+      } else if (isTemplateFolder(selectedFolder)) {
         // If selected folder is a template, create at the same level (sibling)
-        parent = selectedFolder.parent || null;
+        parent = selectedFolder.parent || undefined;
       }
     }
 
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with Account root type
-      folderService.createFolder(me as any, name, isTemplate, parent);
+      addFolder(name, parent, isTemplate);
     } catch (error) {
-      if (error instanceof ListLimitExceededError) {
+      if (error instanceof ItemLimitExceededError) {
         showAlert({
           title: 'List Limit Reached',
-          message: `You've reached your limit of ${error.maxLists} lists. Upgrade your plan to create more.`,
+          message: `You've reached your limit of ${error.maxItems} lists. Upgrade your plan to create more.`,
         });
       } else {
         throw error;

@@ -1,10 +1,9 @@
 import { useAccount, useIsAuthenticated, useLogOut } from 'jazz-tools/react';
 import { useEffect, useState } from 'react';
-import { useViewStateCleanup } from '@/hooks/useViewStateCleanup';
+import { useCheckListHierarchy, useViewStateCleanup } from '@/hooks';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
 import { Account } from '@/schemas';
-import * as folderService from '@/services/folderService';
 import { EmailAuthDialog } from './auth/EmailAuthDialog';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
@@ -50,6 +49,9 @@ export function AuthGate() {
   // Run viewState cleanup in the background
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue with optional root
   useViewStateCleanup(me as any);
+
+  // Hierarchy operations (for account deletion)
+  const { deleteAllUserData } = useCheckListHierarchy(me);
 
   // Track if user explicitly signed out
   const [userSignedOut, setUserSignedOut] = useState(
@@ -172,10 +174,7 @@ export function AuthGate() {
 
       // Only delete Jazz data AFTER API call succeeds
       // This ensures data is actually deleted from Jazz, not just orphaned
-      if (me) {
-        // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference issue
-        folderService.deleteAllUserData(me as any);
-      }
+      deleteAllUserData();
 
       // Sign out after successful deletion
       localStorage.setItem('user-signed-out', 'true');

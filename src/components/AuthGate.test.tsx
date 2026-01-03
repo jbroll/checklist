@@ -22,8 +22,12 @@ vi.mock('jazz-tools/react', () => ({
 import { useAccount, useIsAuthenticated } from 'jazz-tools/react';
 
 // Mock custom hooks
-vi.mock('@/hooks/useViewStateCleanup', () => ({
+const mockDeleteAllUserData = vi.fn();
+vi.mock('@/hooks', () => ({
   useViewStateCleanup: vi.fn(),
+  useCheckListHierarchy: () => ({
+    deleteAllUserData: mockDeleteAllUserData,
+  }),
 }));
 
 const mockShowAlert = vi.fn();
@@ -46,13 +50,6 @@ vi.mock('@/lib/auth-client', () => ({
     signOut: () => mockSignOut(),
   },
 }));
-
-// Mock folder service
-vi.mock('@/services/folderService', () => ({
-  deleteAllUserData: vi.fn(),
-}));
-
-import * as folderService from '@/services/folderService';
 
 // Mock child components
 vi.mock('./auth/EmailAuthDialog', () => ({
@@ -367,7 +364,7 @@ describe('AuthGate', () => {
         });
       });
 
-      expect(folderService.deleteAllUserData).toHaveBeenCalled();
+      expect(mockDeleteAllUserData).toHaveBeenCalled();
       expect(mockLogOut).toHaveBeenCalled();
       expect(mockShowAlert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -399,7 +396,7 @@ describe('AuthGate', () => {
       });
 
       // Should not delete Jazz data if API call fails
-      expect(folderService.deleteAllUserData).not.toHaveBeenCalled();
+      expect(mockDeleteAllUserData).not.toHaveBeenCalled();
     });
   });
 

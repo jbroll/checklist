@@ -23,6 +23,7 @@ import { ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
 import { co, Group, type InstanceOfSchema } from 'jazz-tools';
 import { useCallback } from 'react';
 import { type Account, FolderNode } from '../schemas';
+import * as subscriptionService from '../services/subscriptionService';
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;
@@ -213,9 +214,10 @@ export function useCheckListHierarchy(
     (name: string, parent?: FolderType, isTemplate = true): FolderType | null => {
       if (!account?.root?.folders) return null;
 
-      // Check subscription limit
-      if (!baseResult.canCreate) {
-        throw new ItemLimitExceededError(baseResult.maxItems);
+      // Check subscription limit only for template folders
+      // Use CheckList's subscription logic (counts templates only, not organizational folders)
+      if (isTemplate && !subscriptionService.canCreateList(account)) {
+        throw new ItemLimitExceededError(subscriptionService.getMaxLists(account));
       }
 
       const newFolder = createFolderNode(name, account, parent, isTemplate);
@@ -228,7 +230,7 @@ export function useCheckListHierarchy(
 
       return newFolder;
     },
-    [account, baseResult.canCreate, baseResult.maxItems],
+    [account],
   );
 
   // Duplicate template folder with deep copy of items
