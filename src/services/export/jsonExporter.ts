@@ -5,14 +5,15 @@
  * Version 2.0: Uses hierarchical structure and neutral terminology.
  */
 
+import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import packageJson from '../../../package.json';
+import { isTemplateFolder } from '../../hooks';
 import { generateSessionName } from '../../lib/utils';
 import type { Account, FolderNode, SessionData } from '../../schemas';
 import type { TemplateItem } from '../../schemas/tree';
 import { toISOString } from '../../utils/dateUtils';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
-import * as folderService from '../folderService';
 import type {
   ExportedData,
   ExportedFolder,
@@ -30,12 +31,14 @@ import type {
 export function exportAllFolders(account: InstanceOfSchema<typeof Account>): ExportedData {
   const folders: ExportedFolder[] = [];
 
-  // Get all template folders from the hierarchy
-  const templates = folderService.getAllTemplateFolders(account);
-  for (const template of templates) {
-    if (!template) continue;
-    const exportedFolder = exportTemplateNode(template);
-    folders.push(exportedFolder);
+  // Get all template folders from the hierarchy using walkTree
+  if (account?.root?.folders) {
+    walkTree([...account.root.folders] as InstanceOfSchema<typeof FolderNode>[], (node) => {
+      if (node.archived) return 'skip';
+      if (isTemplateFolder(node)) {
+        folders.push(exportTemplateNode(node));
+      }
+    });
   }
 
   return {

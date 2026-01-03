@@ -2,7 +2,6 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
 import type { Account, FolderNode } from '@/schemas';
-import { generateUniqueFolderName } from '@/services/folderService';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
   type ImportAsNewTemplateOptions,
@@ -20,6 +19,31 @@ import { readFileAsText } from '@/utils/fileUpload';
 function getFileId(file: File | null): string {
   if (!file) return 'null';
   return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+// Generate a unique folder name by checking siblings
+function generateUniqueFolderName(
+  baseName: string,
+  account: InstanceOfSchema<typeof Account>,
+  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
+): string {
+  const siblings = parentFolder?.children ?? account.root?.folders ?? [];
+  const existingNames = new Set(
+    [...siblings].filter((f) => f && !f.archived).map((f) => f?.name?.toLowerCase()),
+  );
+
+  if (!existingNames.has(baseName.toLowerCase())) {
+    return baseName;
+  }
+
+  for (let suffix = 2; suffix <= 100; suffix++) {
+    const candidateName = `${baseName} (${suffix})`;
+    if (!existingNames.has(candidateName.toLowerCase())) {
+      return candidateName;
+    }
+  }
+
+  return `${baseName} (${Date.now()})`;
 }
 
 type UnifiedImportResult = ImportResult | TxtImportResult | CsvImportResult;

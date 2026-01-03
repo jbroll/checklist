@@ -10,10 +10,25 @@
  * - Team/Enterprise: Unlimited (-1)
  */
 
+import { walkTree } from '@jbr-jazz/hierarchy-shared';
+import type { InstanceOfSchema } from 'jazz-tools';
+import { isTemplateFolder } from '../hooks';
 import { storageKey } from '../lib/brand';
-import type { AccountParam, SessionData } from '../schemas';
-import { getAllTemplateFolders } from './folderService';
+import type { AccountParam, FolderNode, SessionData } from '../schemas';
 import { getSessionRetentionDays } from './subscriptionService';
+
+type FolderType = InstanceOfSchema<typeof FolderNode>;
+
+/** Collect all template folders using jbr-jazz walkTree */
+function getAllTemplateFolders(account: AccountParam): FolderType[] {
+  if (!account?.root?.folders) return [];
+  const templates: FolderType[] = [];
+  walkTree([...account.root.folders] as FolderType[], (node) => {
+    if (node.archived) return 'skip';
+    if (isTemplateFolder(node)) templates.push(node);
+  });
+  return templates;
+}
 
 // Key for localStorage to track last cleanup time
 const CLEANUP_KEY = storageKey('session_cleanup_last');

@@ -7,17 +7,30 @@
  * All Jazz database access for templates and items goes through this service.
  */
 
+import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { isTemplateFolder } from '../hooks';
 import { generateId } from '../lib/utils';
 import type { Account, FolderNode, TemplateItem } from '../schemas';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
-import * as folderService from './folderService';
 
 // ============================================================================
 // Internal Helper Functions
 // ============================================================================
 
 type Template = InstanceOfSchema<typeof FolderNode>;
+type AccountType = InstanceOfSchema<typeof Account>;
+
+/** Collect all template folders using jbr-jazz walkTree */
+function getAllTemplateFolders(account: AccountType, showArchived = false): Template[] {
+  if (!account?.root?.folders) return [];
+  const templates: Template[] = [];
+  walkTree([...account.root.folders] as Template[], (node) => {
+    if (!showArchived && node.archived) return 'skip';
+    if (isTemplateFolder(node)) templates.push(node);
+  });
+  return templates;
+}
 
 /**
  * Get template by ID, throws if not found
@@ -67,7 +80,7 @@ export function getTemplate(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
 ): Template | null {
-  const templates = folderService.getAllTemplateFolders(account, true);
+  const templates = getAllTemplateFolders(account, true);
   return templates.find((t) => t?.$jazz.id === templateId) || null;
 }
 
@@ -75,7 +88,7 @@ export function getTemplate(
  * Get all templates
  */
 export function getAllTemplates(account: InstanceOfSchema<typeof Account>): Array<Template> {
-  return folderService.getAllTemplateFolders(account, false);
+  return getAllTemplateFolders(account, false);
 }
 
 /**

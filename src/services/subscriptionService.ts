@@ -15,14 +15,16 @@
  * actual tier. This allows soft enforcement during beta testing.
  */
 
+import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { isTemplateFolder } from '../hooks';
 import {
   type AccountParam,
+  type FolderNode,
   type SubscriptionStatus,
   type SubscriptionTier,
   UserSettings,
 } from '../schemas';
-import { getAllTemplateFolders } from './folderService';
 
 // ============================================================================
 // Types
@@ -215,8 +217,13 @@ export function getSessionRetentionDays(account: AccountParam): number {
  * Count the total number of template folders (lists) the user has
  */
 export function countUserLists(account: AccountParam): number {
-  const folders = getAllTemplateFolders(account);
-  return folders.length;
+  if (!account?.root?.folders) return 0;
+  let count = 0;
+  walkTree([...account.root.folders] as InstanceOfSchema<typeof FolderNode>[], (node) => {
+    if (node.archived) return 'skip';
+    if (isTemplateFolder(node)) count++;
+  });
+  return count;
 }
 
 /**

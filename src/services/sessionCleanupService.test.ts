@@ -11,9 +11,31 @@ import {
   shouldRunCleanup,
 } from './sessionCleanupService';
 
+// Mock templates to return from walkTree
+let mockTemplateFolders: any[] = [];
+
+// Create a mock account that provides folders for the service to traverse
+function createMockAccount(): any {
+  return {
+    root: {
+      folders: mockTemplateFolders,
+    },
+  };
+}
+
 // Mock dependencies
-vi.mock('./folderService', () => ({
-  getAllTemplateFolders: vi.fn(),
+vi.mock('@jbr-jazz/hierarchy-shared', () => ({
+  walkTree: vi.fn((folders: any[], visitor: (node: any) => any) => {
+    for (const folder of folders) {
+      if (!folder) continue;
+      visitor(folder);
+    }
+    return false;
+  }),
+}));
+
+vi.mock('../hooks', () => ({
+  isTemplateFolder: vi.fn(() => true),
 }));
 
 vi.mock('./subscriptionService', () => ({
@@ -24,10 +46,8 @@ vi.mock('../lib/brand', () => ({
   storageKey: vi.fn((key: string) => `test_${key}`),
 }));
 
-import { getAllTemplateFolders } from './folderService';
 import { getSessionRetentionDays } from './subscriptionService';
 
-const mockGetAllTemplateFolders = getAllTemplateFolders as ReturnType<typeof vi.fn>;
 const mockGetSessionRetentionDays = getSessionRetentionDays as ReturnType<typeof vi.fn>;
 
 describe('sessionCleanupService', () => {
@@ -36,6 +56,7 @@ describe('sessionCleanupService', () => {
 
   beforeEach(() => {
     localStorageData = {};
+    mockTemplateFolders = [];
 
     // Mock localStorage
     Object.defineProperty(window, 'localStorage', {
@@ -56,7 +77,6 @@ describe('sessionCleanupService', () => {
     });
 
     // Reset mocks
-    mockGetAllTemplateFolders.mockReset();
     mockGetSessionRetentionDays.mockReset();
 
     // Silence console.log
@@ -102,7 +122,7 @@ describe('sessionCleanupService', () => {
     it('returns 0 and marks run when retention is unlimited (-1)', () => {
       mockGetSessionRetentionDays.mockReturnValue(-1);
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(0);
       expect(localStorage.setItem).toHaveBeenCalled();
@@ -133,9 +153,9 @@ describe('sessionCleanupService', () => {
         sessions: [oldSession, newSession],
       };
 
-      mockGetAllTemplateFolders.mockReturnValue([template]);
+      mockTemplateFolders = [template];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(1);
       expect(oldSession.$jazz.set).toHaveBeenCalledWith('archived', true);
@@ -155,9 +175,9 @@ describe('sessionCleanupService', () => {
         $jazz: { set: vi.fn() },
       };
 
-      mockGetAllTemplateFolders.mockReturnValue([{ sessions: [session] }]);
+      mockTemplateFolders = [{ sessions: [session] }];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(0);
       expect(session.$jazz.set).not.toHaveBeenCalled();
@@ -165,9 +185,9 @@ describe('sessionCleanupService', () => {
 
     it('handles templates with no sessions', () => {
       mockGetSessionRetentionDays.mockReturnValue(30);
-      mockGetAllTemplateFolders.mockReturnValue([{ sessions: null }, { sessions: undefined }]);
+      mockTemplateFolders = [{ sessions: null }, { sessions: undefined }];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(0);
     });
@@ -184,9 +204,9 @@ describe('sessionCleanupService', () => {
         $jazz: { set: vi.fn() },
       };
 
-      mockGetAllTemplateFolders.mockReturnValue([{ sessions: [null, validSession, null] }]);
+      mockTemplateFolders = [{ sessions: [null, validSession, null] }];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(1);
     });
@@ -203,9 +223,9 @@ describe('sessionCleanupService', () => {
         $jazz: { set: vi.fn() },
       };
 
-      mockGetAllTemplateFolders.mockReturnValue([{ sessions: [session] }]);
+      mockTemplateFolders = [{ sessions: [session] }];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(1);
     });
@@ -228,21 +248,18 @@ describe('sessionCleanupService', () => {
         $jazz: { set: vi.fn() },
       };
 
-      mockGetAllTemplateFolders.mockReturnValue([
-        { sessions: [session1] },
-        { sessions: [session2] },
-      ]);
+      mockTemplateFolders = [{ sessions: [session1] }, { sessions: [session2] }];
 
-      const result = cleanupExpiredSessions({} as any);
+      const result = cleanupExpiredSessions(createMockAccount());
 
       expect(result).toBe(2);
     });
 
     it('marks cleanup run time in localStorage', () => {
       mockGetSessionRetentionDays.mockReturnValue(30);
-      mockGetAllTemplateFolders.mockReturnValue([]);
+      mockTemplateFolders = [];
 
-      cleanupExpiredSessions({} as any);
+      cleanupExpiredSessions(createMockAccount());
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
         'test_session_cleanup_last',
@@ -255,7 +272,7 @@ describe('sessionCleanupService', () => {
     it('returns 0 when retention is unlimited', () => {
       mockGetSessionRetentionDays.mockReturnValue(-1);
 
-      const result = getExpiredSessionCount({} as any);
+      const result = getExpiredSessionCount(createMockAccount());
 
       expect(result).toBe(0);
     });
@@ -269,7 +286,7 @@ describe('sessionCleanupService', () => {
       const newDate = new Date();
       newDate.setDate(newDate.getDate() - 15);
 
-      mockGetAllTemplateFolders.mockReturnValue([
+      mockTemplateFolders = [
         {
           sessions: [
             { archived: false, createdAt: oldDate }, // Expired
@@ -277,18 +294,18 @@ describe('sessionCleanupService', () => {
             { archived: true, createdAt: oldDate }, // Archived (skipped)
           ],
         },
-      ]);
+      ];
 
-      const result = getExpiredSessionCount({} as any);
+      const result = getExpiredSessionCount(createMockAccount());
 
       expect(result).toBe(1);
     });
 
     it('handles templates with no sessions', () => {
       mockGetSessionRetentionDays.mockReturnValue(30);
-      mockGetAllTemplateFolders.mockReturnValue([{ sessions: null }]);
+      mockTemplateFolders = [{ sessions: null }];
 
-      const result = getExpiredSessionCount({} as any);
+      const result = getExpiredSessionCount(createMockAccount());
 
       expect(result).toBe(0);
     });
@@ -299,11 +316,9 @@ describe('sessionCleanupService', () => {
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 45);
 
-      mockGetAllTemplateFolders.mockReturnValue([
-        { sessions: [null, { archived: false, createdAt: oldDate }, null] },
-      ]);
+      mockTemplateFolders = [{ sessions: [null, { archived: false, createdAt: oldDate }, null] }];
 
-      const result = getExpiredSessionCount({} as any);
+      const result = getExpiredSessionCount(createMockAccount());
 
       expect(result).toBe(1);
     });

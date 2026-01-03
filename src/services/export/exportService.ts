@@ -4,10 +4,11 @@
  * Orchestrates all export operations (JSON, TXT, CSV).
  */
 
+import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
+import { isTemplateFolder } from '../../hooks';
 import type { Account, FolderNode } from '../../schemas';
 import { getDateStampForFilename } from '../../utils/dateUtils';
-import * as folderService from '../folderService';
 import {
   exportSessionToCsv as exportSessionToCsvImpl,
   exportTemplateItemsToCsv as exportTemplateItemsToCsvImpl,
@@ -19,6 +20,8 @@ import {
 } from './txtExporter';
 import type { ExportedData, ExportScope } from './types';
 
+type FolderType = InstanceOfSchema<typeof FolderNode>;
+
 /**
  * Find a template by its Jazz ID
  *
@@ -29,9 +32,17 @@ import type { ExportedData, ExportScope } from './types';
 function findTemplateById(
   account: InstanceOfSchema<typeof Account>,
   templateId: string,
-): InstanceOfSchema<typeof FolderNode> | null {
-  const templates = folderService.getAllTemplateFolders(account);
-  return templates.find((t) => t?.$jazz?.id === templateId) || null;
+): FolderType | null {
+  if (!account?.root?.folders) return null;
+  let found: FolderType | null = null;
+  walkTree([...account.root.folders] as FolderType[], (node) => {
+    if (node.archived) return 'skip';
+    if (isTemplateFolder(node) && node.$jazz?.id === templateId) {
+      found = node;
+      return 'stop';
+    }
+  });
+  return found;
 }
 
 /**
