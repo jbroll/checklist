@@ -28,13 +28,12 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "preserveSymlinks": true,
 
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "jazz-tools": ["./node_modules/jazz-tools"],
-      "jazz-tools/*": ["./node_modules/jazz-tools/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],
