@@ -21,9 +21,8 @@ import type { SubscriptionStatus, SubscriptionTier } from '@jbr-jazz/billing-sha
 import { type UseHierarchyResult, useHierarchy } from '@jbr-jazz/hierarchy-client';
 import { ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
 import { co, Group, type InstanceOfSchema } from 'jazz-tools';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { type Account, FolderNode } from '../schemas';
-import * as subscriptionService from '../services/subscriptionService';
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;
@@ -198,6 +197,11 @@ export function useCheckListHierarchy(
     [account],
   );
 
+  // Count only template folders for subscription limits (not organizational folders)
+  const countNode = useMemo(() => {
+    return (node: FolderType) => isTemplateFolder(node);
+  }, []);
+
   // Call the base useHierarchy hook with type assertion for cross-package compatibility
   // biome-ignore lint/suspicious/noExplicitAny: Jazz type compatibility between packages
   const baseResult = useHierarchy<FolderType, any>({
@@ -207,6 +211,7 @@ export function useCheckListHierarchy(
     subscriptionTier,
     subscriptionStatus,
     createNode,
+    countNode,
   });
 
   // Override addFolder to support isTemplate parameter
@@ -215,9 +220,9 @@ export function useCheckListHierarchy(
       if (!account?.root?.folders) return null;
 
       // Check subscription limit only for template folders
-      // Use CheckList's subscription logic (counts templates only, not organizational folders)
-      if (isTemplate && !subscriptionService.canCreateList(account)) {
-        throw new ItemLimitExceededError(subscriptionService.getMaxLists(account));
+      // jbr-jazz's canCreate uses our countNode predicate (isTemplateFolder)
+      if (isTemplate && !baseResult.canCreate) {
+        throw new ItemLimitExceededError(baseResult.maxItems);
       }
 
       const newFolder = createFolderNode(name, account, parent, isTemplate);
@@ -230,7 +235,7 @@ export function useCheckListHierarchy(
 
       return newFolder;
     },
-    [account],
+    [account, baseResult.canCreate, baseResult.maxItems],
   );
 
   // Duplicate template folder with deep copy of items
