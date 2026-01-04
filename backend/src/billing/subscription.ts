@@ -2,18 +2,19 @@ import type Database from 'better-sqlite3';
 import { stripe, isStripeEnabled, type TierSlug, type SubscriptionTier, type UserSubscription } from './stripe.js';
 
 // Default tier limits for when database isn't available
-const DEFAULT_TIERS: Record<TierSlug, { maxLists: number; sessionRetentionDays: number }> = {
-  free: { maxLists: 3, sessionRetentionDays: 7 },
-  plus: { maxLists: 30, sessionRetentionDays: 30 },
-  premium: { maxLists: 300, sessionRetentionDays: 365 },
-  enterprise: { maxLists: -1, sessionRetentionDays: -1 },
+// Uses jbr-jazz generic naming: maxItems, retentionDays
+const DEFAULT_TIERS: Record<TierSlug, { maxItems: number; retentionDays: number }> = {
+  free: { maxItems: 3, retentionDays: 7 },
+  plus: { maxItems: 30, retentionDays: 30 },
+  premium: { maxItems: 300, retentionDays: 365 },
+  enterprise: { maxItems: -1, retentionDays: -1 },
 };
 
 // Get all subscription tiers
 export function getSubscriptionTiers(db: Database.Database): SubscriptionTier[] {
   const stmt = db.prepare(`
-    SELECT slug, name, price_cents as priceCents, max_lists as maxLists,
-           session_retention_days as sessionRetentionDays, stripe_price_id as stripePriceId
+    SELECT slug, name, price_cents as priceCents, max_items as maxItems,
+           retention_days as retentionDays, stripe_price_id as stripePriceId
     FROM subscription_tier
     ORDER BY price_cents ASC
   `);
@@ -23,8 +24,8 @@ export function getSubscriptionTiers(db: Database.Database): SubscriptionTier[] 
 // Get a specific tier by slug
 export function getTier(db: Database.Database, tierSlug: TierSlug): SubscriptionTier | null {
   const stmt = db.prepare(`
-    SELECT slug, name, price_cents as priceCents, max_lists as maxLists,
-           session_retention_days as sessionRetentionDays, stripe_price_id as stripePriceId
+    SELECT slug, name, price_cents as priceCents, max_items as maxItems,
+           retention_days as retentionDays, stripe_price_id as stripePriceId
     FROM subscription_tier WHERE slug = ?
   `);
   return (stmt.get(tierSlug) as SubscriptionTier) || null;
@@ -133,15 +134,15 @@ export function updateUserSubscription(
 // Check if user can create more lists
 export function canCreateList(db: Database.Database, userId: string, currentListCount: number): boolean {
   const { tier } = getUserSubscriptionWithTier(db, userId);
-  if (tier.maxLists === -1) return true; // Unlimited
-  return currentListCount < tier.maxLists;
+  if (tier.maxItems === -1) return true; // Unlimited
+  return currentListCount < tier.maxItems;
 }
 
 // Get lists remaining
 export function getListsRemaining(db: Database.Database, userId: string, currentListCount: number): number {
   const { tier } = getUserSubscriptionWithTier(db, userId);
-  if (tier.maxLists === -1) return -1; // Unlimited
-  return Math.max(0, tier.maxLists - currentListCount);
+  if (tier.maxItems === -1) return -1; // Unlimited
+  return Math.max(0, tier.maxItems - currentListCount);
 }
 
 // Create Stripe checkout session
@@ -290,11 +291,11 @@ export function handleSubscriptionDeleted(
 }
 
 // Record usage snapshot
-export function recordUsage(db: Database.Database, userId: string, listCount: number): void {
+export function recordUsage(db: Database.Database, userId: string, itemCount: number): void {
   const stmt = db.prepare(`
-    INSERT INTO usage_snapshot (user_id, list_count) VALUES (?, ?)
+    INSERT INTO usage_snapshot (user_id, item_count) VALUES (?, ?)
   `);
-  stmt.run(userId, listCount);
+  stmt.run(userId, itemCount);
 }
 
 // Get usage history
@@ -302,13 +303,13 @@ export function getUsageHistory(
   db: Database.Database,
   userId: string,
   limit = 30
-): Array<{ listCount: number; recordedAt: number }> {
+): Array<{ itemCount: number; recordedAt: number }> {
   const stmt = db.prepare(`
-    SELECT list_count as listCount, recorded_at as recordedAt
+    SELECT item_count as itemCount, recorded_at as recordedAt
     FROM usage_snapshot
     WHERE user_id = ?
     ORDER BY recorded_at DESC
     LIMIT ?
   `);
-  return stmt.all(userId, limit) as Array<{ listCount: number; recordedAt: number }>;
+  return stmt.all(userId, limit) as Array<{ itemCount: number; recordedAt: number }>;
 }

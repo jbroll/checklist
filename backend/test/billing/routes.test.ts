@@ -57,21 +57,21 @@ function initTestDb() {
     )
   `);
 
-  // Create subscription tier table
+  // Create subscription tier table (aligned with jbr-jazz schema)
   db.exec(`
     CREATE TABLE subscription_tier (
       slug TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       price_cents INTEGER NOT NULL,
-      max_lists INTEGER NOT NULL,
-      session_retention_days INTEGER NOT NULL,
+      max_items INTEGER NOT NULL,
+      retention_days INTEGER NOT NULL,
       stripe_price_id TEXT
     )
   `);
 
   // Insert default tiers
   db.exec(`
-    INSERT INTO subscription_tier (slug, name, price_cents, max_lists, session_retention_days, stripe_price_id) VALUES
+    INSERT INTO subscription_tier (slug, name, price_cents, max_items, retention_days, stripe_price_id) VALUES
       ('free', 'Free', 0, 3, 7, NULL),
       ('plus', 'Plus', 999, 30, 30, 'price_plus_test'),
       ('premium', 'Premium', 1999, 300, 365, 'price_premium_test'),
@@ -98,7 +98,7 @@ function initTestDb() {
     CREATE TABLE usage_snapshot (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-      list_count INTEGER NOT NULL,
+      item_count INTEGER NOT NULL,
       recorded_at INTEGER DEFAULT (unixepoch())
     )
   `);
@@ -173,8 +173,8 @@ describe('Billing Routes', () => {
       const plusTier = response.body.tiers.find((t: any) => t.slug === 'plus');
       expect(plusTier.name).toBe('Plus');
       expect(plusTier.priceCents).toBe(999);
-      expect(plusTier.maxLists).toBe(30);
-      expect(plusTier.sessionRetentionDays).toBe(30);
+      expect(plusTier.maxItems).toBe(30);
+      expect(plusTier.retentionDays).toBe(30);
     });
   });
 
@@ -230,8 +230,8 @@ describe('Billing Routes', () => {
       createSubscription('user-1', 'plus', 'active');
 
       // Add some usage history
-      db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 5, 1000);
-      db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 7, 2000);
+      db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 5, 1000);
+      db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 7, 2000);
 
       mockAuth.api.getSession.mockResolvedValue({
         user: { id: 'user-1', email: 'test@example.com', name: 'Test User' },
@@ -240,8 +240,8 @@ describe('Billing Routes', () => {
       const response = await request(app).get('/api/billing/usage').expect(200);
 
       expect(response.body.tier.slug).toBe('plus');
-      expect(response.body.maxLists).toBe(30);
-      expect(response.body.sessionRetentionDays).toBe(30);
+      expect(response.body.maxItems).toBe(30);
+      expect(response.body.retentionDays).toBe(30);
       expect(response.body.history).toHaveLength(2);
     });
   });
@@ -269,7 +269,7 @@ describe('Billing Routes', () => {
 
       // Verify it was recorded
       const snapshot = db.prepare('SELECT * FROM usage_snapshot WHERE user_id = ?').get('user-1') as any;
-      expect(snapshot.list_count).toBe(5);
+      expect(snapshot.item_count).toBe(5);
     });
 
     it('should reject invalid listCount', async () => {

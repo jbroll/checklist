@@ -55,21 +55,21 @@ function initTestDb() {
     )
   `);
 
-  // Create subscription tier table
+  // Create subscription tier table (aligned with jbr-jazz schema)
   db.exec(`
     CREATE TABLE subscription_tier (
       slug TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       price_cents INTEGER NOT NULL,
-      max_lists INTEGER NOT NULL,
-      session_retention_days INTEGER NOT NULL,
+      max_items INTEGER NOT NULL,
+      retention_days INTEGER NOT NULL,
       stripe_price_id TEXT
     )
   `);
 
   // Insert default tiers
   db.exec(`
-    INSERT INTO subscription_tier (slug, name, price_cents, max_lists, session_retention_days, stripe_price_id) VALUES
+    INSERT INTO subscription_tier (slug, name, price_cents, max_items, retention_days, stripe_price_id) VALUES
       ('free', 'Free', 0, 3, 7, NULL),
       ('plus', 'Plus', 999, 30, 30, 'price_plus_test'),
       ('premium', 'Premium', 1999, 300, 365, 'price_premium_test'),
@@ -96,7 +96,7 @@ function initTestDb() {
     CREATE TABLE usage_snapshot (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-      list_count INTEGER NOT NULL,
+      item_count INTEGER NOT NULL,
       recorded_at INTEGER DEFAULT (unixepoch())
     )
   `);
@@ -139,8 +139,8 @@ describe('Subscription Service', () => {
       expect(plusTier).toBeDefined();
       expect(plusTier?.name).toBe('Plus');
       expect(plusTier?.priceCents).toBe(999);
-      expect(plusTier?.maxLists).toBe(30);
-      expect(plusTier?.sessionRetentionDays).toBe(30);
+      expect(plusTier?.maxItems).toBe(30);
+      expect(plusTier?.retentionDays).toBe(30);
       expect(plusTier?.stripePriceId).toBe('price_plus_test');
     });
   });
@@ -151,7 +151,7 @@ describe('Subscription Service', () => {
 
       expect(tier).not.toBeNull();
       expect(tier?.slug).toBe('premium');
-      expect(tier?.maxLists).toBe(300);
+      expect(tier?.maxItems).toBe(300);
     });
 
     it('should return null for invalid slug', () => {
@@ -218,8 +218,8 @@ describe('Subscription Service', () => {
 
       expect(result.tierSlug).toBe('plus');
       expect(result.tier.name).toBe('Plus');
-      expect(result.tier.maxLists).toBe(30);
-      expect(result.tier.sessionRetentionDays).toBe(30);
+      expect(result.tier.maxItems).toBe(30);
+      expect(result.tier.retentionDays).toBe(30);
     });
 
     it('should return default tier values when tier lookup returns defaults', () => {
@@ -232,8 +232,8 @@ describe('Subscription Service', () => {
 
       // Should return the tier from database
       expect(result.tier.slug).toBe('free');
-      expect(result.tier.maxLists).toBe(3);
-      expect(result.tier.sessionRetentionDays).toBe(7);
+      expect(result.tier.maxItems).toBe(3);
+      expect(result.tier.retentionDays).toBe(7);
       // Verify tier object is properly merged
       expect(result.tierSlug).toBe('free');
       expect(result.status).toBe('active');
@@ -465,7 +465,7 @@ describe('Subscription Service', () => {
       recordUsage(db, 'user-1', 5);
 
       const result = db.prepare('SELECT * FROM usage_snapshot WHERE user_id = ?').get('user-1') as any;
-      expect(result.list_count).toBe(5);
+      expect(result.item_count).toBe(5);
     });
 
     it('should allow multiple snapshots for same user', () => {
@@ -487,21 +487,21 @@ describe('Subscription Service', () => {
 
     it('should return usage history in descending order', () => {
       // Insert with explicit timestamps to control order
-      db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 5, 1000);
-      db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 7, 2000);
-      db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 3, 3000);
+      db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 5, 1000);
+      db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 7, 2000);
+      db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', 3, 3000);
 
       const history = getUsageHistory(db, 'user-1');
 
       expect(history).toHaveLength(3);
-      expect(history[0].listCount).toBe(3); // Most recent
-      expect(history[1].listCount).toBe(7);
-      expect(history[2].listCount).toBe(5); // Oldest
+      expect(history[0].itemCount).toBe(3); // Most recent
+      expect(history[1].itemCount).toBe(7);
+      expect(history[2].itemCount).toBe(5); // Oldest
     });
 
     it('should respect limit parameter', () => {
       for (let i = 0; i < 50; i++) {
-        db.prepare('INSERT INTO usage_snapshot (user_id, list_count, recorded_at) VALUES (?, ?, ?)').run('user-1', i, i);
+        db.prepare('INSERT INTO usage_snapshot (user_id, item_count, recorded_at) VALUES (?, ?, ?)').run('user-1', i, i);
       }
 
       const history = getUsageHistory(db, 'user-1', 10);

@@ -90,8 +90,8 @@ export function setupBillingRoutes(
 
       res.json({
         tier: subscription.tier,
-        maxLists: subscription.tier.maxLists,
-        sessionRetentionDays: subscription.tier.sessionRetentionDays,
+        maxItems: subscription.tier.maxItems,
+        retentionDays: subscription.tier.retentionDays,
         history,
       });
     } catch (error) {
@@ -108,12 +108,14 @@ export function setupBillingRoutes(
         return ApiErrors.unauthorized(res);
       }
 
-      const { listCount } = req.body;
-      if (typeof listCount !== 'number' || listCount < 0 || listCount > 10000) {
-        return ApiErrors.badRequest(res, 'Invalid listCount');
+      const { listCount, itemCount } = req.body;
+      // Support both old (listCount) and new (itemCount) field names for backward compatibility
+      const count = itemCount ?? listCount;
+      if (typeof count !== 'number' || count < 0 || count > 10000) {
+        return ApiErrors.badRequest(res, 'Invalid count');
       }
 
-      recordUsage(db, session.user.id, listCount);
+      recordUsage(db, session.user.id, count);
       res.json({ success: true });
     } catch (error) {
       console.error('[billing] Error recording usage:', error);

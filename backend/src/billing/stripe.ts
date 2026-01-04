@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import type {
   SubscriptionTier as BaseTier,
   SubscriptionStatus,
+  TierConfig,
   UserSubscription as BaseUserSubscription,
 } from '@jbr-jazz/billing-shared';
 
@@ -25,15 +26,8 @@ export function isStripeEnabled(): boolean {
 export type TierSlug = BaseTier;
 export type { SubscriptionStatus };
 
-// CheckList-specific tier interface (uses maxLists instead of generic maxItems)
-export interface SubscriptionTier {
-  slug: TierSlug;
-  name: string;
-  priceCents: number;
-  maxLists: number;
-  sessionRetentionDays: number;
-  stripePriceId: string | null;
-}
+// Use jbr-jazz TierConfig for tier structure (uses maxItems, retentionDays)
+export type SubscriptionTier = TierConfig;
 
 // CheckList uses the same UserSubscription structure as billing-shared
 export type UserSubscription = BaseUserSubscription;

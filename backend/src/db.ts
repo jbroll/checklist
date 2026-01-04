@@ -20,6 +20,16 @@ export function initDb(sqliteDb: Database.Database) {
   const subscriptionsSql = readFileSync(join(__dirname, 'migrations/subscriptions.sql'), 'utf-8');
   sqliteDb.exec(subscriptionsSql);
 
+  // Run schema alignment migration (renames old column names to jbr-jazz format)
+  // This is safe to run on fresh installs - errors are ignored when columns don't exist
+  try {
+    const alignmentSql = readFileSync(join(__dirname, 'migrations/billing-schema-alignment.sql'), 'utf-8');
+    sqliteDb.exec(alignmentSql);
+    console.log('[db] Billing schema alignment migration applied');
+  } catch {
+    // Migration already applied or fresh install with new column names
+  }
+
   // Sync Stripe price IDs from environment variables to database
   // This allows the database to be the single source of truth for tier configuration
   syncStripePriceIds(sqliteDb);

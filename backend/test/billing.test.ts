@@ -75,13 +75,13 @@ describe('Subscription Tiers', () => {
     const freeTier = getTier(db, 'free');
     expect(freeTier).not.toBeNull();
     expect(freeTier?.slug).toBe('free');
-    expect(freeTier?.maxLists).toBe(3);
-    expect(freeTier?.sessionRetentionDays).toBe(7);
+    expect(freeTier?.maxItems).toBe(3);
+    expect(freeTier?.retentionDays).toBe(7);
 
     const plusTier = getTier(db, 'plus');
     expect(plusTier).not.toBeNull();
     expect(plusTier?.slug).toBe('plus');
-    expect(plusTier?.maxLists).toBe(30);
+    expect(plusTier?.maxItems).toBe(30);
   });
 
   it('should return null for non-existent tier', () => {
@@ -178,7 +178,7 @@ describe('User Subscription', () => {
     const result = getUserSubscriptionWithTier(db, 'test-user-1');
     expect(result.tierSlug).toBe('free');
     expect(result.tier.slug).toBe('free');
-    expect(result.tier.maxLists).toBe(3);
+    expect(result.tier.maxItems).toBe(3);
   });
 });
 
@@ -310,7 +310,7 @@ describe('Usage Tracking', () => {
 
     const history = getUsageHistory(db, 'test-user-1');
     expect(history).toHaveLength(1);
-    expect(history[0].listCount).toBe(5);
+    expect(history[0].itemCount).toBe(5);
   });
 
   it('should return usage history in descending order', () => {
@@ -320,8 +320,8 @@ describe('Usage Tracking', () => {
 
     const history = getUsageHistory(db, 'test-user-1');
     expect(history).toHaveLength(3);
-    expect(history[0].listCount).toBe(3); // Most recent first
-    expect(history[2].listCount).toBe(1);
+    expect(history[0].itemCount).toBe(3); // Most recent first
+    expect(history[2].itemCount).toBe(1);
   });
 
   it('should limit usage history results', () => {
