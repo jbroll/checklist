@@ -40,7 +40,7 @@ export interface InviteRecord {
   senderEmail: string;
   recipientEmail: string;
   folderId: string;
-  permission: 'view' | 'edit' | 'admin';
+  permission: 'reader' | 'writer' | 'admin';
 }
 
 export interface TestFolder {
@@ -49,7 +49,7 @@ export interface TestFolder {
   ownerId: string;
 }
 
-type Permission = 'view' | 'edit' | 'admin';
+type Permission = 'reader' | 'writer' | 'admin';
 
 /**
  * TestContext - Manages multiple users and shared test state
@@ -67,9 +67,9 @@ export class TestContext {
   readonly mocks = {
     getSession: vi.fn(),
     validateSenderAccess: vi.fn().mockResolvedValue(true),
-    addToFolderGroup: vi.fn().mockResolvedValue({ alreadyMember: false }),
-    getFolderGroupMembers: vi.fn().mockResolvedValue([]),
-    removeFromFolderGroup: vi.fn().mockResolvedValue(undefined),
+    addToGroup: vi.fn().mockResolvedValue({ alreadyMember: false }),
+    getGroupMembers: vi.fn().mockResolvedValue([]),
+    removeFromGroup: vi.fn().mockResolvedValue(undefined),
     shareInviteLimiter: { check: vi.fn().mockReturnValue(true) },
     tokenValidationLimiter: { check: vi.fn().mockReturnValue(true) },
   };
@@ -206,8 +206,8 @@ export class TestContext {
     this.folders.set(name, folder);
 
     // Add user to mock group members
-    const currentMembers = this.mocks.getFolderGroupMembers.mock.results.slice(-1)[0]?.value ?? [];
-    this.mocks.getFolderGroupMembers.mockResolvedValue([
+    const currentMembers = this.mocks.getGroupMembers.mock.results.slice(-1)[0]?.value ?? [];
+    this.mocks.getGroupMembers.mockResolvedValue([
       ...currentMembers,
       { id: user.accountID, role: 'admin' },
     ]);
@@ -241,8 +241,8 @@ export class TestContext {
 
     const response = await request(this.app).post('/api/shares/invite').send({
       recipientEmail,
-      folderCoValueId: folder.id,
-      permission: options.permission ?? 'edit',
+      targetId: folder.id,
+      permission: options.permission ?? 'writer',
       expiresInDays: options.expiresInDays ?? 7,
     });
 
@@ -255,7 +255,7 @@ export class TestContext {
       senderEmail: user.email,
       recipientEmail,
       folderId: folder.id,
-      permission: options.permission ?? 'edit',
+      permission: options.permission ?? 'writer',
     };
 
     this.invites.set(response.body.token, invite);
@@ -313,7 +313,7 @@ export class TestContext {
     const response = await request(this.app).post('/api/shares/accept').send({ token: tokenToAccept });
 
     if (response.status === 200) {
-      return { success: true, folderId: response.body.folderId };
+      return { success: true, folderId: response.body.targetId };
     } else {
       return {
         success: false,
@@ -328,7 +328,7 @@ export class TestContext {
    */
   async getCollaborators(folderName: string): Promise<any[]> {
     const folder = this.getFolder(folderName);
-    const response = await request(this.app).get(`/api/shares/folders/${folder.id}/collaborators`);
+    const response = await request(this.app).get(`/api/shares/targets/${folder.id}/collaborators`);
     return response.body.collaborators ?? [];
   }
 
@@ -337,7 +337,7 @@ export class TestContext {
    */
   async getPendingInvites(folderName: string): Promise<any[]> {
     const folder = this.getFolder(folderName);
-    const response = await request(this.app).get(`/api/shares/folders/${folder.id}/invites`);
+    const response = await request(this.app).get(`/api/shares/targets/${folder.id}/invites`);
     return response.body.invites ?? [];
   }
 
@@ -429,8 +429,8 @@ export class TestContext {
 
     // Reset default mock behaviors
     this.mocks.validateSenderAccess.mockResolvedValue(true);
-    this.mocks.addToFolderGroup.mockResolvedValue({ alreadyMember: false });
-    this.mocks.getFolderGroupMembers.mockResolvedValue([]);
+    this.mocks.addToGroup.mockResolvedValue({ alreadyMember: false });
+    this.mocks.getGroupMembers.mockResolvedValue([]);
     this.mocks.shareInviteLimiter.check.mockReturnValue(true);
     this.mocks.tokenValidationLimiter.check.mockReturnValue(true);
   }

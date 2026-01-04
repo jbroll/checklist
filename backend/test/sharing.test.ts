@@ -39,10 +39,10 @@ vi.mock('../src/auth.js', () => {
 
 // Mock the agent module (sharing routes use it)
 vi.mock('../src/agent.js', () => ({
-  addToFolderGroup: vi.fn().mockResolvedValue(undefined),
+  addToGroup: vi.fn().mockResolvedValue(undefined),
   validateSenderAccess: vi.fn().mockResolvedValue(true),
-  getFolderGroupMembers: vi.fn().mockResolvedValue([]),
-  removeFromFolderGroup: vi.fn().mockResolvedValue(undefined),
+  getGroupMembers: vi.fn().mockResolvedValue([]),
+  removeFromGroup: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { auth, sqliteDb } from '../src/auth.js';
@@ -128,8 +128,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztestfolder123',
-          permission: 'edit',
+          targetId: 'co_ztestfolder123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -141,8 +141,8 @@ describe('Folder Sharing API', () => {
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(response.body.token) as any;
       expect(invite).toBeDefined();
       expect(invite.recipient_email).toBe(testUser2.email);
-      expect(invite.folder_covalue_id).toBe('co_ztestfolder123');
-      expect(invite.permission).toBe('edit');
+      expect(invite.target_covalue_id).toBe('co_ztestfolder123');
+      expect(invite.permission).toBe('writer');
       expect(invite.sender_email).toBe(testUser1.email);
     });
 
@@ -154,8 +154,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -176,8 +176,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -200,8 +200,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -215,7 +215,7 @@ describe('Folder Sharing API', () => {
       expect(response.body.valid).toBe(true);
       expect(response.body.recipientEmail).toBe(testUser2.email);
       expect(response.body.senderEmail).toBe(testUser1.email);
-      expect(response.body.permission).toBe('edit');
+      expect(response.body.permission).toBe('writer');
     });
 
     it('should reject invalid token', async () => {
@@ -237,7 +237,7 @@ describe('Folder Sharing API', () => {
       sqliteDb.prepare(`
         INSERT INTO share_invites (
           token, sender_email, sender_jazz_account_id, recipient_email,
-          folder_covalue_id, permission, created_at, expires_at
+          target_covalue_id, permission, created_at, expires_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -246,7 +246,7 @@ describe('Folder Sharing API', () => {
         testUser1.accountID,
         testUser2.email,
         'co_ztest123',
-        'edit',
+        'writer',
         twoDaysAgo,
         yesterday
       );
@@ -272,8 +272,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -300,8 +300,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -319,7 +319,7 @@ describe('Folder Sharing API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.folderId).toBe('co_ztest123');
+      expect(response.body.targetId).toBe('co_ztest123');
 
       // Check database - invite should be marked as accepted
       const invite = sqliteDb.prepare('SELECT * FROM share_invites WHERE token = ?').get(token) as any;
@@ -335,7 +335,7 @@ describe('Folder Sharing API', () => {
       sqliteDb.prepare(`
         INSERT INTO share_invites (
           token, sender_email, sender_jazz_account_id, recipient_email,
-          folder_covalue_id, permission, created_at, expires_at, accepted_at
+          target_covalue_id, permission, created_at, expires_at, accepted_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -344,7 +344,7 @@ describe('Folder Sharing API', () => {
         testUser1.accountID,
         testUser2.email,
         'co_ztest123',
-        'edit',
+        'writer',
         now,
         now + 7 * 24 * 60 * 60,
         now - 3600 // Accepted 1 hour ago
@@ -364,7 +364,7 @@ describe('Folder Sharing API', () => {
     });
   });
 
-  describe('GET /api/shares/folders/:folderId/invites', () => {
+  describe('GET /api/shares/targets/:folderId/invites', () => {
     it('should list pending invites for a folder', async () => {
       const folderId = 'co_ztestfolderinvites';
 
@@ -378,8 +378,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: 'user1@example.com',
-          folderCoValueId: folderId,
-          permission: 'view',
+          targetId: folderId,
+          permission: 'reader',
           expiresInDays: 7,
         });
 
@@ -387,14 +387,14 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: 'user2@example.com',
-          folderCoValueId: folderId,
-          permission: 'edit',
+          targetId: folderId,
+          permission: 'writer',
           expiresInDays: 30,
         });
 
       // Get invites
       const response = await request(app)
-        .get(`/api/shares/folders/${folderId}/invites`);
+        .get(`/api/shares/targets/${folderId}/invites`);
 
       expect(response.status).toBe(200);
       expect(response.body.invites).toHaveLength(2);
@@ -414,7 +414,7 @@ describe('Folder Sharing API', () => {
       sqliteDb.prepare(`
         INSERT INTO share_invites (
           token, sender_email, sender_jazz_account_id, recipient_email,
-          folder_covalue_id, permission, created_at, expires_at
+          target_covalue_id, permission, created_at, expires_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -423,7 +423,7 @@ describe('Folder Sharing API', () => {
         testUser1.accountID,
         'expired@example.com',
         folderId,
-        'view',
+        'reader',
         now - 10 * 24 * 60 * 60,
         now - 3 * 24 * 60 * 60 // Expired 3 days ago
       );
@@ -434,7 +434,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get(`/api/shares/folders/${folderId}/invites`);
+        .get(`/api/shares/targets/${folderId}/invites`);
 
       expect(response.status).toBe(200);
       expect(response.body.invites).toHaveLength(0);
@@ -453,8 +453,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -483,8 +483,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -537,8 +537,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: 'user2-work@company.com',
-          folderCoValueId: 'co_ztestalias',
-          permission: 'edit',
+          targetId: 'co_ztestalias',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -574,8 +574,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztestnojazz',
-          permission: 'view',
+          targetId: 'co_ztestnojazz',
+          permission: 'reader',
           expiresInDays: 7,
         });
 
@@ -603,7 +603,7 @@ describe('Folder Sharing API', () => {
       sqliteDb.prepare(`
         INSERT INTO share_invites (
           token, sender_email, sender_jazz_account_id, recipient_email,
-          folder_covalue_id, permission, created_at, expires_at
+          target_covalue_id, permission, created_at, expires_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -612,7 +612,7 @@ describe('Folder Sharing API', () => {
         testUser1.accountID,
         testUser2.email,
         'co_ztestexpired',
-        'edit',
+        'writer',
         now - (10 * 24 * 60 * 60),
         now - (3 * 24 * 60 * 60) // Expired 3 days ago
       );
@@ -631,11 +631,11 @@ describe('Folder Sharing API', () => {
       expect(response.body.message).toContain('expired');
     });
 
-    it('should handle Jazz addToFolderGroup failure gracefully', async () => {
-      const { addToFolderGroup } = await import('../src/agent.js');
+    it('should handle Jazz addToGroup failure gracefully', async () => {
+      const { addToGroup } = await import('../src/agent.js');
 
-      // Mock addToFolderGroup to throw
-      vi.mocked(addToFolderGroup).mockRejectedValueOnce(new Error('Jazz sync failed'));
+      // Mock addToGroup to throw
+      vi.mocked(addToGroup).mockRejectedValueOnce(new Error('Jazz sync failed'));
 
       // User 1 creates invite
       vi.mocked(auth.api.getSession).mockResolvedValue({
@@ -647,8 +647,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztestjazzfail',
-          permission: 'edit',
+          targetId: 'co_ztestjazzfail',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -673,10 +673,10 @@ describe('Folder Sharing API', () => {
     });
 
     it('should return alreadyMember when user is already in group', async () => {
-      const { addToFolderGroup } = await import('../src/agent.js');
+      const { addToGroup } = await import('../src/agent.js');
 
-      // Mock addToFolderGroup to return alreadyMember
-      vi.mocked(addToFolderGroup).mockResolvedValueOnce({ alreadyMember: true });
+      // Mock addToGroup to return alreadyMember
+      vi.mocked(addToGroup).mockResolvedValueOnce({ alreadyMember: true });
 
       // User 1 creates invite
       vi.mocked(auth.api.getSession).mockResolvedValue({
@@ -688,8 +688,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztestalreadymember',
-          permission: 'edit',
+          targetId: 'co_ztestalreadymember',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -727,8 +727,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_zfoldernoaccess',
-          permission: 'edit',
+          targetId: 'co_zfoldernoaccess',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -748,8 +748,8 @@ describe('Folder Sharing API', () => {
         .post('/api/shares/invite')
         .send({
           recipientEmail: testUser2.email,
-          folderCoValueId: 'co_ztest123',
-          permission: 'edit',
+          targetId: 'co_ztest123',
+          permission: 'writer',
           expiresInDays: 7,
         });
 
@@ -791,11 +791,11 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/invalid-id-format/invites');
+        .get('/api/shares/targets/invalid-id-format/invites');
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('bad_request');
-      expect(response.body.message).toContain('Invalid folder ID');
+      expect(response.body.message).toContain('Invalid target ID');
     });
 
     it('should reject invalid folder ID format in GET collaborators', async () => {
@@ -805,7 +805,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/not-a-coid/collaborators');
+        .get('/api/shares/targets/not-a-coid/collaborators');
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('bad_request');
@@ -818,7 +818,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete('/api/shares/folders/bad-folder/collaborators/co_zvalidaccount');
+        .delete('/api/shares/targets/bad-folder/collaborators/co_zvalidaccount');
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('bad_request');
@@ -831,16 +831,16 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete('/api/shares/folders/co_zvalidfolder/collaborators/bad-account');
+        .delete('/api/shares/targets/co_zvalidfolder/collaborators/bad-account');
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('bad_request');
     });
 
     it('should accept valid Jazz CoValue ID format', async () => {
-      const { getFolderGroupMembers } = await import('../src/agent.js');
+      const { getGroupMembers } = await import('../src/agent.js');
 
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
       ]);
 
@@ -851,18 +851,18 @@ describe('Folder Sharing API', () => {
 
       // Valid format: co_z followed by alphanumeric
       const response = await request(app)
-        .get('/api/shares/folders/co_zABC123def456/collaborators');
+        .get('/api/shares/targets/co_zABC123def456/collaborators');
 
       expect(response.status).toBe(200);
     });
   });
 
-  describe('GET /api/shares/folders/:folderId/collaborators', () => {
+  describe('GET /api/shares/targets/:folderId/collaborators', () => {
     it('should return collaborators mapped from Jazz group members', async () => {
-      const { getFolderGroupMembers } = await import('../src/agent.js');
+      const { getGroupMembers } = await import('../src/agent.js');
 
       // Mock Jazz group members
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
         { id: testUser2.accountID, role: 'writer' },
       ]);
@@ -873,7 +873,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_ztestcollab/collaborators');
+        .get('/api/shares/targets/co_ztestcollab/collaborators');
 
       expect(response.status).toBe(200);
       expect(response.body.collaborators).toHaveLength(2);
@@ -882,16 +882,16 @@ describe('Folder Sharing API', () => {
       expect(admin).toBeDefined();
       expect(admin.email).toBe(testUser1.email);
 
-      const editor = response.body.collaborators.find((c: any) => c.permission === 'edit');
+      const editor = response.body.collaborators.find((c: any) => c.permission === 'writer');
       expect(editor).toBeDefined();
       expect(editor.email).toBe(testUser2.email);
     });
 
     it('should handle Jazz members not in BetterAuth database', async () => {
-      const { getFolderGroupMembers } = await import('../src/agent.js');
+      const { getGroupMembers } = await import('../src/agent.js');
 
       // Mock Jazz group with unknown member
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
         { id: 'co_zunknownuser', role: 'reader' },
       ]);
@@ -902,7 +902,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_ztestunknown/collaborators');
+        .get('/api/shares/targets/co_ztestunknown/collaborators');
 
       expect(response.status).toBe(200);
       // Should only return the known user
@@ -914,15 +914,15 @@ describe('Folder Sharing API', () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_ztest/collaborators');
+        .get('/api/shares/targets/co_ztest/collaborators');
 
       expect(response.status).toBe(401);
     });
 
     it('should handle Jazz error gracefully', async () => {
-      const { getFolderGroupMembers } = await import('../src/agent.js');
+      const { getGroupMembers } = await import('../src/agent.js');
 
-      vi.mocked(getFolderGroupMembers).mockRejectedValueOnce(new Error('Jazz error'));
+      vi.mocked(getGroupMembers).mockRejectedValueOnce(new Error('Jazz error'));
 
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: testUser1,
@@ -930,24 +930,24 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .get('/api/shares/folders/co_ztesterror/collaborators');
+        .get('/api/shares/targets/co_ztesterror/collaborators');
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('server_error');
     });
   });
 
-  describe('DELETE /api/shares/folders/:folderId/collaborators/:accountId', () => {
+  describe('DELETE /api/shares/targets/:folderId/collaborators/:accountId', () => {
     it('should remove collaborator when requester is admin', async () => {
-      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+      const { getGroupMembers, removeFromGroup } = await import('../src/agent.js');
 
       // Mock: testUser1 is admin
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
         { id: testUser2.accountID, role: 'writer' },
       ]);
 
-      vi.mocked(removeFromFolderGroup).mockResolvedValueOnce(undefined);
+      vi.mocked(removeFromGroup).mockResolvedValueOnce(undefined);
 
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: testUser1,
@@ -955,18 +955,18 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_ztestremove/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/targets/co_ztestremove/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(removeFromFolderGroup).toHaveBeenCalledWith('co_ztestremove', testUser2.accountID);
+      expect(removeFromGroup).toHaveBeenCalledWith('co_ztestremove', testUser2.accountID);
     });
 
     it('should reject when requester is not admin', async () => {
-      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+      const { getGroupMembers, removeFromGroup } = await import('../src/agent.js');
 
       // Mock: testUser1 is only a writer
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'writer' },
         { id: testUser2.accountID, role: 'writer' },
       ]);
@@ -977,17 +977,17 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_ztestnoadmin/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/targets/co_ztestnoadmin/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(403);
       expect(response.body.error).toBe('forbidden');
-      expect(removeFromFolderGroup).not.toHaveBeenCalled();
+      expect(removeFromGroup).not.toHaveBeenCalled();
     });
 
     it('should reject when requester is reader', async () => {
-      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+      const { getGroupMembers, removeFromGroup } = await import('../src/agent.js');
 
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'reader' },
         { id: testUser2.accountID, role: 'writer' },
       ]);
@@ -998,20 +998,20 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_ztestreader/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/targets/co_ztestreader/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(403);
-      expect(removeFromFolderGroup).not.toHaveBeenCalled();
+      expect(removeFromGroup).not.toHaveBeenCalled();
     });
 
-    it('should handle Jazz removeFromFolderGroup error', async () => {
-      const { getFolderGroupMembers, removeFromFolderGroup } = await import('../src/agent.js');
+    it('should handle Jazz removeFromGroup error', async () => {
+      const { getGroupMembers, removeFromGroup } = await import('../src/agent.js');
 
-      vi.mocked(getFolderGroupMembers).mockResolvedValueOnce([
+      vi.mocked(getGroupMembers).mockResolvedValueOnce([
         { id: testUser1.accountID, role: 'admin' },
       ]);
 
-      vi.mocked(removeFromFolderGroup).mockRejectedValueOnce(new Error('Cannot remove owner'));
+      vi.mocked(removeFromGroup).mockRejectedValueOnce(new Error('Cannot remove owner'));
 
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: testUser1,
@@ -1019,7 +1019,7 @@ describe('Folder Sharing API', () => {
       } as any);
 
       const response = await request(app)
-        .delete(`/api/shares/folders/co_ztestowner/collaborators/${testUser2.accountID}`);
+        .delete(`/api/shares/targets/co_ztestowner/collaborators/${testUser2.accountID}`);
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('server_error');
@@ -1029,7 +1029,7 @@ describe('Folder Sharing API', () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
 
       const response = await request(app)
-        .delete('/api/shares/folders/co_ztest/collaborators/co_zuser');
+        .delete('/api/shares/targets/co_ztest/collaborators/co_zuser');
 
       expect(response.status).toBe(401);
     });

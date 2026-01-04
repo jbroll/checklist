@@ -27,10 +27,10 @@ vi.mock('../src/auth.js', () => {
 });
 
 vi.mock('../src/agent.js', () => ({
-  addToFolderGroup: vi.fn().mockResolvedValue({ alreadyMember: false }),
+  addToGroup: vi.fn().mockResolvedValue({ alreadyMember: false }),
   validateSenderAccess: vi.fn().mockResolvedValue(true),
-  getFolderGroupMembers: vi.fn().mockResolvedValue([]),
-  removeFromFolderGroup: vi.fn().mockResolvedValue(undefined),
+  getGroupMembers: vi.fn().mockResolvedValue([]),
+  removeFromGroup: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../src/lib/email-sender.js', () => ({
@@ -39,9 +39,9 @@ vi.mock('../src/lib/email-sender.js', () => ({
 
 import { auth } from '../src/auth.js';
 import {
-  addToFolderGroup,
+  addToGroup,
   validateSenderAccess,
-  getFolderGroupMembers,
+  getGroupMembers,
 } from '../src/agent.js';
 import { shareInviteLimiter } from '../src/lib/rate-limiter.js';
 
@@ -61,8 +61,8 @@ describe('Multi-User Sharing Scenarios', () => {
     // Wire up the context mocks to the module mocks
     vi.mocked(auth.api.getSession).mockImplementation(() => ctx.mocks.getSession());
     vi.mocked(validateSenderAccess).mockImplementation(() => ctx.mocks.validateSenderAccess());
-    vi.mocked(addToFolderGroup).mockImplementation(() => ctx.mocks.addToFolderGroup());
-    vi.mocked(getFolderGroupMembers).mockImplementation(() => ctx.mocks.getFolderGroupMembers());
+    vi.mocked(addToGroup).mockImplementation(() => ctx.mocks.addToGroup());
+    vi.mocked(getGroupMembers).mockImplementation(() => ctx.mocks.getGroupMembers());
   });
 
   describe('Basic Sharing Flow', () => {
@@ -74,7 +74,7 @@ describe('Multi-User Sharing Scenarios', () => {
       // Alice creates folder and shares with Bob
       ctx.asUser('Alice');
       ctx.createFolder('Groceries');
-      const invite = await ctx.shareWith('Bob', 'Groceries', { permission: 'edit' });
+      const invite = await ctx.shareWith('Bob', 'Groceries', { permission: 'writer' });
 
       // Verify invite was created
       expect(invite.token).toBeDefined();
@@ -88,10 +88,10 @@ describe('Multi-User Sharing Scenarios', () => {
       expect(result.folderId).toBe(ctx.getFolder('Groceries').id);
 
       // Verify Jazz group was updated
-      expect(addToFolderGroup).toHaveBeenCalledWith(
+      expect(addToGroup).toHaveBeenCalledWith(
         ctx.getFolder('Groceries').id,
         ctx.getUser('Bob').accountID,
-        'edit'
+        'writer'
       );
     });
 
@@ -255,12 +255,12 @@ describe('Multi-User Sharing Scenarios', () => {
 
       ctx.asUser('Alice');
       ctx.createFolder('ReadOnly');
-      await ctx.shareWith('Bob', 'ReadOnly', { permission: 'view' });
+      await ctx.shareWith('Bob', 'ReadOnly', { permission: 'reader' });
 
       ctx.asUser('Bob');
       await ctx.acceptInvite();
 
-      expect(addToFolderGroup).toHaveBeenCalledWith(expect.any(String), expect.any(String), 'view');
+      expect(addToGroup).toHaveBeenCalledWith(expect.any(String), expect.any(String), 'reader');
     });
 
     it('should share with admin permission', async () => {
@@ -274,7 +274,7 @@ describe('Multi-User Sharing Scenarios', () => {
       ctx.asUser('Bob');
       await ctx.acceptInvite();
 
-      expect(addToFolderGroup).toHaveBeenCalledWith(expect.any(String), expect.any(String), 'admin');
+      expect(addToGroup).toHaveBeenCalledWith(expect.any(String), expect.any(String), 'admin');
     });
   });
 
@@ -288,11 +288,11 @@ describe('Multi-User Sharing Scenarios', () => {
         .asUser('Alice')
         .createFolder('Team Project')
         .asUser('Alice')
-        .shareWith('Bob', 'Team Project', { permission: 'edit' })
+        .shareWith('Bob', 'Team Project', { permission: 'writer' })
         .asUser('Bob')
         .tryAcceptInvite((r) => (bobAcceptResult = r))
         .asUser('Alice')
-        .shareWith('Charlie', 'Team Project', { permission: 'view' })
+        .shareWith('Charlie', 'Team Project', { permission: 'reader' })
         .asUser('Charlie')
         .tryAcceptInvite((r) => (charlieAcceptResult = r))
         .verify(() => {
@@ -337,7 +337,7 @@ describe('Multi-User Sharing Scenarios', () => {
       const result = await ctx.acceptInvite(invite.token);
 
       // This should work but Jazz agent might indicate already a member
-      ctx.mocks.addToFolderGroup.mockResolvedValue({ alreadyMember: true });
+      ctx.mocks.addToGroup.mockResolvedValue({ alreadyMember: true });
       expect(result.success).toBe(true);
     });
 
