@@ -17,7 +17,11 @@
  * ```
  */
 
-import type { SubscriptionStatus, SubscriptionTier } from '@jbr-jazz/billing-shared';
+import {
+  DEFAULT_TIER_LIMITS,
+  type SubscriptionStatus,
+  type SubscriptionTier,
+} from '@jbr-jazz/billing-shared';
 import { type UseHierarchyResult, useHierarchy } from '@jbr-jazz/hierarchy-client';
 import { ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
 import { co, Group, type InstanceOfSchema } from 'jazz-tools';
@@ -186,7 +190,14 @@ export function useCheckListHierarchy(
   // Get subscription tier from account settings
   const root = account?.root as CheckListRoot | undefined;
   const subscriptionTier = root?.userSettings?.subscriptionTier ?? 'free';
-  const subscriptionStatus = root?.userSettings?.subscriptionStatus;
+
+  // Compute limits from subscription tier
+  const limits = useMemo(() => {
+    const tierLimits = DEFAULT_TIER_LIMITS[subscriptionTier] ?? DEFAULT_TIER_LIMITS.free;
+    return {
+      maxItems: tierLimits.maxItems === -1 ? Infinity : tierLimits.maxItems,
+    };
+  }, [subscriptionTier]);
 
   // Create a stable createNode function for templates (default)
   const createNode = useCallback(
@@ -202,16 +213,22 @@ export function useCheckListHierarchy(
     return (node: FolderType) => isTemplateFolder(node);
   }, []);
 
+  // Check if creation is allowed given limits and current count
+  const checkCanCreate = useCallback(
+    (lim: { maxItems: number }, count: number) => lim.maxItems === Infinity || count < lim.maxItems,
+    [],
+  );
+
   // Call the base useHierarchy hook with type assertion for cross-package compatibility
   // biome-ignore lint/suspicious/noExplicitAny: Jazz type compatibility between packages
-  const baseResult = useHierarchy<FolderType, any>({
+  const baseResult = useHierarchy<FolderType, any, { maxItems: number }>({
     root: root as unknown as { folders?: unknown },
     // biome-ignore lint/suspicious/noExplicitAny: Jazz type compatibility between packages
     owner: account as any,
-    subscriptionTier,
-    subscriptionStatus,
     createNode,
     countNode,
+    limits,
+    checkCanCreate,
   });
 
   // Override addFolder to support isTemplate parameter
@@ -222,7 +239,7 @@ export function useCheckListHierarchy(
       // Check subscription limit only for template folders
       // jbr-jazz's canCreate uses our countNode predicate (isTemplateFolder)
       if (isTemplate && !baseResult.canCreate) {
-        throw new ItemLimitExceededError(baseResult.maxItems);
+        throw new ItemLimitExceededError(limits.maxItems);
       }
 
       const newFolder = createFolderNode(name, account, parent, isTemplate);
@@ -235,7 +252,7 @@ export function useCheckListHierarchy(
 
       return newFolder;
     },
-    [account, baseResult.canCreate, baseResult.maxItems],
+    [account, baseResult.canCreate, limits.maxItems],
   );
 
   // Duplicate template folder with deep copy of items
