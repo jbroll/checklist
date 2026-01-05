@@ -115,12 +115,8 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     setIsCreatingInvite(true);
 
     try {
+      // createInvite throws on error, passing through the API error message
       const result = await sharing.createInvite(folder.$jazz.id, recipientEmail.trim(), permission);
-
-      // Hook throws on error, so result should always be non-null here
-      if (!result) {
-        throw new Error('Failed to create invite');
-      }
 
       // Add the agent to the folder so it can manage future accepts
       if (result.agentAccountId) {
