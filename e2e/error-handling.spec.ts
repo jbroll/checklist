@@ -34,10 +34,21 @@ async function openImportDialog(page) {
 }
 
 /**
- * Create a test folder
+ * Create a test folder (organizational container, no limit)
  */
 async function createFolder(page, name: string) {
   await page.getByRole('button', { name: /new folder/i }).click();
+  await page.getByLabel(/name/i).fill(name);
+  await page.getByRole('button', { name: /create/i }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await page.waitForTimeout(1000);
+}
+
+/**
+ * Create a test list (template folder, subject to subscription limits)
+ */
+async function createList(page, name: string) {
+  await page.getByRole('button', { name: /new list/i }).click();
   await page.getByLabel(/name/i).fill(name);
   await page.getByRole('button', { name: /create/i }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
@@ -278,7 +289,7 @@ Category 2`;
 // ============================================================================
 
 test.describe('Subscription Limits', () => {
-  test.skip('should show upgrade dialog when list limit is reached', async ({ page, context }) => {
+  test('should show upgrade dialog when list limit is reached', async ({ page }) => {
     // Mock subscription API to return free tier with 3 list limit
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -295,30 +306,26 @@ test.describe('Subscription Limits', () => {
       });
     });
 
-    await page.goto('/');
-    await waitForPageLoad(page);
-    await page.waitForTimeout(2000); // Wait for subscription sync
+    // Visit billing success page to trigger subscription sync from mocked API
+    await page.goto('/billing/success');
+    await expect(page.getByRole('heading', { name: /thank you/i })).toBeVisible({ timeout: 15000 });
 
-    // Create folders up to the limit (3 for free tier)
-    for (let i = 1; i <= 3; i++) {
-      await createFolder(page, `List ${i}`);
+    // Navigate back to dashboard
+    await page.getByRole('button', { name: /dashboard/i }).click();
+    await waitForPageLoad(page);
+
+    // Create lists up to the limit (3 for free tier)
+    // Note: "Quick Errands" is a default list, so we only need to create 2 more
+    for (let i = 1; i <= 2; i++) {
+      await createList(page, `Test List ${i}`);
     }
 
-    // Try to create one more folder (should hit limit)
-    await page.getByRole('button', { name: /new folder/i }).click();
+    // Try to create one more list (should hit limit and show upgrade dialog)
+    await page.getByRole('button', { name: /new list/i }).click();
 
-    // Should show upgrade dialog or limit message
-    const upgradeDialogVisible = await page
-      .getByRole('heading', { name: /upgrade/i })
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-
-    const limitMessageVisible = await page
-      .getByText(/limit|upgrade|maximum/i)
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-
-    expect(upgradeDialogVisible || limitMessageVisible).toBeTruthy();
+    // Should show upgrade dialog with limit message
+    await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/limit reached/i)).toBeVisible();
   });
 
   test('should prevent creating lists beyond limit', async ({ page }) => {
@@ -337,50 +344,67 @@ test.describe('Subscription Limits', () => {
       });
     });
 
-    await page.goto('/');
+    // Visit billing success page to trigger subscription sync from mocked API
+    await page.goto('/billing/success');
+    await expect(page.getByRole('heading', { name: /thank you/i })).toBeVisible({ timeout: 15000 });
+
+    // Navigate back to dashboard
+    await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
-    await page.waitForTimeout(2000);
 
-    // Create 3 folders
-    for (let i = 1; i <= 3; i++) {
-      await createFolder(page, `Limited List ${i}`);
+    // Create 2 more lists (Quick Errands + 2 = 3 total, at limit)
+    for (let i = 1; i <= 2; i++) {
+      await createList(page, `Limited List ${i}`);
     }
 
-    // Verify all 3 folders exist
-    for (let i = 1; i <= 3; i++) {
-      await expect(page.getByText(`Limited List ${i}`)).toBeVisible();
-    }
+    // Verify lists exist
+    await expect(page.getByText('Limited List 1')).toBeVisible();
+    await expect(page.getByText('Limited List 2')).toBeVisible();
 
-    // Try to create 4th folder - should be prevented or show upgrade
-    await page.getByRole('button', { name: /new folder/i }).click();
+    // Try to create 4th list - should show upgrade dialog instead
+    await page.getByRole('button', { name: /new list/i }).click();
 
-    // Either upgrade dialog shows or create dialog is blocked
-    const dialogHeading = page.getByRole('dialog').getByRole('heading').first();
-    const headingText = await dialogHeading.textContent();
-
-    // Should show either upgrade prompt or creation is prevented
-    expect(headingText).toBeDefined();
+    // Should show upgrade dialog, not the create dialog
+    await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
   });
 
-  test.skip('should show tier information in upgrade dialog', async ({ page }) => {
-    await page.goto('/');
+  test('should show tier information in upgrade dialog', async ({ page }) => {
+    // Mock free tier to ensure upgrade option is visible
+    await page.route('/api/billing/subscription', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          subscription: {
+            tierSlug: 'free',
+            status: 'active',
+            tier: { maxLists: 3, sessionRetentionDays: 7 },
+          },
+        }),
+      });
+    });
+
+    // Visit billing success page to sync subscription
+    await page.goto('/billing/success');
+    await expect(page.getByRole('heading', { name: /thank you/i })).toBeVisible({ timeout: 15000 });
+
+    // Navigate back to dashboard
+    await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
     // Open more menu and look for upgrade option
     await page.locator('header').getByLabel('More options').click();
+    await page.getByRole('menuitem', { name: /upgrade/i }).click();
 
-    const upgradeOption = page.getByRole('menuitem', { name: /upgrade|subscription/i });
-    const upgradeVisible = await upgradeOption.isVisible().catch(() => false);
+    // Should show tier comparison table
+    await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Free').first()).toBeVisible();
+    await expect(page.getByText('Plus').first()).toBeVisible();
+    await expect(page.getByText('Premium').first()).toBeVisible();
 
-    if (upgradeVisible) {
-      await upgradeOption.click();
-
-      // Should show tier comparison
-      await expect(page.getByText(/free|plus|premium/i)).toBeVisible({ timeout: 5000 });
-
-      // Should show features
-      await expect(page.getByText(/lists|session/i)).toBeVisible();
-    }
+    // Should show features
+    await expect(page.getByText('Lists').first()).toBeVisible();
+    await expect(page.getByText('Session history')).toBeVisible();
   });
 });
 
@@ -483,6 +507,9 @@ test.describe('Data Sync Errors', () => {
     await expect(page.getByRole('button', { name: /new folder/i })).toBeVisible();
   });
 
+  // Note: Offline reload requires the PWA service worker to cache the app shell.
+  // In test mode (dev server), service worker isn't fully active.
+  // TODO: Enable when running against production build with installed service worker
   test.skip('should persist data locally when offline', async ({ page, context }) => {
     await page.goto('/');
     await waitForPageLoad(page);
