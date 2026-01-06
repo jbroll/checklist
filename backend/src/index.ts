@@ -206,14 +206,14 @@ setupLimitCheckRoute(app, sqliteDb, auth, {
     // CheckList counts template folders (lists) from usage_snapshot
     // The frontend periodically records usage via POST /api/billing/usage
     const result = db.prepare(`
-      SELECT list_count FROM usage_snapshot
+      SELECT item_count FROM usage_snapshot
       WHERE user_id = ?
       ORDER BY recorded_at DESC
       LIMIT 1
-    `).get(userId) as { list_count: number } | undefined;
+    `).get(userId) as { item_count: number } | undefined;
 
     return {
-      currentCount: result?.list_count ?? 0,
+      currentCount: result?.item_count ?? 0,
       resourceName: 'lists',
     };
   },
