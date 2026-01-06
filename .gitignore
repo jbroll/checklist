@@ -37,6 +37,11 @@ dist-ssr
 .env.production
 secrets.env
 secrets-test.env
+*.env.backup*
+secrets*.backup*
+
+# Backups (created by rotation scripts)
+backups/
 
 # Test reports
 playwright-report/
