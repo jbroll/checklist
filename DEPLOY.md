@@ -191,6 +191,52 @@ For multi-domain OAuth:
 - Add all domains to Google OAuth console redirect URIs
 - Add all domains to Apple OAuth return URLs
 
+## Database Migrations
+
+The backend uses SQLite for authentication and billing data. When schema changes occur, run the migration script before updating the backend.
+
+### Migration v2: jbr-jazz Schema Alignment
+
+This migration updates column names to align with jbr-jazz conventions:
+
+| Table | Old Column | New Column |
+|-------|-----------|------------|
+| share_invites | folder_covalue_id | target_covalue_id |
+| share_invites | permission (view/edit) | permission (reader/writer) |
+| subscription_tier | max_lists | max_items |
+| subscription_tier | session_retention_days | retention_days |
+| usage_snapshot | list_count | item_count |
+| user_subscription | status CHECK | adds 'beta' option |
+
+**Run migration on production:**
+
+```bash
+# SSH to server
+ssh user@checklist-app.rkroll.com
+
+# Navigate to backend directory
+cd /var/lib/checklist-api
+
+# Run migration (creates automatic backup)
+sudo -u checklist ./scripts/migrate-schema-v2.sh ./auth.db
+
+# Verify and restart service
+sudo systemctl restart checklist-api
+```
+
+**Rollback if needed:**
+
+```bash
+# Find backup file
+ls -la ./auth.db.backup.*
+
+# Restore from backup
+sudo -u checklist cp ./auth.db.backup.YYYYMMDD_HHMMSS ./auth.db
+sudo systemctl restart checklist-api
+```
+
+The migration is idempotent - safe to run multiple times.
+
 ## Security Notes
 
 1. **Never commit secrets** - Keep OAuth credentials, BETTER_AUTH_SECRET, and Stripe keys out of git

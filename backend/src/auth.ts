@@ -142,9 +142,10 @@ function createAuthConfig(baseURL: string) {
       // Disable CSRF check for development only
       disableCSRFCheck: process.env.NODE_ENV !== 'production',
       // Apple OAuth uses POST-based callbacks which require sameSite: "none"
+      // In development (HTTP), we can't use secure cookies
       defaultCookieAttributes: {
-        sameSite: 'none' as const,
-        secure: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
+        secure: process.env.NODE_ENV === 'production',
       },
     },
 
