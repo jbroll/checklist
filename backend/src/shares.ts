@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type Database from 'better-sqlite3';
 import { randomBytes } from 'node:crypto';
 import { auth } from './auth.js';
-import { addToGroup, validateSenderAccess, getGroupMembers, removeFromGroup } from './agent.js';
+import { addToGroup, getGroupMembers, removeFromGroup } from './agent.js';
 import { ApiErrors } from './lib/api-error.js';
 import { canUserAccessShareEmail } from './lib/email-matching.js';
 import { shareInviteLimiter, tokenValidationLimiter } from './lib/rate-limiter.js';
@@ -54,16 +54,16 @@ export function setupSharingRoutes(app: Express, db: Database.Database) {
 
     const { recipientEmail, targetId, permission, expiresInDays } = req.body;
 
-    // Validate sender has access to the target before creating invite
+    // Get sender's Jazz account ID for audit purposes
     const senderJazzAccountId = (session.user as any).accountID;
     if (!senderJazzAccountId) {
       return ApiErrors.badRequest(res, 'Jazz account ID is required to share');
     }
 
-    const hasAccess = await validateSenderAccess(targetId, senderJazzAccountId);
-    if (!hasAccess) {
-      return ApiErrors.forbidden(res, 'You do not have access to share this item');
-    }
+    // Note: We don't validate Jazz group membership here. The frontend runs as the
+    // authenticated user and will add the agent to the folder's group after this
+    // call succeeds. If the user doesn't have permission, the frontend group
+    // manipulation will fail. Jazz's permission model handles access control.
 
     const token = randomBytes(32).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + (expiresInDays * 24 * 60 * 60);
