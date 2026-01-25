@@ -712,30 +712,10 @@ describe('Folder Sharing API', () => {
   });
 
   describe('POST /api/shares/invite with sender validation', () => {
-    it('should reject invite when sender lacks folder access', async () => {
-      const { validateSenderAccess } = await import('../src/agent.js');
-
-      // Mock validateSenderAccess to return false
-      vi.mocked(validateSenderAccess).mockResolvedValueOnce(false);
-
-      vi.mocked(auth.api.getSession).mockResolvedValue({
-        user: testUser1,
-        session: { id: 'session-1' },
-      } as any);
-
-      const response = await request(app)
-        .post('/api/shares/invite')
-        .send({
-          recipientEmail: testUser2.email,
-          targetId: 'co_zfoldernoaccess',
-          permission: 'writer',
-          expiresInDays: 7,
-        });
-
-      expect(response.status).toBe(403);
-      expect(response.body.error).toBe('forbidden');
-      expect(response.body.message).toContain('do not have access');
-    });
+    // Note: Backend no longer validates Jazz group membership at invite creation.
+    // Access control is handled by the frontend through Jazz's permission model.
+    // When the frontend adds the agent to the folder's group, Jazz enforces
+    // whether the user actually has permission to do so.
 
     it('should reject invite when sender has no Jazz account ID', async () => {
       // User with no accountID

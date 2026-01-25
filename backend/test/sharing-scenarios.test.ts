@@ -399,7 +399,16 @@ describe('Multi-User Sharing Scenarios', () => {
   });
 
   describe('Authorization Checks', () => {
-    it('should reject invite creation from non-owner', async () => {
+    // Note: Backend no longer validates Jazz group membership at invite creation.
+    // Access control is handled by the frontend through Jazz's permission model.
+    // When the frontend adds the agent to the folder's group, Jazz enforces
+    // whether the user actually has permission to do so.
+    //
+    // The invite database record can be created by any authenticated user,
+    // but accepting the invite requires the agent to be in the target's group,
+    // which only happens if the original user had permission to add it.
+
+    it('should allow invite creation (access enforced by frontend Jazz operations)', async () => {
       ctx.addUser('Alice');
       ctx.addUser('Bob');
       ctx.addUser('Charlie');
@@ -407,16 +416,13 @@ describe('Multi-User Sharing Scenarios', () => {
       ctx.asUser('Alice');
       ctx.createFolder('AliceFolder');
 
-      // Bob tries to share Alice's folder (but doesn't have access)
-      ctx.mocks.validateSenderAccess.mockResolvedValue(false);
-
+      // Bob creates an invite for Alice's folder
+      // The backend allows this - access control happens when frontend
+      // tries to add the agent to the group (which would fail for Bob)
       ctx.asUser('Bob');
-      try {
-        await ctx.createInvite('AliceFolder', 'charlie@example.com');
-        expect.fail('Should have rejected unauthorized share');
-      } catch (e: any) {
-        expect(e.message).toContain('403');
-      }
+      const invite = await ctx.createInvite('AliceFolder', 'charlie@example.com');
+      expect(invite.token).toBeDefined();
+      expect(invite.recipientEmail).toBe('charlie@example.com');
     });
   });
 });
