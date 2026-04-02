@@ -1,4 +1,8 @@
-# Jazz Package Migration Plan
+# Jazz Package Migration Plan (ARCHIVED)
+
+> **Status: Phases 0-2 COMPLETE, Phase 3 DEFERRED** - Archived 2026-04-02.
+> Backend consolidated via @jbr-jazz packages. Frontend migration assessed and deferred (low value/high effort).
+> Phases 4-5 (SharedReference, Publication) remain future possibilities if needed.
 
 This document outlines the plan to migrate CheckList and WicketMap to use a unified package ecosystem, sharing code while preserving app-specific features.
 

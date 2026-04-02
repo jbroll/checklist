@@ -9,7 +9,7 @@
  * - Works inline or in dialogs
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCategorization } from '@/lib/categorization';
 import type { AutocompleteDomain, Suggestion } from '@/lib/categorization/types';
 
@@ -24,6 +24,12 @@ export interface ItemInputValue {
     subcategory?: string;
     subcategoryName?: string;
   };
+}
+
+export interface ExistingItem {
+  id: string;
+  name: string;
+  isSelected: boolean;
 }
 
 export interface ItemInputProps {
@@ -49,6 +55,10 @@ export interface ItemInputProps {
   variant?: 'inline' | 'stacked';
   /** Autocomplete domain to use (default: 'grocery') */
   autocompleteDomain?: AutocompleteDomain;
+  /** Existing template items to search/match against */
+  existingItems?: ExistingItem[];
+  /** Called when user selects an existing item (toggles it) */
+  onSelectExisting?: (itemId: string) => void;
 }
 
 export function ItemInput({
@@ -63,6 +73,8 @@ export function ItemInput({
   className = '',
   variant = 'inline',
   autocompleteDomain = 'grocery',
+  existingItems,
+  onSelectExisting,
 }: ItemInputProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'item' | 'category'>(defaultType);
@@ -94,6 +106,28 @@ export function ItemInput({
 
   // Only show suggestions for items, not categories
   const visibleSuggestions = type === 'item' && showSuggestions ? suggestions : [];
+
+  // Match existing template items against input
+  const matchingExisting = useMemo(() => {
+    if (!existingItems || type !== 'item' || !showSuggestions || name.trim().length < 2) return [];
+    const query = name.trim().toLowerCase();
+    return existingItems
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .sort((a, b) => {
+        // Prefer starts-with over contains
+        const aStarts = a.name.toLowerCase().startsWith(query) ? 0 : 1;
+        const bStarts = b.name.toLowerCase().startsWith(query) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 5);
+  }, [existingItems, type, showSuggestions, name]);
+
+  // Combined dropdown: existing items first, then dictionary suggestions
+  const cappedSuggestions =
+    matchingExisting.length > 0
+      ? visibleSuggestions.slice(0, Math.max(3, 8 - matchingExisting.length))
+      : visibleSuggestions;
 
   const handleReset = useCallback(() => {
     setName('');
@@ -158,11 +192,29 @@ export function ItemInput({
     [clearSuggestions],
   );
 
+  const handleSelectExistingItem = useCallback(
+    (itemId: string) => {
+      onSelectExisting?.(itemId);
+      // Clear input and refocus for continued use
+      setName('');
+      clearSuggestions();
+      setSelectedIndex(-1);
+      setShowSuggestions(true);
+      setSelectedCategoryInfo(null);
+      inputRef.current?.focus();
+    },
+    [onSelectExisting, clearSuggestions],
+  );
+
+  // Total items in dropdown for keyboard navigation
+  const dropdownLength = matchingExisting.length + cappedSuggestions.length;
+  const hasDropdown = dropdownLength > 0 && showSuggestions;
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       // Escape handling
       if (e.key === 'Escape') {
-        if (visibleSuggestions.length > 0 && showSuggestions) {
+        if (hasDropdown) {
           // First escape clears suggestions
           setShowSuggestions(false);
           clearSuggestions();
@@ -172,27 +224,35 @@ export function ItemInput({
         return;
       }
 
-      // Arrow key navigation for suggestions
-      if (visibleSuggestions.length > 0 && showSuggestions) {
+      // Arrow key navigation for combined dropdown
+      if (hasDropdown) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          setSelectedIndex((prev) => (prev < visibleSuggestions.length - 1 ? prev + 1 : prev));
+          setSelectedIndex((prev) => (prev < dropdownLength - 1 ? prev + 1 : prev));
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
         } else if ((e.key === 'Tab' || e.key === 'Enter') && selectedIndex >= 0) {
           e.preventDefault();
-          handleSelectSuggestion(visibleSuggestions[selectedIndex]);
+          // Determine which section the selected index falls in
+          if (selectedIndex < matchingExisting.length) {
+            handleSelectExistingItem(matchingExisting[selectedIndex].id);
+          } else {
+            handleSelectSuggestion(cappedSuggestions[selectedIndex - matchingExisting.length]);
+          }
         }
       }
     },
     [
-      visibleSuggestions,
-      showSuggestions,
+      hasDropdown,
+      dropdownLength,
       selectedIndex,
+      matchingExisting,
+      cappedSuggestions,
       clearSuggestions,
       onCancel,
       handleSelectSuggestion,
+      handleSelectExistingItem,
     ],
   );
 
@@ -233,8 +293,8 @@ export function ItemInput({
               maxLength={200}
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded={visibleSuggestions.length > 0}
-              aria-controls={visibleSuggestions.length > 0 ? 'item-suggestions-list' : undefined}
+              aria-expanded={hasDropdown}
+              aria-controls={hasDropdown ? 'item-suggestions-list' : undefined}
               aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
               className="flex-1 min-w-0 rounded border border-divider-primary bg-surface-elevated px-3 py-2 text-base text-content-primary placeholder:text-content-disabled focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             />
@@ -263,39 +323,109 @@ export function ItemInput({
             )}
           </div>
 
-          {/* Suggestions dropdown */}
-          {visibleSuggestions.length > 0 && (
+          {/* Combined dropdown: existing items + dictionary suggestions */}
+          {hasDropdown && (
             <div
               id="item-suggestions-list"
               role="listbox"
               aria-label="Item suggestions"
               className="absolute z-50 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md shadow-lg max-h-48 overflow-auto"
             >
-              {visibleSuggestions.map((suggestion, index) => (
-                <div
-                  key={suggestion.text}
-                  id={`suggestion-${index}`}
-                  role="option"
-                  aria-selected={index === selectedIndex}
-                  tabIndex={-1}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleSelectSuggestion(suggestion)}
-                    tabIndex={-1}
-                    className={`w-full px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center justify-between ${
-                      index === selectedIndex ? 'bg-green-100 dark:bg-green-900/50' : ''
-                    }`}
-                  >
-                    <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                      {suggestion.text}
-                    </span>
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">
-                      {getCategoryDisplay(suggestion)}
-                    </span>
-                  </button>
-                </div>
-              ))}
+              {/* Existing template items section */}
+              {matchingExisting.length > 0 && (
+                <>
+                  {cappedSuggestions.length > 0 && (
+                    <div className="px-3 py-1 text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide">
+                      In template
+                    </div>
+                  )}
+                  {matchingExisting.map((item, index) => (
+                    <div
+                      key={item.id}
+                      id={`suggestion-${index}`}
+                      role="option"
+                      aria-selected={index === selectedIndex}
+                      tabIndex={-1}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSelectExistingItem(item.id)}
+                        tabIndex={-1}
+                        className={`w-full px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 ${
+                          index === selectedIndex ? 'bg-blue-100 dark:bg-blue-900/50' : ''
+                        }`}
+                      >
+                        <span
+                          className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                            item.isSelected
+                              ? 'bg-green-600 border-green-600 text-white'
+                              : 'border-neutral-300 dark:border-neutral-600'
+                          }`}
+                        >
+                          {item.isSelected && (
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="text-neutral-800 dark:text-neutral-200 truncate">
+                          {item.name}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Dictionary suggestions section */}
+              {cappedSuggestions.length > 0 && (
+                <>
+                  {matchingExisting.length > 0 && (
+                    <div className="px-3 py-1 text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wide border-t border-neutral-200 dark:border-neutral-700">
+                      Add new
+                    </div>
+                  )}
+                  {cappedSuggestions.map((suggestion, index) => {
+                    const globalIndex = matchingExisting.length + index;
+                    return (
+                      <div
+                        key={suggestion.text}
+                        id={`suggestion-${globalIndex}`}
+                        role="option"
+                        aria-selected={globalIndex === selectedIndex}
+                        tabIndex={-1}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelectSuggestion(suggestion)}
+                          tabIndex={-1}
+                          className={`w-full px-3 py-2 text-left hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center justify-between ${
+                            globalIndex === selectedIndex ? 'bg-green-100 dark:bg-green-900/50' : ''
+                          }`}
+                        >
+                          <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                            {suggestion.text}
+                          </span>
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">
+                            {getCategoryDisplay(suggestion)}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>

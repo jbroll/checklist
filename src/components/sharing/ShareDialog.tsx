@@ -118,29 +118,25 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
       // createInvite throws on error, passing through the API error message
       const result = await sharing.createInvite(folder.$jazz.id, recipientEmail.trim(), permission);
 
-      // Add the agent to the folder so it can manage future accepts
+      // Add the agent to the folder so it can manage future accepts.
+      // This must succeed before we show the share URL to the user - otherwise
+      // the recipient could try to accept before the agent has access.
       if (result.agentAccountId) {
-        try {
+        const isMember = folder.$jazz.owner.members.some(
+          (m: { id: string }) => m.id === result.agentAccountId,
+        );
+
+        if (!isMember) {
           const agentAccount = await Account.load(result.agentAccountId as ID<Account>, {
             loadAs: folder.$jazz.owner,
           });
 
-          if (agentAccount) {
-            // Check if agent is already a member
-            const isMember = folder.$jazz.owner.members.some(
-              (m: { id: string }) => m.id === result.agentAccountId,
-            );
-
-            if (!isMember) {
-              folder.$jazz.owner.addMember(agentAccount, 'admin');
-              await folder.$jazz.owner.$jazz.waitForSync();
-            }
+          if (!agentAccount) {
+            throw new Error('Could not load sharing agent. Please try again.');
           }
-        } catch (err) {
-          if (import.meta.env.DEV) console.error('Failed to add agent to folder:', err);
-          setError(
-            'Warning: Could not add sharing agent to folder. Invite link created but accepting may fail. Try refreshing and creating a new invite.',
-          );
+
+          folder.$jazz.owner.addMember(agentAccount, 'admin');
+          await folder.$jazz.owner.$jazz.waitForSync();
         }
       }
 

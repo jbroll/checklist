@@ -148,6 +148,21 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     [],
   );
 
+  // Existing items for search in autocomplete dropdown
+  const existingItemsForSearch = useMemo(
+    () =>
+      activeItems
+        .filter((item) => item.type === 'item')
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          isSelected: !!(
+            template.defaultItems?.[item.id] || session?.itemStates?.[item.id]?.selected
+          ),
+        })),
+    [activeItems, template.defaultItems, session?.itemStates],
+  );
+
   // Early returns after all hooks
   if (!me || !me.root) {
     return (
@@ -221,6 +236,8 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   clearOnSubmit={true}
                   autoFocus={true}
                   autocompleteDomain={template.autocompleteDomain ?? 'grocery'}
+                  existingItems={existingItemsForSearch}
+                  onSelectExisting={handlers.handleToggleDefault}
                 />
               </div>
             )}

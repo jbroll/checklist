@@ -125,6 +125,45 @@ export function isValidFileSize(file: File, maxSizeInMB: number): boolean {
 }
 
 /**
+ * Validate file content matches the declared file type.
+ *
+ * Reads the first bytes of the file to check:
+ * - No null bytes (rejects binary files masquerading as text)
+ * - JSON files start with { or [ after trimming whitespace
+ *
+ * @param file - File object
+ * @param fileType - The declared file type ('json', 'csv', 'txt')
+ * @returns Object with valid flag and optional error message
+ */
+export async function validateFileContent(
+  file: File,
+  fileType: string,
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    // Read first 1KB to validate content without loading entire file
+    const slice = file.slice(0, 1024);
+    const text = await readFileAsText(new File([slice], file.name));
+
+    // Reject binary content (null bytes indicate non-text files)
+    if (text.includes('\0')) {
+      return { valid: false, error: 'File appears to be binary, not a text file.' };
+    }
+
+    // For JSON files, verify content starts with valid JSON
+    if (fileType === 'json') {
+      const trimmed = text.trimStart();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+        return { valid: false, error: 'File does not appear to contain valid JSON.' };
+      }
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Could not read file contents.' };
+  }
+}
+
+/**
  * Format file size for display
  *
  * @param bytes - File size in bytes

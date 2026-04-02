@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'kjekit',
   webDir: 'dist',
   server: {
-    url: 'https://checklist.rkroll.com',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://checklist.rkroll.com',
     androidScheme: 'https',
     iosScheme: 'https',
   },

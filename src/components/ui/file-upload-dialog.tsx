@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDialog } from '@/lib/dialog-context';
+import { validateFileContent } from '@/utils/fileUpload';
 
 type FileType = 'json' | 'txt' | 'csv';
 
@@ -82,7 +83,7 @@ export function FileUploadDialog<TResult>({
   };
 
   const validateAndSetFile = async (file: File) => {
-    // Validate file type
+    // Validate file type by extension
     const fileName = file.name.toLowerCase();
     const detectedType = acceptedFileTypes.find((type) => fileName.endsWith(`.${type}`));
 
@@ -100,6 +101,16 @@ export function FileUploadDialog<TResult>({
       await showAlert({
         title: 'File Too Large',
         message: 'File too large.',
+      });
+      return;
+    }
+
+    // Validate file content matches declared type (binary detection, JSON structure check)
+    const contentCheck = await validateFileContent(file, detectedType);
+    if (!contentCheck.valid) {
+      await showAlert({
+        title: 'Invalid File',
+        message: contentCheck.error ?? 'File content does not match expected type.',
       });
       return;
     }
