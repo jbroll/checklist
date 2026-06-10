@@ -1,5 +1,5 @@
 import { type Permission, useSharing } from '@jbr-jazz/hierarchy-client';
-import { Account, type ID, type InstanceOfSchema } from 'jazz-tools';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { Check, Clock, Contact, Copy, Loader2, Mail, Share2, Trash2, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -115,30 +115,14 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     setIsCreatingInvite(true);
 
     try {
-      // createInvite throws on error, passing through the API error message
-      const result = await sharing.createInvite(folder.$jazz.id, recipientEmail.trim(), permission);
-
-      // Add the agent to the folder so it can manage future accepts.
-      // This must succeed before we show the share URL to the user - otherwise
-      // the recipient could try to accept before the agent has access.
-      if (result.agentAccountId) {
-        const isMember = folder.$jazz.owner.members.some(
-          (m: { id: string }) => m.id === result.agentAccountId,
-        );
-
-        if (!isMember) {
-          const agentAccount = await Account.load(result.agentAccountId as ID<Account>, {
-            loadAs: folder.$jazz.owner,
-          });
-
-          if (!agentAccount) {
-            throw new Error('Could not load sharing agent. Please try again.');
-          }
-
-          folder.$jazz.owner.addMember(agentAccount, 'admin');
-          await folder.$jazz.owner.$jazz.waitForSync();
-        }
-      }
+      // Records the invite and grants the sharing agent admin on the folder so
+      // it can add the recipient at accept time. Throws on error (API message
+      // passed through). Must complete before we show the share URL.
+      const result = await sharing.createInviteAndGrantAgent(
+        folder,
+        recipientEmail.trim(),
+        permission,
+      );
 
       setShareUrl(result.shareUrl);
       setRecipientEmail('');
