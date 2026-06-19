@@ -88,6 +88,31 @@ git add -A
 git commit -m "fix: adapt app code to jazz-tools 0.20 API"
 ```
 
+### Task A2b: Fix 0.20 deep-loading regression (discovered during execution)
+
+**Root cause:** jazz-tools 0.20 no longer auto-loads CoList *elements*. With the
+account loaded via `useAccount()` without a resolve query, `account.root.folders`
+has the right `length` but its elements are `null`, so `[...folders].filter(f => f != null)`
+(in `getRootFolders`, tree builders, `addToLocation`) yields an empty list — the
+UI shows "No lists yet" and folder/list/item creation silently no-ops. This broke
+~65 e2e tests (every data-creating flow) while the app shell still loaded.
+
+**Fix:**
+- Add `export const ACCOUNT_RESOLVE = { root: { folders: { $each: true }, viewState: true, userSettings: true } }`
+  in `src/schemas/index.ts`; give the `Account` schema a matching `.resolved(...)`
+  default; in the migration, `ensureLoaded({ resolve: { folders: { $each: true } } })`
+  before the empty-check.
+- Pass `useAccount(Account, { resolve: ACCOUNT_RESOLVE })` at every data-rendering
+  call site (8): `AppContainer`, `TestPage`, `AuthGate`, `InviteAcceptPage`,
+  `SessionView`, `SessionZone`, `SessionItemRow`, `BillingSuccessPage`. (Sites
+  using the type-param form `useAccount<typeof Account>()` passed no runtime
+  schema — convert to the runtime-arg form.)
+- Add `dedupe: ['jazz-tools','better-auth','react','react-dom']` to vite resolve
+  (single-instance safety with file:-linked jbr-jazz).
+- Also pin `better-auth` to `1.5.6` (jazz-tools 0.20 client plugin uses the older
+  2-arg `getActions`; 1.6.x's 3-arg `BetterAuthClientPlugin` type-mismatches) and
+  fix `backend/src/auth.ts` auth-instance typing (`Auth<concrete>` vs generic).
+
 ### Task A3: Verify live Jazz sync against the peer
 
 **Files:** none (manual/e2e verification).
