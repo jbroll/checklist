@@ -1,9 +1,9 @@
-import { useAccount, useIsAuthenticated, useLogOut } from 'jazz-tools/react';
 import { useEffect, useState } from 'react';
 import { useCheckListHierarchy, useViewStateCleanup } from '@/hooks';
+import { useAccount, useIsAuthenticated, useLogOut } from '@/jazz';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
-import { ACCOUNT_RESOLVE, Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schema';
 import { EmailAuthDialog } from './auth/EmailAuthDialog';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';

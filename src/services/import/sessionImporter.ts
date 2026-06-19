@@ -6,8 +6,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
-import type { Account, FolderNode, SessionData } from '../../schemas';
-import type { ItemState } from '../../schemas/tree';
+import type { Account, FolderNode, SessionData } from '../../schema';
+import type { ItemState } from '../../schema/tree';
 import { parseCsv } from '../../utils/csvParser';
 
 export interface SessionImportResult {

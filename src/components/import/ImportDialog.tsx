@@ -3,7 +3,7 @@ import { ItemImportResult } from '@/components/import/ItemImportResult';
 import { JsonImportResult } from '@/components/import/JsonImportResult';
 import { useImportDialog } from '@/components/import/useImportDialog';
 import { FileUploadDialog } from '@/components/ui/file-upload-dialog';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, FolderNode } from '@/schema';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';

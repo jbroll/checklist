@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account, FolderNode } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account, FolderNode } from '@/schema';
 
 // CSRF header for API requests
 const getAuthHeaders = async (): Promise<Record<string, string>> => ({

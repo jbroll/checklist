@@ -1,6 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo } from 'react';
-import type { SessionData, Template, TemplateItem } from '@/schemas';
+import type { SessionData, Template, TemplateItem } from '@/schema';
 import { getLeafItems } from '@/utils/itemTreeHelpers';
 
 /** Sort items by sortOrder (with name as fallback) */

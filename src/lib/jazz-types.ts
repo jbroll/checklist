@@ -7,7 +7,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, SessionData, SubscriptionTier } from '../schemas';
+import type { Account, SessionData, SubscriptionTier } from '../schema';
 
 /**
  * Represents a potentially unloaded Jazz account.

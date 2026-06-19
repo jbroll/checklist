@@ -29,7 +29,7 @@ import {
   type SubscriptionStatus,
   type SubscriptionTier,
   UserSettings,
-} from '../schemas';
+} from '../schema';
 
 // Re-export display helpers from billing-shared
 export { getTierDisplayName, isPaidTier };

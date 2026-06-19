@@ -7,7 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { AutocompleteDomain } from '../lib/categorization/types';
-import { type AccountParam, type FolderNode, UserSettings } from '../schemas';
+import { type AccountParam, type FolderNode, UserSettings } from '../schema';
 
 /**
  * Type alias for FolderNode instances (same Jazz inference issue as Account)

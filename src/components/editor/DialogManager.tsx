@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react';
 import { UpgradeDialog } from '@/components/billing';
 import { iterateSessions } from '@/lib/jazz-types';
 import type { DialogName, DialogState } from '@/lib/useDialogManager';
-import type { Account, FolderNode, SessionData } from '@/schemas';
+import type { Account, FolderNode, SessionData } from '@/schema';
 import * as subscriptionService from '@/services/subscriptionService';
 import * as userSettingsService from '@/services/userSettingsService';
 import { AddFolderDialog } from './AddFolderDialog';

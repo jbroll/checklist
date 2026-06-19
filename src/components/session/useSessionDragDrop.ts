@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/core';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
-import type { Account, Template, TemplateItem } from '@/schemas';
+import type { Account, Template, TemplateItem } from '@/schema';
 import * as templateService from '@/services/templateService';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';

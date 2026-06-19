@@ -21,7 +21,7 @@ import {
 } from './viewStateService';
 
 // Mock ViewState.create to return a properly structured object
-vi.mock('../schemas', async (importOriginal) => {
+vi.mock('../schema', async (importOriginal) => {
   const original = await importOriginal();
   return {
     ...(original as object),

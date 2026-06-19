@@ -6,8 +6,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../../lib/utils';
-import type { Account, FolderNode } from '../../schemas';
-import type { TemplateItem } from '../../schemas/tree';
+import type { Account, FolderNode } from '../../schema';
+import type { TemplateItem } from '../../schema/tree';
 
 export interface BaseImportResult {
   imported: number;

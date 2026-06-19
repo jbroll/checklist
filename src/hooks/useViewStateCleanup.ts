@@ -7,7 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef } from 'react';
-import type { Account } from '../schemas';
+import type { Account } from '../schema';
 import * as viewStateService from '../services/viewStateService';
 
 /**

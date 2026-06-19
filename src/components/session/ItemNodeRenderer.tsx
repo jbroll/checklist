@@ -1,7 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
-import type { SessionData, Template, TemplateItem } from '@/schemas';
+import type { SessionData, Template, TemplateItem } from '@/schema';
 import type { buildItemTree } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { SessionZone } from './SessionZone';

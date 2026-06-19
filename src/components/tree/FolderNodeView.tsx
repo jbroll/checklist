@@ -43,7 +43,7 @@ import {
 import { isOrganizationalFolder, isTemplateFolder, useCheckListHierarchy } from '@/hooks';
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import { useDialog } from '@/lib/dialog-context';
-import type { Account, FolderNode, TemplateItem } from '@/schemas';
+import type { Account, FolderNode, TemplateItem } from '@/schema';
 import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 import { IndentedRow } from './IndentedRow';

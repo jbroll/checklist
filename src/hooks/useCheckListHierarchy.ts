@@ -24,9 +24,10 @@ import {
 } from '@jbr-jazz/billing-shared';
 import { type UseHierarchyResult, useHierarchy } from '@jbr-jazz/hierarchy-client';
 import { ItemLimitExceededError } from '@jbr-jazz/hierarchy-shared';
-import { co, Group, type InstanceOfSchema } from 'jazz-tools';
+import type { InstanceOfSchema } from 'jazz-tools';
 import { useCallback, useMemo } from 'react';
-import { type Account, FolderNode } from '../schemas';
+import { co, Group } from '@/jazz';
+import { type Account, FolderNode } from '../schema';
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;
 type AccountType = InstanceOfSchema<typeof Account>;

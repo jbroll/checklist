@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, FolderNode } from '../../schema';
 import { parseCsv } from '../../utils/csvParser';
 import { type BaseImportResult, importItems } from './baseImporter';
 

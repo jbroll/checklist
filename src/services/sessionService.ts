@@ -7,7 +7,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { generateId } from '../lib/utils';
-import type { Account, ItemState, SessionData, TemplateItem } from '../schemas';
+import type { Account, ItemState, SessionData, TemplateItem } from '../schema';
 import { getTemplate } from './templateService';
 
 type SessionsLike = SessionData[] | { [Symbol.iterator](): Iterator<SessionData> };

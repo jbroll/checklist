@@ -5,10 +5,11 @@
  * Supports v2.0 (hierarchical with IDs) format.
  */
 
-import { Group, type InstanceOfSchema } from 'jazz-tools';
+import type { InstanceOfSchema } from 'jazz-tools';
+import { Group } from '@/jazz';
 import { generateId } from '../../lib/utils';
-import { type Account, FolderNode, type SessionData } from '../../schemas';
-import type { ItemState, TemplateItem } from '../../schemas/tree';
+import { type Account, FolderNode, type SessionData } from '../../schema';
+import type { ItemState, TemplateItem } from '../../schema/tree';
 import { createChildPath } from '../../utils/pathUtils';
 import type {
   ExportedData,

@@ -22,7 +22,7 @@ import {
 } from './userSettingsService';
 
 // Mock UserSettings.create
-vi.mock('../schemas', async (importOriginal) => {
+vi.mock('../schema', async (importOriginal) => {
   const original = await importOriginal();
   return {
     ...(original as object),

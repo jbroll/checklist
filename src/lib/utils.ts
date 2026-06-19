@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
-import type { SessionData } from '@/schemas';
+import type { SessionData } from '@/schema';
 import { formatTime } from '@/utils/dateUtils';
 
 export function cn(...inputs: ClassValue[]) {

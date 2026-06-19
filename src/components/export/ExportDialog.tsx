@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useDialog } from '@/lib/dialog-context';
-import type { Account, Template } from '@/schemas';
+import type { Account, Template } from '@/schema';
 import {
   exportTemplateItemsToCsv,
   exportTemplateItemsToText,

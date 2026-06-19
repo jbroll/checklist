@@ -7,7 +7,7 @@
 import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { isTemplateFolder } from '../../hooks';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, FolderNode } from '../../schema';
 import { getDateStampForFilename } from '../../utils/dateUtils';
 import {
   exportSessionToCsv as exportSessionToCsvImpl,

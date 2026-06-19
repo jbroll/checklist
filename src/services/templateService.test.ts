@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { TemplateItem } from '../schemas';
+import type { TemplateItem } from '../schema';
 import { PATH_SEPARATOR } from '../utils/pathUtils';
 import * as templateService from './templateService';
 

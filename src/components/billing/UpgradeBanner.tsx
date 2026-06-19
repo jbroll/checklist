@@ -10,7 +10,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { storageKey } from '../../lib/brand';
-import type { AccountParam } from '../../schemas';
+import type { AccountParam } from '../../schema';
 import {
   countUserLists,
   getListsRemaining,

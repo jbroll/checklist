@@ -1,6 +1,6 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useState } from 'react';
-import type { Account, SessionData, Template, TemplateItem } from '@/schemas';
+import type { Account, SessionData, Template, TemplateItem } from '@/schema';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
 

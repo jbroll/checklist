@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
+import type { FolderNode } from '../../schema';
 import { toISOStringOrEmpty } from '../../utils/dateUtils';
 import { getLeafItems } from '../../utils/itemTreeHelpers';
 import { findSessionById } from './helpers';

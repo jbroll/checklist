@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { FolderNode } from '@/schemas';
+import type { FolderNode } from '@/schema';
 
 // Check if Contact Picker API is available
 const hasContactPicker = 'contacts' in navigator && 'ContactsManager' in window;

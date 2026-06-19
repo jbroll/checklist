@@ -1,7 +1,7 @@
 import { AuthProvider } from 'jazz-tools/better-auth/auth/react';
-import { JazzReactProvider, useAccount } from 'jazz-tools/react';
 import type { ReactNode } from 'react';
-import { Account } from '../schemas';
+import { JazzReactProvider, useAccount } from '@/jazz';
+import { Account } from '../schema';
 import { betterAuthClient } from './auth-client';
 
 // Jazz API key is intentionally public (like Firebase) - it identifies the project
@@ -64,14 +64,14 @@ export function JazzProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Re-export hooks from jazz-tools/react
+// Re-export hooks through the jazz narrow-waist
 export {
   useAcceptInvite,
   useAccount,
   useCoState,
   useIsAuthenticated,
   useLogOut,
-} from 'jazz-tools/react';
+} from '@/jazz';
 
 /**
  * Typed wrapper for useAccount that returns our Account schema type

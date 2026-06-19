@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-import type { TemplateItem } from '@/schemas';
+import type { TemplateItem } from '@/schema';
 import { IndentedRow } from './IndentedRow';
 
 interface TemplateItemViewProps {

@@ -5,7 +5,7 @@
  * This prevents magic numbers and ensures consistency across the codebase.
  */
 
-import type { SubscriptionTier } from '@/schemas';
+import type { SubscriptionTier } from '@/schema';
 
 // ============================================================================
 // Subscription Tier Limits

@@ -6,8 +6,9 @@
  */
 
 import { createNodeGroup } from '@jbr-jazz/hierarchy-shared';
-import { co, type Group, type InstanceOfSchema } from 'jazz-tools';
-import { type Account, FolderNode } from '../schemas';
+import type { Group, InstanceOfSchema } from 'jazz-tools';
+import { co } from '@/jazz';
+import { type Account, FolderNode } from '../schema';
 import { canCreateList, getMaxLists } from './subscriptionService';
 
 /**

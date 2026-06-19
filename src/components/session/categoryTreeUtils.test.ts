@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TemplateItem } from '@/schemas';
+import type { TemplateItem } from '@/schema';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { areAllItemsSelected, collectAllItemIds, getSelectionState } from './categoryTreeUtils';
 

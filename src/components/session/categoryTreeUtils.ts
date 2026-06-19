@@ -1,4 +1,4 @@
-import type { TemplateItem } from '@/schemas';
+import type { TemplateItem } from '@/schema';
 import type { CategoryNode } from './categoryTreeBuilder';
 
 /**

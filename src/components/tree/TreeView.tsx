@@ -18,7 +18,7 @@ import { legacyStorageKey } from '@/lib/brand';
 import { useDialog } from '@/lib/dialog-context';
 import { iterateSessions } from '@/lib/jazz-types';
 import { usePWAInstall } from '@/lib/usePWAInstall';
-import type { Account, FolderNode, SessionData } from '@/schemas';
+import type { Account, FolderNode, SessionData } from '@/schema';
 import * as sessionService from '@/services/sessionService';
 import * as viewStateService from '@/services/viewStateService';
 import { FolderNodeView } from './FolderNodeView';

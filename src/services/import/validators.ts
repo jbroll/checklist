@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account } from '../../schemas';
+import type { Account } from '../../schema';
 import type { ExportedData, ExportedFolder } from '../export/types';
 import type { ValidationResult } from './types';
 

@@ -10,8 +10,8 @@ import type { InstanceOfSchema } from 'jazz-tools';
 import packageJson from '../../../package.json';
 import { isTemplateFolder } from '../../hooks';
 import { generateSessionName } from '../../lib/utils';
-import type { Account, FolderNode, SessionData } from '../../schemas';
-import type { TemplateItem } from '../../schemas/tree';
+import type { Account, FolderNode, SessionData } from '../../schema';
+import type { TemplateItem } from '../../schema/tree';
 import { toISOString } from '../../utils/dateUtils';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import type {

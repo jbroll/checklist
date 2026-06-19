@@ -7,7 +7,7 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { ItemState, TemplateItem } from '@/schemas';
+import type { ItemState, TemplateItem } from '@/schema';
 import { SessionItemRow } from './SessionItemRow';
 
 // Mock the Jazz hook

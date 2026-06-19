@@ -1,7 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
-import type { Account, FolderNode } from '@/schemas';
+import type { Account, FolderNode } from '@/schema';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
   type ImportAsNewTemplateOptions,

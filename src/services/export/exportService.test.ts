@@ -4,8 +4,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { describe, expect, it } from 'vitest';
-import type { Account, FolderNode, TemplateItem } from '../../schemas';
-import type { SessionData } from '../../schemas/tree';
+import type { Account, FolderNode, TemplateItem } from '../../schema';
+import type { SessionData } from '../../schema/tree';
 import {
   exportSessionToCsv,
   exportSessionToText,

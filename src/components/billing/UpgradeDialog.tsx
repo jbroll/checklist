@@ -8,7 +8,7 @@
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { brand } from '../../lib/brand';
-import type { AccountParam } from '../../schemas';
+import type { AccountParam } from '../../schema';
 import {
   getBetaMessage,
   getSubscriptionTier,

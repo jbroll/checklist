@@ -15,7 +15,7 @@ import {
   unarchiveNode,
 } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode, SessionData, TemplateItem } from '../schemas';
+import type { Account, FolderNode, SessionData, TemplateItem } from '../schema';
 import * as CheckListFolder from './checklistFolderFactory';
 import * as ExportService from './export/exportService';
 import { importJson } from './import/jsonImporter';

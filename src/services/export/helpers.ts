@@ -4,7 +4,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { iterateSessions } from '../../lib/jazz-types';
-import type { FolderNode, SessionData } from '../../schemas';
+import type { FolderNode, SessionData } from '../../schema';
 
 /**
  * Find a session by ID within a template's sessions

@@ -8,8 +8,8 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schemas';
-import type { TemplateItem } from '../../schemas/tree';
+import type { FolderNode } from '../../schema';
+import type { TemplateItem } from '../../schema/tree';
 import { buildItemTree, getActiveItems, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import { findSessionById } from './helpers';
 

@@ -30,7 +30,7 @@ import {
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
-import type { SubscriptionTier } from '@/schemas';
+import type { SubscriptionTier } from '@/schema';
 import { LinkedEmailsSection } from './LinkedEmailsSection';
 
 interface ProfileDialogProps {

@@ -11,7 +11,7 @@ import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { isTemplateFolder } from '../hooks';
 import { generateId } from '../lib/utils';
-import type { Account, FolderNode, TemplateItem } from '../schemas';
+import type { Account, FolderNode, TemplateItem } from '../schema';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
 
 // ============================================================================

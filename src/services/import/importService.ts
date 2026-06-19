@@ -5,7 +5,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, FolderNode } from '../../schema';
 import { readFileAsText } from '../../utils/fileUpload';
 import * as CheckListFolder from '../checklistFolderFactory';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';

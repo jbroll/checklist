@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
 import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { SessionData } from '@/schemas';
+import type { SessionData } from '@/schema';
 import { IndentedRow } from './IndentedRow';
 
 interface SessionRowViewProps {

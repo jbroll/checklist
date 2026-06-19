@@ -1,5 +1,6 @@
 import { startWorker } from 'jazz-tools/worker';
-import { Account, type ID, CoMap } from 'jazz-tools';
+import type { ID } from 'jazz-tools';
+import { Account, CoMap } from './jazz';
 
 // Agent for server-side Jazz operations
 let worker: Account | null = null;

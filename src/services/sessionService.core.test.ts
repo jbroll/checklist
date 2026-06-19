@@ -7,8 +7,8 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode, TemplateItem } from '../schemas';
-import type { SessionData } from '../schemas/tree';
+import type { Account, FolderNode, TemplateItem } from '../schema';
+import type { SessionData } from '../schema/tree';
 import { createMockCoMap } from '../test/setup';
 import {
   clearSessionState,

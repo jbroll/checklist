@@ -7,7 +7,7 @@
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schema';
 import {
   getSubscriptionTier,
   getTierDisplayName,

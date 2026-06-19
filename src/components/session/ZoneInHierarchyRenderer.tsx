@@ -1,7 +1,7 @@
 import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { SessionData, Template, TemplateItem } from '@/schemas';
+import type { SessionData, Template, TemplateItem } from '@/schema';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 

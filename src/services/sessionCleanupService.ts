@@ -14,7 +14,7 @@ import { walkTree } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { isTemplateFolder } from '../hooks';
 import { storageKey } from '../lib/brand';
-import type { AccountParam, FolderNode, SessionData } from '../schemas';
+import type { AccountParam, FolderNode, SessionData } from '../schema';
 import { getSessionRetentionDays } from './subscriptionService';
 
 type FolderType = InstanceOfSchema<typeof FolderNode>;

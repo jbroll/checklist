@@ -4,8 +4,8 @@ import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-import type { FolderNode, ItemState, TemplateItem } from '@/schemas';
-import { ACCOUNT_RESOLVE, Account } from '@/schemas';
+import type { FolderNode, ItemState, TemplateItem } from '@/schema';
+import { ACCOUNT_RESOLVE, Account } from '@/schema';
 import * as templateService from '@/services/templateService';
 
 interface SessionItemRowProps {

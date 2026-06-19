@@ -10,7 +10,7 @@
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAccount, useLogOut } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schema';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 

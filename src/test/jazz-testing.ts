@@ -139,7 +139,7 @@ async function getJazzTesting() {
  */
 async function getSchemas() {
   if (!schemasModule) {
-    schemasModule = await import('../schemas');
+    schemasModule = await import('../schema');
   }
   return schemasModule;
 }

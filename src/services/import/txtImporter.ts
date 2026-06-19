@@ -12,7 +12,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schemas';
+import type { Account, FolderNode } from '../../schema';
 import { parseTextList } from '../../utils/csvParser';
 import {
   isIndentedFormat,

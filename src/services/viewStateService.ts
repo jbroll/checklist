@@ -7,7 +7,7 @@
  */
 
 import type { InstanceOfSchema } from 'jazz-tools';
-import { type AccountParam, ViewState } from '../schemas';
+import { type AccountParam, ViewState } from '../schema';
 
 // ============================================================================
 // Folder Expanded State
