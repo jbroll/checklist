@@ -5,7 +5,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
 import { useAccount } from '@/lib/jazz';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
-import type { Account, SessionData, Template } from '@/schemas';
+import type { SessionData, Template } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { ItemNodeRenderer } from './ItemNodeRenderer';
@@ -29,7 +30,7 @@ interface SessionViewProps {
 
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount<typeof Account>() as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const { navState, navigateTo, goBack } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);

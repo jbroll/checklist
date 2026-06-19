@@ -201,19 +201,27 @@ function createAuthConfig(baseURL: string) {
   };
 }
 
+// Build an auth instance for an origin. Deriving the cache/return type from
+// this factory keeps the concrete options generic (better-auth 1.5.x made
+// Auth<ConcreteOptions> non-assignable to the generic Auth<BetterAuthOptions>).
+function createAuthInstance(baseURL: string) {
+  return betterAuth(createAuthConfig(baseURL));
+}
+type AuthInstance = ReturnType<typeof createAuthInstance>;
+
 // Cache of auth instances per origin
-const authInstances = new Map<string, ReturnType<typeof betterAuth>>();
+const authInstances = new Map<string, AuthInstance>();
 
 /**
  * Get BetterAuth instance for a specific origin.
  * Each origin gets its own instance with the correct baseURL for OAuth callbacks.
  */
-export function getAuthForOrigin(origin: string): ReturnType<typeof betterAuth> {
+export function getAuthForOrigin(origin: string): AuthInstance {
   // Normalize origin
   const normalizedOrigin = origin.replace(/\/$/, '');
 
   if (!authInstances.has(normalizedOrigin)) {
-    authInstances.set(normalizedOrigin, betterAuth(createAuthConfig(normalizedOrigin)));
+    authInstances.set(normalizedOrigin, createAuthInstance(normalizedOrigin));
   }
 
   return authInstances.get(normalizedOrigin)!;

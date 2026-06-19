@@ -214,6 +214,12 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Force a SINGLE jazz-tools / better-auth instance in the bundle. The
+    // @jbr-jazz/* packages are file:-linked and resolve these from jbr-jazz's
+    // own node_modules via symlink realpath; without dedupe the app and the
+    // jbr-jazz dist could load separate jazz-tools instances, breaking Jazz's
+    // CoValue runtime/schema identity.
+    dedupe: ['jazz-tools', 'better-auth', 'react', 'react-dom'],
   },
   server: {
     port: 8765,

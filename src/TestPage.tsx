@@ -10,14 +10,14 @@
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAccount, useLogOut } from '@/lib/jazz';
-import { Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
   // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account) as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const logOut = useLogOut();
 
   // Expose services to window for E2E tests

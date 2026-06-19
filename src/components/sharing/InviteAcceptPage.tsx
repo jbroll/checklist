@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useAccount } from '@/lib/jazz';
-import { Account, FolderNode } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account, FolderNode } from '@/schemas';
 
 // CSRF header for API requests
 const getAuthHeaders = async (): Promise<Record<string, string>> => ({
@@ -41,7 +41,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   });
 
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account) as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const [state, setState] = useState<PageState>({ type: 'loading' });
 
   // Track if we've moved past the initial validation phase

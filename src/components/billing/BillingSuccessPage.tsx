@@ -7,7 +7,7 @@
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAccount } from '@/lib/jazz';
-import { Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import {
   getSubscriptionTier,
   getTierDisplayName,
@@ -22,7 +22,7 @@ type PageState =
 
 export function BillingSuccessPage() {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz MaybeLoaded type requires runtime checks
-  const me = useAccount(Account) as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const [state, setState] = useState<PageState>({ type: 'syncing' });
 
   useEffect(() => {

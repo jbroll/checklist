@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useCheckListHierarchy, useViewStateCleanup } from '@/hooks';
 import { betterAuthClient } from '@/lib/auth-client';
 import { useDialog } from '@/lib/dialog-context';
-import { Account } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import { EmailAuthDialog } from './auth/EmailAuthDialog';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';
@@ -41,7 +41,7 @@ export function AuthGate() {
   }, [showEmailAuthDialog]);
   // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account) as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const logOut = useLogOut();
   const { showAlert, showConfirm } = useDialog();
   const isAuthenticated = useIsAuthenticated();

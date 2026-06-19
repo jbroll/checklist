@@ -14,7 +14,8 @@ import { useAccount } from '@/lib/jazz';
 import { useDialogManager } from '@/lib/useDialogManager';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import { useTemplateNavigation } from '@/lib/useTemplateNavigation';
-import type { Account, FolderNode } from '@/schemas';
+import type { FolderNode } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import * as SessionService from '@/services/sessionService';
 import * as subscriptionService from '@/services/subscriptionService';
 import { DialogManager, type SessionExportData } from './DialogManager';
@@ -37,9 +38,10 @@ export function AppContainer({
   onDeleteAccount,
   isAuthenticated,
 }: AppContainerProps) {
-  // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount<typeof Account>() as any;
+  // Jazz 0.20: pass the Account schema + resolve query so the folder tree is
+  // deep-loaded ($each); without it root.folders yields null elements.
+  // biome-ignore lint/suspicious/noExplicitAny: Jazz MaybeLoaded type requires runtime checks
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
   const { showAlert } = useDialog();
 

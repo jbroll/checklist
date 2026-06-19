@@ -8,7 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAccount } from '@/lib/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { Account, FolderNode, ItemState, TemplateItem } from '@/schemas';
+import type { FolderNode, ItemState, TemplateItem } from '@/schemas';
+import { ACCOUNT_RESOLVE, Account } from '@/schemas';
 import * as templateService from '@/services/templateService';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { collectAllItemIds, getSelectionState } from './categoryTreeUtils';
@@ -122,7 +123,7 @@ export function SessionZone({
     onEditNote,
   } = itemEditModeProps;
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount<typeof Account>() as any;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 

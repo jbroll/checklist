@@ -162,6 +162,9 @@ export const Account = co
     }
 
     // Step 6: Create default "Quick Errands" list for new users with no lists
+    // Resolve folder elements ($each) so length/iteration see loaded nodes
+    // (jazz-tools 0.20: CoList elements are not auto-loaded without $each).
+    await root.$jazz.ensureLoaded({ resolve: { folders: { $each: true } } });
     if (root.folders.length === 0) {
       const now = new Date();
       const errands = [
@@ -214,7 +217,36 @@ export const Account = co
 
       root.folders.$jazz.push(quickErrands);
     }
+  })
+  // Schema-level default resolve query (jazz-tools 0.20). useAccount(Account)
+  // and ensureLoaded() use this when no explicit resolve is given, so the folder
+  // tree is deep-loaded ($each) instead of yielding null CoList elements. Nested
+  // folder `children` autoload on access in React hooks; top-level folders,
+  // their inline items/sessions, viewState and userSettings load eagerly here.
+  .resolved({
+    root: {
+      folders: { $each: true },
+      viewState: true,
+      userSettings: true,
+    },
   });
+
+/**
+ * Default resolve query for loading the account's folder tree.
+ *
+ * jazz-tools 0.20 no longer auto-loads CoList elements: without an explicit
+ * `$each`, `account.root.folders` yields `null` elements. Pass this to
+ * `useAccount(Account, { resolve: ACCOUNT_RESOLVE })` at every call site that
+ * reads folder/session data so the tree is deep-loaded. Nested folder
+ * `children` autoload on access in React hooks.
+ */
+export const ACCOUNT_RESOLVE = {
+  root: {
+    folders: { $each: true },
+    viewState: true,
+    userSettings: true,
+  },
+} as const;
 
 // Re-export tree schemas and types for easy importing
 export { FolderNode, Template, type SessionData, type TemplateItem, type ItemState };
