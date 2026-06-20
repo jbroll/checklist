@@ -1,0 +1,7 @@
+# Type names intentionally (or historically) defined in more than one file,
+# allowed past the org-hooks ts-dup-types gate. One name per line.
+# Grandfathered at org-hooks adoption; dedupe opportunistically.
+
+ItemTreeNode          # session ItemNodeRenderer vs utils/itemTreeHelpers
+TierLimits            # config/constants vs services/subscriptionService
+SessionImportOptions  # import/sessionImporter vs import/types
