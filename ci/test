@@ -7,8 +7,11 @@ export WORKTREE
 # shellcheck disable=SC1091
 . "$WORKTREE/ci/setup.sh"
 cd "$WORKTREE"
-# simple-ci rsyncs the worktree WITHOUT node_modules — install first.
+# simple-ci rsyncs the worktree WITHOUT node_modules — install both the root
+# (frontend) and the separate backend npm project.
 npm install
+( cd backend && npm install )
 npm run lint
 npm run type-check
 npm run test:run
+( cd backend && npm test )
