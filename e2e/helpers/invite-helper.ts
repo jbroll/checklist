@@ -48,14 +48,24 @@ export async function generateInvite(
   await expect(linkInput).toBeVisible({ timeout: 10000 });
   const url = await linkInput.inputValue();
   expect(url).toContain('/invite/');
-  return url;
+  // The backend builds the shareUrl from FRONTEND_URL (production in dev), but the
+  // invite token lives in the local backend DB. Normalize the host to the current
+  // origin so the recipient hits the same backend that issued the token.
+  const issued = new URL(url);
+  const origin = new URL(page.url()).origin;
+  return `${origin}${issued.pathname}${issued.search}`;
 }
 
-/** Revoke the pending invite for a recipient (confirm() + the X button on its row). */
+/** Revoke the pending invite for a recipient (confirm() + the X "Revoke invite" button). */
 export async function revokeInvite(page: Page, recipientEmail: string): Promise<void> {
-  page.once('dialog', (d) => d.accept());
-  const row = page.locator('div').filter({ hasText: recipientEmail }).last();
-  await row.getByRole('button', { name: /revoke invite/i }).click();
+  // The pending invite must be listed first (its row shows the recipient email).
+  await expect(page.getByText(recipientEmail).last()).toBeVisible({ timeout: 10000 });
+  page.once('dialog', (d) => d.accept()); // confirm() prompt
+  // The revoke control is a button titled "Revoke invite" (one per pending invite).
+  await page
+    .getByRole('button', { name: /revoke invite/i })
+    .first()
+    .click();
   await expect(page.getByText(recipientEmail)).toHaveCount(0, { timeout: 10000 });
 }
 
@@ -63,17 +73,24 @@ export async function assertFolderVisible(page: Page, folderName: string): Promi
   await expect(page.getByText(folderName).first()).toBeVisible({ timeout: 30000 });
 }
 
-/** Soft-delete (archive) a folder via its row menu (best-effort cleanup). */
+/**
+ * Soft-delete (archive) a folder via its row menu. Best-effort cleanup with short
+ * timeouts so a missing control never hangs the afterAll hook.
+ */
 export async function archiveFolder(page: Page, folderName: string): Promise<void> {
-  const folderText = page.getByText(folderName).first();
-  if (!(await folderText.isVisible().catch(() => false))) return;
-  await folderText.hover();
-  const folderRow = folderText.locator('xpath=ancestor::div[contains(@class, "group")]').first();
-  const menuButton = folderRow.locator('button').filter({ has: page.locator('svg') }).last();
-  await menuButton.click();
-  page.once('dialog', (d) => d.accept());
-  await page
-    .getByRole('menuitem', { name: /delete|archive|remove/i })
-    .click()
-    .catch(() => {});
+  try {
+    const folderText = page.getByText(folderName).first();
+    if (!(await folderText.isVisible({ timeout: 2000 }).catch(() => false))) return;
+    await folderText.hover({ timeout: 3000 });
+    const folderRow = folderText.locator('xpath=ancestor::div[contains(@class, "group")]').first();
+    const menuButton = folderRow.locator('button').filter({ has: page.locator('svg') }).last();
+    await menuButton.click({ timeout: 3000 });
+    page.once('dialog', (d) => d.accept());
+    await page
+      .getByRole('menuitem', { name: /delete|archive|remove/i })
+      .first()
+      .click({ timeout: 3000 });
+  } catch {
+    // best-effort cleanup — never block teardown
+  }
 }

@@ -83,7 +83,9 @@ export async function verifyTestUserEmail(page: Page, email: string): Promise<vo
 export async function loginTestUser(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  if (await isSignedIn(page)) return;
+  // Quick check: if the "Sign In" button isn't present, we're already signed in.
+  const signInBtn = page.getByRole('button', { name: /sign in/i }).first();
+  if (!(await signInBtn.isVisible().catch(() => false))) return;
   // After the verify redirect, EmailAuthDialog may already be open (signin mode).
   const emailField = page.locator('#signin-email');
   if (!(await emailField.isVisible().catch(() => false))) {
@@ -95,28 +97,37 @@ export async function loginTestUser(page: Page, email: string, password: string)
     .getByRole('button', { name: /^sign in$/i })
     .last()
     .click();
-  // EmailAuthDialog reloads the page on success; wait for the app shell.
-  await page.waitForLoadState('networkidle');
+  // EmailAuthDialog reloads the page on success; the authenticated app shell +
+  // Jazz account take a moment to settle. isSignedIn() polls for that state.
 }
 
-/** True when the authenticated app shell is mounted (no "Sign In", tree ready). */
+/**
+ * True when the authenticated app shell is mounted: the "CheckList" header
+ * heading is present AND the "Sign In" button is absent (it only renders when
+ * unauthenticated). Polls with reload-retry to absorb the post-login reload and
+ * the known Jazz cold-load race.
+ */
 export async function isSignedIn(page: Page): Promise<boolean> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const signInVisible = await page
-      .getByRole('button', { name: /sign in/i })
-      .first()
-      .isVisible()
-      .catch(() => false);
-    if (!signInVisible) {
-      const ready = await page
-        .getByRole('button', { name: /new folder|new list|add folder/i })
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline) {
+      const shell = await page
+        .getByRole('heading', { name: /^checklist$/i })
         .first()
         .isVisible()
         .catch(() => false);
-      if (ready) return true;
+      if (shell) {
+        const signInVisible = await page
+          .getByRole('button', { name: /sign in/i })
+          .first()
+          .isVisible()
+          .catch(() => false);
+        if (!signInVisible) return true;
+      }
+      await page.waitForTimeout(500);
     }
     await page.reload();
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
   }
   return false;
 }

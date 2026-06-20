@@ -252,6 +252,7 @@ npm run type-check   # TypeScript validation
 npm run lint         # Code linting
 npm run test:run     # Unit tests
 npm run test:e2e     # E2E tests
+npm run test:e2e:invite  # Invite closed-loop E2E (needs gpu GreenMail; see e2e/INVITE_TESTING.md)
 npm run build        # Production build
 npm run preview      # Test production build
 ```

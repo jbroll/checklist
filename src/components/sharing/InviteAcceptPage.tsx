@@ -42,13 +42,18 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
   // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
   const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  // Stable account id for effect deps (the `me`/`sharing` object refs change every
+  // render; depending on them floods /validate — see the useEffect below).
+  const meId: string | null = me?.$jazz?.id ?? null;
   const [state, setState] = useState<PageState>({ type: 'loading' });
 
   // Track if we've moved past the initial validation phase
   // Once we're in accepting/success/error state, don't re-validate
   const hasStartedAcceptingRef = useRef(false);
 
-  // Validate the invite token
+  // Validate the invite token. Keyed on stable token + meId, NOT the me/sharing
+  // object refs (they change every render -> infinite /validate loop). Read at call time.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on meId by design
   useEffect(() => {
     // Don't re-validate if we've already started accepting or completed
     if (hasStartedAcceptingRef.current) {
@@ -95,7 +100,7 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     }
 
     doValidation();
-  }, [token, me, sharing]);
+  }, [token, meId]);
 
   const handleAccept = async () => {
     // Mark that we've started accepting - prevents re-validation on me changes
