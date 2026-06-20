@@ -69,3 +69,6 @@ coverage/
 
 # lefthook per-repo overrides
 lefthook-local.yml
+
+# Playwright persisted auth sessions (real test-account sessions)
+e2e/.auth/

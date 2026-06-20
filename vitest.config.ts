@@ -43,7 +43,9 @@ export default defineConfig({
       },
     },
     // Configure test file patterns
-    include: ['src/**/*.{test,spec}.{js,ts,tsx}'],
+    // e2e/helpers hold pure (non-browser) helpers whose unit tests run here;
+    // Playwright only collects *.spec.ts (see playwright.config.ts testMatch).
+    include: ['src/**/*.{test,spec}.{js,ts,tsx}', 'e2e/helpers/**/*.test.ts'],
     exclude: ['node_modules/', 'dist/', 'build/'],
   },
 });
