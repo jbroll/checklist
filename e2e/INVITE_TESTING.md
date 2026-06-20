@@ -16,7 +16,7 @@ accounts + the real backend + real Jazz**.
 | unauthenticated visitor sees invite details + sign-in prompt | Signed-out accept page → Google/Apple sign-in | ✅ |
 | wrong account (test3) sees the email-mismatch state | Logged-in email ≠ invite recipient → "Wrong Account" | ✅ |
 | revoked invite shows an error to the recipient | Organizer revokes → recipient gets `not_found` error | ✅ |
-| recipient accepts and gains folder access | Accept → Jazz grant → folder appears in recipient tree | ⏳ `test.fixme` (see Known issue) |
+| recipient accepts and gains folder access | Accept → Jazz grant → folder appears in recipient tree | ✅ |
 
 Invites are **copy-link only** — checklist does not email invites. GreenMail is
 used solely to verify the test accounts' signup emails so they can log in.
@@ -52,25 +52,22 @@ npm run test:e2e:invite:tunnel
 GreenMail needs no real credentials — any username/password works and the
 per-recipient mailbox is auto-created on first access.
 
-## Known issue: invite accept (tracked)
+## Fixed: invite accept (stale Jazz API in agent.ts)
 
-The **accept** step is broken at the product level, so the final test is
-`test.fixme`. `POST /api/shares/accept` returns **500**: the backend Jazz agent
-(`JAZZ_AGENT_ACCOUNT_ID`) cannot access the shared folder's group —
-`addToGroup` (backend/src/agent.ts) throws *"Target … not found"* /
-*"current user … is not authorized to access …"*. The recipient therefore never
-gains access.
+The accept flow was returning **500** ("Failed to grant access") because
+checklist's custom `backend/src/agent.ts` used **Jazz v0.18 APIs** that no longer
+exist in v0.19, diverging from the canonical `@jbr-jazz/hierarchy-backend`:
 
-This reproduces outside the tests (organizer generates an invite → recipient
-accepts → 500), so it is a real bug in the agent-grant path:
-`createInviteAndGrantAgent` is meant to grant the agent admin on the folder, but
-the agent cannot load/decrypt the folder group. Ruled out: token validity,
-expiry, invite-URL host, sync-peer / API-key parity (both use `cloud.jazz.tools`
-+ same key), and sync timing (a 12s delay did not help). The likely area is the
-agent grant / agent-account key-sharing, possibly inside the `@jbr-jazz/hierarchy`
-packages.
+| Stale (v0.18) | Correct (v0.19) |
+|---|---|
+| `(target as any)._owner` / `'_owner' in target` | `target.$jazz.owner` |
+| `'id' in account` / `'loadingState' in account` | `'$jazz' in account` (`isLoadedAccount`) |
+| `ownerGroup.waitForSync()` | `ownerGroup.$jazz.waitForSync()` |
 
-Un-`fixme` the "recipient accepts and gains folder access" test once this is fixed.
+The agent grant itself always worked — the worker could load the folder fine; the
+code just read the wrong property and threw "Target not found" before reaching the
+grant. Fixed in `addToGroup`, `getGroupMembers`, `validateSenderAccess`, and
+`removeFromGroup`. The closed-loop accept test now passes end-to-end.
 
 ## Related fix
 

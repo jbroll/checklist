@@ -6,6 +6,15 @@ import { Account, CoMap } from './jazz';
 let worker: Account | null = null;
 
 /**
+ * A loaded Jazz Account (v0.19) is an object exposing the `$jazz` accessor.
+ * The legacy checks (`'id' in account` / `'loadingState' in account`) are wrong
+ * for v0.19 and reject valid accounts.
+ */
+function isLoadedAccount(account: unknown): account is Account {
+  return account !== null && typeof account === 'object' && '$jazz' in account;
+}
+
+/**
  * Check if the Jazz agent is ready for operations
  */
 export function isAgentReady(): boolean {
@@ -71,7 +80,7 @@ export async function validateSenderAccess(
       loadAs: worker,
     });
 
-    if (!target || !('_owner' in target)) {
+    if (!target || !(target as { $jazz?: { owner?: unknown } }).$jazz?.owner) {
       console.warn(`Target ${targetId} not found or not loaded`);
       return false;
     }
@@ -81,14 +90,14 @@ export async function validateSenderAccess(
       loadAs: worker,
     });
 
-    if (!senderAccount || !('id' in senderAccount) || 'loadingState' in senderAccount) {
+    if (!isLoadedAccount(senderAccount)) {
       console.warn(`Sender account ${senderJazzAccountId} not found`);
       return false;
     }
 
-    // Check if sender is in the target's owner group
+    // Check if sender is in the target's owner group (v0.19 `$jazz.owner`).
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (target as any)._owner;
+    const ownerGroup = (target as any).$jazz.owner;
 
     // Get all members of the group
     const members = ownerGroup.members;
@@ -130,7 +139,7 @@ export async function addToGroup(
       loadAs: worker,
     });
 
-    if (!target || !('_owner' in target)) {
+    if (!target || !(target as { $jazz?: { owner?: unknown } }).$jazz?.owner) {
       throw new Error(`Target ${targetId} not found`);
     }
 
@@ -139,13 +148,14 @@ export async function addToGroup(
       loadAs: worker,
     });
 
-    if (!recipientAccount || !('id' in recipientAccount) || 'loadingState' in recipientAccount) {
+    if (!isLoadedAccount(recipientAccount)) {
       throw new Error(`Recipient account ${recipientJazzAccountId} not found`);
     }
 
-    // Add member to target's owner group
+    // Add member to target's owner group. The owner is exposed via the v0.19
+    // `$jazz.owner` accessor (NOT the legacy `_owner` property).
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (target as any)._owner;
+    const ownerGroup = (target as any).$jazz.owner;
 
     // Check if already a member
     const existingMember = ownerGroup.members.find(
@@ -162,7 +172,7 @@ export async function addToGroup(
     console.log(`✅ Added ${recipientJazzAccountId.slice(0, 12)}... to ${targetId.slice(0, 12)}... with role ${permission}`);
 
     // Wait for sync to ensure the change is persisted
-    await ownerGroup.waitForSync();
+    await ownerGroup.$jazz.waitForSync();
 
     return { alreadyMember: false };
   } catch (error) {
@@ -189,13 +199,13 @@ export async function getGroupMembers(
       loadAs: worker,
     });
 
-    if (!target || !('_owner' in target)) {
+    if (!target || !(target as { $jazz?: { owner?: unknown } }).$jazz?.owner) {
       throw new Error(`Target ${targetId} not found`);
     }
 
-    // Get all members of the group
+    // Get all members of the group (v0.19 `$jazz.owner`).
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (target as any)._owner;
+    const ownerGroup = (target as any).$jazz.owner;
 
     // Check if owner is a Group (has members property)
     if (!ownerGroup.members) {
@@ -233,14 +243,16 @@ export async function removeFromGroup(
       loadAs: worker,
     });
 
-    if (!target || !('_owner' in target)) {
+    if (!target || !(target as { $jazz?: { owner?: unknown } }).$jazz?.owner) {
       throw new Error(`Target ${targetId} not found`);
     }
 
-    // Prevent removing the group owner (they should always have access)
+    // Prevent removing the group owner (they should always have access).
+    // Owner is exposed via v0.19 `$jazz.owner`; the group's own owner account is
+    // likewise `ownerGroup.$jazz.owner`.
     // biome-ignore lint/suspicious/noExplicitAny: Jazz types are complex
-    const ownerGroup = (target as any)._owner;
-    const groupOwner = ownerGroup?._owner as { id: string } | undefined;
+    const ownerGroup = (target as any).$jazz.owner;
+    const groupOwner = ownerGroup?.$jazz?.owner as { id: string } | undefined;
     const groupOwnerId = groupOwner?.id;
 
     if (groupOwnerId === userJazzAccountId) {
@@ -252,7 +264,7 @@ export async function removeFromGroup(
       loadAs: worker,
     });
 
-    if (!userAccount || !('id' in userAccount) || 'loadingState' in userAccount) {
+    if (!isLoadedAccount(userAccount)) {
       throw new Error(`User account ${userJazzAccountId} not found`);
     }
 
@@ -262,7 +274,7 @@ export async function removeFromGroup(
     console.log(`✅ Removed ${userJazzAccountId.slice(0, 12)}... from ${targetId.slice(0, 12)}...`);
 
     // Wait for sync
-    await ownerGroup.waitForSync();
+    await ownerGroup.$jazz.waitForSync();
   } catch (error) {
     console.error('Error removing member from group:', error);
     throw error;

@@ -4,13 +4,6 @@
  * the recipient (test2) and a third party (test3) exercise the accept page.
  *
  * Requires the auth-setup project (e2e/.auth/test*.json) + GreenMail mail infra.
- *
- * KNOWN ISSUE (tracked): the invite *accept* grant is broken at the product level
- * — POST /api/shares/accept returns 500 because the backend Jazz agent cannot
- * access the shared folder's group (addToGroup -> "Target not found" /
- * "not authorized"). The recipient therefore never gains access. The accept +
- * folder-visibility tests below are marked test.fixme until that is fixed. See
- * e2e/INVITE_TESTING.md ("Known issue: invite accept") for details.
  */
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -134,10 +127,7 @@ test.describe('Invite closed loop', () => {
     }
   });
 
-  // KNOWN ISSUE: backend agent cannot access the shared folder group, so accept
-  // 500s and the recipient never gains access. Un-fixme once the agent-grant path
-  // is fixed. See the file header + e2e/INVITE_TESTING.md.
-  test.fixme('recipient accepts and gains folder access', async ({ browser }) => {
+  test('recipient accepts and gains folder access', async ({ browser }) => {
     expect(shareUrl).toBeTruthy();
     const ctx = await browser.newContext({ storageState: path.join(AUTH_DIR, 'test2.json') });
     const page = await ctx.newPage();
