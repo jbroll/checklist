@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# simple-ci entry: Playwright e2e suite. Playwright's webServer auto-starts
+# `npm run dev` (frontend 8765 + backend 3001) and global setup starts the mock
+# OAuth server, so this needs no manually-started services.
+# Invoked by: sci push checklist/e2e
+set -euo pipefail
+WORKTREE="$(cd "$(dirname "$0")/.." && pwd)"
+export WORKTREE
+# shellcheck disable=SC1091
+. "$WORKTREE/ci/setup.sh"
+cd "$WORKTREE"
+# CI=true makes Playwright always start fresh servers (no reuse).
+export CI=true
+npm install
+npx playwright install --with-deps chromium >/dev/null 2>&1 || npx playwright install chromium
+npm run test:e2e

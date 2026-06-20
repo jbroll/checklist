@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# simple-ci entry: lint + type-check + unit tests (no servers needed).
+# Invoked by: sci push checklist/test
+set -euo pipefail
+WORKTREE="$(cd "$(dirname "$0")/.." && pwd)"
+export WORKTREE
+# shellcheck disable=SC1091
+. "$WORKTREE/ci/setup.sh"
+cd "$WORKTREE"
+# simple-ci rsyncs the worktree WITHOUT node_modules — install first.
+npm install
+npm run lint
+npm run type-check
+npm run test:run
