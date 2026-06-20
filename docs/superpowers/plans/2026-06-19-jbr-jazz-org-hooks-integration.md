@@ -606,6 +606,29 @@ git commit -m "ci: add test:ci entrypoint for simple-ci"
 
 ---
 
+## Execution notes (what actually shipped)
+
+- **Phase A** (`7b0f03a`): jazz-tools→0.20.18 across checklist+jbr-jazz+wicketmap;
+  better-auth→1.5.6; vite dedupe; **0.20 deep-loading fix** (ACCOUNT_RESOLVE at 8
+  useAccount sites). e2e 65-fail → 0-fail. jbr-jazz committed (`60fd61a`);
+  wicketmap left version-aligned but uncommitted (user choice).
+- **Phase B** (`505b628`): `src/jazz/` + `backend/src/jazz/` waists; `schemas`→`schema`.
+- **Phase C** (`61691b0`, `5ffd3d0`): lefthook + org-hooks wired; bespoke hooks
+  removed; knip/dpdm added. The org-hooks ts profile has MORE gates than the plan
+  anticipated — adopting them surfaced pre-existing debt, handled as:
+  - `ts-circular`: fixed a real cycle (`schema → jazz-types → schema`).
+  - `ts-no-reexports`: `.no-reexports-allow` grandfathers the jazz waist (essential)
+    + pre-existing barrels.
+  - `ts-dup-types`: `.dup-types-allow` grandfathers 3 duplicate type names.
+  - `knip` (ts-deadcode): scoped to `--include files` with a 6-file ignore
+    baseline; **deferred**: unused exports/types + dependency hygiene (unlisted
+    `zod` in backend, unused radix/express devdeps).
+- **Phase D** (`1f70d31`): `ci/setup.sh` + `test:ci` committed. **Host-side
+  simple-ci registration is NOT done** — it needs the GPU CI box (repo added to
+  `$CI_WORKSPACE`, `~/.config/checklist/secrets.env`, a triggered run). Do that
+  on the runner host; `ci/setup.sh` is simpler than wicketmap's (cloud Jazz peer,
+  no local jazz-sync, so no version-lock/account-minting).
+
 ## Follow-up (separate effort, NOT this plan): wicketmap backend waist
 
 Per the user, wicketmap's backend should also come under waist control — a
