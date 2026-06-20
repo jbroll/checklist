@@ -39,6 +39,7 @@
     "type-check": "tsc --noEmit && tsc --noEmit -p backend/tsconfig.json",
     "knip": "knip --no-progress --include files",
     "check": "npm run type-check && npm run lint && npm run test:run",
+    "test:ci": "npm run lint && npm run type-check && npm run test:run && npm run test:e2e",
     "check:staged": "lint-staged",
     "lighthouse": "lhci autorun",
     "lighthouse:collect": "lhci collect",
