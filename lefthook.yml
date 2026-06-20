@@ -1,0 +1,39 @@
+# Hook config is pulled from the pinned org-hooks ref; this stub plus the
+# repo-local commands below is all this repo carries.
+# See ~/src/org-hooks/examples/lefthook.stub.yml.
+remotes:
+  - git_url: /home/john/src/org-hooks
+    ref: main
+    refetch: true
+    configs:
+      - lefthook-common.yml
+      - profiles/ts.yml
+
+# Sourced before every hook — exports ORG_HOOKS so the remote scripts resolve.
+# Absolute path: the generated git hook sources this with POSIX `.`, which only
+# searches the cwd when the path contains a slash (a bare name fails at commit).
+rc: /home/john/src/checklist/lefthook-rc.sh
+
+# ── Repo-local commands ──────────────────────────────────────────────────────
+pre-commit:
+  commands:
+    # Override the inherited ts-jazz-waist (which scans only `src`) to ALSO
+    # scan the backend tree — CheckList puts the backend under waist control.
+    ts-jazz-waist:
+      glob: "*.{ts,tsx,js,jsx,mjs}"
+      run: node "${ORG_HOOKS}/scripts/check-jazz-value-import-ban.mjs" src && node "${ORG_HOOKS}/scripts/check-jazz-value-import-ban.mjs" backend/src
+    # Full unit suite (frontend + backend) — fast, deterministic.
+    unit-tests:
+      glob: "*.{ts,tsx}"
+      run: npm run test:run
+    # Playwright e2e drives the real app; its webServer auto-starts npm run dev.
+    e2e-tests:
+      glob: "*.{ts,tsx,html}"
+      run: npm run test:e2e
+
+# Preserve CheckList's commit-message policy (subject 10-72, ASCII-only,
+# body = Co-Authored-By only). org-hooks lefthook-common provides no commit-msg.
+commit-msg:
+  commands:
+    format:
+      run: 'bash scripts/git-hooks/check-commit-msg.sh {1}'

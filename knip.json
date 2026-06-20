@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": ["@capacitor/.*", "dpdm"],
+  "ignoreBinaries": ["cap", "lhci", "openssl"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/main.tsx",
+        "src/**/index.ts",
+        "*.config.{ts,js,mjs}",
+        "scripts/**/*.{ts,js,mjs}",
+        "website/build-legal.js"
+      ],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": [
+        "src/components/ui/FeatureErrorBoundary.tsx",
+        "src/components/ui/badge.tsx",
+        "src/components/ui/empty-state.tsx",
+        "src/config/constants.ts",
+        "src/lib/types.ts",
+        "src/lib/useLongPressIndicator.ts"
+      ]
+    },
+    "backend": {
+      "entry": ["src/index.ts", "src/migrate.ts", "src/migrate-auth.ts", "scripts/**/*.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

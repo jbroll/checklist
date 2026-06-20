@@ -66,3 +66,6 @@ ios/build/
 # Generated PWA icons from capacitor-assets
 icons/
 coverage/
+
+# lefthook per-repo overrides
+lefthook-local.yml
