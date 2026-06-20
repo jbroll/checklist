@@ -17,11 +17,8 @@ rc: /home/john/src/checklist/lefthook-rc.sh
 # ── Repo-local commands ──────────────────────────────────────────────────────
 pre-commit:
   commands:
-    # Override the inherited ts-jazz-waist (which scans only `src`) to ALSO
-    # scan the backend tree — CheckList puts the backend under waist control.
-    ts-jazz-waist:
-      glob: "*.{ts,tsx,js,jsx,mjs}"
-      run: node "${ORG_HOOKS}/scripts/check-jazz-value-import-ban.mjs" src && node "${ORG_HOOKS}/scripts/check-jazz-value-import-ban.mjs" backend/src
+    # ts-jazz-waist is inherited from org-hooks profiles/ts.yml, which scans
+    # `src backend/src` (multi-root) — so no repo-local override is needed.
     # Full unit suite (frontend + backend) — fast, deterministic.
     unit-tests:
       glob: "*.{ts,tsx}"
