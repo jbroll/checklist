@@ -43,12 +43,9 @@ test.describe('Infrastructure Health', () => {
     const health = await response.json();
     expect(health.status).toBe('ok');
     expect(health.timestamp).toBeTruthy();
-    expect(health.features).toBeDefined();
 
-    // Log feature status for monitoring
+    // @jbr-jazz/hierarchy-backend's health endpoint returns { status, timestamp }.
     console.log(`  Backend health: OK (${responseTime}ms)`);
-    console.log(`  - Sharing: ${health.features.sharing ? 'enabled' : 'disabled'}`);
-    console.log(`  - Billing: ${health.features.billing ? 'enabled' : 'disabled'}`);
   });
 
   test('auth endpoints - session endpoint responds', async ({ request, baseURL }) => {

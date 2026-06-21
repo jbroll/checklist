@@ -23,11 +23,11 @@
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self';
+      script-src 'self' 'wasm-unsafe-eval';
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: blob:;
       font-src 'self';
-      connect-src 'self' wss://cloud.jazz.tools https://api.stripe.com https://*.googleapis.com;
+      connect-src 'self' data: wss://cloud.jazz.tools https://api.stripe.com https://*.googleapis.com;
       frame-src https://js.stripe.com https://accounts.google.com https://appleid.apple.com;
       frame-ancestors 'none';
     " />
