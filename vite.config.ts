@@ -223,7 +223,11 @@ export default defineConfig({
         // Use 127.0.0.1 (not 'localhost'): createHierarchyServer binds IPv4-only
         // (127.0.0.1), and 'localhost' can resolve to ::1 (IPv6) first → ECONNREFUSED.
         target: 'http://127.0.0.1:3001',
-        changeOrigin: true,
+        // changeOrigin MUST be false: the package's per-origin BetterAuth derives the
+        // auth baseURL from the Host header and rejects untrusted origins with 421.
+        // Rewriting Host to 127.0.0.1:3001 (changeOrigin:true) is not a trusted origin;
+        // keeping the real Host (localhost:8765) matches trustedOrigins so login works.
+        changeOrigin: false,
         // Ensure custom headers are forwarded (critical for Jazz BetterAuth plugin)
         configure: (proxy, _options) => {
           proxy.on('proxyReq', (proxyReq, req, _res) => {
