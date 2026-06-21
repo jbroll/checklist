@@ -5,288 +5,113 @@ if (typeof globalThis.WebSocket === 'undefined') {
   globalThis.WebSocket = WebSocket;
 }
 
-import { toNodeHandler } from 'better-auth/node';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
-import crypto from 'node:crypto';
-import { auth, sqliteDb, getAuthForOrigin, getOriginFromRequest } from './auth.js';
-import { initDb } from './db.js';
-import { initAgent, isAgentReady } from './agent.js';
-import { ApiErrors } from './lib/api-error.js';
-import { setupSharingRoutes } from './shares.js';
-import { setupVerifiedEmailRoutes } from './verified-emails.js';
-import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
+import dotenv from 'dotenv';
+import type { BackendConfig } from '@jbr-jazz/hierarchy-shared';
+import { createHierarchyServer } from '@jbr-jazz/hierarchy-backend';
 import { setupLimitCheckRoute } from '@jbr-jazz/billing-backend';
+import { initBillingDb } from './db.js';
+import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
 
-// Load environment variables from both root .env and backend .env
-// Root .env first (shared config like JAZZ_API_KEY)
+// Root .env first (shared config like JAZZ_API_KEY), then backend .env
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
-// Backend .env second (backend-specific overrides)
 dotenv.config();
-
-// Alias VITE_JAZZ_API_KEY to JAZZ_API_KEY for backend use
 if (process.env.VITE_JAZZ_API_KEY && !process.env.JAZZ_API_KEY) {
   process.env.JAZZ_API_KEY = process.env.VITE_JAZZ_API_KEY;
 }
 
-// Initialize database - ensure BetterAuth tables exist first
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const isProd = process.env.NODE_ENV === 'production';
+const dbPath = process.env.AUTH_DB_PATH || (isProd ? './data/auth.db' : './auth.db');
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-// BetterAuth will auto-create tables on first request
-// No manual table creation needed - BetterAuth handles migrations
-console.log('[startup] BetterAuth will auto-create tables on first use');
-
-// Initialize sharing tables
-initDb(sqliteDb);
-
-// Initialize agent asynchronously in the background (non-blocking)
-// Agent is optional - server will work without it, sharing features will be disabled
-initAgent().catch((error) => {
-  console.error('Failed to start Jazz agent:', error);
-  console.log('Server will continue running, but sharing features will be unavailable');
-});
-
-// Express server
-const app = express();
-
-// Trust proxy headers (X-Forwarded-Host, X-Forwarded-Proto)
-// Required for multi-domain OAuth to work correctly behind Apache proxy
-app.set('trust proxy', true);
-
-// Security headers (helmet.js)
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        connectSrc: [
-          "'self'",
-          'wss://cloud.jazz.tools',
-          'https://cloud.jazz.tools',
-          process.env.FRONTEND_URL || 'http://localhost:5173',
-        ].filter(Boolean) as string[],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        fontSrc: ["'self'", 'data:'],
-        frameSrc: ["'none'"],
-        frameAncestors: ["'self'"], // Clickjacking protection
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
-      },
-    },
-    // Clickjacking protection via X-Frame-Options
-    frameguard: {
-      action: 'sameorigin',
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-    crossOriginEmbedderPolicy: false, // Required for some OAuth flows
-  }),
-);
-
-// Health check endpoint (before CORS for monitoring accessibility)
-// This allows health checks from load balancers, monitoring systems, etc.
-// Available at both /health and /api/health for flexibility
-app.get(['/health', '/api/health'], (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    features: {
-      sharing: isAgentReady(),
-      billing: !!process.env.STRIPE_SECRET_KEY,
-    },
-  });
-});
-
-// CORS configuration (MUST come before Better Auth handler)
-// Allow multiple localhost ports for development + production domains
-const allowedOrigins = [
-  'http://localhost:8765',
-  'http://localhost:8766',
-  'http://localhost:5173',
-  'https://checklist-app.rkroll.com',
-  process.env.FRONTEND_URL,
-  'https://appleid.apple.com',  // Apple OAuth callback
-].filter(Boolean);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests without Origin header (OAuth callbacks, same-origin navigation)
-      // Security is enforced via CSRF tokens and cookie settings, not Origin
-      if (!origin) {
-        return callback(null, true);
+const config: BackendConfig = {
+  port: Number(process.env.PORT) || 3001,
+  frontendUrl,
+  baseUrl: frontendUrl,
+  dbPath,
+  authSecret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me',
+  appName: 'CheckList',
+  jazzApiKey: process.env.JAZZ_API_KEY,
+  jazzAgentAccountId: process.env.JAZZ_AGENT_ACCOUNT_ID,
+  jazzAgentSecret: process.env.JAZZ_AGENT_SECRET,
+  trustedOrigins: [
+    'http://localhost:8765',
+    'http://localhost:8766',
+    'http://localhost:5173',
+    'https://checklist-app.rkroll.com',
+    'https://appleid.apple.com',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ],
+  providers: [
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [{
+          name: 'google',
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          scopes: ['openid', 'email'],
+          options: { prompt: 'select_account', disableDefaultScopes: true },
+        }]
+      : []),
+    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+      ? [{
+          name: 'apple',
+          clientId: process.env.APPLE_CLIENT_ID,
+          clientSecret: process.env.APPLE_CLIENT_SECRET,
+          scopes: ['name', 'email'],
+        }]
+      : []),
+  ],
+  smtp: process.env.SMTP_HOST
+    ? {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || '',
+        from: process.env.EMAIL_FROM || 'CheckList <invite@checklist.rkroll.com>',
       }
+    : undefined,
+  emailAuth: {
+    enabled: true,
+    requireEmailVerification: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+  },
+  accountLinking: { enabled: true, trustedProviders: ['google', 'apple'] },
+  // Stripe webhook needs the raw body before express.json() (registered via this hook).
+  registerRawRoutes: (app, db) => {
+    setupStripeWebhook(app, db);
+  },
+  // Account deletion is mounted by createHierarchyServer; this cleans checklist's
+  // billing tables inside the same deletion transaction.
+  accountDeletionCleanup: (db, userId, _email) => {
+    db.prepare('DELETE FROM usage_snapshot WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_subscription WHERE user_id = ?').run(userId);
+  },
+};
 
-      // Use exact match instead of startsWith to prevent subdomain attacks
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`[CORS] Rejected origin: ${origin}`);
-        callback(null, false);
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  }),
-);
+const server = createHierarchyServer(config);
+server.app.set('trust proxy', true);
 
-// Request logging middleware with request ID
-app.use((req, res, next) => {
-  // Validate client-provided request ID format (UUID only) to prevent log injection
-  const clientRequestId = req.headers['x-request-id'] as string;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const requestId = (clientRequestId && uuidRegex.test(clientRequestId)) ? clientRequestId : crypto.randomUUID();
-  req.id = requestId;
-  res.setHeader('x-request-id', requestId);
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [${requestId}] ${req.method} ${req.url}`);
-  next();
-});
+// Checklist-specific billing tables + Stripe price sync.
+initBillingDb(server.db);
 
-// CSRF protection middleware for state-changing requests
-app.use((req, res, next) => {
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    // Skip CSRF check for BetterAuth routes (handled separately)
-    if (req.url.startsWith('/api/auth')) {
-      return next();
-    }
-    // Skip CSRF check for Stripe webhook (verified via signature)
-    if (req.url === '/api/webhooks/stripe') {
-      return next();
-    }
-    // Require X-Requested-With header for all other state-changing requests
-    if (!req.headers['x-requested-with']) {
-      console.warn(`[CSRF] Missing X-Requested-With header for ${req.method} ${req.url}`);
-      return ApiErrors.forbidden(res, 'Missing required header');
-    }
-  }
-  next();
-});
-
-// BetterAuth handler - MUST come before express.json()
-// Uses per-origin auth instances for multi-domain OAuth support
-app.use('/api/auth', (req, res) => {
-  const origin = getOriginFromRequest(req.headers);
-  const authInstance = getAuthForOrigin(origin);
-  return toNodeHandler(authInstance)(req, res);
-});
-
-// Stripe webhook - MUST come before express.json() for raw body access
-setupStripeWebhook(app, sqliteDb);
-
-// Parse JSON bodies (AFTER Better Auth handler and Stripe webhook)
-// Limit body size to prevent DoS attacks via large payloads
-app.use(express.json({ limit: '100kb' }));
-app.use(express.urlencoded({ extended: true, limit: '100kb' }));
-
-// Sharing routes
-setupSharingRoutes(app, sqliteDb);
-
-// Verified emails routes
-setupVerifiedEmailRoutes(app, sqliteDb);
-
-// Billing routes
-setupBillingRoutes(app, sqliteDb, auth);
-
-// Limit check route (uses jbr-jazz billing-backend with app-specific callback)
-setupLimitCheckRoute(app, sqliteDb, auth, {
-  getUsage: (db, userId, tier, status) => {
-    // CheckList counts template folders (lists) from usage_snapshot
-    // The frontend periodically records usage via POST /api/billing/usage
-    const result = db.prepare(`
-      SELECT item_count FROM usage_snapshot
-      WHERE user_id = ?
-      ORDER BY recorded_at DESC
-      LIMIT 1
-    `).get(userId) as { item_count: number } | undefined;
-
-    return {
-      currentCount: result?.item_count ?? 0,
-      resourceName: 'lists',
-    };
+// Billing routes (JSON body already mounted by the package).
+setupBillingRoutes(server.app, server.db, server.auth);
+setupLimitCheckRoute(server.app, server.db, server.auth, {
+  getUsage: (db, userId, _tier, _status) => {
+    const result = db
+      .prepare('SELECT item_count FROM usage_snapshot WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 1')
+      .get(userId) as { item_count: number } | undefined;
+    return { currentCount: result?.item_count ?? 0, resourceName: 'lists' };
   },
   formatMessage: (response) => {
-    if (response.status === 'beta') {
-      return `Beta: ${response.currentCount} of ${response.maxAllowed} lists (Plus tier limits during beta)`;
-    }
-    if (response.atLimit) {
-      return `You've reached your limit of ${response.maxAllowed} lists. Upgrade your plan to create more.`;
-    }
-    if (response.approachingLimit) {
-      return `${response.remaining} lists remaining. Consider upgrading for more.`;
-    }
-    if (response.maxAllowed === -1) {
-      return `${response.currentCount} lists (unlimited)`;
-    }
+    if (response.status === 'beta') return `Beta: ${response.currentCount} of ${response.maxAllowed} lists (Plus tier limits during beta)`;
+    if (response.atLimit) return `You've reached your limit of ${response.maxAllowed} lists. Upgrade your plan to create more.`;
+    if (response.approachingLimit) return `${response.remaining} lists remaining. Consider upgrading for more.`;
+    if (response.maxAllowed === -1) return `${response.currentCount} lists (unlimited)`;
     return `${response.currentCount} of ${response.maxAllowed} lists`;
   },
 });
 
-// Account deletion endpoint
-// Deletes the user's BetterAuth account and all associated data
-// Jazz data becomes inaccessible since account keys are deleted with the user
-app.delete('/api/account', async (req, res) => {
-  try {
-    // Get session from BetterAuth
-    const session = await auth.api.getSession({
-      headers: req.headers as Record<string, string>,
-    });
-
-    if (!session?.user?.id) {
-      return ApiErrors.unauthorized(res);
-    }
-
-    const userId = session.user.id;
-    const userEmail = session.user.email;
-
-    // Log with masked email for privacy
-    const maskedEmail = userEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-    console.log(`[account-deletion] Deleting account for user ${userId.slice(0, 8)}... (${maskedEmail})`);
-
-    // Use a transaction to ensure atomic deletion
-    const deleteAccount = sqliteDb.transaction(() => {
-      // Delete any share invites sent by or to this user
-      sqliteDb.prepare('DELETE FROM share_invites WHERE sender_email = ? OR recipient_email = ?').run(userEmail, userEmail);
-
-      // Delete verified emails (should cascade, but be explicit)
-      sqliteDb.prepare('DELETE FROM verified_email WHERE user_id = ?').run(userId);
-
-      // Delete subscription and usage data (should cascade, but be explicit)
-      sqliteDb.prepare('DELETE FROM usage_snapshot WHERE user_id = ?').run(userId);
-      sqliteDb.prepare('DELETE FROM user_subscription WHERE user_id = ?').run(userId);
-
-      // Delete the user - this cascades to sessions and OAuth accounts
-      // The Jazz account keys (stored in user.accountID) are also deleted,
-      // making the user's Jazz data inaccessible
-      sqliteDb.prepare('DELETE FROM user WHERE id = ?').run(userId);
-    });
-
-    deleteAccount();
-
-    console.log(`[account-deletion] Successfully deleted account for user ${userId.slice(0, 8)}...`);
-
-    res.json({ success: true, message: 'Account deleted successfully' });
-  } catch (error) {
-    console.error('[account-deletion] Error deleting account:', error);
-    return ApiErrors.serverError(res, 'Failed to delete account');
-  }
-});
-
-const PORT = process.env.PORT || 3001;
-
-app.listen(PORT, () => {
-  console.log(`🔐 BetterAuth server running on port ${PORT}`);
-  console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-});
+server.start();

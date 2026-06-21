@@ -220,7 +220,9 @@ export default defineConfig({
     port: 8765,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        // Use 127.0.0.1 (not 'localhost'): createHierarchyServer binds IPv4-only
+        // (127.0.0.1), and 'localhost' can resolve to ::1 (IPv6) first → ECONNREFUSED.
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
         // Ensure custom headers are forwarded (critical for Jazz BetterAuth plugin)
         configure: (proxy, _options) => {

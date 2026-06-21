@@ -5,7 +5,9 @@
  * Run this before starting the backend server
  */
 
-import { sqliteDb } from './auth.js';
+import Database from 'better-sqlite3';
+const dbPath = process.env.AUTH_DB_PATH || (process.env.NODE_ENV === 'production' ? './data/auth.db' : './auth.db');
+const sqliteDb = new Database(dbPath);
 
 console.log('[migrate-auth] Checking BetterAuth tables...');
 

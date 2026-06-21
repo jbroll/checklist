@@ -6,7 +6,7 @@
 
 import Database from 'better-sqlite3';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { initDb } from '../src/db.js';
+import { initBillingDb } from '../src/db.js';
 import {
   canCreateList,
   getListsRemaining,
@@ -45,7 +45,7 @@ beforeAll(() => {
   `);
 
   // Initialize subscription tables
-  initDb(db);
+  initBillingDb(db);
 });
 
 afterAll(() => {
@@ -105,7 +105,7 @@ describe('Stripe Price ID Sync', () => {
     process.env.STRIPE_PRICE_PREMIUM = 'price_test_premium_456';
 
     // Re-init to trigger sync
-    initDb(db);
+    initBillingDb(db);
 
     const plusTier = getTier(db, 'plus');
     const premiumTier = getTier(db, 'premium');
@@ -134,7 +134,7 @@ describe('Stripe Price ID Sync', () => {
     delete process.env.STRIPE_PRICE_PLUS;
 
     // Re-init
-    initDb(db);
+    initBillingDb(db);
 
     const plusTier = getTier(db, 'plus');
     expect(plusTier?.stripePriceId).toBeNull();
