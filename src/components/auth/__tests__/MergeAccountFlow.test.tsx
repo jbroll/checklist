@@ -17,7 +17,7 @@ vi.mock('@/lib/auth-client', () => ({
   betterAuthClient: { signOut: vi.fn(), signIn: { social: vi.fn(), email: vi.fn() } },
 }));
 vi.mock('@/jazz', () => ({
-  useAccount: () => ({ me: { $jazz: { id: 'co_target' }, root: { folders: [] } } }),
+  useAccount: () => ({ $jazz: { id: 'co_target' }, root: { folders: [] } }),
 }));
 vi.mock('@/schema', () => ({
   Account: {},

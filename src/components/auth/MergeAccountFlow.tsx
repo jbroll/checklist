@@ -1,5 +1,5 @@
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useAccount } from '@/jazz';
 import {
   adoptFolders,
@@ -24,15 +24,9 @@ type FlowState =
   | 'mismatch';
 
 export default function MergeAccountFlow() {
-  // The real `@/jazz` useAccount (jazz-tools 0.20.x) returns the loaded account
-  // directly, while the test mock returns `{ me }`. Reconcile both shapes: prefer
-  // an explicit `.me` property if present, otherwise treat the result as the
-  // account itself. Kept as `any` to match the merge helper signatures (the
-  // codebase casts Jazz accounts to `any` at every call site — see AuthGate).
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz MaybeLoaded type requires runtime checks
-  const accountResult = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
   // biome-ignore lint/suspicious/noExplicitAny: Jazz account passed to merge helpers
-  const me: any = accountResult?.me ?? accountResult ?? null;
+  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  const hasRun = useRef(false);
   const [flowState, setFlowState] = useState<FlowState>('processing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mergeNonce, setMergeNonce] = useState<string | null>(null);
@@ -41,16 +35,19 @@ export default function MergeAccountFlow() {
 
   useEffect(() => {
     async function handleMergeFlow() {
+      if (!me) {
+        // Account not yet loaded — wait
+        return;
+      }
+
+      if (hasRun.current) return;
+      hasRun.current = true;
+
       const state = loadMergeState();
 
       if (!state) {
         // No saved merge state — show entry screen
         setFlowState('entry');
-        return;
-      }
-
-      if (!me) {
-        // Account not yet loaded — wait
         return;
       }
 
@@ -99,10 +96,6 @@ export default function MergeAccountFlow() {
     handleMergeFlow();
   }, [me]);
 
-  const callbackURL = mergeNonce
-    ? `${window.location.origin}/?merge=${mergeNonce}`
-    : window.location.href;
-
   async function handleStartMerge() {
     setFlowState('processing');
     try {
@@ -118,12 +111,15 @@ export default function MergeAccountFlow() {
   }
 
   async function handleSocialSignIn(provider: 'google' | 'apple') {
+    if (!mergeNonce) return;
+    const callbackURL = `${window.location.origin}/?merge=${mergeNonce}`;
     await betterAuthClient.signIn.social({ provider, callbackURL });
   }
 
   async function handleEmailSignIn(e: FormEvent) {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || !mergeNonce) return;
+    const callbackURL = `${window.location.origin}/?merge=${mergeNonce}`;
     setErrorMessage(null);
     try {
       await betterAuthClient.signIn.email({ email, password, callbackURL });
