@@ -107,6 +107,9 @@ const BillingCancelPage = lazy(() =>
   })),
 );
 
+// Lazy load MergeAccountFlow for account merge
+const MergeAccountFlow = lazy(() => import('./components/auth/MergeAccountFlow'));
+
 // Lazy load Jazz Inspector to avoid bundling it unnecessarily
 const JazzInspector = lazy(() =>
   import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
@@ -178,6 +181,7 @@ function App() {
   const isBillingCancel = pathname === '/billing/cancel';
   const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
   const inviteToken = inviteMatch ? inviteMatch[1] : null;
+  const isMergeFlow = new URLSearchParams(window.location.search).get('merge') !== null;
 
   // Block test page in production
   if (isTestPage && import.meta.env.PROD) {
@@ -246,6 +250,10 @@ function App() {
             ) : isTestPage ? (
               <Suspense fallback={<LoadingScreen />}>
                 <TestPage />
+              </Suspense>
+            ) : isMergeFlow ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <MergeAccountFlow />
               </Suspense>
             ) : (
               <AuthGate />

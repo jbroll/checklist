@@ -159,6 +159,17 @@ export function LinkedEmailsSection() {
         </div>
       ))}
 
+      {/* Merge another account */}
+      <button
+        type="button"
+        onClick={() => {
+          window.location.href = '/?merge=start';
+        }}
+        className="text-sm text-content-secondary underline hover:text-content-primary"
+      >
+        Combine another account into this one
+      </button>
+
       {/* Add new email */}
       <div className="flex gap-2">
         <input
