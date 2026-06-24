@@ -2,8 +2,8 @@
  * Invite Helper — drives the authenticated Share dialog UI for invite E2E.
  *
  * Selectors follow src/components/sharing/ShareDialog.tsx (input #email,
- * select#permission, "Get Link" button, readonly shareUrl input) and the
- * folder-row menu pattern from e2e/sharing-ui.spec.ts.
+ * select#permission, the "Email invite" delivery button, readonly shareUrl
+ * input) and the folder-row menu pattern from e2e/sharing-ui.spec.ts.
  */
 import { expect, type Page } from '@playwright/test';
 
@@ -34,7 +34,12 @@ export async function openShareDialog(page: Page, folderName: string): Promise<v
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
 }
 
-/** Generate a real copy-link invite; returns the shareUrl. */
+/**
+ * Generate a real invite via the "Email invite" action (desktop primary: headless
+ * Chromium has no Web Share). This both creates the invite and sends the email
+ * (sendEmail=true), matching the closed-loop test's GreenMail expectation.
+ * Returns the shareUrl.
+ */
 export async function generateInvite(
   page: Page,
   recipientEmail: string,
@@ -42,8 +47,8 @@ export async function generateInvite(
 ): Promise<string> {
   await page.locator('#email').fill(recipientEmail);
   await page.locator('select#permission').selectOption(permission);
-  await page.getByRole('button', { name: 'Get Link' }).click();
-  await expect(page.getByText(/invite link generated/i)).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button', { name: 'Email invite' }).click();
+  await expect(page.getByText(/invite emailed to/i)).toBeVisible({ timeout: 20000 });
   const linkInput = page.locator('input[value*="/invite/"]');
   await expect(linkInput).toBeVisible({ timeout: 10000 });
   const url = await linkInput.inputValue();

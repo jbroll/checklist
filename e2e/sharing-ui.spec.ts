@@ -130,28 +130,29 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=pending2@example.com')).toBeVisible();
   });
 
-  test('should have disabled Get Link button when email is empty', async ({ page }) => {
+  test('should have disabled delivery buttons when email is empty', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Find Get Link button and verify it's disabled
-    const getLinkButton = page.getByRole('button', { name: 'Get Link' });
-    await expect(getLinkButton).toBeDisabled();
+    // Both delivery actions are visible but disabled until a recipient is entered.
+    // Headless Chromium has no Web Share, so the primary button is "Email invite".
+    await expect(page.getByRole('button', { name: 'Copy link' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Email invite' })).toBeDisabled();
   });
 
-  test('should enable Get Link button when valid email is entered', async ({ page }) => {
+  test('should enable delivery buttons when valid email is entered', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Enter email
     await page.locator('input#email').fill('newuser@example.com');
 
-    // Get Link button should be enabled
-    const getLinkButton = page.getByRole('button', { name: 'Get Link' });
-    await expect(getLinkButton).toBeEnabled();
+    // Delivery buttons should be enabled
+    await expect(page.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Email invite' })).toBeEnabled();
   });
 
-  test('should generate invite link when clicking Get Link', async ({ page }) => {
+  test('should generate invite link when clicking Email invite', async ({ page }) => {
     // Mock the invite creation endpoint
     await page.route('**/api/shares/invite', (route) => {
       route.fulfill({
@@ -168,12 +169,12 @@ test.describe('Share Dialog UI', () => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Enter email and click Get Link
+    // Enter email and click Email invite (desktop primary action)
     await page.locator('input#email').fill('newuser@example.com');
-    await page.getByRole('button', { name: 'Get Link' }).click();
+    await page.getByRole('button', { name: 'Email invite' }).click();
 
-    // Verify success message and link display
-    await expect(page.locator('text=Invite link generated!')).toBeVisible();
+    // Verify confirmation message and link display
+    await expect(page.locator('text=Invite emailed to newuser@example.com')).toBeVisible();
     await expect(page.locator('input[value*="/invite/new-invite-token-123"]')).toBeVisible();
   });
 
@@ -196,9 +197,9 @@ test.describe('Share Dialog UI', () => {
     // Wait for loading to complete
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Enter email and click Get Link
+    // Enter email and click Email invite (desktop primary action)
     await page.locator('input#email').fill('newuser@example.com');
-    await page.getByRole('button', { name: 'Get Link' }).click();
+    await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify error message (with longer timeout to allow for API call)
     await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible({ timeout: 10000 });
