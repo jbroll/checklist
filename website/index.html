@@ -13,20 +13,20 @@
            ======================================== */
 
         :root {
-            /* Primary (Brand) - Teal */
-            --primary-50: #f0fdfa;
-            --primary-100: #ccfbf1;
-            --primary-400: #5CBDBD;
-            --primary-500: #3D9E9E;
-            --primary-600: #2d7a7a;
-            --primary-700: #1e5555;
+            /* Primary (Brand) - Purple */
+            --primary-50: #f5f0ff;
+            --primary-100: #ede9fe;
+            --primary-400: #a855f7;
+            --primary-500: #8b5cf6;
+            --primary-600: #7c3aed;
+            --primary-700: #6d28d9;
 
-            /* Accent - Indigo (Option C) */
-            --accent-50: #eef2ff;
-            --accent-100: #e0e7ff;
-            --accent-400: #818cf8;
-            --accent-500: #6366f1;
-            --accent-600: #4f46e5;
+            /* Accent - Purple */
+            --accent-50: #f5f0ff;
+            --accent-100: #ede9fe;
+            --accent-400: #a855f7;
+            --accent-500: #8b5cf6;
+            --accent-600: #7c3aed;
 
             /* Neutral */
             --neutral-50: #f9fafb;
@@ -45,21 +45,20 @@
             --warning: #f59e0b;
             --error: #ef4444;
 
-            /* Light theme (default) */
-            --bg-page: var(--neutral-50);
+            /* Light editorial theme (default) */
+            --bg-page: #eef0f3;
             --bg-card: #ffffff;
             --bg-card-hover: #ffffff;
-            --text-primary: var(--neutral-900);
-            --text-secondary: var(--neutral-600);
+            --text-primary: #111827;
+            --text-secondary: #5b6573;
             --text-muted: var(--neutral-400);
-            --border-color: var(--neutral-200);
+            --border-color: #e2e5ea;
             --shadow-color: rgba(0, 0, 0, 0.08);
 
-            /* Component colors */
-            --hero-gradient-start: var(--primary-400);
-            --hero-gradient-end: var(--primary-500);
-            --hero-text: #ffffff;
-            --hero-text-muted: #a7f3f3;
+            /* Light editorial hero (canvas bg, ink text, purple accents) */
+            --hero-bg: #eef0f3;
+            --hero-text: #111827;
+            --hero-text-muted: #5b6573;
             --btn-primary-bg: var(--primary-500);
             --btn-primary-bg-hover: var(--primary-600);
             --btn-primary-text: #ffffff;
@@ -92,8 +91,9 @@
             --border-color: var(--neutral-700);
             --shadow-color: rgba(0, 0, 0, 0.3);
 
-            --hero-gradient-start: var(--primary-600);
-            --hero-gradient-end: var(--primary-700);
+            --hero-bg: var(--neutral-900);
+            --hero-text: var(--neutral-50);
+            --hero-text-muted: var(--neutral-300);
             --feature-icon-bg: var(--accent-600);
             --feature-icon-color: var(--accent-100);
             --nav-bg: var(--neutral-800);
@@ -128,36 +128,8 @@
             --accent-600: #d97706;
         }
 
-        /* Auto-detect system dark mode preference */
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) {
-                --bg-page: var(--neutral-900);
-                --bg-card: var(--neutral-800);
-                --bg-card-hover: var(--neutral-700);
-                --text-primary: var(--neutral-50);
-                --text-secondary: var(--neutral-300);
-                --text-muted: var(--neutral-500);
-                --border-color: var(--neutral-700);
-                --shadow-color: rgba(0, 0, 0, 0.3);
-
-                --hero-gradient-start: var(--primary-600);
-                --hero-gradient-end: var(--primary-700);
-                --feature-icon-bg: var(--accent-600);
-                --feature-icon-color: var(--accent-100);
-                --nav-bg: var(--neutral-800);
-                --footer-bg: #0a0a0a;
-
-                /* Dark illustration colors */
-                --illustration-bg: var(--neutral-700);
-                --illustration-card-bg: var(--neutral-600);
-                --illustration-card-border: var(--neutral-500);
-                --illustration-text: var(--neutral-100);
-                --illustration-text-muted: var(--neutral-300);
-                --illustration-text-faint: var(--neutral-400);
-                --illustration-highlight: var(--primary-700);
-                --illustration-accent: var(--primary-100);
-            }
-        }
+        /* Light-only to stay consistent with the rest of the rkroll family.
+           Manual setTheme('dark') still works for opt-in; no auto dark mode. */
 
         /* ========================================
            BASE STYLES
@@ -170,7 +142,8 @@
         }
 
         .gradient-bg {
-            background: linear-gradient(135deg, var(--hero-gradient-start) 0%, var(--hero-gradient-end) 100%);
+            background: var(--hero-bg);
+            color: var(--hero-text);
         }
 
         .feature-card {
@@ -258,41 +231,42 @@
     </script>
 
     <!-- Hero Section -->
-    <section class="gradient-bg text-white py-12 md:py-16">
+    <section class="gradient-bg py-14 md:py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h1 class="text-3xl md:text-5xl font-bold mb-6">
+                <span class="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-5" style="background-color: var(--primary-50); color: var(--primary-600);">Beta</span>
+                <h1 class="text-3xl md:text-5xl font-bold mb-6 tracking-tight" style="color: var(--hero-text);">
                     Simple Shared Checklists
                 </h1>
                 <!-- Use cases + CTA -->
                 <div class="flex flex-wrap justify-center items-center gap-4 max-w-4xl mx-auto">
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🛒</span>
-                        <div class="text-cyan-100 text-base mt-1">Groceries</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Groceries</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🧳</span>
-                        <div class="text-cyan-100 text-base mt-1">Packing</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Packing</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🏕️</span>
-                        <div class="text-cyan-100 text-base mt-1">Camping</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Camping</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🐕</span>
-                        <div class="text-cyan-100 text-base mt-1">Pet Care</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Pet Care</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🧹</span>
-                        <div class="text-cyan-100 text-base mt-1">Cleaning</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Cleaning</div>
                     </div>
-                    <div class="bg-white/10 rounded-lg px-4 py-3 text-center">
+                    <div class="rounded-lg px-4 py-3 text-center border" style="background-color: var(--bg-card); border-color: var(--border-color);">
                         <span class="text-4xl">🚀</span>
-                        <div class="text-cyan-100 text-base mt-1">Launches</div>
+                        <div class="text-base mt-1" style="color: var(--hero-text-muted);">Launches</div>
                     </div>
-                    <a href="https://checklist-app.rkroll.com" class="rounded-lg px-4 py-3 text-center transition" style="background-color: var(--primary-50);" onmouseover="this.style.backgroundColor='var(--primary-100)'" onmouseout="this.style.backgroundColor='var(--primary-50)'">
+                    <a href="https://checklist-app.rkroll.com" class="rounded-lg px-4 py-3 text-center transition" style="background-color: var(--primary-600);" onmouseover="this.style.backgroundColor='var(--primary-700)'" onmouseout="this.style.backgroundColor='var(--primary-600)'">
                         <span class="text-4xl">✨</span>
-                        <div class="text-teal-600 text-base font-medium mt-1">Try Free</div>
+                        <div class="text-white text-base font-medium mt-1">Try Free</div>
                     </a>
                 </div>
             </div>
@@ -323,14 +297,14 @@
                         <div class="flex items-center justify-between gap-2">
                             <div class="illustration-card rounded-lg p-2 shadow-sm border flex-1">
                                 <div class="flex items-center gap-1 mb-1">
-                                    <div class="w-4 h-4 rounded-full bg-teal-500 flex items-center justify-center">
+                                    <div class="w-4 h-4 rounded-full bg-violet-600 flex items-center justify-center">
                                         <span class="text-[8px] text-white font-bold">You</span>
                                     </div>
                                     <span class="text-[10px] illustration-text-muted">Phone</span>
                                 </div>
                                 <div class="text-[10px] space-y-0.5">
                                     <div class="flex items-center gap-1">
-                                        <div class="w-2.5 h-2.5 rounded border-2 border-teal-500 bg-teal-500"></div>
+                                        <div class="w-2.5 h-2.5 rounded border-2 border-violet-600 bg-violet-600"></div>
                                         <span class="illustration-text-faint line-through">Milk</span>
                                     </div>
                                     <div class="flex items-center gap-1">
@@ -340,10 +314,10 @@
                                 </div>
                             </div>
                             <div class="flex flex-col items-center gap-0.5">
-                                <svg class="w-3 h-3 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3 h-3 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                                 </svg>
-                                <span class="text-[8px] text-teal-600">sync</span>
+                                <span class="text-[8px] text-violet-700">sync</span>
                             </div>
                             <div class="illustration-card rounded-lg p-2 shadow-sm border flex-1">
                                 <div class="flex items-center gap-1 mb-1">
@@ -354,7 +328,7 @@
                                 </div>
                                 <div class="text-[10px] space-y-0.5">
                                     <div class="flex items-center gap-1">
-                                        <div class="w-2.5 h-2.5 rounded border-2 border-teal-500 bg-teal-500"></div>
+                                        <div class="w-2.5 h-2.5 rounded border-2 border-violet-600 bg-violet-600"></div>
                                         <span class="illustration-text-faint line-through">Milk</span>
                                     </div>
                                     <div class="flex items-center gap-1">
@@ -390,11 +364,11 @@
                                 <div class="text-[9px] illustration-text font-medium mb-1">Groceries</div>
                                 <div class="text-[10px] space-y-0.5">
                                     <div class="flex items-center gap-1">
-                                        <div class="w-2.5 h-2.5 rounded border-2 border-teal-500 bg-teal-500"></div>
+                                        <div class="w-2.5 h-2.5 rounded border-2 border-violet-600 bg-violet-600"></div>
                                         <span class="illustration-text-faint line-through">Milk</span>
                                     </div>
                                     <div class="flex items-center gap-1">
-                                        <div class="w-2.5 h-2.5 rounded border-2 border-teal-500 bg-teal-500"></div>
+                                        <div class="w-2.5 h-2.5 rounded border-2 border-violet-600 bg-violet-600"></div>
                                         <span class="illustration-text-faint line-through">Bread</span>
                                     </div>
                                     <div class="flex items-center gap-1">
@@ -448,7 +422,7 @@
                                 </div>
                             </div>
                             <!-- Shield icon -->
-                            <svg class="w-12 h-12 text-teal-500" fill="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-12 h-12 text-violet-600" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                 <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -504,15 +478,15 @@
                             <div class="illustration-card rounded-lg p-2 shadow-sm border flex-1">
                                 <div class="text-[10px] illustration-text-muted">Your List</div>
                                 <div class="text-xs font-semibold illustration-text">"Weekly Groceries"</div>
-                                <div class="text-[10px] text-teal-600 mt-0.5">Never changes</div>
+                                <div class="text-[10px] text-violet-700 mt-0.5">Never changes</div>
                             </div>
                             <svg class="w-4 h-4 illustration-text-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
                             <div class="flex flex-col gap-1.5 flex-1">
-                                <div class="illustration-card rounded p-1.5 shadow-sm border-2 border-teal-300">
+                                <div class="illustration-card rounded p-1.5 shadow-sm border-2 border-violet-300">
                                     <div class="text-[10px] illustration-text-muted">This week</div>
-                                    <div class="text-[10px] text-teal-600">18/24 done</div>
+                                    <div class="text-[10px] text-violet-700">18/24 done</div>
                                 </div>
                                 <div class="illustration-card rounded p-1.5 shadow-sm border">
                                     <div class="text-[10px] illustration-text-muted">Last week</div>
@@ -544,7 +518,7 @@
                             <span class="illustration-text">ban</span><span class="illustration-text-faint">|</span>
                         </div>
                         <div class="illustration-card rounded border mt-1 shadow-sm">
-                            <div class="px-2 py-1 text-[11px] border-l-2 border-teal-500 flex justify-between" style="background-color: var(--illustration-highlight);">
+                            <div class="px-2 py-1 text-[11px] border-l-2 border-violet-600 flex justify-between" style="background-color: var(--illustration-highlight);">
                                 <span class="font-medium illustration-text">Bananas</span>
                                 <span class="illustration-text-faint">Produce</span>
                             </div>
@@ -579,13 +553,13 @@
                     <div class="illustration-area rounded-lg p-3 mt-2">
                         <div class="flex flex-col gap-1 text-[11px]">
                             <div class="flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="w-3.5 h-3.5 text-violet-700" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                                 </svg>
                                 <span class="font-medium illustration-text">Stores</span>
                             </div>
                             <div class="flex items-center gap-1.5 ml-4">
-                                <svg class="w-3.5 h-3.5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="w-3.5 h-3.5 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                                 </svg>
                                 <span class="illustration-text-muted">Costco</span>
@@ -632,10 +606,10 @@
                             </div>
                             <!-- Sealed envelope in transit -->
                             <div class="flex flex-col items-center px-1">
-                                <svg class="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
-                                <svg class="w-2.5 h-2.5 text-teal-600 -mt-2" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="w-2.5 h-2.5 text-violet-700 -mt-2" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
                                 </svg>
                             </div>

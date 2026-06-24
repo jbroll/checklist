@@ -103,10 +103,10 @@ const styles = `
         .prose p { color: #374151; margin-bottom: 1rem; line-height: 1.7; }
         .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; color: #374151; }
         .prose li { margin-bottom: 0.25rem; }
-        .prose a { color: #0d9488; text-decoration: underline; }
-        .prose a:hover { color: #0f766e; }
-        .prose hr { border-color: #d1d5db; margin: 2rem 0; }
-        .prose blockquote { background: #f0fdfa; border-left: 4px solid #14b8a6; padding: 1rem; margin: 1rem 0; color: #115e59; }
+        .prose a { color: #7c3aed; text-decoration: underline; }
+        .prose a:hover { color: #6d28d9; }
+        .prose hr { border-color: #e2e5ea; margin: 2rem 0; }
+        .prose blockquote { background: #f5f0ff; border-left: 4px solid #7c3aed; padding: 1rem; margin: 1rem 0; color: #4c1d95; }
         .prose strong { font-weight: 600; }
         .prose em { font-style: italic; }
 `;
@@ -193,7 +193,7 @@ function generatePage(mdFile, htmlFile, title) {
     <style>${styles}
     </style>
 </head>
-<body class="bg-gray-50">
+<body style="background-color: #eef0f3;">
     <!-- Navigation -->
     <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -205,7 +205,7 @@ function generatePage(mdFile, htmlFile, title) {
                 </div>
                 <div class="flex items-center space-x-8">
                     ${navLinks}
-                    <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                    <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #7c3aed;">Try Free</a>
                 </div>
             </div>
         </div>
@@ -213,7 +213,7 @@ function generatePage(mdFile, htmlFile, title) {
 
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 prose">
+        <div class="bg-white rounded-lg shadow-sm border p-8 md:p-12 prose" style="border-color: #e2e5ea;">
             ${contentHtml}
         </div>
     </div>
@@ -226,7 +226,7 @@ function generatePage(mdFile, htmlFile, title) {
                     <p class="text-lg">&copy; 2025 <a href="http://rkroll.com" class="text-gray-400 hover:text-white">rkroll.com</a></p>
                     ${footerLinks}
                 </div>
-                <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #3D9E9E;">Try Free</a>
+                <a href="${brands.checklist.appUrl}" data-brand="appUrlHref" class="text-white px-4 py-2 rounded-lg text-sm font-medium transition" style="background-color: #7c3aed;">Try Free</a>
             </div>
         </div>
     </footer>
@@ -235,12 +235,16 @@ function generatePage(mdFile, htmlFile, title) {
 </html>
 `;
 
+  // Strip trailing whitespace per line and guarantee one final newline
+  // (the eof-whitespace commit gate rejects either).
+  const cleanHtml = `${fullHtml.split('\n').map((line) => line.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '')}\n`;
+
   const htmlPath = join(__dirname, htmlFile);
-  writeFileSync(htmlPath, fullHtml);
+  writeFileSync(htmlPath, cleanHtml);
 
   // Also write to public/ for the app
   const publicPath = join(__dirname, '..', 'public', htmlFile);
-  writeFileSync(publicPath, fullHtml);
+  writeFileSync(publicPath, cleanHtml);
 
   console.log(`Generated ${htmlFile} from ${mdFile}`);
 }
