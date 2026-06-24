@@ -11,6 +11,7 @@ import type { BackendConfig } from '@jbr-jazz/hierarchy-shared';
 import { createHierarchyServer } from '@jbr-jazz/hierarchy-backend';
 import { setupLimitCheckRoute } from '@jbr-jazz/billing-backend';
 import { initBillingDb } from './db.js';
+import { ensureAuthTables } from './migrate-auth.js';
 import { setupBillingRoutes, setupStripeWebhook } from './billing/routes.js';
 
 // Root .env first (shared config like JAZZ_API_KEY), then backend .env
@@ -92,6 +93,12 @@ const config: BackendConfig = {
 
 const server = createHierarchyServer(config);
 server.app.set('trust proxy', true);
+
+// Ensure BetterAuth tables exist before any request is served. The Jazz backend
+// does not create them, and the systemd unit launches dist/index.js directly
+// (bypassing the migrate-auth CLI) and is regenerated on each deploy, so this
+// must run here. Idempotent.
+ensureAuthTables(server.db);
 
 // Checklist-specific billing tables + Stripe price sync.
 initBillingDb(server.db);
