@@ -77,7 +77,7 @@ it('adoptFolders loads folders and pushes them into account.root.folders', async
   vi.spyOn(Account, 'load').mockResolvedValue({ id: 'co_source' } as never);
 
   const account = {
-    root: { folders: { push, some: vi.fn().mockReturnValue(false) } },
+    root: { folders: { $jazz: { push }, some: vi.fn().mockReturnValue(false) } },
   } as never;
 
   await adoptFolders(account, ['co_f1'], 'co_source_jazz_id');

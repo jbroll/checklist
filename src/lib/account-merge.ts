@@ -70,7 +70,9 @@ export async function shareTopLevelFoldersTo(
 }
 
 export async function adoptFolders(
-  account: JazzAccount & { root: { folders: { push: (f: unknown) => void } & JazzFolder[] } },
+  account: JazzAccount & {
+    root: { folders: { $jazz: { push: (f: unknown) => void } } & JazzFolder[] };
+  },
   folderIds: string[],
   sourceJazzId: string,
 ): Promise<void> {
@@ -78,7 +80,7 @@ export async function adoptFolders(
     if (account.root.folders.some((f) => f?.$jazz?.id === id)) continue; // idempotent
     const folder = await FolderNode.load(id, { loadAs: account as never });
     if (!folder) continue;
-    account.root.folders.push(folder);
+    account.root.folders.$jazz.push(folder);
     // Best-effort: drop the now-detached source identity from the group.
     try {
       const group = (folder as unknown as JazzFolder).$jazz.owner;
