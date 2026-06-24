@@ -26,6 +26,8 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:invite": "playwright test --project=invite",
     "test:e2e:invite:tunnel": "ssh -f -N -o ExitOnForwardFailure=yes -L 3025:127.0.0.1:3025 -L 3143:127.0.0.1:3143 gpu; SMTP_HOST=127.0.0.1 SMTP_PORT=3025 SMTP_USER=greenmail SMTP_PASS=greenmail IMAP_HOST=127.0.0.1 IMAP_PORT=3143 IMAP_USERNAME=greenmail IMAP_PASSWORD=greenmail IMAP_PER_RECIPIENT=1 playwright test --project=invite",
+    "test:e2e:merge": "playwright test --project=merge",
+    "test:e2e:merge:tunnel": "ssh -f -N -o ExitOnForwardFailure=yes -L 3025:127.0.0.1:3025 -L 3143:127.0.0.1:3143 gpu; SMTP_HOST=127.0.0.1 SMTP_PORT=3025 SMTP_USER=greenmail SMTP_PASS=greenmail IMAP_HOST=127.0.0.1 IMAP_PORT=3143 IMAP_USERNAME=greenmail IMAP_PASSWORD=greenmail IMAP_PER_RECIPIENT=1 playwright test --project=merge",
     "test:smoke:local": "SMOKE_TEST=true BASE_URL=http://localhost:8765 playwright test deploy-smoke",
     "test:smoke:test": "SMOKE_TEST=true BASE_URL=https://checklist-test.rkroll.com playwright test deploy-smoke",
     "test:smoke:prod": "SMOKE_TEST=true BASE_URL=https://checklist-app.rkroll.com playwright test deploy-smoke",

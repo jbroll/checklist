@@ -68,10 +68,16 @@ export default defineConfig({
       name: 'chromium',
       // Project-level testIgnore overrides the global one, so repeat the
       // deploy-smoke exclusion here. Invite + auth-setup specs run under their
-      // own projects (below), so exclude them from chromium too.
+      // own projects (below), so exclude them from chromium too. The merge
+      // closed-loop spec also runs under its own project.
       testIgnore: isSmokeTest
-        ? ['**/invite.setup.ts', '**/invite-closed-loop.spec.ts']
-        : ['**/deploy-smoke.spec.ts', '**/invite.setup.ts', '**/invite-closed-loop.spec.ts'],
+        ? ['**/invite.setup.ts', '**/invite-closed-loop.spec.ts', '**/account-merge.spec.ts']
+        : [
+            '**/deploy-smoke.spec.ts',
+            '**/invite.setup.ts',
+            '**/invite-closed-loop.spec.ts',
+            '**/account-merge.spec.ts',
+          ],
       use: { ...devices['Desktop Chrome'] },
     },
     ...(hasEmailInfra
@@ -90,6 +96,16 @@ export default defineConfig({
               // Default actor = organizer (test1); recipient/third-party specs
               // open their own context with the matching storageState.
               storageState: 'e2e/.auth/test1.json',
+            },
+          },
+          {
+            name: 'merge',
+            testMatch: /account-merge\.spec\.ts/,
+            dependencies: ['auth-setup'],
+            use: {
+              ...devices['Desktop Chrome'],
+              // No default storageState — the merge spec drives all sign-ins
+              // manually so that localStorage is preserved across transitions.
             },
           },
         ]
