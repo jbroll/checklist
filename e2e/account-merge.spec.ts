@@ -9,6 +9,9 @@
  *   - A signs in, shares folders → prepares merge → signs out.
  *   - B signs back in → adopts A's folders → finalize → success screen.
  *   - Assert B's tree shows BOTH folders.
+ *   - Finally, sign in with A's credentials in a fresh context and assert it now
+ *     lands on B's (merged) data — proving the source login repoints at the
+ *     target Jazz account.
  *
  * Requires the auth-setup project (e2e/.auth/test{1,2}.json) + GreenMail mail
  * infra (same as the invite closed-loop suite). When IMAP_HOST is absent the
@@ -24,7 +27,11 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { TEST_ACCOUNTS, loginTestUser, waitForHomeReady } from './helpers/auth-helper';
-import { archiveFolder, createFolder } from './helpers/invite-helper';
+import {
+  archiveFolder,
+  assertFolderVisibleWithReload,
+  createFolder,
+} from './helpers/invite-helper';
 import { uniqueFolderName } from './helpers/folder-name';
 
 const AUTH_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.auth');
@@ -67,6 +74,9 @@ test.describe('Account merge closed loop', () => {
       await page.goto('/');
       await waitForHomeReady(page);
       await createFolder(page, FOLDER_A);
+      // Let FOLDER_A fully sync to the server before closing this context, so the
+      // later share step (run as A) can find and re-share it.
+      await page.waitForTimeout(4000);
     } finally {
       await ctx.close();
     }
@@ -93,6 +103,10 @@ test.describe('Account merge closed loop', () => {
       }).toPass({ timeout: 30000 });
       await waitForHomeReady(page);
       await createFolder(page, FOLDER_B);
+      // Let FOLDER_B fully sync to the server before the merge signs B out — a
+      // CoValue created moments before signOut may not have reached the sync
+      // server, and B's post-merge cold-load would then miss it.
+      await page.waitForTimeout(4000);
 
       // --- Phase 2: Navigate to merge entry page -----------------------------
       // /?merge=start triggers MergeAccountFlow with no localStorage state → 'entry'
@@ -106,7 +120,7 @@ test.describe('Account merge closed loop', () => {
       // --- Phase 3: Click "Combine another account" → flow starts merge -------
       // This calls startMerge(), saves state to localStorage, signs out B,
       // then renders the "Sign in as the other account" screen.
-      await page.getByRole('button', { name: /combine another account/i }).click();
+      await page.getByTestId('merge-start').click();
       // After signOut the page may reload. Wait for the awaiting-source-login UI.
       await expect(page.getByRole('heading', { name: /sign in as the other account/i })).toBeVisible(
         { timeout: 30000 },
@@ -114,10 +128,10 @@ test.describe('Account merge closed loop', () => {
 
       // --- Phase 4: Sign in as A (source account) ----------------------------
       // Fill the email+password form in the MergeAccountFlow to sign in as A.
-      // The form uses plain <input> elements (not the standard sign-in dialog).
-      await page.locator('input[type="email"]').fill(TEST_ACCOUNTS.organizer.email);
-      await page.locator('input[type="password"]').fill(TEST_ACCOUNTS.organizer.password);
-      await page.getByRole('button', { name: /sign in with email/i }).click();
+      // The form uses MergeAccountFlow's own inline inputs (not SignInDialog).
+      await page.getByTestId('merge-login-email').fill(TEST_ACCOUNTS.organizer.email);
+      await page.getByTestId('merge-login-password').fill(TEST_ACCOUNTS.organizer.password);
+      await page.getByTestId('merge-login-submit').click();
 
       // After A signs in, the flow processes: shareTopLevelFoldersTo + prepareMerge,
       // then signs A out and shows the "Sign back into your main account" screen.
@@ -126,9 +140,9 @@ test.describe('Account merge closed loop', () => {
       ).toBeVisible({ timeout: 60000 });
 
       // --- Phase 5: Sign in as B (target account) ----------------------------
-      await page.locator('input[type="email"]').fill(TEST_ACCOUNTS.recipient.email);
-      await page.locator('input[type="password"]').fill(TEST_ACCOUNTS.recipient.password);
-      await page.getByRole('button', { name: /sign in with email/i }).click();
+      await page.getByTestId('merge-login-email').fill(TEST_ACCOUNTS.recipient.email);
+      await page.getByTestId('merge-login-password').fill(TEST_ACCOUNTS.recipient.password);
+      await page.getByTestId('merge-login-submit').click();
 
       // After B signs in, the flow verifies identity, adoptFolders, finalizeMerge.
       await expect(page.getByRole('heading', { name: /merge complete/i })).toBeVisible({
@@ -141,8 +155,29 @@ test.describe('Account merge closed loop', () => {
       await waitForHomeReady(page);
 
       // Both B's original folder AND A's adopted folder must appear in B's tree.
-      await expect(page.getByText(FOLDER_B).first()).toBeVisible({ timeout: 30000 });
-      await expect(page.getByText(FOLDER_A).first()).toBeVisible({ timeout: 30000 });
+      // Reload-retry absorbs Jazz adoption sync lag.
+      await assertFolderVisibleWithReload(page, FOLDER_B);
+      await assertFolderVisibleWithReload(page, FOLDER_A);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  /**
+   * Step 5: a fresh login with A's (source) credentials now opens B's (target)
+   * Jazz account. finalizeMerge repointed A's BetterAuth user at B's accountID +
+   * encryptedCredentials, so signing in as A must land on the merged data —
+   * both FOLDER_A and FOLDER_B visible.
+   */
+  test('A signs in fresh and lands on the merged (target) data', async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
+    try {
+      await loginTestUser(page, TEST_ACCOUNTS.organizer.email, TEST_ACCOUNTS.organizer.password);
+      await waitForHomeReady(page);
+      // A's login now resolves to B's Jazz account, which owns both folders.
+      await assertFolderVisibleWithReload(page, FOLDER_B);
+      await assertFolderVisibleWithReload(page, FOLDER_A);
     } finally {
       await ctx.close();
     }

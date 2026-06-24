@@ -79,6 +79,30 @@ export async function assertFolderVisible(page: Page, folderName: string): Promi
 }
 
 /**
+ * Assert a folder appears in the tree, reloading between polls to absorb Jazz
+ * cold-load / adoption sync lag (a freshly adopted CoValue can take a few seconds
+ * to materialize and the cached tree won't repaint without a reload).
+ */
+export async function assertFolderVisibleWithReload(
+  page: Page,
+  folderName: string,
+  attempts = 6,
+): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    const visible = await page
+      .getByText(folderName)
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    if (visible) return;
+    await page.reload();
+    await page.waitForLoadState('networkidle').catch(() => {});
+  }
+  // Final hard assertion (fails with a useful message if still missing).
+  await expect(page.getByText(folderName).first()).toBeVisible({ timeout: 10000 });
+}
+
+/**
  * Soft-delete (archive) a folder via its row menu. Best-effort cleanup with short
  * timeouts so a missing control never hangs the afterAll hook.
  */

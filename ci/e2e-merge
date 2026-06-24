@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# simple-ci entry: Playwright account-merge closed-loop (the `merge` project +
+# its `auth-setup` dependency only). Requires the GreenMail mail infra —
+# services.env's SMTP_HOST + IMAP_* make playwright.config's `hasEmailInfra`
+# true, which registers the auth-setup + merge projects. The merge spec drives
+# its own two-login sign-ins (no default storageState).
+# Invoked by: sci push checklist/e2e-merge
+set -euo pipefail
+WORKTREE="$(cd "$(dirname "$0")/.." && pwd)"
+export WORKTREE
+# shellcheck disable=SC1091
+. "$WORKTREE/ci/setup.sh"
+# GreenMail email infra: playwright.config gates the auth-setup + merge projects
+# on IMAP_HOST + IMAP_USERNAME (hasEmailInfra). Point at the CI host's local
+# GreenMail — the same ports test:e2e:merge:tunnel forwards from gpu. Defaults
+# only (`:=`), so a host's services.env still wins if it sets these.
+: "${SMTP_HOST:=127.0.0.1}"; : "${SMTP_PORT:=3025}"; : "${SMTP_USER:=greenmail}"; : "${SMTP_PASS:=greenmail}"
+: "${IMAP_HOST:=127.0.0.1}"; : "${IMAP_PORT:=3143}"; : "${IMAP_USERNAME:=greenmail}"; : "${IMAP_PASSWORD:=greenmail}"; : "${IMAP_PER_RECIPIENT:=1}"
+export SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS IMAP_HOST IMAP_PORT IMAP_USERNAME IMAP_PASSWORD IMAP_PER_RECIPIENT
+cd "$WORKTREE"
+# CI=true makes Playwright always start fresh servers (no reuse).
+export CI=true
+# simple-ci rsyncs the worktree WITHOUT node_modules — install root + backend.
+npm install
+( cd backend && npm install )
+npx playwright install --with-deps chromium >/dev/null 2>&1 || npx playwright install chromium
+npx playwright test --project=merge
