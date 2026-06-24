@@ -122,7 +122,15 @@ export default function MergeAccountFlow() {
     const callbackURL = `${window.location.origin}/?merge=${mergeNonce}`;
     setErrorMessage(null);
     try {
-      await betterAuthClient.signIn.email({ email, password, callbackURL });
+      const result = await betterAuthClient.signIn.email({ email, password, callbackURL });
+      if (result?.error) {
+        setErrorMessage(result.error.message || 'Invalid email or password');
+        return;
+      }
+      // Email+password sign-in returns JSON and does NOT follow callbackURL the
+      // way social sign-in does, so navigate to the merge callback ourselves to
+      // re-mount MergeAccountFlow as the newly authenticated account.
+      window.location.href = callbackURL;
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Sign in failed');
     }
@@ -156,6 +164,7 @@ export default function MergeAccountFlow() {
             </p>
             <button
               type="button"
+              data-testid="merge-start"
               onClick={handleStartMerge}
               className="mt-6 w-full rounded-lg bg-accent-primary px-6 py-2 text-sm font-medium text-white hover:bg-accent-primary/90"
             >
@@ -195,6 +204,7 @@ export default function MergeAccountFlow() {
             <form onSubmit={handleEmailSignIn} className="mt-6 flex flex-col gap-3 text-left">
               <input
                 type="email"
+                data-testid="merge-login-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
@@ -203,6 +213,7 @@ export default function MergeAccountFlow() {
               />
               <input
                 type="password"
+                data-testid="merge-login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
@@ -211,6 +222,7 @@ export default function MergeAccountFlow() {
               />
               <button
                 type="submit"
+                data-testid="merge-login-submit"
                 className="w-full rounded-lg bg-accent-primary px-6 py-2 text-sm font-medium text-white hover:bg-accent-primary/90"
               >
                 Sign in with email

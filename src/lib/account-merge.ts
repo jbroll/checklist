@@ -57,12 +57,24 @@ export async function shareTopLevelFoldersTo(
   for (const folder of account.root.folders) {
     if (!folder || folder.archived) continue;
     const group = folder.$jazz.owner;
+    // Only Group-owned folders can be re-shared. A folder owned directly by an
+    // Account (rather than a Group) cannot have members added — addMember would
+    // try to extend the account and throw "Cannot extend an account". Skip any
+    // folder we cannot share rather than aborting the entire merge.
+    if (!group || typeof group.addMember !== 'function' || !Array.isArray(group.members)) {
+      continue;
+    }
     const alreadyMember = group.members.some((m: { id: string }) => m.id === targetJazzId);
     if (!alreadyMember) {
       const targetAccount = await Account.load(targetJazzId, { loadAs: group.$jazz.loadedAs });
       if (!targetAccount) throw new Error('Could not load the target account to share with.');
-      group.addMember(targetAccount as never, 'admin');
-      await group.$jazz.waitForSync();
+      try {
+        group.addMember(targetAccount as never, 'admin');
+        await group.$jazz.waitForSync();
+      } catch {
+        // Non-shareable owner (e.g. account-owned folder): skip it.
+        continue;
+      }
     }
     ids.push(folder.$jazz.id);
   }
@@ -71,14 +83,25 @@ export async function shareTopLevelFoldersTo(
 
 export async function adoptFolders(
   account: JazzAccount & {
-    root: { folders: { $jazz: { push: (f: unknown) => void } } & JazzFolder[] };
+    root: {
+      folders: {
+        $jazz: { push: (f: unknown) => void; waitForSync?: () => Promise<void> };
+      } & JazzFolder[];
+    };
   },
   folderIds: string[],
   sourceJazzId: string,
 ): Promise<void> {
   for (const id of folderIds) {
     if (account.root.folders.some((f) => f?.$jazz?.id === id)) continue; // idempotent
-    const folder = await FolderNode.load(id, { loadAs: account as never });
+    // The folder was just shared to us by the source; the group-membership grant
+    // may still be propagating from the sync server. Retry the load a few times
+    // so a transient sync lag doesn't silently drop an adopted folder.
+    let folder = await FolderNode.load(id, { loadAs: account as never });
+    for (let attempt = 0; !folder && attempt < 10; attempt++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      folder = await FolderNode.load(id, { loadAs: account as never });
+    }
     if (!folder) continue;
     account.root.folders.$jazz.push(folder);
     // Best-effort: drop the now-detached source identity from the group.
@@ -89,5 +112,13 @@ export async function adoptFolders(
     } catch {
       /* non-fatal: ghost admin is a dead, unloggable account */
     }
+  }
+  // Flush the updated root to the sync server so a subsequent home load (which
+  // re-fetches from the server after this account's re-login) sees the adopted
+  // folders instead of a stale cached list.
+  try {
+    await account.root.folders.$jazz.waitForSync?.();
+  } catch {
+    /* best-effort: sync will still converge eventually */
   }
 }
