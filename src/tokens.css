@@ -24,6 +24,34 @@
   --color-interactive-active: 229 229 229; /* neutral-200 */
 }
 
+/* Tokens consumed by shared @jbr-jazz/hierarchy-client components */
+:root {
+  --jh-primary: #16a34a;
+  --jh-primary-hover: #15803d;
+  --jh-primary-light: rgba(22, 163, 74, 0.1);
+  --jh-danger: #dc2626;
+  --jh-danger-hover: #b91c1c;
+  --jh-danger-light: rgba(220, 38, 38, 0.1);
+  --jh-success: #16a34a;
+  --jh-success-hover: #15803d;
+  --jh-success-light: rgba(22, 163, 74, 0.1);
+  --jh-warning: #d97706;
+  --jh-warning-hover: #b45309;
+  --jh-warning-light: rgba(217, 119, 6, 0.1);
+  --jh-bg-primary: #ffffff;
+  --jh-bg-secondary: #f5f5f5;
+  --jh-bg-elevated: #ffffff;
+  --jh-bg-hover: #f5f5f5;
+  --jh-bg-active: #e5e5e5;
+  --jh-border-primary: #e5e5e5;
+  --jh-border-secondary: #d4d4d4;
+  --jh-text-primary: #171717;
+  --jh-text-secondary: #525252;
+  --jh-text-tertiary: #737373;
+  --jh-text-disabled: #a3a3a3;
+  --jh-focus-ring: rgba(22, 163, 74, 0.2);
+}
+
 .dark {
   /* Background Tokens - Dark Mode */
   --color-bg-primary: 38 38 38; /* neutral-800 */

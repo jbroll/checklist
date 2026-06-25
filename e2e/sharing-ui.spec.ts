@@ -145,7 +145,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Enter email
-    await page.locator('input#email').fill('newuser@example.com');
+    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
 
     // Delivery buttons should be enabled
     await expect(page.getByRole('button', { name: 'Copy link' })).toBeEnabled();
@@ -170,7 +170,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Enter email and click Email invite (desktop primary action)
-    await page.locator('input#email').fill('newuser@example.com');
+    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
     await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify confirmation message and link display
@@ -198,7 +198,7 @@ test.describe('Share Dialog UI', () => {
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
 
     // Enter email and click Email invite (desktop primary action)
-    await page.locator('input#email').fill('newuser@example.com');
+    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
     await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify error message (with longer timeout to allow for API call)
@@ -209,8 +209,8 @@ test.describe('Share Dialog UI', () => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Find permission dropdown
-    const permissionSelect = page.locator('select#permission');
+    // Find permission dropdown (id is a React useId() value; locate by label)
+    const permissionSelect = page.getByLabel('Permission');
     await expect(permissionSelect).toBeVisible();
 
     // Verify options exist (using Jazz native role names)
@@ -223,15 +223,15 @@ test.describe('Share Dialog UI', () => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Find expiration dropdown
-    const expirationSelect = page.locator('select#expiration');
+    // Find expiration dropdown (aria-label="Expires")
+    const expirationSelect = page.getByLabel('Expires');
     await expect(expirationSelect).toBeVisible();
 
-    // Verify options exist
+    // Verify options exist (expirations=[1,7,14,30])
     await expect(expirationSelect.locator('option[value="1"]')).toHaveText('1 day');
     await expect(expirationSelect.locator('option[value="7"]')).toHaveText('7 days');
+    await expect(expirationSelect.locator('option[value="14"]')).toHaveText('14 days');
     await expect(expirationSelect.locator('option[value="30"]')).toHaveText('30 days');
-    await expect(expirationSelect.locator('option[value="90"]')).toHaveText('90 days');
   });
 
   test('should close dialog when clicking Done', async ({ page }) => {

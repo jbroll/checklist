@@ -1,9 +1,14 @@
 /**
  * Invite Helper — drives the authenticated Share dialog UI for invite E2E.
  *
- * Selectors follow src/components/sharing/ShareDialog.tsx (input #email,
- * select#permission, the "Email invite" delivery button, readonly shareUrl
- * input) and the folder-row menu pattern from e2e/sharing-ui.spec.ts.
+ * Selectors follow src/components/sharing/ShareDialog.tsx (SharePanel child):
+ * - recipient: `input[type="email"]` scoped to the dialog (placeholder
+ *   "colleague@example.com or +1234567890") — no id attribute.
+ * - permission: `getByLabel('Permission')` — id is a React useId() value.
+ * - expiration: `getByLabel('Expires')` — aria-label on the select.
+ * - delivery: "Email invite" / "Copy link" buttons (unchanged).
+ * - shareUrl: readonly `input[value*="/invite/"]` rendered by ShareDialog
+ *   after a successful invite (the `lastShareUrl` block).
  */
 import { expect, type Page } from '@playwright/test';
 
@@ -45,8 +50,8 @@ export async function generateInvite(
   recipientEmail: string,
   permission: 'reader' | 'writer' | 'admin',
 ): Promise<string> {
-  await page.locator('#email').fill(recipientEmail);
-  await page.locator('select#permission').selectOption(permission);
+  await page.getByRole('dialog').locator('input[type="email"]').fill(recipientEmail);
+  await page.getByLabel('Permission').selectOption(permission);
   await page.getByRole('button', { name: 'Email invite' }).click();
   await expect(page.getByText(/invite emailed to/i)).toBeVisible({ timeout: 20000 });
   const linkInput = page.locator('input[value*="/invite/"]');
