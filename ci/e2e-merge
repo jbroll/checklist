@@ -1,25 +1,61 @@
 #!/usr/bin/env bash
 # simple-ci entry: Playwright account-merge closed-loop (the `merge` project +
-# its `auth-setup` dependency only). Requires the GreenMail mail infra —
-# services.env's SMTP_HOST + IMAP_* make playwright.config's `hasEmailInfra`
-# true, which registers the auth-setup + merge projects. The merge spec drives
-# its own two-login sign-ins (no default storageState).
+# its `auth-setup` dependency only). Requires the GreenMail mail infra AND a
+# configured Jazz sharing agent.
+#
+# The merge transfers folders by routing a group-membership grant through the
+# backend Jazz agent (mirroring the Share flow), so it needs a real agent. The
+# public Jazz cloud has none, so — like wicketmap — this job uses the host's
+# local `jazz-sync` service (ws://127.0.0.1:4200) and mints a throwaway agent
+# with jazz-run. Both the browser (VITE_JAZZ_PEER) and the backend worker
+# (JAZZ_PEER) point at that local peer so the agent's grants propagate.
+#
 # Invoked by: sci push checklist/e2e-merge
 set -euo pipefail
 WORKTREE="$(cd "$(dirname "$0")/.." && pwd)"
 export WORKTREE
 # shellcheck disable=SC1091
 . "$WORKTREE/ci/setup.sh"
-# GreenMail email infra: playwright.config gates the auth-setup + merge projects
-# on IMAP_HOST + IMAP_USERNAME (hasEmailInfra). Point at the CI host's local
-# GreenMail — the same ports test:e2e:merge:tunnel forwards from gpu. Defaults
-# only (`:=`), so a host's services.env still wins if it sets these.
+# GreenMail email infra (auth-setup verifies signup emails). Defaults to the
+# host's local GreenMail; services.env wins if it sets these.
 : "${SMTP_HOST:=127.0.0.1}"; : "${SMTP_PORT:=3025}"; : "${SMTP_USER:=greenmail}"; : "${SMTP_PASS:=greenmail}"
 : "${IMAP_HOST:=127.0.0.1}"; : "${IMAP_PORT:=3143}"; : "${IMAP_USERNAME:=greenmail}"; : "${IMAP_PASSWORD:=greenmail}"; : "${IMAP_PER_RECIPIENT:=1}"
 export SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS IMAP_HOST IMAP_PORT IMAP_USERNAME IMAP_PASSWORD IMAP_PER_RECIPIENT
 cd "$WORKTREE"
-# CI=true makes Playwright always start fresh servers (no reuse).
 export CI=true
+
+# ── Local Jazz sync peer + minted sharing agent ──────────────────────────────
+JAZZ_LOCAL_PEER="${VITE_JAZZ_SYNC_PEER:-ws://127.0.0.1:4200}"
+JAZZ_RUN="${JAZZ_RUN:-$HOME/jazz-sync/node_modules/.bin/jazz-run}"
+if [ ! -x "$JAZZ_RUN" ]; then
+  echo "[ci/e2e-merge] ERROR: jazz-run not found at $JAZZ_RUN" >&2
+  exit 1
+fi
+AGENT_JSON="$("$JAZZ_RUN" account create -n "checklist-ci-merge-agent-$$" -p "$JAZZ_LOCAL_PEER" --json 2>/dev/null | tail -1)"
+AGENT_ID="$(printf '%s' "$AGENT_JSON" | jq -r '.accountID // empty')"
+AGENT_SECRET="$(printf '%s' "$AGENT_JSON" | jq -r '.agentSecret // empty')"
+if [ -z "$AGENT_ID" ] || [ -z "$AGENT_SECRET" ]; then
+  echo "[ci/e2e-merge] ERROR: could not mint Jazz agent on $JAZZ_LOCAL_PEER" >&2
+  echo "[ci/e2e-merge]   jazz-run output: $AGENT_JSON" >&2
+  exit 1
+fi
+echo "[ci/e2e-merge] minted Jazz agent: $AGENT_ID on $JAZZ_LOCAL_PEER"
+
+# Rewrite backend/.env (written by ci/setup.sh with the cloud peer) to use the
+# local peer, drop the cloud api key, and add the minted agent creds. dotenv
+# first-occurrence wins, so replace the existing VITE_JAZZ_PEER line in place.
+ENV_FILE="$WORKTREE/backend/.env"
+sed -i -E "s#^VITE_JAZZ_PEER=.*#VITE_JAZZ_PEER=$JAZZ_LOCAL_PEER#" "$ENV_FILE"
+{
+  echo "JAZZ_PEER=$JAZZ_LOCAL_PEER"
+  echo "VITE_JAZZ_API_KEY="
+  echo "JAZZ_AGENT_ACCOUNT_ID=$AGENT_ID"
+  echo "JAZZ_AGENT_SECRET=$AGENT_SECRET"
+} >> "$ENV_FILE"
+# The frontend (vite webServer, started by Playwright) reads these from the
+# environment; export so they override the cloud defaults.
+export VITE_JAZZ_PEER="$JAZZ_LOCAL_PEER" JAZZ_PEER="$JAZZ_LOCAL_PEER" VITE_JAZZ_API_KEY=""
+
 # simple-ci rsyncs the worktree WITHOUT node_modules — install root + backend.
 npm install
 ( cd backend && npm install )

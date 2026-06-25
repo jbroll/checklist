@@ -37,25 +37,89 @@ describe('merge API helpers', () => {
 import { FolderNode } from '@/schema/tree';
 import { adoptFolders, shareTopLevelFoldersTo } from '../account-merge';
 
-it('shareTopLevelFoldersTo adds target to each folder group and returns ids', async () => {
+it('shareTopLevelFoldersTo grants agent admin on each group-owned folder and returns ids', async () => {
   const addMember = vi.fn();
   const group = {
+    // group.members is an array — signals this is a group-owned folder
     members: [],
     addMember,
     removeMember: vi.fn(),
     $jazz: { waitForSync: vi.fn().mockResolvedValue(undefined), loadedAs: {} },
   };
-  const mkFolder = (id: string, archived = false) => ({ archived, $jazz: { id, owner: group } });
+  const mkRef = (id: string, archived = false) => ({ archived, $jazz: { id } });
   const account = {
-    root: { folders: [mkFolder('co_f1'), mkFolder('co_f2'), mkFolder('co_f3', true)] },
+    $jazz: { ensureLoaded: vi.fn().mockResolvedValue(undefined) },
+    root: { folders: [mkRef('co_f1'), mkRef('co_f2'), mkRef('co_f3', true)] },
   } as never;
 
-  vi.spyOn(Account, 'load').mockResolvedValue({ id: 'co_target' } as never);
+  // Mock the agent-id fetch (GET /api/account/merge/agent)
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ agentAccountId: 'co_agent' }),
+  }) as never;
+
+  // shareTopLevelFoldersTo re-loads each folder fresh so its owner Group is usable.
+  vi.spyOn(FolderNode, 'load').mockImplementation(
+    async (id: never) => ({ archived: false, $jazz: { id, owner: group } }) as never,
+  );
+  // Account.load is called to load the AGENT account (not the target directly).
+  vi.spyOn(Account, 'load').mockResolvedValue({ id: 'co_agent' } as never);
 
   const ids = await shareTopLevelFoldersTo(account, 'co_target');
   expect(ids).toEqual(['co_f1', 'co_f2']); // archived folder skipped
+  // The AGENT (not the target) is added as admin to each group-owned folder
   expect(addMember).toHaveBeenCalledTimes(2);
   expect(addMember).toHaveBeenCalledWith(expect.anything(), 'admin');
+});
+
+it('shareTopLevelFoldersTo skips account-owned folders (no members array)', async () => {
+  const addMember = vi.fn();
+  // account-owned: owner has no `members` array
+  const accountOwner = {
+    $jazz: { waitForSync: vi.fn().mockResolvedValue(undefined), loadedAs: {} },
+  };
+  const groupOwner = {
+    members: [],
+    addMember,
+    $jazz: { waitForSync: vi.fn().mockResolvedValue(undefined), loadedAs: {} },
+  };
+  const mkRef = (id: string) => ({ archived: false, $jazz: { id } });
+  const account = {
+    $jazz: { ensureLoaded: vi.fn().mockResolvedValue(undefined) },
+    root: { folders: [mkRef('co_acct_owned'), mkRef('co_group_owned')] },
+  } as never;
+
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ agentAccountId: 'co_agent' }),
+  }) as never;
+
+  vi.spyOn(FolderNode, 'load').mockImplementation(async (id: never) => {
+    // co_acct_owned has an account-owner (no members array)
+    const owner = id === 'co_acct_owned' ? accountOwner : groupOwner;
+    return { archived: false, $jazz: { id, owner } } as never;
+  });
+  vi.spyOn(Account, 'load').mockResolvedValue({ id: 'co_agent' } as never);
+
+  const ids = await shareTopLevelFoldersTo(account, 'co_target');
+  // Only group-owned folder should be returned
+  expect(ids).toEqual(['co_group_owned']);
+  expect(addMember).toHaveBeenCalledTimes(1);
+});
+
+it('shareTopLevelFoldersTo returns empty list when no agent configured', async () => {
+  const account = {
+    $jazz: { ensureLoaded: vi.fn().mockResolvedValue(undefined) },
+    root: { folders: [] },
+  } as never;
+
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ agentAccountId: null }),
+  }) as never;
+
+  const ids = await shareTopLevelFoldersTo(account, 'co_target');
+  expect(ids).toEqual([]);
 });
 
 it('adoptFolders loads folders and pushes them into account.root.folders', async () => {

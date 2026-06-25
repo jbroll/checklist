@@ -32,6 +32,22 @@ export const TEST_ACCOUNTS = {
 
 export type TestAccountRole = keyof typeof TEST_ACCOUNTS;
 
+/** Shared password for dynamically-provisioned per-run test accounts. */
+export const TEST_PASSWORD_EXPORT = TEST_PASSWORD;
+
+let emailCounter = 0;
+/**
+ * Collision-safe email for a per-run, throwaway test account. GreenMail accepts
+ * all domains and (in IMAP_PER_RECIPIENT mode) gives each address its own
+ * mailbox, so a fresh address per run yields a clean, never-before-merged
+ * account — essential for destructive flows like account merge.
+ */
+export function uniqueTestEmail(prefix: string): string {
+  emailCounter += 1;
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${prefix}-${Date.now()}-${emailCounter}-${rand}@checklist.rkroll.com`;
+}
+
 /** Open SignInDialog, then the EmailAuthDialog (signin mode). */
 async function openEmailAuthDialog(page: Page): Promise<void> {
   await page

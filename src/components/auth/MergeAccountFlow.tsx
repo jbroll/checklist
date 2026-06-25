@@ -1,6 +1,6 @@
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useAccount } from '@/jazz';
+import { useAccount, useIsAuthenticated } from '@/jazz';
 import {
   adoptFolders,
   clearMergeState,
@@ -26,7 +26,18 @@ type FlowState =
 export default function MergeAccountFlow() {
   // biome-ignore lint/suspicious/noExplicitAny: Jazz account passed to merge helpers
   const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
-  const hasRun = useRef(false);
+  // Whether the Jazz context is backed by an authenticated (non-anonymous)
+  // account. After signOut + email sign-in, useAccount briefly yields a
+  // transient anonymous/half-authenticated identity (whose root still points at
+  // the PREVIOUS account's CoValues and throws an Authorization Error when read).
+  // The merge phases must only run once Jazz has settled on the real signed-in
+  // account, so we gate them on this flag.
+  const isAuthenticated = useIsAuthenticated();
+  // Guards the one-shot phase processing. We record which phase has been
+  // dispatched (and for which authenticated account id) so the effect can WAIT
+  // for the authenticated account to settle and then run exactly once — instead
+  // of firing on the first transient `me` and capturing the wrong identity.
+  const dispatchedRef = useRef<string | null>(null);
   const [flowState, setFlowState] = useState<FlowState>('processing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mergeNonce, setMergeNonce] = useState<string | null>(null);
@@ -40,16 +51,47 @@ export default function MergeAccountFlow() {
         return;
       }
 
-      if (hasRun.current) return;
-      hasRun.current = true;
-
       const state = loadMergeState();
 
       if (!state) {
-        // No saved merge state — show entry screen
-        setFlowState('entry');
+        // No saved merge state — show the entry screen (this is the user's own
+        // already-authenticated account; no phase processing to gate).
+        if (dispatchedRef.current !== 'entry') {
+          dispatchedRef.current = 'entry';
+          setFlowState('entry');
+        }
         return;
       }
+
+      // Both phases act ON the just-signed-in Jazz account. Immediately after
+      // signOut + email sign-in, useAccount briefly returns a transient
+      // anonymous/half-authenticated identity whose root still references the
+      // PREVIOUS account's CoValues (reading them throws an Authorization Error).
+      // Wait until Jazz reports an authenticated, non-anonymous account before
+      // processing, otherwise share-out/adopt run against the wrong identity and
+      // silently drop the folders.
+      //
+      // IMPORTANT: do NOT change flowState here. When not yet authenticated we
+      // may be (a) on a fresh post-reload mount (flowState defaults to
+      // 'processing') or (b) showing the 'awaiting-*-login' prompt that a click/
+      // sign-in handler just set — which we must NOT clobber, or the user can
+      // never sign in as the other account.
+      if (!isAuthenticated) return;
+
+      // Guard against acting on a STALE-but-authenticated identity that hasn't
+      // re-derived to the just-signed-in account yet. In awaiting-source the
+      // signed-in account must be the SOURCE (≠ target); if `me` is still the
+      // target, the previous account is lingering — wait for the source to settle
+      // rather than act on the wrong identity. (Leave flowState untouched.)
+      if (state.phase === 'awaiting-source' && me.$jazz?.id === state.targetJazzId) {
+        return;
+      }
+
+      // One-shot per (phase, authenticated account id): run exactly once the
+      // real signed-in account has settled.
+      const dispatchKey = `${state.phase}:${me.$jazz?.id}`;
+      if (dispatchedRef.current === dispatchKey) return;
+      dispatchedRef.current = dispatchKey;
 
       if (state.phase === 'awaiting-source') {
         // Now signed in as source. Share folders to target, then prompt re-login.
@@ -94,7 +136,7 @@ export default function MergeAccountFlow() {
     }
 
     handleMergeFlow();
-  }, [me]);
+  }, [me, isAuthenticated]);
 
   async function handleStartMerge() {
     setFlowState('processing');

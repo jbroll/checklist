@@ -101,7 +101,9 @@ export default defineConfig({
           {
             name: 'merge',
             testMatch: /account-merge\.spec\.ts/,
-            dependencies: ['auth-setup'],
+            // No auth-setup dependency: account merge is destructive, so the spec
+            // provisions its own FRESH accounts per run (beforeAll) rather than
+            // reuse the shared test1/test2 sessions, which a prior merge fuses.
             use: {
               ...devices['Desktop Chrome'],
               // No default storageState — the merge spec drives all sign-ins

@@ -18,6 +18,8 @@ vi.mock('@/lib/auth-client', () => ({
 }));
 vi.mock('@/jazz', () => ({
   useAccount: () => ({ $jazz: { id: 'co_target' }, root: { folders: [] } }),
+  // The merge phases are gated on an authenticated (non-anonymous) account.
+  useIsAuthenticated: () => true,
 }));
 vi.mock('@/schema', () => ({
   Account: {},
