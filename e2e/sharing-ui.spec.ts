@@ -298,7 +298,9 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=This invite link has expired.')).toBeVisible();
   });
 
-  test('should show invite details for unauthenticated user', async ({ page }) => {
+  test('should show invite details for an authenticated user', async ({ page }) => {
+    // The backend only returns invite details to an authenticated checklist
+    // user; a valid response therefore represents that authenticated case.
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -306,7 +308,6 @@ test.describe('Invite Accept Page UI', () => {
         body: JSON.stringify({
           valid: true,
           senderEmail: 'alice@example.com',
-          recipientEmail: 'bob@example.com',
           permission: 'writer',
         }),
       });
@@ -324,29 +325,51 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('button:has-text("Decline")')).toBeVisible();
   });
 
-  test('should show sign-in options after clicking Accept for unauthenticated user', async ({ page }) => {
+  test('should not disclose invite details to an unauthenticated user', async ({ page }) => {
+    // Unauthenticated callers get no invite data from the backend, only a
+    // signal to sign in first. The page must show a sign-in prompt and must
+    // NOT reveal the sender, permission, or that the token even resolves.
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'alice@example.com',
-          recipientEmail: 'bob@example.com',
-          permission: 'reader',
-        }),
+        body: JSON.stringify({ valid: false, error: 'unauthenticated' }),
       });
     });
 
     await page.goto('/invite/valid-token');
 
-    // Click Accept Invite
-    await page.click('button:has-text("Accept Invite")');
-
-    // Should show sign-in options
+    // Sign-in prompt shown immediately (no "Accept" step that leaks details)
     await expect(page.locator('text=Sign In to Continue')).toBeVisible();
     await expect(page.locator('text=Continue with Google')).toBeVisible();
     await expect(page.locator('text=Continue with Apple')).toBeVisible();
+
+    // No invite details disclosed
+    await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
+    await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
+    await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
+  });
+
+  test('should not disclose the sender to an authenticated non-recipient', async ({ page }) => {
+    // The backend returns email_mismatch (no sender/permission) when the signed-in
+    // user is not the invited recipient. The page shows the wrong-account screen
+    // and must not reveal the sender or any invite details.
+    await page.route('**/api/shares/validate/*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ valid: false, error: 'email_mismatch' }),
+      });
+    });
+
+    await page.goto('/invite/valid-token');
+
+    await expect(page.locator('text=Wrong Account')).toBeVisible();
+
+    // No sender or invite details disclosed
+    await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
+    await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
+    await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
   });
 
   test('should show reader permission description', async ({ page }) => {

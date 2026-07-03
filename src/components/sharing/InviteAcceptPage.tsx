@@ -19,15 +19,14 @@ interface InviteAcceptPageProps {
 interface InviteValidation {
   valid: boolean;
   senderEmail?: string;
-  recipientEmail?: string;
   permission?: string;
   error?: string;
 }
 
 type PageState =
   | { type: 'loading' }
-  | { type: 'not_authenticated'; invite: InviteValidation }
-  | { type: 'email_mismatch'; inviteEmail: string; userEmail: string }
+  | { type: 'not_authenticated' }
+  | { type: 'email_mismatch'; userEmail: string }
   | { type: 'valid'; invite: InviteValidation }
   | { type: 'accepting' }
   | { type: 'success'; targetId: string }
@@ -64,6 +63,25 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       try {
         const data = await sharing.validateInvite(token);
 
+        // The backend discloses nothing about the invite until the caller is a
+        // signed-in checklist user. Show the sign-in prompt, not invite details.
+        if (data.error === 'unauthenticated') {
+          setState({ type: 'not_authenticated' });
+          return;
+        }
+
+        // Authenticated, but not the invited recipient: the backend withholds
+        // the sender and all other details. Show the wrong-account recovery
+        // screen (only the caller's own email, which they already know).
+        if (data.error === 'email_mismatch') {
+          const sessionResult = await betterAuthClient.getSession();
+          setState({
+            type: 'email_mismatch',
+            userEmail: sessionResult?.data?.user?.email || '',
+          });
+          return;
+        }
+
         if (!data.valid) {
           setState({
             type: 'error',
@@ -72,26 +90,9 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
           return;
         }
 
-        // Get current user session from BetterAuth
-        const sessionResult = await betterAuthClient.getSession();
-
-        // Check if user is authenticated
-        if (!sessionResult?.data?.user || !me) {
-          setState({ type: 'not_authenticated', invite: data as InviteValidation });
-          return;
-        }
-
-        // Check if email matches
-        const userEmail = sessionResult.data.user.email;
-        if (userEmail !== data.recipientEmail) {
-          setState({
-            type: 'email_mismatch',
-            inviteEmail: data.recipientEmail || '',
-            userEmail: userEmail || '',
-          });
-          return;
-        }
-
+        // Authenticated + valid: the recipient-email match is enforced
+        // authoritatively by the backend on accept (case-insensitive, and it
+        // also honors verified secondary emails), so we don't pre-check here.
         setState({ type: 'valid', invite: data as InviteValidation });
       } catch (error) {
         console.error('Failed to validate invite:', error);
@@ -146,10 +147,21 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       }, 2000);
     } catch (error) {
       console.error('Failed to accept invite:', error);
-      setState({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to accept invite',
-      });
+      const message = error instanceof Error ? error.message : 'Failed to accept invite';
+
+      // The backend rejects a non-recipient with an email-mismatch error. Show
+      // the "wrong account" recovery screen (revealing only the signed-in email,
+      // which the user already knows) instead of a generic failure.
+      if (/not for your account/i.test(message)) {
+        const sessionResult = await betterAuthClient.getSession();
+        setState({
+          type: 'email_mismatch',
+          userEmail: sessionResult?.data?.user?.email || '',
+        });
+        return;
+      }
+
+      setState({ type: 'error', message });
     }
   };
 
@@ -162,16 +174,10 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       <div className="w-full max-w-md">
         {state.type === 'loading' && <LoadingState />}
 
-        {state.type === 'not_authenticated' && (
-          <NotAuthenticatedState token={token} invite={state.invite} />
-        )}
+        {state.type === 'not_authenticated' && <NotAuthenticatedState token={token} />}
 
         {state.type === 'email_mismatch' && (
-          <EmailMismatchState
-            inviteEmail={state.inviteEmail}
-            userEmail={state.userEmail}
-            token={token}
-          />
+          <EmailMismatchState userEmail={state.userEmail} token={token} />
         )}
 
         {state.type === 'valid' && (
@@ -203,9 +209,7 @@ function LoadingState() {
   );
 }
 
-function NotAuthenticatedState({ token, invite }: { token: string; invite: InviteValidation }) {
-  const [showSignIn, setShowSignIn] = useState(false);
-
+function NotAuthenticatedState({ token }: { token: string }) {
   const handleGoogleSignIn = () => {
     // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
     sessionStorage.setItem('pending-invite-token', token);
@@ -224,39 +228,9 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
     });
   };
 
-  const handleDecline = () => {
-    window.location.href = '/';
-  };
-
-  // Show invite details first, then sign-in options after Accept
-  if (!showSignIn) {
-    return (
-      <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
-        <div className="mb-6 flex justify-center">
-          <Share2 className="h-12 w-12 text-green-600" />
-        </div>
-        <h1 className="mb-2 text-center text-2xl font-bold text-content-primary">
-          Folder Invitation
-        </h1>
-        <p className="mb-6 text-center text-content-secondary">
-          {invite.senderEmail} has invited you to collaborate
-        </p>
-
-        <PermissionDetails permission={invite.permission} />
-
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={handleDecline}>
-            Decline
-          </Button>
-          <Button className="flex-1" onClick={() => setShowSignIn(true)}>
-            Accept Invite
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // After clicking Accept, show sign-in options
+  // Sign in BEFORE any invite details are shown. The invite's sender, permission
+  // and recipient are never disclosed to a caller who has not authenticated as a
+  // checklist user, so this screen intentionally shows no details about it.
   return (
     <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
@@ -266,7 +240,7 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
         Sign In to Continue
       </h1>
       <p className="mb-6 text-center text-content-secondary">
-        Sign in to accept the invitation from {invite.senderEmail}
+        Sign in to view and accept this invitation.
       </p>
       <div className="space-y-3">
         <Button
@@ -306,22 +280,21 @@ function NotAuthenticatedState({ token, invite }: { token: string; invite: Invit
           Continue with Apple
         </Button>
 
-        <Button variant="ghost" className="w-full" onClick={() => setShowSignIn(false)}>
-          Back
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() => {
+            window.location.href = '/';
+          }}
+        >
+          Go to Dashboard
         </Button>
       </div>
     </div>
   );
 }
 
-function EmailMismatchState({
-  userEmail,
-  token,
-}: {
-  inviteEmail: string;
-  userEmail: string;
-  token: string;
-}) {
+function EmailMismatchState({ userEmail, token }: { userEmail: string; token: string }) {
   return (
     <div className="rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
