@@ -16,6 +16,7 @@
  */
 
 import {
+  DEFAULT_TIER_LIMITS,
   getEffectiveTier as getEffectiveTierFromBilling,
   getTierDisplayName,
   isPaidTier,
@@ -109,11 +110,12 @@ export const TIERS: Record<SubscriptionTier, TierConfig> = {
   },
 };
 
-// Legacy compatibility - derive TIER_LIMITS from TIERS
+// Enforcement limits come from billing-shared (single source of truth for the
+// numbers); TIERS above keeps only CheckList's display strings and pricing.
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = Object.fromEntries(
-  Object.entries(TIERS).map(([key, config]) => [
+  Object.entries(DEFAULT_TIER_LIMITS).map(([key, raw]) => [
     key,
-    { maxLists: config.maxLists, sessionRetentionDays: config.sessionRetentionDays },
+    { maxLists: raw.maxItems, sessionRetentionDays: raw.retentionDays },
   ]),
 ) as Record<SubscriptionTier, TierLimits>;
 

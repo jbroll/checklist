@@ -16,7 +16,6 @@
         "src/components/ui/FeatureErrorBoundary.tsx",
         "src/components/ui/badge.tsx",
         "src/components/ui/empty-state.tsx",
-        "src/config/constants.ts",
         "src/lib/types.ts",
         "src/lib/useLongPressIndicator.ts"
       ]
