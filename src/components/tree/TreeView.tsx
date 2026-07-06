@@ -10,13 +10,13 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { toArray } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
 import { isTemplateFolder, useCheckListHierarchy } from '@/hooks';
 import { legacyStorageKey } from '@/lib/brand';
 import { useDialog } from '@/lib/dialog-context';
-import { iterateSessions } from '@/lib/jazz-types';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { Account, FolderNode, SessionData } from '@/schema';
 import * as sessionService from '@/services/sessionService';
@@ -271,7 +271,7 @@ export function TreeView({
 
   const handleToggleArchiveSession = useCallback(
     (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
-      const sessions = iterateSessions<SessionData>(templateFolder.sessions);
+      const sessions = toArray<SessionData>(templateFolder.sessions);
       const session = sessions.find((s: SessionData) => s?.id === sessionId);
       if (session) {
         if (session.archived) {
@@ -416,7 +416,7 @@ export function TreeView({
     // For templates, always show sessions
     let sessionChildren: React.ReactNode[] = [];
     if (isTemplate && folder.sessions) {
-      const sessions = iterateSessions<SessionData>(folder.sessions);
+      const sessions = toArray<SessionData>(folder.sessions);
       const activeSessions = sessions
         .filter((s: SessionData) => {
           if (!s || !s.id) return false; // Filter out sessions without IDs

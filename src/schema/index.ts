@@ -254,11 +254,6 @@ export { FolderNode, Template, type SessionData, type TemplateItem, type ItemSta
 // Alias for backwards compatibility
 export type Session = SessionData;
 
-// NOTE: Jazz type utilities (isAccountLoaded, getValidTier, LoadedAccount, …)
-// are intentionally NOT re-exported here — import them from '@/lib/jazz-types'
-// directly. Re-exporting created a schema → jazz-types → schema import cycle
-// (caught by org-hooks ts-circular).
-
 /**
  * Type alias for Account instances used in service functions.
  *

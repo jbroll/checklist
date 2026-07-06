@@ -1,7 +1,7 @@
+import { toArray } from '@jbr-jazz/hierarchy-shared';
 import type { InstanceOfSchema } from 'jazz-tools';
 import { lazy, Suspense } from 'react';
 import { UpgradeDialog } from '@/components/billing';
-import { iterateSessions } from '@/lib/jazz-types';
 import type { DialogName, DialogState } from '@/lib/useDialogManager';
 import type { Account, FolderNode, SessionData } from '@/schema';
 import * as subscriptionService from '@/services/subscriptionService';
@@ -135,7 +135,7 @@ export function DialogManager({
       {sessionExportData &&
         (() => {
           const template = templates.find((t) => t?.$jazz.id === sessionExportData.templateId);
-          const sessions = iterateSessions<SessionData>(template?.sessions);
+          const sessions = toArray<SessionData>(template?.sessions);
           const session = sessions.find((s: SessionData) => s?.id === sessionExportData.sessionId);
           if (template && session) {
             // Generate session name from createdAt

@@ -1,0 +1,2 @@
+# Pre-existing files over the 500-line cap, grandfathered (fail-on-new).
+src/components/tree/TreeView.tsx  # 610 lines; touched only for iterateSessions->toArray, split tracked separately
