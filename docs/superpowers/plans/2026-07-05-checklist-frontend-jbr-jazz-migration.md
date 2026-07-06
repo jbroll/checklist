@@ -8,6 +8,25 @@
 
 **Tech Stack:** React 19, TypeScript, jazz-tools, BetterAuth, Tailwind CSS, Vite.
 
+## Execution Status (updated 2026-07-06)
+
+Landed the dedup tasks where CheckList already used, or trivially matched, the shared code. Stopped the "adopt shared primitive" march where the Plan-1 package versions turned out to **diverge** from CheckList's real implementations (they were built from this plan's specs, not extracted from CheckList).
+
+| Task | Status | Notes |
+|---|---|---|
+| B1 auth client | ✅ Done (`79b11f2`) | `auth-client.ts` calls shared `createBetterAuthClient` |
+| B2 `cn` | ⏭️ Dropped | Removing one re-export would force deleting `@example` docs from 5 UI files; cost ≫ benefit |
+| B3 billing limits | ✅ Done (`a9901c2`) | Tier numbers sourced from `DEFAULT_TIER_LIMITS`; dead `config/constants.ts` removed. `getEffectiveTier`/display helpers were already delegated |
+| B4 `subscriptionSettingsFields` | ⏸️ Deferred | Renames live Jazz schema fields (`maxLists`→`maxItems`) — data-migration risk for real prod users |
+| B5 ViewState/`useTreeState` | ⏸️ Deferred | Schema change + hook adoption |
+| B6 folder lifecycle | ⏸️ Deferred | Entangled; needs per-function parity verification |
+| B7 iteration helpers | ✅ Done (`79b11f2`) | `iterateSessions`→`toArray` (verified identical); deleted dead `jazz-types.ts` |
+| B8 generic hooks | ⏭️ Dropped | All four local hooks (`useDoubleTap`/`usePWAInstall`/`useTheme`/`useNavigationHistory`) diverge from the package versions — not duplicates |
+| B9 dialogs | ⏭️ Dropped | Local `useDialog` API (`buttonText`, `variant:'primary'\|'secondary'`) differs from the A5 package version (`confirmText`, `variant:'default'`) |
+| B10 path utils | ⏸️ Deferred (partial only) | Package covers 5 of 8 functions; local `getParentPath` returns `undefined` where package returns `''` |
+
+**Key finding:** the shared hooks/dialogs added in Plan 1 (A4/A5) were authored from specs, so B8/B9 are reimplementation-mismatches rather than swaps. Remaining adoption should be handled case-by-case where genuine, API-matching duplication exists — not as a mechanical delete-and-import.
+
 ## Global Constraints
 
 - Depends on plan `2026-07-05-jbr-jazz-shared-primitives.md` being implemented and packages rebuilt.
