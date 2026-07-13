@@ -1,61 +1,57 @@
-import { useSharing } from '@jbr-jazz/hierarchy-client';
-import type { CoMap, ID } from 'jazz-tools';
+import { useSharing } from '@jbroll/rowboat-sharing-react';
 import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { betterAuthClient } from '@/lib/auth-client';
-import { useAccount } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account, FolderNode } from '@/schema';
-
-// CSRF header for API requests
-const getAuthHeaders = async (): Promise<Record<string, string>> => ({
-  'X-Requested-With': 'XMLHttpRequest',
-});
+import { signIn, signOut, useAuthor, useSession } from '@/jazz';
 
 interface InviteAcceptPageProps {
   token: string;
 }
 
-interface InviteValidation {
-  valid: boolean;
-  senderEmail?: string;
-  permission?: string;
-  error?: string;
+interface InviteDetails {
+  inviterEmail?: string;
+  role?: string;
 }
 
 type PageState =
   | { type: 'loading' }
   | { type: 'not_authenticated' }
   | { type: 'email_mismatch'; userEmail: string }
-  | { type: 'valid'; invite: InviteValidation }
+  | { type: 'valid'; invite: InviteDetails }
   | { type: 'accepting' }
-  | { type: 'success'; targetId: string }
+  | { type: 'success' }
   | { type: 'error'; message: string };
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
-  // Initialize useSharing hook
   const sharing = useSharing({
-    apiBaseUrl: '',
-    getAuthHeaders,
+    apiBaseUrl: '/api/shares',
+    fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
   });
 
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
-  // Stable account id for effect deps (the `me`/`sharing` object refs change every
-  // render; depending on them floods /validate — see the useEffect below).
-  const meId: string | null = me?.$jazz?.id ?? null;
+  const author = useAuthor();
+  const session = useSession();
+  const isAuthenticated = author !== null;
+  const userEmail = session.data?.user?.email ?? '';
+
   const [state, setState] = useState<PageState>({ type: 'loading' });
 
-  // Track if we've moved past the initial validation phase
-  // Once we're in accepting/success/error state, don't re-validate
+  // Track if we've moved past the initial validation phase so a later re-render (e.g. the
+  // session/author refs changing) doesn't re-trigger /validate mid-accept.
   const hasStartedAcceptingRef = useRef(false);
 
-  // Validate the invite token. Keyed on stable token + meId, NOT the me/sharing
-  // object refs (they change every render -> infinite /validate loop). Read at call time.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on meId by design
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on token + isAuthenticated by design; sharing is a fresh object every render
   useEffect(() => {
-    // Don't re-validate if we've already started accepting or completed
     if (hasStartedAcceptingRef.current) {
+      return;
+    }
+
+    // Wait for the session to resolve before deciding anything.
+    if (session.isPending) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setState({ type: 'not_authenticated' });
       return;
     }
 
@@ -63,37 +59,18 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       try {
         const data = await sharing.validateInvite(token);
 
-        // The backend discloses nothing about the invite until the caller is a
-        // signed-in checklist user. Show the sign-in prompt, not invite details.
-        if (data.error === 'unauthenticated') {
-          setState({ type: 'not_authenticated' });
-          return;
-        }
-
-        // Authenticated, but not the invited recipient: the backend withholds
-        // the sender and all other details. Show the wrong-account recovery
-        // screen (only the caller's own email, which they already know).
-        if (data.error === 'email_mismatch') {
-          const sessionResult = await betterAuthClient.getSession();
-          setState({
-            type: 'email_mismatch',
-            userEmail: sessionResult?.data?.user?.email || '',
-          });
-          return;
-        }
-
         if (!data.valid) {
+          // The server withholds the reason (invalid, expired, already accepted, or a valid
+          // token addressed to a different email all come back as `{ valid: false }`) so a
+          // non-recipient can't probe for which case applies.
           setState({
             type: 'error',
-            message: getErrorMessage(data.error || 'invalid'),
+            message: 'This invite link is no longer valid.',
           });
           return;
         }
 
-        // Authenticated + valid: the recipient-email match is enforced
-        // authoritatively by the backend on accept (case-insensitive, and it
-        // also honors verified secondary emails), so we don't pre-check here.
-        setState({ type: 'valid', invite: data as InviteValidation });
+        setState({ type: 'valid', invite: data });
       } catch (error) {
         console.error('Failed to validate invite:', error);
         setState({ type: 'error', message: 'Failed to load invite. Please try again.' });
@@ -101,47 +78,19 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     }
 
     doValidation();
-  }, [token, meId]);
+  }, [token, isAuthenticated, session.isPending]);
 
   const handleAccept = async () => {
-    // Mark that we've started accepting - prevents re-validation on me changes
     hasStartedAcceptingRef.current = true;
     setState({ type: 'accepting' });
 
     try {
-      const result = await sharing.acceptInvite(token);
+      await sharing.acceptInvite(token);
 
-      if (!result) {
-        throw new Error(sharing.error?.message || 'Failed to accept invite');
-      }
+      setState({ type: 'success' });
 
-      // Load the shared folder and add it to root.folders if not already present
-      if (me?.root?.folders && result.targetId) {
-        try {
-          // Load the folder CoValue using the ID from the accept response
-          const folder = await FolderNode.load(result.targetId as ID<CoMap>, {
-            loadAs: me,
-          });
-
-          if (folder) {
-            // Check if folder is already in root.folders (avoid duplicates)
-            const alreadyExists = me.root.folders.some(
-              (f: { $jazz?: { id?: string } } | null) => f?.$jazz?.id === folder.$jazz.id,
-            );
-
-            if (!alreadyExists) {
-              me.root.folders.$jazz.push(folder);
-            }
-          }
-        } catch (loadError) {
-          // Log but don't fail - user still got access, folder just won't appear immediately
-          console.error('Failed to add folder to root:', loadError);
-        }
-      }
-
-      setState({ type: 'success', targetId: result.targetId });
-
-      // Redirect to dashboard after 2 seconds
+      // The shared folder shows up once the client's next periodic sync pulls it (no explicit
+      // "add to my folders" step under rowboat — visibility follows group membership).
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
@@ -149,15 +98,10 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
       console.error('Failed to accept invite:', error);
       const message = error instanceof Error ? error.message : 'Failed to accept invite';
 
-      // The backend rejects a non-recipient with an email-mismatch error. Show
-      // the "wrong account" recovery screen (revealing only the signed-in email,
-      // which the user already knows) instead of a generic failure.
-      if (/not for your account/i.test(message)) {
-        const sessionResult = await betterAuthClient.getSession();
-        setState({
-          type: 'email_mismatch',
-          userEmail: sessionResult?.data?.user?.email || '',
-        });
+      // The backend rejects a non-recipient with this exact message on accept (validate can't
+      // distinguish it, see above). Show the "wrong account" recovery screen.
+      if (/not sent to your account/i.test(message)) {
+        setState({ type: 'email_mismatch', userEmail });
         return;
       }
 
@@ -213,7 +157,7 @@ function NotAuthenticatedState({ token }: { token: string }) {
   const handleGoogleSignIn = () => {
     // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
     sessionStorage.setItem('pending-invite-token', token);
-    betterAuthClient.signIn.social({
+    signIn.social({
       provider: 'google',
       callbackURL: window.location.origin,
     });
@@ -222,15 +166,15 @@ function NotAuthenticatedState({ token }: { token: string }) {
   const handleAppleSignIn = () => {
     // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
     sessionStorage.setItem('pending-invite-token', token);
-    betterAuthClient.signIn.social({
+    signIn.social({
       provider: 'apple',
       callbackURL: window.location.origin,
     });
   };
 
-  // Sign in BEFORE any invite details are shown. The invite's sender, permission
-  // and recipient are never disclosed to a caller who has not authenticated as a
-  // checklist user, so this screen intentionally shows no details about it.
+  // Sign in BEFORE any invite details are shown. The invite's sender, role and recipient are
+  // never disclosed to a caller who hasn't authenticated as a checklist user, so this screen
+  // intentionally shows no details about it.
   return (
     <div className="rounded-lg border border-divider-primary bg-surface-elevated p-8 shadow-sm">
       <div className="mb-6 flex justify-center">
@@ -311,7 +255,7 @@ function EmailMismatchState({ userEmail, token }: { userEmail: string; token: st
         <Button
           className="w-full"
           onClick={async () => {
-            await betterAuthClient.signOut();
+            await signOut();
             window.location.href = `/invite/${token}`;
           }}
         >
@@ -336,7 +280,7 @@ function ValidInviteState({
   onAccept,
   onDecline,
 }: {
-  invite: InviteValidation;
+  invite: InviteDetails;
   onAccept: () => void;
   onDecline: () => void;
 }) {
@@ -349,10 +293,10 @@ function ValidInviteState({
         Folder Invitation
       </h1>
       <p className="mb-6 text-center text-content-secondary">
-        {invite.senderEmail} has invited you to collaborate
+        {invite.inviterEmail} has invited you to collaborate
       </p>
 
-      <PermissionDetails permission={invite.permission} />
+      <RoleDetails role={invite.role} />
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-3">
@@ -413,9 +357,6 @@ function ErrorState({ message }: { message: string }) {
       </div>
       <h1 className="mb-2 text-center text-2xl font-bold text-red-900">Invite Error</h1>
       <p className="mb-6 text-center text-red-700">{message}</p>
-      <p className="mb-6 text-center text-sm text-red-600">
-        Please read the message above before continuing.
-      </p>
       <Button
         variant="outline"
         className="w-full"
@@ -430,16 +371,16 @@ function ErrorState({ message }: { message: string }) {
 }
 
 /**
- * Display permission level with Jazz role names (reader/writer/admin)
+ * Display role level with rowboat's role names (reader/writer/admin).
  */
-function PermissionDetails({ permission }: { permission?: string }) {
+function RoleDetails({ role }: { role?: string }) {
   const labels: Record<string, { name: string; description: string }> = {
     reader: { name: 'Reader', description: 'You can view items in this folder' },
     writer: { name: 'Writer', description: 'You can view and modify items in this folder' },
     admin: { name: 'Admin', description: 'You have full control including sharing permissions' },
   };
 
-  const info = labels[permission || ''] || { name: permission, description: '' };
+  const info = labels[role ?? ''] ?? { name: role, description: '' };
 
   return (
     <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">
@@ -450,21 +391,4 @@ function PermissionDetails({ permission }: { permission?: string }) {
       <div className="text-sm text-content-secondary">{info.description}</div>
     </div>
   );
-}
-
-function getErrorMessage(errorCode: string): string {
-  switch (errorCode) {
-    case 'not_found':
-      return 'This invite link is invalid or has been revoked.';
-    case 'expired':
-      return 'This invite link has expired.';
-    case 'already_accepted':
-      return 'This invite has already been accepted.';
-    case 'already_member':
-      return 'You already have access to this folder.';
-    case 'self_invite':
-      return 'You cannot accept an invite to your own folder.';
-    default:
-      return 'This invite link is no longer valid.';
-  }
 }

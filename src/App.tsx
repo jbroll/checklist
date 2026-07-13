@@ -70,13 +70,21 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-// TODO(slice-2): TestPage/InviteAcceptPage/BillingSuccessPage/MergeAccountFlow all read a
-// Jazz `Account` (via the old `@/lib/jazz` `useAccount`/`useTypedAccount`), which the rowboat
-// port's provider no longer supplies (see `src/lib/jazz.tsx`). Rather than stub those pages
-// out in place, their routes are disabled here for slice 1 (folders-only) — the files are
-// untouched on disk (still compile against the unchanged Jazz schema in `src/schema/index.ts`)
-// but are no longer imported, so they're not part of the production bundle. See
-// `docs/superpowers/d-t4-report.md`.
+// TODO(slice-2): TestPage/BillingSuccessPage/MergeAccountFlow still read a Jazz `Account` (via
+// the old `@/lib/jazz` `useAccount`/`useTypedAccount`), which the rowboat port's provider no
+// longer supplies (see `src/lib/jazz.tsx`). Rather than stub those pages out in place, their
+// routes stay disabled here for slice 1 (folders-only) — the files are untouched on disk (still
+// compile against the unchanged Jazz schema in `src/schema/index.ts`) but are no longer
+// imported, so they're not part of the production bundle. See `docs/superpowers/d-t4-report.md`.
+// InviteAcceptPage was ported onto rowboat's `useSharing` in the sharing slice (see
+// `docs/superpowers/d-t5-report.md`) and is re-enabled below.
+
+// Lazy load InviteAcceptPage for sharing invites
+const InviteAcceptPage = lazy(() =>
+  import('./components/sharing/InviteAcceptPage').then((module) => ({
+    default: module.InviteAcceptPage,
+  })),
+);
 
 // Lazy load ResetPasswordPage for password reset flow
 const ResetPasswordPage = lazy(() =>
@@ -139,6 +147,8 @@ function App() {
 
   // Parse current route
   const pathname = window.location.pathname;
+  const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
+  const inviteToken = inviteMatch ? inviteMatch[1] : null;
   const isResetPasswordPage = pathname === '/reset-password';
   const isVerifyEmailPage = pathname === '/verify-email';
   const isBillingCancel = pathname === '/billing/cancel';
@@ -160,7 +170,11 @@ function App() {
             Skip to main content
           </a>
           <div className="min-h-screen bg-surface-secondary">
-            {isResetPasswordPage ? (
+            {inviteToken ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <InviteAcceptPage token={inviteToken} />
+              </Suspense>
+            ) : isResetPasswordPage ? (
               <Suspense fallback={<LoadingScreen />}>
                 <ResetPasswordPage />
               </Suspense>

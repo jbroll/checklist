@@ -60,7 +60,6 @@
     "src/components/session/**",
     "src/components/tree/TemplateItemView.tsx",
     "src/components/tree/SessionRowView.tsx",
-    "src/components/sharing/InviteAcceptPage.tsx",
     "src/components/import/**",
     "src/services/import/**",
     "src/services/checklistFolderFactory.ts",
