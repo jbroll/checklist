@@ -21,8 +21,8 @@
  * for the exact call sites.
  */
 import { useCallback, useMemo } from 'react';
+import { useRowboat, useSelect } from '@/jazz';
 import type { FolderRow } from '@/schema/folder';
-import { useRowboat, useSelect } from '@/schema/folder';
 import {
   childrenOf,
   addFolder as opAddFolder,
@@ -71,6 +71,17 @@ export interface UseCheckListHierarchyResult {
   childrenOf: (parentId: string | null) => FolderRow[];
   /** Billing is deferred in this slice — creation is never blocked. */
   canCreate: () => boolean;
+  /**
+   * TODO(slice-2): trash/template/items/account-wipe surface. Items/sessions aren't in the
+   * rowboat `Folder` table yet, so these are explicit no-op stubs (empty array / resolved
+   * promise), not silent fallbacks over real data — callers must hide the UI that drives
+   * them (see TreeView's `hideArchivedTemplatesToggle`-style gating).
+   */
+  archivedFolders: FolderRow[];
+  emptyTrash: () => Promise<void>;
+  duplicateTemplate: (id: string) => FolderRow | undefined;
+  getAllTemplateFolders: () => FolderRow[];
+  deleteAllUserData: () => Promise<void>;
 }
 
 export function useCheckListHierarchy(
@@ -136,6 +147,12 @@ export function useCheckListHierarchy(
 
   const canCreate = useCallback(() => true, []);
 
+  // TODO(slice-2): trash/template/items/account-wipe. See UseCheckListHierarchyResult.
+  const emptyTrash = useCallback(async () => {}, []);
+  const duplicateTemplate = useCallback((_id: string) => undefined, []);
+  const getAllTemplateFolders = useCallback(() => [] as FolderRow[], []);
+  const deleteAllUserData = useCallback(async () => {}, []);
+
   return {
     folders,
     allFolders,
@@ -150,6 +167,11 @@ export function useCheckListHierarchy(
     findById,
     childrenOf: childrenOfCb,
     canCreate,
+    archivedFolders: [],
+    emptyTrash,
+    duplicateTemplate,
+    getAllTemplateFolders,
+    deleteAllUserData,
   };
 }
 
@@ -168,4 +190,29 @@ export function isTemplateFolder(folder: FolderRow): boolean {
 
 export function isOrganizationalFolder(folder: FolderRow): boolean {
   return folder.type === 'folder';
+}
+
+/**
+ * Local minimal replacements for the jazz-backed hook's error classes (there's no
+ * `@jbroll/rowboat-*` equivalent). Neither is thrown by this slice's hook today —
+ * `moveNode`/`g.folder.move` already hard-errors (a plain `Error`) on a cycle, and there is
+ * no item-limit/billing check in slice 1 (see `canCreate`, which is a permissive `() => true`
+ * stub pending the billing port). Kept as real subclasses, not aliases, so out-of-scope call
+ * sites that still do `instanceof ItemLimitExceededError` / read `.maxItems` type-check and
+ * behave correctly once those checks are ported in a later slice.
+ */
+export class CircularReferenceError extends Error {
+  constructor(message = 'Cannot move a folder into its own descendant') {
+    super(message);
+    this.name = 'CircularReferenceError';
+  }
+}
+
+export class ItemLimitExceededError extends Error {
+  readonly maxItems: number;
+  constructor(maxItems: number, message = `List limit of ${maxItems} reached`) {
+    super(message);
+    this.name = 'ItemLimitExceededError';
+    this.maxItems = maxItems;
+  }
 }

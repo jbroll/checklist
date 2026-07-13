@@ -70,15 +70,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-// Lazy load TestPage only in development to avoid bundling it in production
-const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
-
-// Lazy load InviteAcceptPage for sharing invites
-const InviteAcceptPage = lazy(() =>
-  import('./components/sharing/InviteAcceptPage').then((module) => ({
-    default: module.InviteAcceptPage,
-  })),
-);
+// TODO(slice-2): TestPage/InviteAcceptPage/BillingSuccessPage/MergeAccountFlow all read a
+// Jazz `Account` (via the old `@/lib/jazz` `useAccount`/`useTypedAccount`), which the rowboat
+// port's provider no longer supplies (see `src/lib/jazz.tsx`). Rather than stub those pages
+// out in place, their routes are disabled here for slice 1 (folders-only) — the files are
+// untouched on disk (still compile against the unchanged Jazz schema in `src/schema/index.ts`)
+// but are no longer imported, so they're not part of the production bundle. See
+// `docs/superpowers/d-t4-report.md`.
 
 // Lazy load ResetPasswordPage for password reset flow
 const ResetPasswordPage = lazy(() =>
@@ -94,45 +92,12 @@ const VerifyEmailPage = lazy(() =>
   })),
 );
 
-// Lazy load billing pages for Stripe checkout flow
-const BillingSuccessPage = lazy(() =>
-  import('./components/billing/BillingSuccessPage').then((module) => ({
-    default: module.BillingSuccessPage,
-  })),
-);
-
+// Lazy load billing cancel page (no Account access needed, unlike BillingSuccessPage)
 const BillingCancelPage = lazy(() =>
   import('./components/billing/BillingCancelPage').then((module) => ({
     default: module.BillingCancelPage,
   })),
 );
-
-// Lazy load MergeAccountFlow for account merge
-const MergeAccountFlow = lazy(() => import('./components/auth/MergeAccountFlow'));
-
-// Lazy load Jazz Inspector to avoid bundling it unnecessarily
-const JazzInspector = lazy(() =>
-  import('jazz-tools/inspector').then((module) => ({ default: module.JazzInspector })),
-);
-
-/**
- * Conditional Jazz Inspector wrapper
- * Only shows inspector in development mode (never in production)
- */
-function ConditionalJazzInspector() {
-  const isDevelopment = import.meta.env.DEV;
-
-  // Only show inspector in development mode
-  if (!isDevelopment) {
-    return null;
-  }
-
-  return (
-    <Suspense fallback={null}>
-      <JazzInspector />
-    </Suspense>
-  );
-}
 
 function App() {
   // Check for in-app browser (Facebook, Instagram, etc.) which don't support
@@ -174,41 +139,9 @@ function App() {
 
   // Parse current route
   const pathname = window.location.pathname;
-  const isTestPage = pathname === '/test';
   const isResetPasswordPage = pathname === '/reset-password';
   const isVerifyEmailPage = pathname === '/verify-email';
-  const isBillingSuccess = pathname === '/billing/success';
   const isBillingCancel = pathname === '/billing/cancel';
-  const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
-  const inviteToken = inviteMatch ? inviteMatch[1] : null;
-  const isMergeFlow = new URLSearchParams(window.location.search).get('merge') !== null;
-
-  // Block test page in production
-  if (isTestPage && import.meta.env.PROD) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-green-50 dark:bg-neutral-900">
-        <div className="max-w-md rounded-xl border border-green-200 dark:border-green-800 bg-white dark:bg-neutral-800 p-8 text-center shadow-lg">
-          <div className="mb-4 flex justify-center">
-            <div className="rounded-full bg-green-100 dark:bg-green-900 p-4">
-              <RefreshCw className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-          <h1 className="mb-2 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
-            Page Not Available
-          </h1>
-          <p className="mb-6 text-neutral-600 dark:text-neutral-400">
-            This page is only available in development mode.
-          </p>
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-white font-medium hover:bg-green-700 transition-colors"
-          >
-            Go to Home
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   // Block in-app browsers (Facebook, Instagram, etc.) which don't support
   // OAuth and have unreliable local storage for offline data
@@ -227,11 +160,7 @@ function App() {
             Skip to main content
           </a>
           <div className="min-h-screen bg-surface-secondary">
-            {inviteToken ? (
-              <Suspense fallback={<LoadingScreen />}>
-                <InviteAcceptPage token={inviteToken} />
-              </Suspense>
-            ) : isResetPasswordPage ? (
+            {isResetPasswordPage ? (
               <Suspense fallback={<LoadingScreen />}>
                 <ResetPasswordPage />
               </Suspense>
@@ -239,27 +168,14 @@ function App() {
               <Suspense fallback={<LoadingScreen />}>
                 <VerifyEmailPage />
               </Suspense>
-            ) : isBillingSuccess ? (
-              <Suspense fallback={<LoadingScreen />}>
-                <BillingSuccessPage />
-              </Suspense>
             ) : isBillingCancel ? (
               <Suspense fallback={<LoadingScreen />}>
                 <BillingCancelPage />
-              </Suspense>
-            ) : isTestPage ? (
-              <Suspense fallback={<LoadingScreen />}>
-                <TestPage />
-              </Suspense>
-            ) : isMergeFlow ? (
-              <Suspense fallback={<LoadingScreen />}>
-                <MergeAccountFlow />
               </Suspense>
             ) : (
               <AuthGate />
             )}
           </div>
-          <ConditionalJazzInspector />
         </DialogProvider>
       </JazzProvider>
     </ErrorBoundary>

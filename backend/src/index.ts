@@ -21,7 +21,7 @@ import {
 } from '@jbroll/rowboat-backend';
 import { mountShareRoutes, registerShareTables } from '@jbroll/rowboat-sharing';
 import { compileSchema } from '@jbroll/rowboat-schema';
-import { schema as folderSchema } from '../../src/schema/folder.js';
+import { schema as folderSchema } from '../../shared/schema.js';
 
 // Root .env first (shared config), then backend .env — mirrors the pre-port load order.
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });

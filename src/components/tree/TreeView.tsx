@@ -10,43 +10,32 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { toArray } from '@jbr-jazz/hierarchy-shared';
-import type { InstanceOfSchema } from 'jazz-tools';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
-import { isTemplateFolder, useCheckListHierarchy } from '@/hooks';
-import { legacyStorageKey } from '@/lib/brand';
-import { useDialog } from '@/lib/dialog-context';
+import { useCheckListHierarchy } from '@/hooks';
+import { usePort, useRowboat, useSelect } from '@/jazz';
 import { usePWAInstall } from '@/lib/usePWAInstall';
-import type { Account, FolderNode, SessionData } from '@/schema';
-import * as sessionService from '@/services/sessionService';
-import * as viewStateService from '@/services/viewStateService';
+import type { FolderRow } from '@/schema/folder';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
-import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
 
 // Tree structure for rendering
 interface TreeNode {
-  folder: InstanceOfSchema<typeof FolderNode>;
+  folder: FolderRow;
   children: TreeNode[];
   level: number;
 }
 
 // Grouped prop interfaces to reduce prop drilling
 export interface TreeViewSelectionHandlers {
-  onTemplateSelect?: (templateId: string) => void;
   onFolderSelect?: (folderId: string) => void;
-  onOpenSession?: (templateId: string, sessionId: string) => void;
-  onExportSession?: (templateId: string, sessionId: string) => void;
 }
 
 export interface TreeViewHeaderActions {
   onHeaderClick?: () => void;
   onAddFolder?: () => void;
   onAddTemplate?: () => void;
-  onExport?: () => void;
-  onImport?: () => void;
 }
 
 export interface TreeViewAuthProps {
@@ -64,81 +53,49 @@ export interface TreeViewArchiveSettings {
   hideArchiveAction?: boolean;
 }
 
-export interface TreeViewSubscriptionInfo {
-  subscriptionTier?: string;
-  listCount?: number;
-  maxLists?: number;
-  onUpgradeClick?: () => void;
-}
-
 interface TreeViewProps {
-  account: InstanceOfSchema<typeof Account>;
-  selectedTemplateId?: string | null;
   selectedFolderId?: string | null;
   selectionHandlers?: TreeViewSelectionHandlers;
   headerActions?: TreeViewHeaderActions;
   authProps?: TreeViewAuthProps;
   archiveSettings?: TreeViewArchiveSettings;
-  subscriptionInfo?: TreeViewSubscriptionInfo;
 }
 
-/**
- * Expand all ancestor folders in viewState to make a folder visible
- */
-function expandAncestorFoldersInViewState(
-  account: InstanceOfSchema<typeof Account>,
-  folder: InstanceOfSchema<typeof FolderNode>,
-): void {
-  let current = folder.parent;
-  while (current) {
-    viewStateService.setFolderExpanded(account, current.$jazz.id, true);
-    current = current.parent;
-  }
-}
-
-/**
- * Build hierarchical tree from FolderNode structure
- */
-function buildFolderTree(
-  folders: InstanceOfSchema<typeof FolderNode>[] | null | undefined,
-  showArchived: boolean,
-  level = 0,
-): TreeNode[] {
-  if (!folders || !Array.isArray(folders)) return [];
-  const nodes: TreeNode[] = [];
-
+/** Build the hierarchical tree from a flat `FolderRow[]` (reactive selector output). */
+function buildFolderTree(folders: FolderRow[], showArchived: boolean): TreeNode[] {
+  const byParent = new Map<string | null, FolderRow[]>();
   for (const folder of folders) {
-    if (!folder) continue;
     if (!showArchived && folder.archived) continue;
-
-    const children =
-      folder.children && Array.isArray(folder.children)
-        ? buildFolderTree(folder.children, showArchived, level + 1)
-        : [];
-
-    nodes.push({
-      folder,
-      children,
-      level,
-    });
+    const key = folder.parent_id;
+    const siblings = byParent.get(key) ?? [];
+    siblings.push(folder);
+    byParent.set(key, siblings);
   }
 
-  return nodes;
+  function build(parentId: string | null, level: number): TreeNode[] {
+    const siblings = byParent.get(parentId) ?? [];
+    return siblings
+      .slice()
+      .sort((a, b) => a.created_at - b.created_at)
+      .map((folder) => ({
+        folder,
+        children: build(folder.id, level + 1),
+        level,
+      }));
+  }
+
+  return build(null, 0);
 }
 
 export function TreeView({
-  account,
-  selectedTemplateId: _selectedTemplateId,
   selectedFolderId,
   selectionHandlers = {},
   headerActions = {},
   authProps = {},
   archiveSettings = {},
-  subscriptionInfo = {},
 }: TreeViewProps) {
-  // Destructure grouped props
-  const { onTemplateSelect, onFolderSelect, onOpenSession, onExportSession } = selectionHandlers;
-  const { onHeaderClick, onAddFolder, onAddTemplate, onExport, onImport } = headerActions;
+  const { onFolderSelect } = selectionHandlers;
+  const { onHeaderClick, onAddFolder, onAddTemplate } = headerActions;
   const {
     onSignOut,
     onSignIn,
@@ -147,15 +104,9 @@ export function TreeView({
     showProfileDialog,
     onShowProfileDialogChange,
   } = authProps;
-  const {
-    hideArchivedTemplatesToggle = false,
-    hideArchivedSessionsToggle = false,
-    hideArchiveAction = false,
-  } = archiveSettings;
-  const { subscriptionTier, listCount, maxLists, onUpgradeClick } = subscriptionInfo;
-  const { showConfirm } = useDialog();
+  const { hideArchivedTemplatesToggle = false, hideArchiveAction = false } = archiveSettings;
 
-  // Use jbr-jazz hierarchy hook for folder operations
+  const { author, mintGroup } = usePort();
   const {
     findById,
     renameNode,
@@ -163,20 +114,20 @@ export function TreeView({
     unarchiveNode,
     deleteNode,
     moveNode,
-    moveNodeToIndex,
     archivedFolders,
     emptyTrash,
-  } = useCheckListHierarchy(account);
+  } = useCheckListHierarchy({ createdBy: author ?? 'anon', mintGroup });
+
+  // The hook's own `folders`/`allFolders` are TOP-LEVEL only and change-detected by shallow
+  // (id, updated_at) comparison — a rename/move nested two levels deep wouldn't flip that
+  // array's identity. Reading the whole `folder` table directly here (instead) means every
+  // graph write re-runs this selector, so nested changes are never missed.
+  const g = useRowboat();
+  const allFolderRows = useSelect(() => g.folder.all().map((n) => n.$data));
+
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [showArchivedTemplates, setShowArchivedTemplates] = useState(() => {
-    const stored = localStorage.getItem(legacyStorageKey('show-archived-templates'));
-    return stored === 'true';
-  });
-  const [showArchivedSessions, setShowArchivedSessions] = useState(() => {
-    const stored = localStorage.getItem(legacyStorageKey('show-archived-sessions'));
-    return stored === 'true';
-  });
+  const [showArchivedTemplates, setShowArchivedTemplates] = useState(false);
 
   // PWA install state
   const { showInstallOption, hasNativePrompt, triggerInstall } = usePWAInstall();
@@ -190,332 +141,145 @@ export function TreeView({
     }
   }, [hasNativePrompt, triggerInstall]);
 
-  // Persist archived view preferences
-  useEffect(() => {
-    localStorage.setItem(
-      legacyStorageKey('show-archived-templates'),
-      String(showArchivedTemplates),
-    );
-  }, [showArchivedTemplates]);
-
-  useEffect(() => {
-    localStorage.setItem(legacyStorageKey('show-archived-sessions'), String(showArchivedSessions));
-  }, [showArchivedSessions]);
-
-  // Get selected folder by ID
   const selectedFolder = useMemo(() => {
     if (!selectedFolderId) return null;
-    return findById(selectedFolderId);
+    return findById(selectedFolderId) ?? null;
   }, [selectedFolderId, findById]);
 
-  // Clear selection when selected folder becomes archived
-  useEffect(() => {
-    if (selectedFolder?.archived && !showArchivedTemplates) {
-      onHeaderClick?.();
-    }
-  }, [selectedFolder, showArchivedTemplates, onHeaderClick]);
-
-  // Configure sensors for drag detection
-  // Use MouseSensor + TouchSensor instead of PointerSensor for proper mobile support
-  // TouchSensor allows scrolling while supporting drag gestures
   const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8, // Require 8px of movement before activating drag
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250, // 250ms hold before drag starts (allows scrolling)
-        tolerance: 8, // Allow 8px of movement during the delay
-      },
-    }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
   const handleToggleFolderExpand = useCallback(
-    (folder: InstanceOfSchema<typeof FolderNode>) => {
-      viewStateService.toggleFolderExpanded(account, folder.$jazz.id);
+    (folder: FolderRow) => {
+      void g.folder.update(folder.id, { expanded: !folder.expanded });
     },
-    [account],
+    [g],
   );
 
   const handleRenameFolder = useCallback(
-    (folder: InstanceOfSchema<typeof FolderNode>, newName: string) => {
-      renameNode(folder, newName);
+    (folder: FolderRow, newName: string) => {
+      void renameNode(folder.id, newName);
     },
     [renameNode],
   );
 
   const handleToggleArchiveFolder = useCallback(
-    (folder: InstanceOfSchema<typeof FolderNode>) => {
+    (folder: FolderRow) => {
       if (folder.archived) {
-        unarchiveNode(folder);
+        void unarchiveNode(folder.id);
       } else {
-        archiveNode(folder);
+        void archiveNode(folder.id);
       }
     },
     [archiveNode, unarchiveNode],
   );
 
   const handleDeleteFolder = useCallback(
-    (folder: InstanceOfSchema<typeof FolderNode>) => {
-      deleteNode(folder);
+    (folder: FolderRow) => {
+      void deleteNode(folder.id);
     },
     [deleteNode],
   );
 
-  const handleFolderDuplicated = useCallback((newFolder: InstanceOfSchema<typeof FolderNode>) => {
-    // Trigger inline rename mode on the new folder (don't select/navigate)
-    setEditingFolderId(newFolder.$jazz.id);
-  }, []);
-
-  const handleToggleArchiveSession = useCallback(
-    (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
-      const sessions = toArray<SessionData>(templateFolder.sessions);
-      const session = sessions.find((s: SessionData) => s?.id === sessionId);
-      if (session) {
-        if (session.archived) {
-          sessionService.unarchiveSession(account, templateFolder.$jazz.id, sessionId);
-        } else {
-          sessionService.archiveSession(account, templateFolder.$jazz.id, sessionId);
-        }
-      }
-    },
-    [account],
-  );
-
-  const handleDeleteSession = useCallback(
-    (templateFolder: InstanceOfSchema<typeof FolderNode>, sessionId: string) => {
-      sessionService.deleteSession(account, templateFolder.$jazz.id, sessionId);
-    },
-    [account],
-  );
-
-  // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const folderId = event.active.data.current?.folderId as string;
     setActiveFolderId(folderId);
   }, []);
 
   const handleDragOver = useCallback((_event: DragOverEvent) => {
-    // Optional: Add visual feedback during drag
+    // No-op: reserved for future visual feedback during drag.
   }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-
       setActiveFolderId(null);
-
-      if (!over || !active.data.current || !account.root?.folders) {
-        return;
-      }
+      if (!over || !active.data.current) return;
 
       const draggedFolderId = active.data.current.folderId as string;
       const overData = over.data.current;
-
       const draggedFolder = findById(draggedFolderId);
       if (!draggedFolder) return;
 
-      // Check if dropped on a reorder zone
-      if (overData?.type === 'reorder-zone') {
-        const afterItemId = overData.afterItemId as string | undefined;
-        const beforeItemId = overData.beforeItemId as string | undefined;
-        const targetParentId = overData.parentId as string | undefined;
-
-        // Find target parent folder (undefined means root level)
-        const targetParent = targetParentId ? findById(targetParentId) : undefined;
-
-        // Get the target list (either parent's children or root folders)
-        const targetList = targetParent?.children || account.root.folders;
-
-        // Find target index in the new parent's list
-        let newIndex: number;
-
-        if (afterItemId) {
-          const afterIndex = targetList.findIndex(
-            (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === afterItemId,
-          );
-          newIndex = afterIndex + 1;
-        } else if (beforeItemId) {
-          newIndex = targetList.findIndex(
-            (f: InstanceOfSchema<typeof FolderNode> | null) => f?.$jazz.id === beforeItemId,
-          );
-        } else {
-          newIndex = 0;
-        }
-
-        try {
-          // Use moveNodeToIndex which handles both cross-parent moves and same-parent reorders
-          moveNodeToIndex(draggedFolder, targetParent, newIndex);
-        } catch (error) {
-          console.error('[TreeView] Error moving folder to index:', error);
-        }
-        return;
-      }
-
-      // Handle hierarchy changes (move into folders)
-      let newParent: InstanceOfSchema<typeof FolderNode> | undefined;
-
+      let newParentId: string | null | undefined;
       if (overData?.path === '__ROOT_DROP_ZONE__') {
-        newParent = undefined; // Move to root level
+        newParentId = null;
       } else if (overData?.isFolder && overData?.folderId) {
-        // Find the target folder
-        newParent = findById(overData.folderId as string) ?? undefined;
+        newParentId = overData.folderId as string;
       }
+
+      if (newParentId === undefined) return;
 
       try {
-        moveNode(draggedFolder, newParent);
+        void moveNode(draggedFolder.id, newParentId);
       } catch (error) {
-        // Log unexpected errors (not circular move validation)
-        if (!(error instanceof Error && error.message.includes('Cannot move folder into itself'))) {
-          console.error('[TreeView] Error moving folder:', error);
-        }
+        console.error('[TreeView] Error moving folder:', error);
       }
     },
-    [account, findById, moveNode, moveNodeToIndex],
+    [findById, moveNode],
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveFolderId(null);
   }, []);
 
-  // Build hierarchical tree structure
-  const folderTree = useMemo(() => {
-    const folders = account.root?.folders;
-    const foldersArray =
-      folders && Array.isArray(folders) ? folders : folders ? Array.from(folders) : [];
-    return buildFolderTree(foldersArray, showArchivedTemplates);
-  }, [account.root?.folders, showArchivedTemplates]);
+  const folderTree = useMemo(
+    () => buildFolderTree(allFolderRows, showArchivedTemplates),
+    [allFolderRows, showArchivedTemplates],
+  );
 
-  // Check if there are any archived folders
-  const hasArchivedTemplates = useMemo(() => {
-    return archivedFolders.length > 0;
-  }, [archivedFolders]);
+  const hasArchivedTemplates = archivedFolders.length > 0;
 
-  // Handle empty trash
-  const handleEmptyTrash = useCallback(async () => {
-    const count = archivedFolders.length;
-    if (count === 0) return;
-
-    const confirmed = await showConfirm({
-      title: 'Empty Trash',
-      message: `Permanently delete ${count} archived item${count === 1 ? '' : 's'}? This cannot be undone.`,
-      confirmText: 'Delete',
-      variant: 'danger',
-    });
-    if (confirmed) {
-      emptyTrash();
-    }
-  }, [archivedFolders, showConfirm, emptyTrash]);
+  const handleEmptyTrash = useCallback(() => {
+    void emptyTrash();
+  }, [emptyTrash]);
 
   const renderNode = (node: TreeNode): React.ReactNode => {
     const { folder, children } = node;
-    const isTemplate = isTemplateFolder(folder);
-
-    // For templates, always show sessions
-    let sessionChildren: React.ReactNode[] = [];
-    if (isTemplate && folder.sessions) {
-      const sessions = toArray<SessionData>(folder.sessions);
-      const activeSessions = sessions
-        .filter((s: SessionData) => {
-          if (!s || !s.id) return false; // Filter out sessions without IDs
-          return showArchivedSessions || !s.archived;
-        })
-        .sort((a: SessionData, b: SessionData) => {
-          const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
-        });
-
-      sessionChildren = activeSessions.map((session: SessionData, index: number) => (
-        <SessionRowView
-          key={session.id || `session-${index}`}
-          session={session}
-          templateName={folder.name}
-          level={node.level + 1}
-          onOpen={(sessionId) => {
-            // Expand the template and its ancestors using viewState
-            expandAncestorFoldersInViewState(account, folder);
-            viewStateService.setFolderExpanded(account, folder.$jazz.id, true);
-            onOpenSession?.(folder.$jazz.id, sessionId);
-          }}
-          onArchive={(sessionId) => handleToggleArchiveSession(folder, sessionId)}
-          onDelete={(sessionId) => handleDeleteSession(folder, sessionId)}
-          onExport={(sessionId) => onExportSession?.(folder.$jazz.id, sessionId)}
-          allSessions={activeSessions}
-          hideArchiveAction={hideArchiveAction}
-        />
-      ));
-    }
-
-    const hasChildren = children.length > 0 || sessionChildren.length > 0;
+    const hasChildren = children.length > 0;
 
     return (
       <FolderNodeView
-        key={folder.$jazz.id}
+        key={folder.id}
         folder={folder}
         level={node.level}
         hasChildren={hasChildren}
-        isSelected={selectedFolderId === folder.$jazz.id}
-        onSelect={() => {
-          onFolderSelect?.(folder.$jazz.id);
-          // Also call onTemplateSelect for templates
-          if (isTemplate) {
-            onTemplateSelect?.(folder.$jazz.id);
-          }
-        }}
+        isSelected={selectedFolderId === folder.id}
+        onSelect={() => onFolderSelect?.(folder.id)}
         onToggleExpand={() => handleToggleFolderExpand(folder)}
         onRename={(newName) => handleRenameFolder(folder, newName)}
         onArchive={() => handleToggleArchiveFolder(folder)}
         onDelete={() => handleDeleteFolder(folder)}
-        onDuplicated={handleFolderDuplicated}
-        autoStartEditing={editingFolderId === folder.$jazz.id}
+        autoStartEditing={editingFolderId === folder.id}
         onAutoEditStarted={() => setEditingFolderId(null)}
-        account={account}
         hideArchiveAction={hideArchiveAction}
       >
-        {/* Render children only when expanded - use viewState for per-user expansion */}
-        {viewStateService.getFolderExpanded(account, folder.$jazz.id) && (
-          <>
-            {/* Render sessions for templates */}
-            {sessionChildren}
-            {/* Render child folders recursively with reorder zones */}
-            {children.map((childNode, childIndex) => {
-              const parentId = folder.$jazz.id;
-
-              return (
-                <div key={childNode.folder.$jazz.id}>
-                  {/* Reorder zone before first child */}
-                  {childIndex === 0 && (
-                    <ReorderDropZone
-                      id={`reorder-before-${childNode.folder.$jazz.id}`}
-                      beforeItemId={childNode.folder.$jazz.id}
-                      parentId={parentId}
-                      isDragging={!!activeFolderId}
-                    />
-                  )}
-                  {renderNode(childNode)}
-                  {/* Reorder zone after each child */}
-                  <ReorderDropZone
-                    id={`reorder-after-${childNode.folder.$jazz.id}`}
-                    afterItemId={childNode.folder.$jazz.id}
-                    beforeItemId={children[childIndex + 1]?.folder.$jazz.id}
-                    parentId={parentId}
-                    isDragging={!!activeFolderId}
-                  />
-                </div>
-              );
-            })}
-          </>
-        )}
+        {folder.expanded &&
+          children.map((childNode, childIndex) => (
+            <div key={childNode.folder.id}>
+              {childIndex === 0 && (
+                <ReorderDropZone
+                  id={`reorder-before-${childNode.folder.id}`}
+                  beforeItemId={childNode.folder.id}
+                  parentId={folder.id}
+                  isDragging={!!activeFolderId}
+                />
+              )}
+              {renderNode(childNode)}
+              <ReorderDropZone
+                id={`reorder-after-${childNode.folder.id}`}
+                afterItemId={childNode.folder.id}
+                beforeItemId={children[childIndex + 1]?.folder.id}
+                parentId={folder.id}
+                isDragging={!!activeFolderId}
+              />
+            </div>
+          ))}
       </FolderNodeView>
     );
   };
-
-  // Always show New Folder/List buttons
-  // Users can create new items at any time, regardless of selection or archived view state
-  const canCreateFolderOrList = true;
 
   return (
     <DndContext
@@ -527,22 +291,21 @@ export function TreeView({
       onDragCancel={handleDragCancel}
     >
       <div className="rounded-lg border border-divider-primary bg-surface-elevated flex flex-col flex-1 min-h-0">
-        {/* Root-level drop zone with header */}
         <TreeViewHeader
           isDragging={!!activeFolderId}
-          canCreateFolderOrList={canCreateFolderOrList}
+          canCreateFolderOrList={true}
           showArchivedTemplates={showArchivedTemplates}
-          showArchivedSessions={showArchivedSessions}
           hideArchivedTemplatesToggle={hideArchivedTemplatesToggle}
-          hideArchivedSessionsToggle={hideArchivedSessionsToggle}
+          // TODO(slice-2): session archiving isn't ported yet — always hide that toggle.
+          hideArchivedSessionsToggle={true}
           hasArchivedTemplates={hasArchivedTemplates}
           onHeaderClick={onHeaderClick || (() => {})}
           onAddFolder={onAddFolder || (() => {})}
           onAddTemplate={onAddTemplate || (() => {})}
-          onExport={onExport || (() => {})}
-          onImport={onImport || (() => {})}
-          onToggleShowArchivedTemplates={() => setShowArchivedTemplates(!showArchivedTemplates)}
-          onToggleShowArchivedSessions={() => setShowArchivedSessions(!showArchivedSessions)}
+          // TODO(slice-2): export/import operate on template items, not ported yet.
+          onExport={() => {}}
+          onImport={() => {}}
+          onToggleShowArchivedTemplates={() => setShowArchivedTemplates((v) => !v)}
           onEmptyTrash={handleEmptyTrash}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
@@ -555,10 +318,6 @@ export function TreeView({
           onAbout={() => {
             window.location.href = '/about.html';
           }}
-          subscriptionTier={subscriptionTier}
-          listCount={listCount}
-          maxLists={maxLists}
-          onUpgradeClick={onUpgradeClick}
         />
 
         {folderTree.length === 0 ? (
@@ -570,21 +329,19 @@ export function TreeView({
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="divide-y divide-divider-secondary p-2">
               {folderTree.map((node, index) => (
-                <div key={node.folder.$jazz.id}>
-                  {/* Reorder zone before first item */}
+                <div key={node.folder.id}>
                   {index === 0 && (
                     <ReorderDropZone
-                      id={`reorder-before-${node.folder.$jazz.id}`}
-                      beforeItemId={node.folder.$jazz.id}
+                      id={`reorder-before-${node.folder.id}`}
+                      beforeItemId={node.folder.id}
                       isDragging={!!activeFolderId}
                     />
                   )}
                   {renderNode(node)}
-                  {/* Reorder zone after each item */}
                   <ReorderDropZone
-                    id={`reorder-after-${node.folder.$jazz.id}`}
-                    afterItemId={node.folder.$jazz.id}
-                    beforeItemId={folderTree[index + 1]?.folder.$jazz.id}
+                    id={`reorder-after-${node.folder.id}`}
+                    afterItemId={node.folder.id}
+                    beforeItemId={folderTree[index + 1]?.folder.id}
                     isDragging={!!activeFolderId}
                   />
                 </div>
@@ -594,7 +351,6 @@ export function TreeView({
         )}
       </div>
 
-      {/* Drag Overlay */}
       <DragOverlay>
         {activeFolderId && selectedFolder ? (
           <div className="bg-surface-elevated border-2 border-green-500 rounded-md px-3 py-2 shadow-lg opacity-90">
@@ -603,7 +359,6 @@ export function TreeView({
         ) : null}
       </DragOverlay>
 
-      {/* PWA Install Instructions Dialog */}
       <InstallInstructionsDialog open={showInstallDialog} onOpenChange={setShowInstallDialog} />
     </DndContext>
   );

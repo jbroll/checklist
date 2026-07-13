@@ -1,23 +1,26 @@
 /**
- * Jazz runtime narrow-waist.
+ * rowboat runtime narrow-waist.
  *
- * The ONLY non-schema module allowed to value-import from "jazz-tools" /
- * "jazz-tools/react" (enforced by the org-hooks ts-jazz-waist gate, which
- * exempts src/jazz/** and src/schema/**). App code imports runtime values from
- * "@/jazz"; types still come from "jazz-tools" directly (type imports are
- * migration-cheap and allowed everywhere).
+ * Replaces the old Jazz waist (`co`/`Group`/`JazzReactProvider`/`useAccount`/etc. from
+ * `jazz-tools`) now that the folder hierarchy is ported to rowboat (see
+ * `src/schema/folder.ts`, `src/lib/jazz.tsx`). App code that needs the graph, auth, or the
+ * provider imports it from here rather than reaching into `@jbroll/rowboat-*` /
+ * `@jbroll/rowboat-auth-betterauth-react` directly, so a future rename/replacement touches
+ * this one module, not the tree.
+ *
+ * Out-of-scope UI (items/session/template/billing/sharing — see
+ * `docs/superpowers/d-t4-report.md`) still imports Jazz CoValue types (`FolderNode`,
+ * `Account`, etc.) directly from `jazz-tools` / `src/schema/index.ts`, which this waist no
+ * longer re-exports; those files are out of slice-1 scope and excluded from `tsc --noEmit`
+ * (see `tsconfig.json`).
  */
 
-// Core runtime values used by schema factories / services.
-export { co, Group } from 'jazz-tools';
-
-// React hooks + provider used across the app (re-exported through the waist so
-// the eventual Jazz vNext migration touches this one module, not the tree).
+// better-auth session/identity hooks + actions, used by AuthGate.
 export {
-  JazzReactProvider,
-  useAcceptInvite,
-  useAccount,
-  useCoState,
-  useIsAuthenticated,
-  useLogOut,
-} from 'jazz-tools/react';
+  signIn,
+  signOut,
+  useAuthor,
+  useSession,
+} from '@jbroll/rowboat-auth-betterauth-react';
+// The rowboat provider + sync loop + anon-claim wiring.
+export { JazzProvider, usePort, useRowboat, useSelect } from '@/lib/jazz';
