@@ -175,7 +175,14 @@ export function useCheckListHierarchy(
   };
 }
 
-function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
+/**
+ * Shared `useSelect` equality check for `FolderRow[]` snapshots (id + updated_at shallow
+ * compare). Also used directly by `TreeView` (which reads the whole table, not just
+ * top-level folders) — every `useSelect` selector that maps/filters into a new array MUST
+ * pass an `isEqual`, or `useSyncExternalStore`'s default `Object.is` never matches a
+ * freshly-mapped array and the render loops forever (`getSnapshot should be cached`).
+ */
+export function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i].id !== b[i].id || a[i].updated_at !== b[i].updated_at) return false;

@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -19,6 +22,24 @@ const baseURL = isSmokeTest
   : 'http://localhost:8765';
 
 const hasEmailInfra = Boolean(process.env.IMAP_HOST && process.env.IMAP_USERNAME);
+
+// The rowboat backend (backend/src/index.ts) defaults AUTH_DB_PATH to
+// ./auth.db, which on a checkout that has ever run the pre-port jbr-jazz
+// backend is THAT db (missing rowboat's share_invites.target_group_id
+// column etc) — booting the e2e backend against it hard-errors on the first
+// sharing query. Every e2e run therefore gets its own fresh sqlite file in a
+// per-run temp dir, never the repo's ./auth.db, so there is no schema
+// collision to paper over with a lenient migration.
+const e2eAuthDbPath = path.join(
+  fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-e2e-auth-')),
+  'auth.db',
+);
+
+// Playwright's own downloadable chromium build isn't installable on this
+// host (no apt-get for the fallback Ubuntu package set) — point at the
+// system-installed chromium instead. Only chromium ships here; other
+// browser projects are not configured.
+const systemChromiumPath = '/usr/bin/chromium';
 
 export default defineConfig({
   testDir: './e2e',
@@ -78,7 +99,12 @@ export default defineConfig({
             '**/invite-closed-loop.spec.ts',
             '**/account-merge.spec.ts',
           ],
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: fs.existsSync(systemChromiumPath)
+          ? { executablePath: systemChromiumPath }
+          : {},
+      },
     },
     ...(hasEmailInfra
       ? [
@@ -124,5 +150,17 @@ export default defineConfig({
         url: 'http://localhost:8765',
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
+        env: {
+          // Fresh per-run db (see e2eAuthDbPath above) + a fixed test secret
+          // and localhost FRONTEND_URL, overriding backend/.env's production
+          // values (checkout's backend/.env carries FRONTEND_URL pointed at
+          // the deployed prod origin and the real prod BETTER_AUTH_SECRET —
+          // dotenv.config() never overwrites an already-set process.env
+          // var, so setting these here wins over backend/.env).
+          AUTH_DB_PATH: e2eAuthDbPath,
+          BETTER_AUTH_SECRET: 'e2e-test-secret-do-not-use-in-prod-00000000',
+          FRONTEND_URL: 'http://localhost:8765',
+          PORT: '3001',
+        },
       },
 });

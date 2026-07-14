@@ -12,7 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { useCallback, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
-import { useCheckListHierarchy } from '@/hooks';
+import { arraysEqualById, useCheckListHierarchy } from '@/hooks';
 import { usePort, useRowboat, useSelect } from '@/jazz';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { FolderRow } from '@/schema/folder';
@@ -123,7 +123,11 @@ export function TreeView({
   // array's identity. Reading the whole `folder` table directly here (instead) means every
   // graph write re-runs this selector, so nested changes are never missed.
   const g = useRowboat();
-  const allFolderRows = useSelect(() => g.folder.all().map((n) => n.$data));
+  // MUST pass isEqual: the selector maps into a fresh array every call, and
+  // useSyncExternalStore's default Object.is never matches a freshly-mapped
+  // array — without this the snapshot never "settles" and React infinite-loops
+  // the render (confirmed via browser console: "getSnapshot should be cached").
+  const allFolderRows = useSelect(() => g.folder.all().map((n) => n.$data), arraysEqualById);
 
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);

@@ -10,6 +10,7 @@ export type {
 } from './useCheckListHierarchy';
 // Hierarchy management
 export {
+  arraysEqualById,
   CircularReferenceError,
   ItemLimitExceededError,
   isOrganizationalFolder,
