@@ -42,6 +42,10 @@ vi.mock('../../services/subscriptionService', () => ({
   },
 }));
 
+// The component reads the graph via useRowboat(); subscriptionService is mocked, so the graph
+// value is unused — a stub is enough.
+vi.mock('@/jazz', () => ({ useRowboat: () => ({}) }));
+
 import {
   getBetaMessage,
   getSubscriptionTier,
@@ -49,15 +53,10 @@ import {
   redirectToCheckout,
 } from '../../services/subscriptionService';
 
-// TODO(slice-2): billing still reads a Jazz Account; port to rowboat once subscription/usage
-// lands there (see docs/superpowers/d-t4-report.md).
-describe.skip('UpgradeDialog', () => {
-  const mockAccount = { id: 'test-account', root: { folders: [] } } as any;
-
+describe('UpgradeDialog', () => {
   const defaultProps = {
     open: true,
     onOpenChange: vi.fn(),
-    account: mockAccount,
   };
 
   beforeEach(() => {

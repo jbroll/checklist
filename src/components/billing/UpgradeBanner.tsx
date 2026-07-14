@@ -9,8 +9,8 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useRowboat } from '@/jazz';
 import { storageKey } from '../../lib/brand';
-import type { AccountParam } from '../../schema';
 import {
   countUserLists,
   getListsRemaining,
@@ -21,7 +21,6 @@ import {
 import { Button } from '../ui/button';
 
 interface UpgradeBannerProps {
-  account: AccountParam;
   onUpgradeClick: () => void;
 }
 
@@ -29,7 +28,8 @@ interface UpgradeBannerProps {
 const DISMISS_KEY = storageKey('upgrade_banner_dismissed');
 const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export function UpgradeBanner({ account, onUpgradeClick }: UpgradeBannerProps) {
+export function UpgradeBanner({ onUpgradeClick }: UpgradeBannerProps) {
+  const g = useRowboat();
   const [dismissed, setDismissed] = useState(true); // Start hidden, show after check
 
   useEffect(() => {
@@ -54,14 +54,14 @@ export function UpgradeBanner({ account, onUpgradeClick }: UpgradeBannerProps) {
   if (dismissed) return null;
 
   // Only show for free tier users approaching their limit
-  const tier = getSubscriptionTier(account);
+  const tier = getSubscriptionTier(g);
   if (tier !== 'free') return null;
 
-  if (!isApproachingLimit(account)) return null;
+  if (!isApproachingLimit(g)) return null;
 
-  const currentCount = countUserLists(account);
-  const maxLists = getMaxLists(account);
-  const remaining = getListsRemaining(account);
+  const currentCount = countUserLists(g);
+  const maxLists = getMaxLists(g);
+  const remaining = getListsRemaining(g);
 
   return (
     <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2">

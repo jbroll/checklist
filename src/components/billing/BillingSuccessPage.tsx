@@ -6,8 +6,7 @@
 
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useAccount } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
+import { useRowboat } from '@/jazz';
 import {
   getSubscriptionTier,
   getTierDisplayName,
@@ -21,21 +20,17 @@ type PageState =
   | { type: 'error'; message: string };
 
 export function BillingSuccessPage() {
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  const g = useRowboat();
   const [state, setState] = useState<PageState>({ type: 'syncing' });
 
   useEffect(() => {
-    // Wait for account to be available
-    if (!me) return;
-
     async function syncAndRedirect() {
       try {
-        // Sync subscription from backend to Jazz cache
-        await syncSubscriptionFromBackend(me);
+        // Sync subscription from the backend into the local user_settings cache
+        await syncSubscriptionFromBackend(g);
 
         // Get the updated tier
-        const tier = getSubscriptionTier(me);
+        const tier = getSubscriptionTier(g);
         const tierName = getTierDisplayName(tier);
 
         setState({ type: 'success', tierName });
@@ -54,7 +49,7 @@ export function BillingSuccessPage() {
     }
 
     syncAndRedirect();
-  }, [me]);
+  }, [g]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-secondary p-4">

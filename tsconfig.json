@@ -56,7 +56,6 @@
      * silences `tsc --noEmit` — `vite build` does not process them at all. */
     "src/TestPage.tsx",
     "src/components/auth/MergeAccountFlow.tsx",
-    "src/components/billing/**",
     "src/components/session/**",
     "src/components/tree/TemplateItemView.tsx",
     "src/components/tree/SessionRowView.tsx",

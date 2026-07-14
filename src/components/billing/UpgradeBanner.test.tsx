@@ -17,6 +17,10 @@ vi.mock('../../services/subscriptionService', () => ({
   getListsRemaining: vi.fn(),
 }));
 
+// The component reads the graph via useRowboat(); subscriptionService is mocked, so the graph
+// value is unused — a stub is enough.
+vi.mock('@/jazz', () => ({ useRowboat: () => ({}) }));
+
 import {
   countUserLists,
   getListsRemaining,
@@ -25,13 +29,8 @@ import {
   isApproachingLimit,
 } from '../../services/subscriptionService';
 
-// TODO(slice-2): billing still reads a Jazz Account; port to rowboat once subscription/usage
-// lands there (see docs/superpowers/d-t4-report.md).
-describe.skip('UpgradeBanner', () => {
-  const mockAccount = { id: 'test-account', root: { folders: [] } } as any;
-
+describe('UpgradeBanner', () => {
   const defaultProps = {
-    account: mockAccount,
     onUpgradeClick: vi.fn(),
   };
 

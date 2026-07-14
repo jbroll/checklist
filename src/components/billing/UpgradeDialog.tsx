@@ -7,8 +7,8 @@
 
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { useRowboat } from '@/jazz';
 import { brand } from '../../lib/brand';
-import type { AccountParam } from '../../schema';
 import {
   getBetaMessage,
   getSubscriptionTier,
@@ -29,7 +29,6 @@ import {
 interface UpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  account: AccountParam;
   /** Optional message to show at the top (e.g., "You've hit your limit") */
   message?: string;
 }
@@ -61,10 +60,11 @@ const FEATURES: TierFeature[] = [
   { name: 'Encrypted data', free: true, plus: true, premium: true },
 ];
 
-export function UpgradeDialog({ open, onOpenChange, account, message }: UpgradeDialogProps) {
+export function UpgradeDialog({ open, onOpenChange, message }: UpgradeDialogProps) {
+  const g = useRowboat();
   const [loading, setLoading] = useState<'plus' | 'premium' | null>(null);
-  const currentTier = getSubscriptionTier(account);
-  const isBeta = isBetaUser(account);
+  const currentTier = getSubscriptionTier(g);
+  const isBeta = isBetaUser(g);
 
   const handleUpgrade = async (tier: 'plus' | 'premium') => {
     setLoading(tier);
