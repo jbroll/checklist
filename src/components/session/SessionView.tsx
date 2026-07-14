@@ -5,6 +5,7 @@ import { ItemInput } from '@/components/ui/ItemInput';
 import { useRowboat, useSelect } from '@/jazz';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import type { FolderRow, SessionData } from '@/schema/folder';
+import { parseUserSettingsRow } from '@/schema/userSettingsData';
 import * as userSettingsService from '@/services/userSettingsService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
@@ -25,6 +26,21 @@ interface SessionViewProps {
   sessionId: string;
   onBack: () => void;
   onSwitchSession?: (newSessionId: string) => void;
+}
+
+/** Stable "nothing customized yet" default — see `templateCategoryExpanded`'s useSelect below. */
+const EMPTY_CATEGORY_EXPANDED: Record<string, boolean> = {};
+
+/** Shallow value-equality for a flat `Record<string, boolean>` (a useSelect `isEqual`). */
+function shallowBooleanRecordEqual(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>,
+): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
 }
 
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
@@ -161,9 +177,19 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   );
 
   // Category expanded state from per-user view state (reactive: re-renders on toggle).
-  const templateCategoryExpanded: Record<string, boolean> = useSelect(
-    () => g.user_settings.all()[0]?.$data.view_template_category_expanded[templateId] ?? {},
-  );
+  // `view_template_category_expanded` is a json column (string on the wire) — parse it, and
+  // the `?? {}` default for "nothing customized yet" must be a stable-by-VALUE comparison
+  // (isEqual), not a fresh object every call: useSyncExternalStore's default Object.is never
+  // matches a freshly-minted `{}`/parsed object, which infinite-loops the render (same failure
+  // mode documented on TreeView's `arraysEqualById`).
+  const templateCategoryExpanded: Record<string, boolean> = useSelect(() => {
+    const settingsRow = g.user_settings.all()[0]?.$data;
+    if (!settingsRow) return EMPTY_CATEGORY_EXPANDED;
+    return (
+      parseUserSettingsRow(settingsRow).view_template_category_expanded[templateId] ??
+      EMPTY_CATEGORY_EXPANDED
+    );
+  }, shallowBooleanRecordEqual);
 
   const isCategoryExpanded = (itemId: string): boolean => {
     return templateCategoryExpanded[itemId] ?? true;

@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, ItemState, SessionData } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { makeGraph } from '@/test/rowboat';
 import {
   archiveSession,
@@ -64,7 +65,7 @@ const seed = (extra: Partial<FolderRow> = {}): Graph =>
 const sessionsOf = (g: Graph, id = 'template-1'): SessionData[] => {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.sessions;
+  return parseFolderRow(node.$data).sessions;
 };
 
 /** Read a template's `updated_at`, hard-erroring if the folder is missing. */

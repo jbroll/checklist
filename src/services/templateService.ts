@@ -14,6 +14,7 @@
  */
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { FolderRow, schema, TemplateItem } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { generateId } from '../lib/utils';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
 
@@ -27,13 +28,16 @@ function isTemplateFolder(row: FolderRow): boolean {
   return row.type === 'template-folder';
 }
 
-/** Read the template folder node, throwing if it doesn't exist or isn't a template folder. */
-function requireTemplate(g: Graph, templateId: string) {
+/**
+ * Read the template folder row (json columns parsed), throwing if it doesn't exist or isn't a
+ * template folder.
+ */
+function requireTemplate(g: Graph, templateId: string): FolderRow {
   const node = g.folder(templateId);
   if (!node || !isTemplateFolder(node.$data)) {
     throw new Error(`Template ${templateId} not found`);
   }
-  return node;
+  return parseFolderRow(node.$data);
 }
 
 /** Find item index in the items array, throwing if not found. */
@@ -60,7 +64,7 @@ export function getTemplate(g: Graph, templateId: string): FolderRow | null {
   const node = g.folder(templateId);
   if (!node) return null;
   const row = node.$data;
-  return isTemplateFolder(row) ? row : null;
+  return isTemplateFolder(row) ? parseFolderRow(row) : null;
 }
 
 /** Get all non-archived template folders. */
@@ -68,7 +72,8 @@ export function getAllTemplates(g: Graph): FolderRow[] {
   return g.folder
     .all()
     .map((f) => f.$data)
-    .filter((row) => isTemplateFolder(row) && !row.archived);
+    .filter((row) => isTemplateFolder(row) && !row.archived)
+    .map(parseFolderRow);
 }
 
 /** Check if a template folder exists. */
@@ -105,8 +110,8 @@ async function createTemplateItem(
   parentPath?: string,
   options?: { defaultQuantity?: string; sortOrder?: number; addToDefaults?: boolean },
 ): Promise<string> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const path = createChildPath(parentPath, name);
   assertNoDuplicatePath(items, path);
 
@@ -130,7 +135,7 @@ async function createTemplateItem(
 
   // Auto-add new items to defaults if requested.
   if (options?.addToDefaults) {
-    update.default_items = { ...node.$data.default_items, [newItem.id]: true };
+    update.default_items = { ...row.default_items, [newItem.id]: true };
   }
 
   await g.folder.update(templateId, update);
@@ -194,8 +199,8 @@ export async function renameItem(
   itemId: string,
   newName: string,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const itemIndex = requireItemIndex(items, itemId);
 
   const item = items[itemIndex];
@@ -224,8 +229,8 @@ export async function updateItemNotes(
   itemId: string,
   notes: string,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const itemIndex = requireItemIndex(items, itemId);
 
   const updatedItems = [...items];
@@ -238,8 +243,8 @@ export async function updateItemNotes(
  * Archive (soft delete) an item or category. If it's a category, also archives all descendants.
  */
 export async function archiveItem(g: Graph, templateId: string, itemId: string): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const item = items.find((i) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template`);
 
@@ -267,8 +272,8 @@ export async function moveItem(
   newParentPath: string | undefined,
   sortOrder?: number,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const itemIndex = requireItemIndex(items, itemId);
 
   const item = items[itemIndex];
@@ -297,8 +302,8 @@ export async function moveItem(
 
 /** Get category expanded state (throws if the item is not a category). */
 export function getCategoryExpanded(g: Graph, templateId: string, itemId: string): boolean {
-  const node = requireTemplate(g, templateId);
-  const item = node.$data.items.find((i) => i.id === itemId);
+  const row = requireTemplate(g, templateId);
+  const item = row.items.find((i) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template`);
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
   return item.expanded;
@@ -311,8 +316,8 @@ export async function setCategoryExpanded(
   itemId: string,
   expanded: boolean,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const itemIndex = requireItemIndex(items, itemId);
   const item = items[itemIndex];
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
@@ -340,8 +345,8 @@ export async function reorderItem(
   itemId: string,
   newSortOrder: number,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items;
+  const row = requireTemplate(g, templateId);
+  const items = row.items;
   const itemIndex = requireItemIndex(items, itemId);
 
   const updatedItems = [...items];
@@ -363,8 +368,8 @@ export function calculateInsertionPoint(
   templateId: string,
   selectedItemId: string | null,
 ): { parentPath: string | undefined; sortOrder: number } {
-  const node = requireTemplate(g, templateId);
-  const items = node.$data.items.filter((item) => !item.archived);
+  const row = requireTemplate(g, templateId);
+  const items = row.items.filter((item) => !item.archived);
 
   // If nothing selected, insert at top of root
   if (!selectedItemId) {
@@ -436,8 +441,8 @@ export async function setItemDefault(
   itemId: string,
   isDefault: boolean,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const defaultItems = { ...node.$data.default_items };
+  const row = requireTemplate(g, templateId);
+  const defaultItems = { ...row.default_items };
 
   if (isDefault) {
     defaultItems[itemId] = true;
@@ -454,8 +459,8 @@ export async function toggleItemDefault(
   templateId: string,
   itemId: string,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const isCurrentlyDefault = node.$data.default_items[itemId] === true;
+  const row = requireTemplate(g, templateId);
+  const isCurrentlyDefault = row.default_items[itemId] === true;
   await setItemDefault(g, templateId, itemId, !isCurrentlyDefault);
 }
 
@@ -466,8 +471,8 @@ export async function batchSetItemsDefault(
   itemIds: string[],
   isDefault: boolean,
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const defaultItems = { ...node.$data.default_items };
+  const row = requireTemplate(g, templateId);
+  const defaultItems = { ...row.default_items };
 
   for (const itemId of itemIds) {
     if (isDefault) {
@@ -486,8 +491,8 @@ export async function invertItemsDefault(
   templateId: string,
   itemIds: string[],
 ): Promise<void> {
-  const node = requireTemplate(g, templateId);
-  const defaultItems = { ...node.$data.default_items };
+  const row = requireTemplate(g, templateId);
+  const defaultItems = { ...row.default_items };
 
   for (const itemId of itemIds) {
     if (defaultItems[itemId]) {

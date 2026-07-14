@@ -15,13 +15,15 @@
 
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { schema } from '@/schema/folder';
+import { parseUserSettingsRow } from '@/schema/userSettingsData';
 import type { UserSettingsRow } from '../../shared/schema.js';
 
 type Graph = RelationalGraph<typeof schema>;
 
 /** Read the per-user singleton settings row, or `undefined` for a brand-new user with no row yet. */
 function readSettings(g: Graph): UserSettingsRow | undefined {
-  return g.user_settings.all()[0]?.$data;
+  const row = g.user_settings.all()[0]?.$data;
+  return row ? parseUserSettingsRow(row) : undefined;
 }
 
 /** Read the singleton settings row, hard-erroring if absent (NO FALLBACKS — for write paths). */

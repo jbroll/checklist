@@ -35,9 +35,36 @@ import { schema } from '@/schema/folder';
 
 type Graph = RelationalGraph<typeof schema>;
 
+/** `folder` row json columns that the real rowboat client round-trips as JSON strings. */
+const FOLDER_JSON_COLUMNS = ['items', 'sessions', 'default_items'] as const;
+
+/**
+ * Stringify a `folder` row's json columns to match the real client (`db-crud.ts` `JSON.stringify`s
+ * them on create/update/pull). Test authors write seed rows with plain arrays/objects (`items:
+ * [...]`) because that's the natural shape to write by hand; this converts them to the wire
+ * representation before they reach `reactiveArrayStore`, so `$data` reads out of the graph come
+ * back as strings — exercising `parseFolderRow` the same way production does — instead of silently
+ * matching the unported bug where json columns were read as arrays directly.
+ */
+function stringifyFolderJsonColumns(
+  seed?: Record<string, Row[]>,
+): Record<string, Row[]> | undefined {
+  if (!seed?.folder) return seed;
+  return {
+    ...seed,
+    folder: seed.folder.map((row) => {
+      const stringified: Row = { ...row };
+      for (const col of FOLDER_JSON_COLUMNS) {
+        if (col in row) stringified[col] = JSON.stringify(row[col]);
+      }
+      return stringified;
+    }),
+  };
+}
+
 /** A fresh in-memory graph over the folder schema, optionally pre-seeded. */
 export function makeGraph(seed?: Record<string, Row[]>): Graph {
-  return relational(schema, reactiveArrayStore(seed));
+  return relational(schema, reactiveArrayStore(stringifyFolderJsonColumns(seed)));
 }
 
 let activeGraph: Graph | null = null;

@@ -23,6 +23,7 @@
 import { useCallback, useMemo } from 'react';
 import { useRowboat, useSelect } from '@/jazz';
 import type { FolderRow } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import {
   childrenOf,
   addFolder as opAddFolder,
@@ -100,7 +101,7 @@ export function useCheckListHierarchy(
     () =>
       g.folder
         .all()
-        .map((n) => n.$data)
+        .map((n) => parseFolderRow(n.$data))
         .filter((row) => row.type === 'template-folder'),
     arraysEqualById,
   );

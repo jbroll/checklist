@@ -11,6 +11,7 @@
 
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { FolderRow, schema } from '../../schema/folder';
+import { parseFolderRow } from '../../schema/folderData';
 import { getDateStampForFilename } from '../../utils/dateUtils';
 import {
   exportSessionToCsv as exportSessionToCsvImpl,
@@ -68,7 +69,7 @@ function findTemplateRow(g: Graph, templateId: string): FolderRow | null {
   if (!node) return null;
   const row = node.$data;
   if (!isTemplateFolder(row) || row.archived) return null;
-  return row;
+  return parseFolderRow(row);
 }
 
 /** Find a template folder row by id or throw if not found. */

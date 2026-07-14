@@ -20,6 +20,7 @@ import { generateSessionName } from '../../lib/utils';
 // `buildItemTree`/`generateSessionName` helpers (they read Date timestamps).
 import type { TemplateItem as DatedItem, SessionData as DatedSession } from '../../schema';
 import type { FolderRow, SessionData, schema, TemplateItem } from '../../schema/folder';
+import { parseFolderRow } from '../../schema/folderData';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import type {
   ExportedData,
@@ -75,7 +76,7 @@ function toDatedSession(session: SessionData): DatedSession {
 function collectTemplateFolders(g: Graph): FolderRow[] {
   const childrenByParent = new Map<string | null, FolderRow[]>();
   for (const node of g.folder.all()) {
-    const row = node.$data;
+    const row = parseFolderRow(node.$data);
     const bucket = childrenByParent.get(row.parent_id);
     if (bucket) {
       bucket.push(row);

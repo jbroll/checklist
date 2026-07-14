@@ -10,6 +10,7 @@
  */
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { FolderRow, schema } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 
 type Graph = RelationalGraph<typeof schema>;
 
@@ -122,7 +123,7 @@ export function topLevelFolders(g: Graph): FolderRow[] {
   return g.folder
     .all()
     .filter((f) => f.parent_id === null)
-    .map((f) => f.$data);
+    .map((f) => parseFolderRow(f.$data));
 }
 
 export function childrenOf(g: Graph, parentId: string | null): FolderRow[] {
@@ -131,9 +132,10 @@ export function childrenOf(g: Graph, parentId: string | null): FolderRow[] {
   }
   return requireFolder(g, parentId)
     .children()
-    .map((f) => f.$data);
+    .map((f) => parseFolderRow(f.$data));
 }
 
 export function findById(g: Graph, id: string): FolderRow | undefined {
-  return g.folder(id)?.$data;
+  const row = g.folder(id)?.$data;
+  return row ? parseFolderRow(row) : undefined;
 }

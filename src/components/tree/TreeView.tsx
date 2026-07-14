@@ -16,6 +16,7 @@ import { arraysEqualById, isTemplateFolder, useCheckListHierarchy } from '@/hook
 import { usePort, useRowboat, useSelect } from '@/jazz';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { FolderRow } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import * as sessionService from '@/services/sessionService';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
@@ -151,7 +152,10 @@ export function TreeView({
   // useSyncExternalStore's default Object.is never matches a freshly-mapped
   // array — without this the snapshot never "settles" and React infinite-loops
   // the render (confirmed via browser console: "getSnapshot should be cached").
-  const allFolderRows = useSelect(() => g.folder.all().map((n) => n.$data), arraysEqualById);
+  const allFolderRows = useSelect(
+    () => g.folder.all().map((n) => parseFolderRow(n.$data)),
+    arraysEqualById,
+  );
 
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
