@@ -170,13 +170,10 @@ test.describe('Export/Import Dialog Interactions', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  // Note: This test is skipped because it is flaky when running in parallel.
-  // The underlying issue is that Radix dialog overlays can persist briefly after
-  // the dialog is closed, causing pointer event interception. The actual
-  // functionality (only one dialog can be open at a time) is enforced by React
-  // state management and has been verified manually. Unrelated to the rowboat
-  // port's export/import wiring (both dialogs ARE wired — see file header).
-  test.skip('should not open both dialogs at the same time', async ({ page }) => {
+  // Only one dialog can be open at a time (enforced by useDialogManager state). The
+  // Cancel-then-reopen sequence below waits for the Radix overlay to settle between
+  // dialogs to avoid pointer-event interception from a lingering overlay.
+  test('should not open both dialogs at the same time', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
