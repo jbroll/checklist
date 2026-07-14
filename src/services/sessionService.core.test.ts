@@ -1,26 +1,13 @@
 /**
- * Core session service tests
+ * Core session service tests (rowboat port, slice-2).
  *
- * Tests for session creation, item state management, and session counts.
- * Uses jazz-mock for CoValue mocking.
+ * Sessions live in a template-folder row's `sessions` json column; tests run against an
+ * in-memory `makeGraph()` graph — no Jazz, no React. All timestamps are epoch-ms NUMBERS.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode, TemplateItem } from '../schema';
-import type { SessionData } from '../schema/tree';
-
-// TODO(slice-2): sessions still read a Jazz FolderNode/session; this whole file is
-// skip-pending until sessions land on rowboat (see docs/superpowers/d-t4-report.md). Local
-// replacement for the old jazz-mock `createMockCoMap` helper — good enough shape for a
-// skipped suite, no jazz-mock dependency required.
-function createMockCoMap<T extends object>(
-  data: T,
-  options: { id?: string; trackMutations?: boolean } = {},
-) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
-}
-
+import { describe, expect, it } from 'vitest';
+import type { FolderRow, ItemState, SessionData, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import {
   clearSessionState,
   createSession,
@@ -36,496 +23,436 @@ import {
   updateViewMode,
 } from './sessionService';
 
-// Helper to create mock template item (plain object, not a CoValue)
-const createMockItem = (
-  id: string,
-  name: string,
-  type: 'item' | 'category' = 'item',
-): TemplateItem =>
-  ({
-    id,
-    name,
-    type,
-    path: name,
-    sortOrder: 0,
-    archived: false,
-    expanded: type === 'category',
-    defaultQuantity: '',
-    createdAt: new Date(),
-  }) as TemplateItem;
+type Graph = ReturnType<typeof makeGraph>;
 
-// Helper to create mock session data (plain object, not a CoValue)
-const createMockSession = (id: string, itemStates: Record<string, any> = {}): SessionData => ({
+/** Build a template item. `path` defaults to `name`; categories default to expanded. */
+const item = (id: string, name: string, type: 'item' | 'category' = 'item'): TemplateItem => ({
+  id,
+  name,
+  type,
+  path: name,
+  sortOrder: 0,
+  archived: false,
+  expanded: type === 'category',
+  defaultQuantity: '',
+  createdAt: 0,
+});
+
+/** Build a session (all epoch-ms number timestamps). */
+const session = (id: string, itemStates: Record<string, ItemState> = {}): SessionData => ({
   id,
   itemStates,
   archived: false,
   categoryExpanded: {},
-  viewMode: 'zone-in-hierarchy' as const,
+  viewMode: 'zone-in-hierarchy',
   selectedCount: 0,
   checkedCount: 0,
   remainingCount: 0,
-  createdAt: new Date('2024-01-15T10:00:00Z'),
-  lastActivityAt: new Date('2024-01-15T12:00:00Z'),
+  createdAt: 1_700_000_000_000,
+  lastActivityAt: 1_700_000_000_000,
 });
 
-// Helper to create mock template using jazz-mock
-const createMockTemplate = (
+/** Build a complete template-folder row (all required Folder columns present). */
+const templateFolder = (
   id: string,
   name: string,
   items: TemplateItem[] = [],
   sessions: SessionData[] = [],
   defaultItems: Record<string, boolean> = {},
-) =>
-  createMockCoMap(
-    {
-      name,
-      items,
-      sessions,
-      defaultItems,
-      showZoneHeadings: false,
-      archived: false,
-      expanded: true,
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-10'),
-    },
-    { id, trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof FolderNode>;
+): FolderRow => ({
+  id,
+  owner_group_id: 'group-1',
+  name,
+  type: 'template-folder',
+  parent_id: null,
+  sharing_mode: 'private',
+  archived: false,
+  expanded: true,
+  created_by: 'user-1',
+  created_at: 0,
+  updated_at: 0,
+  items,
+  sessions,
+  default_items: defaultItems,
+  show_zone_headings: false,
+  auto_categorize_enabled: false,
+  autocomplete_domain: 'none',
+});
 
-// Helper to create mock account using jazz-mock
-const createMockAccount = (templates: InstanceOfSchema<typeof FolderNode>[] = []) =>
-  createMockCoMap(
-    {
-      root: createMockCoMap({ folders: templates }, { trackMutations: true }),
-    },
-    { trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof Account>;
+const graphWith = (...folders: FolderRow[]): Graph => makeGraph({ folder: folders });
 
-describe.skip('sessionService - Core Functions', () => {
+/** Read a template's sessions, hard-erroring if the folder is missing. */
+const sessionsOf = (g: Graph, id = 'template-1'): SessionData[] => {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.sessions;
+};
+
+describe('sessionService - Core Functions', () => {
   describe('createSession', () => {
-    it('should create a new session', () => {
-      const items = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+    it('should create a new session', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
       expect(sessionId).toBeDefined();
-      expect(template.sessions).toHaveLength(1);
-      expect(template.sessions[0].id).toBe(sessionId);
+      const sessions = sessionsOf(g);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].id).toBe(sessionId);
     });
 
-    it('should initialize session with default items selected', () => {
-      const items = [
-        createMockItem('item-1', 'Milk'),
-        createMockItem('item-2', 'Bread'),
-        createMockItem('item-3', 'Eggs'),
-      ];
+    it('should initialize session with default items selected', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread'), item('item-3', 'Eggs')];
       const defaultItems = { 'item-1': true, 'item-3': true };
-      const template = createMockTemplate('template-1', 'Groceries', items, [], defaultItems);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [], defaultItems));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
-      const session = template.sessions.find((s: SessionData) => s.id === sessionId);
-      expect(session?.itemStates['item-1']?.selected).toBe(true);
-      expect(session?.itemStates['item-2']).toBeUndefined();
-      expect(session?.itemStates['item-3']?.selected).toBe(true);
+      const s = sessionsOf(g).find((x) => x.id === sessionId);
+      expect(s?.itemStates['item-1']?.selected).toBe(true);
+      expect(s?.itemStates['item-2']).toBeUndefined();
+      expect(s?.itemStates['item-3']?.selected).toBe(true);
     });
 
-    it('should not include archived items in session', () => {
-      const items = [
-        createMockItem('item-1', 'Milk'),
-        { ...createMockItem('item-2', 'Bread'), archived: true } as TemplateItem,
-      ];
+    it('should not include archived items in session', async () => {
+      const items = [item('item-1', 'Milk'), { ...item('item-2', 'Bread'), archived: true }];
       const defaultItems = { 'item-1': true, 'item-2': true };
-      const template = createMockTemplate('template-1', 'Groceries', items, [], defaultItems);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [], defaultItems));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
-      const session = template.sessions.find((s: SessionData) => s.id === sessionId);
-      expect(session?.itemStates['item-1']?.selected).toBe(true);
-      expect(session?.itemStates['item-2']).toBeUndefined();
+      const s = sessionsOf(g).find((x) => x.id === sessionId);
+      expect(s?.itemStates['item-1']?.selected).toBe(true);
+      expect(s?.itemStates['item-2']).toBeUndefined();
     });
 
-    it('should not include categories in session counts', () => {
-      const items = [
-        createMockItem('cat-1', 'Dairy', 'category'),
-        createMockItem('item-1', 'Milk', 'item'),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+    it('should not include categories in session counts', async () => {
+      const items = [item('cat-1', 'Dairy', 'category'), item('item-1', 'Milk', 'item')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
-      const session = template.sessions.find((s: SessionData) => s.id === sessionId);
+      const s = sessionsOf(g).find((x) => x.id === sessionId);
       // Only the leaf item should be counted in remainingCount
-      expect(session?.remainingCount).toBe(1);
+      expect(s?.remainingCount).toBe(1);
     });
 
-    it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+    it('should throw error if template not found', async () => {
+      const g = graphWith();
 
-      expect(() => {
-        createSession(account, 'nonexistent');
-      }).toThrow('Template nonexistent not found');
+      await expect(createSession(g, 'nonexistent')).rejects.toThrow(
+        'Template nonexistent not found',
+      );
     });
 
-    it('should initialize sessions array if not exists', () => {
-      const items = [createMockItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      // Simulate older template without sessions array
-      (template as any).sessions = undefined;
-      const account = createMockAccount([template]);
+    it('should create the first session when sessions array starts empty', async () => {
+      const items = [item('item-1', 'Milk')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
       expect(sessionId).toBeDefined();
-      expect(template.sessions).toBeDefined();
-      expect(template.sessions).toHaveLength(1);
+      expect(sessionsOf(g)).toHaveLength(1);
     });
 
-    it('should set default view mode', () => {
-      const items = [createMockItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+    it('should set default view mode', async () => {
+      const items = [item('item-1', 'Milk')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items));
 
-      const sessionId = createSession(account, 'template-1');
+      const sessionId = await createSession(g, 'template-1');
 
-      const session = template.sessions.find((s: SessionData) => s.id === sessionId);
-      expect(session?.viewMode).toBe('zone-in-hierarchy');
+      const s = sessionsOf(g).find((x) => x.id === sessionId);
+      expect(s?.viewMode).toBe('zone-in-hierarchy');
     });
   });
 
   describe('getSession', () => {
     it('should return session by ID', () => {
-      const session = createMockSession('session-1');
-      const template = createMockTemplate('template-1', 'Groceries', [], [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries', [], [session('session-1')]));
 
-      const result = getSession(account, 'template-1', 'session-1');
+      const result = getSession(g, 'template-1', 'session-1');
 
       expect(result).toBeDefined();
       expect(result?.id).toBe('session-1');
     });
 
     it('should return null if session not found', () => {
-      const template = createMockTemplate('template-1', 'Groceries', [], []);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries'));
 
-      const result = getSession(account, 'template-1', 'nonexistent');
-
-      expect(result).toBeNull();
+      expect(getSession(g, 'template-1', 'nonexistent')).toBeNull();
     });
 
     it('should return null if template not found', () => {
-      const account = createMockAccount([]);
+      const g = graphWith();
 
-      const result = getSession(account, 'nonexistent', 'session-1');
-
-      expect(result).toBeNull();
+      expect(getSession(g, 'nonexistent', 'session-1')).toBeNull();
     });
   });
 
   describe('getSessions', () => {
     it('should return all sessions from template', () => {
-      const sessions = [createMockSession('session-1'), createMockSession('session-2')];
-      const template = createMockTemplate('template-1', 'Groceries', [], sessions);
-      const account = createMockAccount([template]);
+      const sessions = [session('session-1'), session('session-2')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', [], sessions));
 
-      const result = getSessions(account, 'template-1');
-
-      expect(result).toHaveLength(2);
+      expect(getSessions(g, 'template-1')).toHaveLength(2);
     });
 
     it('should return empty array if no sessions exist', () => {
-      const template = createMockTemplate('template-1', 'Groceries', [], []);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries'));
 
-      const result = getSessions(account, 'template-1');
-
-      expect(result).toEqual([]);
+      expect(getSessions(g, 'template-1')).toEqual([]);
     });
 
     it('should return empty array if template not found', () => {
-      const account = createMockAccount([]);
+      const g = graphWith();
 
-      const result = getSessions(account, 'nonexistent');
-
-      expect(result).toEqual([]);
+      expect(getSessions(g, 'nonexistent')).toEqual([]);
     });
   });
 
   describe('Item Selected State', () => {
-    let account: InstanceOfSchema<typeof Account>;
-    let template: InstanceOfSchema<typeof FolderNode>;
-    let items: TemplateItem[];
-
-    beforeEach(() => {
-      items = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
+    const seed = (): Graph => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread')];
+      const s = session('session-1', {
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
       });
-      template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      account = createMockAccount([template]);
-    });
+      return graphWith(templateFolder('template-1', 'Groceries', items, [s]));
+    };
 
     it('should get item selected state', () => {
-      expect(getItemSelected(account, 'template-1', 'session-1', 'item-1')).toBe(true);
-      expect(getItemSelected(account, 'template-1', 'session-1', 'item-2')).toBe(false);
+      const g = seed();
+      expect(getItemSelected(g, 'template-1', 'session-1', 'item-1')).toBe(true);
+      expect(getItemSelected(g, 'template-1', 'session-1', 'item-2')).toBe(false);
     });
 
-    it('should set item selected state', () => {
-      setItemSelected(account, 'template-1', 'session-1', 'item-2', true);
+    it('should set item selected state', async () => {
+      const g = seed();
+      await setItemSelected(g, 'template-1', 'session-1', 'item-2', true);
 
-      expect(template.sessions[0].itemStates['item-2']?.selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2']?.selected).toBe(true);
     });
 
-    it('should unselect item', () => {
-      setItemSelected(account, 'template-1', 'session-1', 'item-1', false);
+    it('should unselect item', async () => {
+      const g = seed();
+      await setItemSelected(g, 'template-1', 'session-1', 'item-1', false);
 
-      expect(template.sessions[0].itemStates['item-1']?.selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1']?.selected).toBe(false);
     });
 
-    it('should toggle item selected state', () => {
-      toggleItemSelected(account, 'template-1', 'session-1', 'item-1');
+    it('should toggle item selected state', async () => {
+      const g = seed();
+      await toggleItemSelected(g, 'template-1', 'session-1', 'item-1');
+      expect(sessionsOf(g)[0].itemStates['item-1']?.selected).toBe(false);
 
-      expect(template.sessions[0].itemStates['item-1']?.selected).toBe(false);
-
-      toggleItemSelected(account, 'template-1', 'session-1', 'item-1');
-
-      expect(template.sessions[0].itemStates['item-1']?.selected).toBe(true);
+      await toggleItemSelected(g, 'template-1', 'session-1', 'item-1');
+      expect(sessionsOf(g)[0].itemStates['item-1']?.selected).toBe(true);
     });
 
-    it('should set selectedAt timestamp when selecting', () => {
-      const beforeSelect = new Date();
-      setItemSelected(account, 'template-1', 'session-1', 'item-2', true);
+    it('should set selectedAt timestamp when selecting', async () => {
+      const g = seed();
+      const beforeSelect = Date.now();
+      await setItemSelected(g, 'template-1', 'session-1', 'item-2', true);
 
-      const selectedAt = template.sessions[0].itemStates['item-2']?.selectedAt;
+      const selectedAt = sessionsOf(g)[0].itemStates['item-2']?.selectedAt;
       expect(selectedAt).toBeDefined();
-      expect(selectedAt?.getTime()).toBeGreaterThanOrEqual(beforeSelect.getTime());
+      expect(selectedAt as number).toBeGreaterThanOrEqual(beforeSelect);
     });
 
-    it('should clear checked state when deselecting', () => {
-      template.sessions[0].itemStates['item-1'].checked = true;
+    it('should clear checked state when deselecting', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread')];
+      const s = session('session-1', {
+        'item-1': { selected: true, checked: true, selectedAt: 1_700_000_000_000 },
+      });
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [s]));
 
-      setItemSelected(account, 'template-1', 'session-1', 'item-1', false);
+      await setItemSelected(g, 'template-1', 'session-1', 'item-1', false);
 
-      expect(template.sessions[0].itemStates['item-1']?.checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checked).toBe(false);
     });
 
-    it('should update createdAt on first item selection', () => {
-      // Create session with no selected items
-      const testItems = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
-      const emptySession = createMockSession('session-empty', {});
-      const emptyTemplate = createMockTemplate('template-empty', 'Empty', testItems, [
-        emptySession,
-      ]);
-      const emptyAccount = createMockAccount([emptyTemplate]);
+    it('should update createdAt on first item selection', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread')];
+      // Session with no selected items and an old createdAt.
+      const emptySession = { ...session('session-empty', {}), createdAt: 1 };
+      const g = graphWith(templateFolder('template-empty', 'Empty', items, [emptySession]));
 
-      const beforeSelect = new Date();
-      setItemSelected(emptyAccount, 'template-empty', 'session-empty', 'item-1', true);
+      const beforeSelect = Date.now();
+      await setItemSelected(g, 'template-empty', 'session-empty', 'item-1', true);
 
       // createdAt should be updated to now (first selection)
-      expect(emptyTemplate.sessions[0].createdAt.getTime()).toBeGreaterThanOrEqual(
-        beforeSelect.getTime(),
-      );
+      expect(sessionsOf(g, 'template-empty')[0].createdAt).toBeGreaterThanOrEqual(beforeSelect);
     });
 
-    it('should not change createdAt on subsequent selections', () => {
-      // Session already has a selected item
-      const originalCreatedAt = template.sessions[0].createdAt;
+    it('should not change createdAt on subsequent selections', async () => {
+      const g = seed();
+      const originalCreatedAt = sessionsOf(g)[0].createdAt;
 
-      setItemSelected(account, 'template-1', 'session-1', 'item-2', true);
+      await setItemSelected(g, 'template-1', 'session-1', 'item-2', true);
 
-      // createdAt should remain unchanged
-      expect(template.sessions[0].createdAt).toEqual(originalCreatedAt);
+      expect(sessionsOf(g)[0].createdAt).toBe(originalCreatedAt);
     });
 
-    it('should skip update when deselecting non-existent item', () => {
-      const originalStates = { ...template.sessions[0].itemStates };
+    it('should skip update when deselecting non-existent item', async () => {
+      const g = seed();
+      const originalKeys = Object.keys(sessionsOf(g)[0].itemStates);
 
       // Deselecting an item that doesn't exist should be a no-op
-      setItemSelected(account, 'template-1', 'session-1', 'nonexistent', false);
+      await setItemSelected(g, 'template-1', 'session-1', 'nonexistent', false);
 
-      // itemStates should be unchanged (no new keys added)
-      expect(Object.keys(template.sessions[0].itemStates)).toEqual(Object.keys(originalStates));
+      expect(Object.keys(sessionsOf(g)[0].itemStates)).toEqual(originalKeys);
     });
   });
 
   describe('Item Checked State', () => {
-    let account: InstanceOfSchema<typeof Account>;
-    let template: InstanceOfSchema<typeof FolderNode>;
-
-    beforeEach(() => {
-      const items = [createMockItem('item-1', 'Milk')];
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
+    const seed = (): Graph => {
+      const items = [item('item-1', 'Milk')];
+      const s = session('session-1', {
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
       });
-      template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      account = createMockAccount([template]);
-    });
+      return graphWith(templateFolder('template-1', 'Groceries', items, [s]));
+    };
 
     it('should get item checked state', () => {
-      expect(getItemChecked(account, 'template-1', 'session-1', 'item-1')).toBe(false);
+      const g = seed();
+      expect(getItemChecked(g, 'template-1', 'session-1', 'item-1')).toBe(false);
     });
 
-    it('should set item checked state', () => {
-      setItemChecked(account, 'template-1', 'session-1', 'item-1', true);
+    it('should set item checked state', async () => {
+      const g = seed();
+      await setItemChecked(g, 'template-1', 'session-1', 'item-1', true);
 
-      expect(template.sessions[0].itemStates['item-1']?.checked).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checked).toBe(true);
     });
 
-    it('should toggle item checked state', () => {
-      toggleItemChecked(account, 'template-1', 'session-1', 'item-1');
+    it('should toggle item checked state', async () => {
+      const g = seed();
+      await toggleItemChecked(g, 'template-1', 'session-1', 'item-1');
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checked).toBe(true);
 
-      expect(template.sessions[0].itemStates['item-1']?.checked).toBe(true);
-
-      toggleItemChecked(account, 'template-1', 'session-1', 'item-1');
-
-      expect(template.sessions[0].itemStates['item-1']?.checked).toBe(false);
+      await toggleItemChecked(g, 'template-1', 'session-1', 'item-1');
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checked).toBe(false);
     });
 
-    it('should set checkedAt timestamp when checking', () => {
-      const beforeCheck = new Date();
-      setItemChecked(account, 'template-1', 'session-1', 'item-1', true);
+    it('should set checkedAt timestamp when checking', async () => {
+      const g = seed();
+      const beforeCheck = Date.now();
+      await setItemChecked(g, 'template-1', 'session-1', 'item-1', true);
 
-      const checkedAt = template.sessions[0].itemStates['item-1']?.checkedAt;
+      const checkedAt = sessionsOf(g)[0].itemStates['item-1']?.checkedAt;
       expect(checkedAt).toBeDefined();
-      expect(checkedAt?.getTime()).toBeGreaterThanOrEqual(beforeCheck.getTime());
+      expect(checkedAt as number).toBeGreaterThanOrEqual(beforeCheck);
     });
 
-    it('should clear checkedAt when unchecking', () => {
-      setItemChecked(account, 'template-1', 'session-1', 'item-1', true);
-      setItemChecked(account, 'template-1', 'session-1', 'item-1', false);
+    it('should clear checkedAt when unchecking', async () => {
+      const g = seed();
+      await setItemChecked(g, 'template-1', 'session-1', 'item-1', true);
+      await setItemChecked(g, 'template-1', 'session-1', 'item-1', false);
 
-      expect(template.sessions[0].itemStates['item-1']?.checkedAt).toBeUndefined();
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checkedAt).toBeUndefined();
     });
 
-    it('should throw error if item state does not exist', () => {
-      expect(() => {
-        setItemChecked(account, 'template-1', 'session-1', 'nonexistent', true);
-      }).toThrow('Item state nonexistent not found in session');
+    it('should throw error if item state does not exist', async () => {
+      const g = seed();
+      await expect(
+        setItemChecked(g, 'template-1', 'session-1', 'nonexistent', true),
+      ).rejects.toThrow('Item state nonexistent not found in session');
     });
   });
 
   describe('updateSessionCounts', () => {
-    it('should update session counts correctly', () => {
-      const items = [
-        createMockItem('item-1', 'Milk'),
-        createMockItem('item-2', 'Bread'),
-        createMockItem('item-3', 'Eggs'),
-      ];
-      const session = createMockSession('session-1', {
+    it('should update session counts correctly', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread'), item('item-3', 'Eggs')];
+      const s = session('session-1', {
         'item-1': { selected: true, checked: false },
         'item-2': { selected: true, checked: true },
       });
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [s]));
 
-      updateSessionCounts(account, 'template-1', 'session-1');
+      await updateSessionCounts(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].selectedCount).toBe(1); // item-1
-      expect(template.sessions[0].checkedCount).toBe(1); // item-2
-      expect(template.sessions[0].remainingCount).toBe(1); // item-3
+      expect(sessionsOf(g)[0].selectedCount).toBe(1); // item-1
+      expect(sessionsOf(g)[0].checkedCount).toBe(1); // item-2
+      expect(sessionsOf(g)[0].remainingCount).toBe(1); // item-3
     });
 
-    it('should not count archived items', () => {
-      const items = [
-        createMockItem('item-1', 'Milk'),
-        { ...createMockItem('item-2', 'Bread'), archived: true } as TemplateItem,
-      ];
-      const session = createMockSession('session-1', {});
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+    it('should not count archived items', async () => {
+      const items = [item('item-1', 'Milk'), { ...item('item-2', 'Bread'), archived: true }];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [session('session-1')]));
 
-      updateSessionCounts(account, 'template-1', 'session-1');
+      await updateSessionCounts(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].remainingCount).toBe(1);
+      expect(sessionsOf(g)[0].remainingCount).toBe(1);
     });
 
-    it('should not count categories', () => {
-      const items = [
-        createMockItem('cat-1', 'Dairy', 'category'),
-        createMockItem('item-1', 'Milk', 'item'),
-      ];
-      const session = createMockSession('session-1', {});
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+    it('should not count categories', async () => {
+      const items = [item('cat-1', 'Dairy', 'category'), item('item-1', 'Milk', 'item')];
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [session('session-1')]));
 
-      updateSessionCounts(account, 'template-1', 'session-1');
+      await updateSessionCounts(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].remainingCount).toBe(1);
+      expect(sessionsOf(g)[0].remainingCount).toBe(1);
     });
   });
 
   describe('updateViewMode', () => {
-    it('should update view mode to flat', () => {
-      const session = createMockSession('session-1');
-      const template = createMockTemplate('template-1', 'Groceries', [], [session]);
-      const account = createMockAccount([template]);
+    it('should update view mode to flat', async () => {
+      const g = graphWith(templateFolder('template-1', 'Groceries', [], [session('session-1')]));
 
-      updateViewMode(account, 'template-1', 'session-1', 'flat');
+      await updateViewMode(g, 'template-1', 'session-1', 'flat');
 
-      expect(template.sessions[0].viewMode).toBe('flat');
+      expect(sessionsOf(g)[0].viewMode).toBe('flat');
     });
 
-    it('should update view mode to zone-in-hierarchy', () => {
-      const session = { ...createMockSession('session-1'), viewMode: 'flat' as const };
-      const template = createMockTemplate('template-1', 'Groceries', [], [session]);
-      const account = createMockAccount([template]);
+    it('should update view mode to zone-in-hierarchy', async () => {
+      const s = { ...session('session-1'), viewMode: 'flat' as const };
+      const g = graphWith(templateFolder('template-1', 'Groceries', [], [s]));
 
-      updateViewMode(account, 'template-1', 'session-1', 'zone-in-hierarchy');
+      await updateViewMode(g, 'template-1', 'session-1', 'zone-in-hierarchy');
 
-      expect(template.sessions[0].viewMode).toBe('zone-in-hierarchy');
+      expect(sessionsOf(g)[0].viewMode).toBe('zone-in-hierarchy');
     });
 
-    it('should update lastActivityAt', () => {
-      const session = createMockSession('session-1');
-      const originalActivityAt = session.lastActivityAt;
-      const template = createMockTemplate('template-1', 'Groceries', [], [session]);
-      const account = createMockAccount([template]);
+    it('should update lastActivityAt', async () => {
+      const s = { ...session('session-1'), lastActivityAt: 1 };
+      const g = graphWith(templateFolder('template-1', 'Groceries', [], [s]));
 
-      updateViewMode(account, 'template-1', 'session-1', 'flat');
+      const before = Date.now();
+      await updateViewMode(g, 'template-1', 'session-1', 'flat');
 
-      expect(template.sessions[0].lastActivityAt.getTime()).toBeGreaterThanOrEqual(
-        originalActivityAt.getTime(),
-      );
+      expect(sessionsOf(g)[0].lastActivityAt).toBeGreaterThanOrEqual(before);
     });
   });
 
   describe('clearSessionState', () => {
-    it('should clear all item states in session', () => {
-      const items = [createMockItem('item-1', 'Milk'), createMockItem('item-2', 'Bread')];
-      const session = createMockSession('session-1', {
+    it('should clear all item states in session', async () => {
+      const items = [item('item-1', 'Milk'), item('item-2', 'Bread')];
+      const s = session('session-1', {
         'item-1': { selected: true, checked: true },
         'item-2': { selected: true, checked: false },
       });
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [s]));
 
-      clearSessionState(account, 'template-1', 'session-1');
+      await clearSessionState(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].itemStates['item-1']?.selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-1']?.checked).toBe(false);
-      expect(template.sessions[0].itemStates['item-2']?.selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2']?.checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1']?.selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1']?.checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2']?.selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2']?.checked).toBe(false);
     });
 
-    it('should update lastActivityAt', () => {
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: false },
-      });
-      const originalActivityAt = session.lastActivityAt;
-      const items = [createMockItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+    it('should update lastActivityAt', async () => {
+      const items = [item('item-1', 'Milk')];
+      const s = {
+        ...session('session-1', { 'item-1': { selected: true, checked: false } }),
+        lastActivityAt: 1,
+      };
+      const g = graphWith(templateFolder('template-1', 'Groceries', items, [s]));
 
-      clearSessionState(account, 'template-1', 'session-1');
+      const before = Date.now();
+      await clearSessionState(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].lastActivityAt.getTime()).toBeGreaterThanOrEqual(
-        originalActivityAt.getTime(),
-      );
+      expect(sessionsOf(g)[0].lastActivityAt).toBeGreaterThanOrEqual(before);
     });
   });
 });

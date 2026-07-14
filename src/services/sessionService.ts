@@ -1,49 +1,48 @@
 /**
- * Session Service
+ * sessionService - pure functions over the rowboat relational graph implementing shopping/list
+ * sessions over a template folder's items.
  *
- * Pure functions for shopping session operations.
- * All Jazz database access for sessions goes through this service.
+ * A session lives in the template folder row's `sessions` json column (an array of `SessionData`).
+ * Ported off Jazz (slice-2) to mirror `templateService.ts`: every function is headless, taking the
+ * graph `g` as its first argument and the folder id (`templateId`) second — reads go through
+ * `getTemplate(g, templateId)` (from `./templateService`), writes through `g.folder.update(id, …)`.
+ * No React, no IndexedDB, no server.
+ *
+ * All timestamps are epoch-ms NUMBERS (`Date.now()`), matching the session/item schema.
+ *
+ * NO FALLBACKS: a missing template or session is a hard error (thrown), never a silent no-op.
  */
-
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { generateId } from '../lib/utils';
-import type { Account, ItemState, SessionData, TemplateItem } from '../schema';
+import type { ItemState, SessionData, schema, TemplateItem } from '../schema/folder';
 import { getTemplate } from './templateService';
 
-type SessionsLike = SessionData[] | { [Symbol.iterator](): Iterator<SessionData> };
+type Graph = RelationalGraph<typeof schema>;
 
-/**
- * Convert sessions (which may be CoList or array) to a plain array
- */
-function getSessionsArray(sessions: SessionsLike | undefined | null): SessionData[] {
-  if (!sessions) return [];
-  return Array.isArray(sessions) ? sessions : Array.from(sessions as Iterable<SessionData>);
+// ============================================================================
+// Internal Helper Functions
+// ============================================================================
+
+/** Read the template folder row, throwing if it doesn't exist or isn't a template folder. */
+function requireTemplate(g: Graph, templateId: string) {
+  const template = getTemplate(g, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+  return template;
 }
 
-/**
- * Get session by ID, throwing if not found
- */
-function getSessionOrThrow(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  sessionId: string,
-): SessionData {
-  const template = getTemplate(account, templateId);
-  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
-
-  const sessions = getSessionsArray(template.sessions);
-  const session = sessions.find((s) => s.id === sessionId);
+/** Get session by ID, throwing if the template or session is missing. */
+function getSessionOrThrow(g: Graph, templateId: string, sessionId: string): SessionData {
+  const template = requireTemplate(g, templateId);
+  const session = template.sessions.find((s) => s.id === sessionId);
   if (!session) throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   return session;
 }
 
-/**
- * Create or update an item state with selection/check changes
- */
+/** Create or update an item state with selection/check changes. */
 function createOrUpdateItemState(
   currentState: ItemState | undefined,
   selected: boolean,
-  now: Date,
+  now: number,
 ): ItemState {
   if (!currentState) {
     return {
@@ -62,58 +61,44 @@ function createOrUpdateItemState(
 }
 
 /**
- * Helper to update a session in the template's sessions array
- * Since sessions are plain objects, we need to replace the entire array to trigger Jazz update
+ * Replace one session in the template's sessions array and write the whole array back. Throws if
+ * the template or session is missing (NO FALLBACKS — a stray session id is a bug, not a no-op).
  */
-function updateSession(
-  account: InstanceOfSchema<typeof Account>,
+async function updateSession(
+  g: Graph,
   templateId: string,
   sessionId: string,
   updates: Partial<SessionData>,
-): void {
-  const template = getTemplate(account, templateId);
-  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
-
-  const sessions = getSessionsArray(template.sessions);
+): Promise<void> {
+  const template = requireTemplate(g, templateId);
+  const sessions = template.sessions;
   const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
   if (sessionIndex === -1) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
-  // Create new session object with updates
-  const updatedSession: SessionData = {
-    ...sessions[sessionIndex],
-    ...updates,
-  };
+  const updatedSessions = [...sessions];
+  updatedSessions[sessionIndex] = { ...sessions[sessionIndex], ...updates };
 
-  // Create new sessions array with updated session
-  const updatedSessions = [...template.sessions];
-  updatedSessions[sessionIndex] = updatedSession;
-
-  // Update template to trigger Jazz sync
-  template.$jazz.set('sessions', updatedSessions);
+  await g.folder.update(templateId, { sessions: updatedSessions, updated_at: Date.now() });
 }
 
-/**
- * Create a new list session for a template
- */
-export function createSession(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): string {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
+// ============================================================================
+// Session Operations
+// ============================================================================
 
-  const now = new Date();
+/** Create a new list session for a template (default items pre-selected). */
+export async function createSession(g: Graph, templateId: string): Promise<string> {
+  const template = requireTemplate(g, templateId);
+
+  const now = Date.now();
 
   // Count non-archived leaf items only (exclude categories)
-  const activeItems = template.items.filter(
-    (item: TemplateItem) => !item.archived && item.type === 'item',
-  );
+  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
 
-  // Initialize itemStates from template.defaultItems
+  // Initialize itemStates from template.default_items
   const itemStates: Record<string, ItemState> = {};
-  const defaultItems = template.defaultItems || {};
+  const defaultItems = template.default_items;
   let selectedCount = 0;
 
   for (const item of activeItems) {
@@ -129,7 +114,6 @@ export function createSession(
 
   const remainingCount = activeItems.length - selectedCount;
 
-  // Create new list session as plain JavaScript object
   const newSession: SessionData = {
     id: generateId(),
     itemStates,
@@ -143,77 +127,59 @@ export function createSession(
     lastActivityAt: now,
   };
 
-  // Add session to template
-  // Initialize sessions list if it doesn't exist (for older templates)
-  if (!template.sessions) {
-    template.$jazz.set('sessions', []);
-  }
-
-  // Create new array with added session to trigger Jazz update
-  const updatedSessions = [...template.sessions, newSession];
-  template.$jazz.set('sessions', updatedSessions);
-  template.$jazz.set('updatedAt', new Date());
+  await g.folder.update(templateId, {
+    sessions: [...template.sessions, newSession],
+    updated_at: now,
+  });
 
   return newSession.id;
 }
 
-/**
- * Get session by ID from a template
- */
-export function getSession(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  sessionId: string,
-): SessionData | null {
-  const template = getTemplate(account, templateId);
-  if (!template?.sessions) return null;
-  const sessions = getSessionsArray(template.sessions);
-  return sessions.find((s) => s.id === sessionId) || null;
+/** Get session by ID from a template (null if the template or session is absent). */
+export function getSession(g: Graph, templateId: string, sessionId: string): SessionData | null {
+  const template = getTemplate(g, templateId);
+  if (!template) return null;
+  return template.sessions.find((s) => s.id === sessionId) || null;
 }
 
-/**
- * Get all sessions from a template
- */
-export function getSessions(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): SessionData[] {
-  const template = getTemplate(account, templateId);
-  if (!template?.sessions) return [];
-  return getSessionsArray(template.sessions).filter((s) => s != null);
+/** Get all sessions from a template. */
+export function getSessions(g: Graph, templateId: string): SessionData[] {
+  const template = getTemplate(g, templateId);
+  if (!template) return [];
+  return template.sessions;
 }
 
-/**
- * Get item's "selected" state
- */
+// ============================================================================
+// Item Selected State
+// ============================================================================
+
+/** Get item's "selected" state. */
 export function getItemSelected(
-  account: InstanceOfSchema<typeof Account>,
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
 ): boolean {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  return session.itemStates?.[itemId]?.selected || false;
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  return session.itemStates[itemId]?.selected || false;
 }
 
-/**
- * Set item's "selected" state explicitly
- */
-export function setItemSelected(
-  account: InstanceOfSchema<typeof Account>,
+/** Set item's "selected" state explicitly. */
+export async function setItemSelected(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
   selected: boolean,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const itemStates = session.itemStates;
   const currentState = itemStates[itemId];
 
   // No change needed if item doesn't exist and we're deselecting
   if (!currentState && !selected) return;
 
-  const now = new Date();
+  const now = Date.now();
   const newItemStates: Record<string, ItemState> = {
     ...itemStates,
     [itemId]: createOrUpdateItemState(currentState, selected, now),
@@ -223,56 +189,54 @@ export function setItemSelected(
   const hasAnySelectedItems = Object.values(itemStates).some((state) => state.selected);
   const isFirstSelection = selected && !hasAnySelectedItems;
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: newItemStates,
     lastActivityAt: now,
     ...(isFirstSelection ? { createdAt: now } : {}),
   });
 }
 
-/**
- * Toggle item's "selected" state (convenience function)
- */
-export function toggleItemSelected(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle item's "selected" state (convenience function). */
+export async function toggleItemSelected(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
-): void {
-  const currentState = getItemSelected(account, templateId, sessionId, itemId);
-  setItemSelected(account, templateId, sessionId, itemId, !currentState);
+): Promise<void> {
+  const currentState = getItemSelected(g, templateId, sessionId, itemId);
+  await setItemSelected(g, templateId, sessionId, itemId, !currentState);
 }
 
-/**
- * Get item's "checked" state
- */
+// ============================================================================
+// Item Checked State
+// ============================================================================
+
+/** Get item's "checked" state. */
 export function getItemChecked(
-  account: InstanceOfSchema<typeof Account>,
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
 ): boolean {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  return session.itemStates?.[itemId]?.checked || false;
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  return session.itemStates[itemId]?.checked || false;
 }
 
-/**
- * Set item's "checked" state explicitly
- */
-export function setItemChecked(
-  account: InstanceOfSchema<typeof Account>,
+/** Set item's "checked" state explicitly (throws if the item has no state yet). */
+export async function setItemChecked(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
   checked: boolean,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const itemStates = session.itemStates;
   const currentState = itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
-  const now = new Date();
-  const newItemStates = {
+  const now = Date.now();
+  const newItemStates: Record<string, ItemState> = {
     ...itemStates,
     [itemId]: {
       ...currentState,
@@ -281,37 +245,37 @@ export function setItemChecked(
     },
   };
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: newItemStates,
     lastActivityAt: now,
   });
 }
 
-/**
- * Toggle item's "checked" state (convenience function)
- */
-export function toggleItemChecked(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle item's "checked" state (convenience function). */
+export async function toggleItemChecked(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
-): void {
-  const currentState = getItemChecked(account, templateId, sessionId, itemId);
-  setItemChecked(account, templateId, sessionId, itemId, !currentState);
+): Promise<void> {
+  const currentState = getItemChecked(g, templateId, sessionId, itemId);
+  await setItemChecked(g, templateId, sessionId, itemId, !currentState);
 }
 
-/**
- * Update session-specific notes for an item
- */
-export function updateSessionItemNotes(
-  account: InstanceOfSchema<typeof Account>,
+// ============================================================================
+// Session Item Notes / Counts / View Mode
+// ============================================================================
+
+/** Update session-specific notes for an item (empty string clears the note). */
+export async function updateSessionItemNotes(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemId: string,
   notes: string,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const itemStates = session.itemStates;
   const currentState = itemStates[itemId];
 
   const newItemStates: Record<string, ItemState> = {
@@ -325,35 +289,30 @@ export function updateSessionItemNotes(
     },
   };
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: newItemStates,
-    lastActivityAt: new Date(),
+    lastActivityAt: Date.now(),
   });
 }
 
-/**
- * Update session counts (selected, checked, remaining)
- */
-export function updateSessionCounts(
-  account: InstanceOfSchema<typeof Account>,
+/** Recompute and persist session counts (selected, checked, remaining) from leaf items. */
+export async function updateSessionCounts(
+  g: Graph,
   templateId: string,
   sessionId: string,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const template = getTemplate(account, templateId);
-  if (!template?.items) return;
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const template = requireTemplate(g, templateId);
 
   // Only count leaf items, not categories
-  const activeItems = template.items.filter(
-    (item: TemplateItem) => !item.archived && item.type === 'item',
-  );
+  const activeItems = template.items.filter((item) => !item.archived && item.type === 'item');
 
   let selectedCount = 0;
   let checkedCount = 0;
   let remainingCount = 0;
 
   activeItems.forEach((item: TemplateItem) => {
-    const state = session.itemStates?.[item.id];
+    const state = session.itemStates[item.id];
     if (!state || (!state.selected && !state.checked)) {
       remainingCount++;
     } else if (state.checked) {
@@ -363,42 +322,41 @@ export function updateSessionCounts(
     }
   });
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     selectedCount,
     checkedCount,
     remainingCount,
   });
 }
 
-/**
- * Update session view mode
- */
-export function updateViewMode(
-  account: InstanceOfSchema<typeof Account>,
+/** Update session view mode. */
+export async function updateViewMode(
+  g: Graph,
   templateId: string,
   sessionId: string,
   viewMode: 'flat' | 'zone-in-hierarchy',
-): void {
-  updateSession(account, templateId, sessionId, {
+): Promise<void> {
+  await updateSession(g, templateId, sessionId, {
     viewMode,
-    lastActivityAt: new Date(),
+    lastActivityAt: Date.now(),
   });
 }
 
-/**
- * Batch select items
- */
-export function batchSelectItems(
-  account: InstanceOfSchema<typeof Account>,
+// ============================================================================
+// Batch Selection
+// ============================================================================
+
+/** Batch select (or deselect) a set of items. */
+export async function batchSelectItems(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemIds: string[],
   selected: boolean,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
-  const updatedStates = { ...itemStates };
-  const now = new Date();
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const updatedStates = { ...session.itemStates };
+  const now = Date.now();
 
   for (const itemId of itemIds) {
     const currentState = updatedStates[itemId];
@@ -407,40 +365,35 @@ export function batchSelectItems(
     updatedStates[itemId] = createOrUpdateItemState(currentState, selected, now);
   }
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: updatedStates,
     lastActivityAt: now,
   });
 }
 
-/**
- * Toggle selection for all items (select all if some unselected, deselect all if all selected)
- */
-export function toggleSelectAllItems(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle selection for all items (select all if some unselected, deselect all if all selected). */
+export async function toggleSelectAllItems(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemIds: string[],
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const itemStates = session.itemStates;
   const allSelected = itemIds.every((id) => itemStates[id]?.selected);
-  batchSelectItems(account, templateId, sessionId, itemIds, !allSelected);
+  await batchSelectItems(g, templateId, sessionId, itemIds, !allSelected);
 }
 
-/**
- * Invert selection for all items (selected → unselected, unselected → selected)
- */
-export function invertItemSelection(
-  account: InstanceOfSchema<typeof Account>,
+/** Invert selection for each item (selected → unselected, unselected → selected). */
+export async function invertItemSelection(
+  g: Graph,
   templateId: string,
   sessionId: string,
   itemIds: string[],
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const itemStates = session.itemStates || {};
-  const updatedStates = { ...itemStates };
-  const now = new Date();
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const updatedStates = { ...session.itemStates };
+  const now = Date.now();
 
   for (const itemId of itemIds) {
     const currentState = updatedStates[itemId];
@@ -448,87 +401,84 @@ export function invertItemSelection(
     updatedStates[itemId] = createOrUpdateItemState(currentState, !currentlySelected, now);
   }
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: updatedStates,
     lastActivityAt: now,
   });
 }
 
-/**
- * Archive a session (soft delete)
- */
-export function archiveSession(
-  account: InstanceOfSchema<typeof Account>,
+// ============================================================================
+// Session Lifecycle
+// ============================================================================
+
+/** Archive a session (soft delete). */
+export async function archiveSession(
+  g: Graph,
   templateId: string,
   sessionId: string,
-): void {
-  updateSession(account, templateId, sessionId, {
+): Promise<void> {
+  await updateSession(g, templateId, sessionId, {
     archived: true,
-    lastActivityAt: new Date(),
+    lastActivityAt: Date.now(),
   });
 }
 
-/**
- * Unarchive a session
- */
-export function unarchiveSession(
-  account: InstanceOfSchema<typeof Account>,
+/** Unarchive a session. */
+export async function unarchiveSession(
+  g: Graph,
   templateId: string,
   sessionId: string,
-): void {
-  updateSession(account, templateId, sessionId, {
+): Promise<void> {
+  await updateSession(g, templateId, sessionId, {
     archived: false,
-    lastActivityAt: new Date(),
+    lastActivityAt: Date.now(),
   });
 }
 
-/**
- * Delete a session (hard delete - removes from template)
- */
-export function deleteSession(
-  account: InstanceOfSchema<typeof Account>,
+/** Delete a session (hard delete - removes it from the template). */
+export async function deleteSession(
+  g: Graph,
   templateId: string,
   sessionId: string,
-): void {
-  const template = getTemplate(account, templateId);
-  if (!template?.sessions) throw new Error(`Template ${templateId} not found or has no sessions`);
-
-  const sessions = getSessionsArray(template.sessions);
+): Promise<void> {
+  const template = requireTemplate(g, templateId);
+  const sessions = template.sessions;
   const sessionExists = sessions.some((s) => s.id === sessionId);
   if (!sessionExists) {
     throw new Error(`Session ${sessionId} not found in template ${templateId}`);
   }
 
-  const updatedSessions = sessions.filter((s) => s.id !== sessionId);
-  template.$jazz.set('sessions', updatedSessions);
-  template.$jazz.set('updatedAt', new Date());
+  await g.folder.update(templateId, {
+    sessions: sessions.filter((s) => s.id !== sessionId),
+    updated_at: Date.now(),
+  });
 }
 
-/**
- * Get category expanded state in session
- */
+// ============================================================================
+// Session Category Expansion
+// ============================================================================
+
+/** Get category expanded state in a session (defaults to true for unknown categories). */
 export function getCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
+  g: Graph,
   templateId: string,
   sessionId: string,
   categoryKey: string,
 ): boolean {
-  const session = getSessionOrThrow(account, templateId, sessionId);
+  const session = getSessionOrThrow(g, templateId, sessionId);
   return session.categoryExpanded?.[categoryKey] ?? true;
 }
 
-/**
- * Set category expanded state in session explicitly
- */
-export function setCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
+/** Set category expanded state in a session explicitly. */
+export async function setCategoryExpanded(
+  g: Graph,
   templateId: string,
   sessionId: string,
   categoryKey: string,
   expanded: boolean,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  updateSession(account, templateId, sessionId, {
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  await updateSession(g, templateId, sessionId, {
     categoryExpanded: {
       ...session.categoryExpanded,
       [categoryKey]: expanded,
@@ -536,38 +486,34 @@ export function setCategoryExpanded(
   });
 }
 
-/**
- * Toggle category expanded state in session (convenience function)
- */
-export function toggleCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle category expanded state in a session (convenience function). */
+export async function toggleCategoryExpanded(
+  g: Graph,
   templateId: string,
   sessionId: string,
   categoryKey: string,
-): void {
-  const currentState = getCategoryExpanded(account, templateId, sessionId, categoryKey);
-  setCategoryExpanded(account, templateId, sessionId, categoryKey, !currentState);
+): Promise<void> {
+  const currentState = getCategoryExpanded(g, templateId, sessionId, categoryKey);
+  await setCategoryExpanded(g, templateId, sessionId, categoryKey, !currentState);
 }
 
-/**
- * Clear all item states in a session (reset all selected/checked flags)
- */
-export function clearSessionState(
-  account: InstanceOfSchema<typeof Account>,
+/** Clear all item states in a session (reset all selected/checked flags), then recompute counts. */
+export async function clearSessionState(
+  g: Graph,
   templateId: string,
   sessionId: string,
-): void {
-  const session = getSessionOrThrow(account, templateId, sessionId);
-  const newItemStates: Record<string, { selected: boolean; checked: boolean }> = {};
+): Promise<void> {
+  const session = getSessionOrThrow(g, templateId, sessionId);
+  const newItemStates: Record<string, ItemState> = {};
 
-  for (const itemId of Object.keys(session.itemStates || {})) {
+  for (const itemId of Object.keys(session.itemStates)) {
     newItemStates[itemId] = { selected: false, checked: false };
   }
 
-  updateSession(account, templateId, sessionId, {
+  await updateSession(g, templateId, sessionId, {
     itemStates: newItemStates,
-    lastActivityAt: new Date(),
+    lastActivityAt: Date.now(),
   });
 
-  updateSessionCounts(account, templateId, sessionId);
+  await updateSessionCounts(g, templateId, sessionId);
 }

@@ -1,26 +1,13 @@
 /**
- * Session lifecycle tests
+ * Session lifecycle tests (rowboat port, slice-2).
  *
- * Tests for archive, unarchive, delete, category expansion, and notes.
- * Uses jazz-mock for CoValue mocking.
+ * Archive, unarchive, delete, category expansion, and notes — over an in-memory `makeGraph()`
+ * graph (no Jazz, no React). All timestamps are epoch-ms NUMBERS.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode } from '../schema';
-import type { SessionData } from '../schema/tree';
-
-// TODO(slice-2): sessions still read a Jazz FolderNode/session; this whole file is
-// skip-pending until sessions land on rowboat (see docs/superpowers/d-t4-report.md). Local
-// replacement for the old jazz-mock `createMockCoMap` helper — good enough shape for a
-// skipped suite, no jazz-mock dependency required.
-function createMockCoMap<T extends object>(
-  data: T,
-  options: { id?: string; trackMutations?: boolean } = {},
-) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
-}
-
+import { describe, expect, it } from 'vitest';
+import type { FolderRow, ItemState, SessionData } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import {
   archiveSession,
   deleteSession,
@@ -29,447 +16,432 @@ import {
   updateSessionItemNotes,
 } from './sessionService';
 
-// Helper to create mock session data (plain object, not a CoValue)
-const createMockSession = (sessionId: string, archived = false): SessionData => ({
+type Graph = ReturnType<typeof makeGraph>;
+
+/** Build a session (all epoch-ms number timestamps). */
+const session = (sessionId: string, archived = false): SessionData => ({
   id: sessionId,
   itemStates: {},
   archived,
   categoryExpanded: {},
-  viewMode: 'zone-in-hierarchy' as const,
+  viewMode: 'zone-in-hierarchy',
   selectedCount: 0,
   checkedCount: 0,
   remainingCount: 0,
-  createdAt: new Date(),
-  lastActivityAt: new Date(),
+  createdAt: 1_700_000_000_000,
+  lastActivityAt: 1_700_000_000_000,
 });
 
-// Helper to create mock template using jazz-mock
-const createMockTemplate = (sessions: SessionData[]) =>
-  createMockCoMap(
-    {
-      name: 'Test Template',
-      items: [],
-      sessions,
-      showZoneHeadings: false,
-      archived: false,
-      expanded: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    { id: 'template-1', trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof FolderNode>;
+/** Build a complete template-folder row (all required Folder columns present). */
+const templateFolder = (sessions: SessionData[], extra: Partial<FolderRow> = {}): FolderRow => ({
+  id: 'template-1',
+  owner_group_id: 'group-1',
+  name: 'Test Template',
+  type: 'template-folder',
+  parent_id: null,
+  sharing_mode: 'private',
+  archived: false,
+  expanded: true,
+  created_by: 'user-1',
+  created_at: 0,
+  updated_at: 0,
+  items: [],
+  sessions,
+  default_items: {},
+  show_zone_headings: false,
+  auto_categorize_enabled: false,
+  autocomplete_domain: 'none',
+  ...extra,
+});
 
-// Helper to create mock account using jazz-mock
-const createMockAccount = () =>
-  createMockCoMap(
-    {
-      root: createMockCoMap({ folders: [] as any[] }, { trackMutations: true }),
-    },
-    { trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof Account>;
-
-describe.skip('Session Lifecycle Functions', () => {
-  let account: InstanceOfSchema<typeof Account>;
-  let session1: SessionData;
-  let session2: SessionData;
-  let template: InstanceOfSchema<typeof FolderNode>;
-
-  beforeEach(() => {
-    account = createMockAccount();
-    session1 = createMockSession('session-1', false);
-    session2 = createMockSession('session-2', true);
-    template = createMockTemplate([session1, session2]);
-    account.root.folders = [template];
+/** Fresh graph seeded with session-1 (active) and session-2 (archived). */
+const seed = (extra: Partial<FolderRow> = {}): Graph =>
+  makeGraph({
+    folder: [templateFolder([session('session-1', false), session('session-2', true)], extra)],
   });
 
+/** Read a template's sessions, hard-erroring if the folder is missing. */
+const sessionsOf = (g: Graph, id = 'template-1'): SessionData[] => {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.sessions;
+};
+
+/** Read a template's `updated_at`, hard-erroring if the folder is missing. */
+const updatedAtOf = (g: Graph, id = 'template-1'): number => {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.updated_at;
+};
+
+describe('Session Lifecycle Functions', () => {
   describe('archiveSession', () => {
-    it('should archive an active session', () => {
-      expect(template.sessions[0].archived).toBe(false);
+    it('should archive an active session', async () => {
+      const g = seed();
+      expect(sessionsOf(g)[0].archived).toBe(false);
 
-      archiveSession(account, 'template-1', 'session-1');
+      await archiveSession(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].archived).toBe(true);
-      expect(template.sessions[0].lastActivityAt).toBeInstanceOf(Date);
+      expect(sessionsOf(g)[0].archived).toBe(true);
+      expect(sessionsOf(g)[0].lastActivityAt).toBeGreaterThan(0);
     });
 
-    it('should update lastActivityAt when archiving', () => {
-      const oldActivityTime = session1.lastActivityAt;
+    it('should update lastActivityAt when archiving', async () => {
+      const g = seed();
+      const oldActivityTime = sessionsOf(g)[0].lastActivityAt;
 
-      // Wait a tiny bit to ensure time difference
-      const _now = new Date(Date.now() + 10);
-      archiveSession(account, 'template-1', 'session-1');
+      await archiveSession(g, 'template-1', 'session-1');
 
-      expect(template.sessions[0].lastActivityAt.getTime()).toBeGreaterThanOrEqual(
-        oldActivityTime.getTime(),
+      expect(sessionsOf(g)[0].lastActivityAt).toBeGreaterThanOrEqual(oldActivityTime);
+    });
+
+    it('should throw error if session not found', async () => {
+      const g = seed();
+      await expect(archiveSession(g, 'template-1', 'non-existent-session')).rejects.toThrow(
+        'Session non-existent-session not found',
       );
     });
 
-    it('should throw error if session not found', () => {
-      expect(() => {
-        archiveSession(account, 'template-1', 'non-existent-session');
-      }).toThrow('Session non-existent-session not found');
+    it('should throw error if template not found', async () => {
+      const g = seed();
+      await expect(archiveSession(g, 'non-existent-template', 'session-1')).rejects.toThrow();
     });
 
-    it('should throw error if template not found', () => {
-      expect(() => {
-        archiveSession(account, 'non-existent-template', 'session-1');
-      }).toThrow();
-    });
+    it('should handle archiving already archived session', async () => {
+      const g = seed();
+      await archiveSession(g, 'template-1', 'session-2');
 
-    it('should handle archiving already archived session', () => {
-      session1.archived = true;
-
-      // Should not throw and archived should remain true
-      expect(() => {
-        archiveSession(account, 'template-1', 'session-1');
-      }).not.toThrow();
-
-      expect(template.sessions[0].archived).toBe(true);
+      expect(sessionsOf(g)[1].archived).toBe(true);
     });
   });
 
   describe('unarchiveSession', () => {
-    it('should unarchive an archived session', () => {
-      expect(template.sessions[1].archived).toBe(true);
+    it('should unarchive an archived session', async () => {
+      const g = seed();
+      expect(sessionsOf(g)[1].archived).toBe(true);
 
-      unarchiveSession(account, 'template-1', 'session-2');
+      await unarchiveSession(g, 'template-1', 'session-2');
 
-      expect(template.sessions[1].archived).toBe(false);
-      expect(template.sessions[1].lastActivityAt).toBeInstanceOf(Date);
+      expect(sessionsOf(g)[1].archived).toBe(false);
+      expect(sessionsOf(g)[1].lastActivityAt).toBeGreaterThan(0);
     });
 
-    it('should update lastActivityAt when unarchiving', () => {
-      const oldActivityTime = session2.lastActivityAt;
+    it('should update lastActivityAt when unarchiving', async () => {
+      const g = seed();
+      const oldActivityTime = sessionsOf(g)[1].lastActivityAt;
 
-      unarchiveSession(account, 'template-1', 'session-2');
+      await unarchiveSession(g, 'template-1', 'session-2');
 
-      expect(session2.lastActivityAt.getTime()).toBeGreaterThanOrEqual(oldActivityTime.getTime());
+      expect(sessionsOf(g)[1].lastActivityAt).toBeGreaterThanOrEqual(oldActivityTime);
     });
 
-    it('should throw error if session not found', () => {
-      expect(() => {
-        unarchiveSession(account, 'template-1', 'non-existent-session');
-      }).toThrow('Session non-existent-session not found');
+    it('should throw error if session not found', async () => {
+      const g = seed();
+      await expect(unarchiveSession(g, 'template-1', 'non-existent-session')).rejects.toThrow(
+        'Session non-existent-session not found',
+      );
     });
 
-    it('should throw error if template not found', () => {
-      expect(() => {
-        unarchiveSession(account, 'non-existent-template', 'session-2');
-      }).toThrow();
+    it('should throw error if template not found', async () => {
+      const g = seed();
+      await expect(unarchiveSession(g, 'non-existent-template', 'session-2')).rejects.toThrow();
     });
 
-    it('should handle unarchiving already active session', () => {
-      session1.archived = false;
+    it('should handle unarchiving already active session', async () => {
+      const g = seed();
+      await unarchiveSession(g, 'template-1', 'session-1');
 
-      // Should not throw and archived should remain false
-      expect(() => {
-        unarchiveSession(account, 'template-1', 'session-1');
-      }).not.toThrow();
-
-      expect(template.sessions[0].archived).toBe(false);
+      expect(sessionsOf(g)[0].archived).toBe(false);
     });
   });
 
   describe('deleteSession', () => {
-    it('should delete a session from template', () => {
-      expect(template.sessions.length).toBe(2);
-      expect(template.sessions[0].id).toBe('session-1');
+    it('should delete a session from template', async () => {
+      const g = seed();
+      expect(sessionsOf(g).length).toBe(2);
+      expect(sessionsOf(g)[0].id).toBe('session-1');
 
-      deleteSession(account, 'template-1', 'session-1');
+      await deleteSession(g, 'template-1', 'session-1');
 
-      expect(template.sessions.length).toBe(1);
-      expect(template.sessions[0].id).toBe('session-2');
+      expect(sessionsOf(g).length).toBe(1);
+      expect(sessionsOf(g)[0].id).toBe('session-2');
     });
 
-    it('should update template updatedAt when deleting session', () => {
-      const oldUpdatedAt = template.updatedAt;
+    it('should update template updated_at when deleting session', async () => {
+      const g = seed();
+      const before = Date.now();
 
-      deleteSession(account, 'template-1', 'session-1');
+      await deleteSession(g, 'template-1', 'session-1');
 
-      expect(template.updatedAt.getTime()).toBeGreaterThanOrEqual(oldUpdatedAt.getTime());
+      expect(updatedAtOf(g)).toBeGreaterThanOrEqual(before);
     });
 
-    it('should throw error if session not found', () => {
-      expect(() => {
-        deleteSession(account, 'template-1', 'non-existent-session');
-      }).toThrow('Session non-existent-session not found');
+    it('should throw error if session not found', async () => {
+      const g = seed();
+      await expect(deleteSession(g, 'template-1', 'non-existent-session')).rejects.toThrow(
+        'Session non-existent-session not found',
+      );
     });
 
-    it('should throw error if template not found', () => {
-      expect(() => {
-        deleteSession(account, 'non-existent-template', 'session-1');
-      }).toThrow('Template non-existent-template not found');
+    it('should throw error if template not found', async () => {
+      const g = seed();
+      await expect(deleteSession(g, 'non-existent-template', 'session-1')).rejects.toThrow(
+        'Template non-existent-template not found',
+      );
     });
 
-    it('should delete last session without error', () => {
-      // Delete first session
-      deleteSession(account, 'template-1', 'session-1');
+    it('should delete last session without error', async () => {
+      const g = seed();
+      await deleteSession(g, 'template-1', 'session-1');
+      expect(sessionsOf(g).length).toBe(1);
 
-      expect(template.sessions.length).toBe(1);
-
-      // Delete last session
-      deleteSession(account, 'template-1', 'session-2');
-
-      expect(template.sessions.length).toBe(0);
+      await deleteSession(g, 'template-1', 'session-2');
+      expect(sessionsOf(g).length).toBe(0);
     });
 
-    it('should handle deleting from middle of sessions array', () => {
-      const session3 = createMockSession('session-3', false);
-      template.sessions.push(session3);
+    it('should handle deleting from middle of sessions array', async () => {
+      const g = makeGraph({
+        folder: [
+          templateFolder([
+            session('session-1', false),
+            session('session-2', true),
+            session('session-3', false),
+          ]),
+        ],
+      });
 
-      expect(template.sessions.length).toBe(3);
-      expect(template.sessions[1].id).toBe('session-2');
+      expect(sessionsOf(g).length).toBe(3);
+      expect(sessionsOf(g)[1].id).toBe('session-2');
 
-      // Delete middle session
-      deleteSession(account, 'template-1', 'session-2');
+      await deleteSession(g, 'template-1', 'session-2');
 
-      expect(template.sessions.length).toBe(2);
-      expect(template.sessions[0].id).toBe('session-1');
-      expect(template.sessions[1].id).toBe('session-3');
+      expect(sessionsOf(g).length).toBe(2);
+      expect(sessionsOf(g)[0].id).toBe('session-1');
+      expect(sessionsOf(g)[1].id).toBe('session-3');
     });
   });
 
   describe('toggleCategoryExpanded', () => {
-    it('should expand a collapsed category', () => {
-      // Default is expanded (true), so set to collapsed
-      template.sessions[0].categoryExpanded = { cat1: false };
+    const seedCat = (categoryExpanded: Record<string, boolean>): Graph =>
+      makeGraph({
+        folder: [templateFolder([{ ...session('session-1', false), categoryExpanded }])],
+      });
 
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
+    it('should expand a collapsed category', async () => {
+      const g = seedCat({ cat1: false });
 
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(true);
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
+
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(true);
     });
 
-    it('should collapse an expanded category', () => {
-      template.sessions[0].categoryExpanded = { cat1: true };
+    it('should collapse an expanded category', async () => {
+      const g = seedCat({ cat1: true });
 
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
 
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(false);
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(false);
     });
 
-    it('should default to true for new categories', () => {
-      template.sessions[0].categoryExpanded = {};
+    it('should default to true for new categories', async () => {
+      const g = seedCat({});
 
       // Category doesn't exist, defaults to true, so toggle should set to false
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'new-cat');
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'new-cat');
 
-      expect(template.sessions[0].categoryExpanded['new-cat']).toBe(false);
+      expect(sessionsOf(g)[0].categoryExpanded['new-cat']).toBe(false);
     });
 
-    it('should preserve other category states', () => {
-      template.sessions[0].categoryExpanded = {
-        cat1: true,
-        cat2: false,
-        cat3: true,
-      };
+    it('should preserve other category states', async () => {
+      const g = seedCat({ cat1: true, cat2: false, cat3: true });
 
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat2');
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat2');
 
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(true);
-      expect(template.sessions[0].categoryExpanded.cat2).toBe(true);
-      expect(template.sessions[0].categoryExpanded.cat3).toBe(true);
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(true);
+      expect(sessionsOf(g)[0].categoryExpanded.cat2).toBe(true);
+      expect(sessionsOf(g)[0].categoryExpanded.cat3).toBe(true);
     });
 
-    it('should throw error if session not found', () => {
-      expect(() => {
-        toggleCategoryExpanded(account, 'template-1', 'non-existent-session', 'cat1');
-      }).toThrow('Session non-existent-session not found');
+    it('should throw error if session not found', async () => {
+      const g = seedCat({});
+      await expect(
+        toggleCategoryExpanded(g, 'template-1', 'non-existent-session', 'cat1'),
+      ).rejects.toThrow('Session non-existent-session not found');
     });
 
-    it('should throw error if template not found', () => {
-      expect(() => {
-        toggleCategoryExpanded(account, 'non-existent-template', 'session-1', 'cat1');
-      }).toThrow();
+    it('should throw error if template not found', async () => {
+      const g = seedCat({});
+      await expect(
+        toggleCategoryExpanded(g, 'non-existent-template', 'session-1', 'cat1'),
+      ).rejects.toThrow();
     });
 
-    it('should handle empty categoryExpanded object', () => {
-      template.sessions[0].categoryExpanded = {};
+    it('should handle empty categoryExpanded object', async () => {
+      const g = seedCat({});
 
-      // Should not throw
-      expect(() => {
-        toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      }).not.toThrow();
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
 
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(false);
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(false);
     });
 
-    it('should handle null/undefined categoryExpanded', () => {
-      template.sessions[0].categoryExpanded = undefined as any;
+    it('should handle undefined categoryExpanded', async () => {
+      // Simulate an older session missing the categoryExpanded map entirely.
+      const s = { ...session('session-1', false) };
+      (s as { categoryExpanded?: Record<string, boolean> }).categoryExpanded = undefined;
+      const g = makeGraph({ folder: [templateFolder([s])] });
 
-      // Should not throw
-      expect(() => {
-        toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      }).not.toThrow();
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
 
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(false);
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(false);
     });
 
-    it('should handle multiple toggles', () => {
-      template.sessions[0].categoryExpanded = { cat1: true };
+    it('should handle multiple toggles', async () => {
+      const g = seedCat({ cat1: true });
 
-      // Toggle once
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(false);
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(false);
 
-      // Toggle again
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(true);
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(true);
 
-      // Toggle once more
-      toggleCategoryExpanded(account, 'template-1', 'session-1', 'cat1');
-      expect(template.sessions[0].categoryExpanded.cat1).toBe(false);
+      await toggleCategoryExpanded(g, 'template-1', 'session-1', 'cat1');
+      expect(sessionsOf(g)[0].categoryExpanded.cat1).toBe(false);
     });
   });
 
   describe('Integration: Archive, Unarchive, Delete workflow', () => {
-    it('should support full lifecycle: archive → unarchive → delete', () => {
-      // Start with active session
-      expect(template.sessions[0].archived).toBe(false);
+    it('should support full lifecycle: archive → unarchive → delete', async () => {
+      const g = seed();
+      expect(sessionsOf(g)[0].archived).toBe(false);
 
-      // Archive it
-      archiveSession(account, 'template-1', 'session-1');
-      expect(template.sessions[0].archived).toBe(true);
+      await archiveSession(g, 'template-1', 'session-1');
+      expect(sessionsOf(g)[0].archived).toBe(true);
 
-      // Unarchive it
-      unarchiveSession(account, 'template-1', 'session-1');
-      expect(template.sessions[0].archived).toBe(false);
+      await unarchiveSession(g, 'template-1', 'session-1');
+      expect(sessionsOf(g)[0].archived).toBe(false);
 
-      // Delete it
-      expect(template.sessions.length).toBe(2);
-      deleteSession(account, 'template-1', 'session-1');
-      expect(template.sessions.length).toBe(1);
-      expect(template.sessions[0].id).toBe('session-2');
+      expect(sessionsOf(g).length).toBe(2);
+      await deleteSession(g, 'template-1', 'session-1');
+      expect(sessionsOf(g).length).toBe(1);
+      expect(sessionsOf(g)[0].id).toBe('session-2');
     });
 
-    it('should allow deleting archived session without unarchiving', () => {
-      // Session2 is already archived
-      expect(template.sessions[1].archived).toBe(true);
-      expect(template.sessions.length).toBe(2);
+    it('should allow deleting archived session without unarchiving', async () => {
+      const g = seed();
+      expect(sessionsOf(g)[1].archived).toBe(true);
+      expect(sessionsOf(g).length).toBe(2);
 
-      // Delete directly
-      deleteSession(account, 'template-1', 'session-2');
+      await deleteSession(g, 'template-1', 'session-2');
 
-      expect(template.sessions.length).toBe(1);
-      expect(template.sessions[0].id).toBe('session-1');
+      expect(sessionsOf(g).length).toBe(1);
+      expect(sessionsOf(g)[0].id).toBe('session-1');
     });
   });
 
   describe('updateSessionItemNotes', () => {
-    it('should add notes to an item without existing state', () => {
-      template.sessions[0].itemStates = {};
+    const seedNotes = (itemStates: Record<string, ItemState>): Graph =>
+      makeGraph({
+        folder: [templateFolder([{ ...session('session-1', false), itemStates }])],
+      });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Check if on sale');
+    it('should add notes to an item without existing state', async () => {
+      const g = seedNotes({});
 
-      expect(template.sessions[0].itemStates['item-1']).toBeDefined();
-      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Check if on sale');
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'Check if on sale');
+
+      const state = sessionsOf(g)[0].itemStates['item-1'];
+      expect(state).toBeDefined();
+      expect(state.notes).toBe('Check if on sale');
+      expect(state.selected).toBe(false);
+      expect(state.checked).toBe(false);
     });
 
-    it('should add notes to an item with existing state', () => {
-      template.sessions[0].itemStates = {
-        'item-1': {
-          selected: true,
-          checked: false,
-          selectedAt: new Date(),
-        },
-      };
+    it('should add notes to an item with existing state', async () => {
+      const g = seedNotes({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Get the organic one');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'Get the organic one');
 
-      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Get the organic one');
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true); // preserved
-      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false); // preserved
+      const state = sessionsOf(g)[0].itemStates['item-1'];
+      expect(state.notes).toBe('Get the organic one');
+      expect(state.selected).toBe(true); // preserved
+      expect(state.checked).toBe(false); // preserved
     });
 
-    it('should update existing notes', () => {
-      template.sessions[0].itemStates = {
-        'item-1': {
-          selected: true,
-          checked: false,
-          notes: 'Old note',
-        },
-      };
+    it('should update existing notes', async () => {
+      const g = seedNotes({ 'item-1': { selected: true, checked: false, notes: 'Old note' } });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'New note');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'New note');
 
-      expect(template.sessions[0].itemStates['item-1'].notes).toBe('New note');
+      expect(sessionsOf(g)[0].itemStates['item-1'].notes).toBe('New note');
     });
 
-    it('should remove notes when empty string is provided', () => {
-      template.sessions[0].itemStates = {
-        'item-1': {
-          selected: true,
-          checked: false,
-          notes: 'Some note',
-        },
-      };
+    it('should remove notes when empty string is provided', async () => {
+      const g = seedNotes({ 'item-1': { selected: true, checked: false, notes: 'Some note' } });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', '');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', '');
 
-      expect(template.sessions[0].itemStates['item-1'].notes).toBeUndefined();
+      expect(sessionsOf(g)[0].itemStates['item-1'].notes).toBeUndefined();
     });
 
-    it('should update lastActivityAt when adding notes', () => {
-      const oldActivityTime = template.sessions[0].lastActivityAt;
-      template.sessions[0].itemStates = {};
+    it('should update lastActivityAt when adding notes', async () => {
+      const g = makeGraph({
+        folder: [templateFolder([{ ...session('session-1', false), lastActivityAt: 1 }])],
+      });
+      const before = Date.now();
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'A note');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'A note');
 
-      expect(template.sessions[0].lastActivityAt.getTime()).toBeGreaterThanOrEqual(
-        oldActivityTime.getTime(),
-      );
+      expect(sessionsOf(g)[0].lastActivityAt).toBeGreaterThanOrEqual(before);
     });
 
-    it('should not affect other items when updating notes', () => {
-      template.sessions[0].itemStates = {
+    it('should not affect other items when updating notes', async () => {
+      const g = seedNotes({
         'item-1': { selected: true, checked: false, notes: 'Note 1' },
         'item-2': { selected: false, checked: true, notes: 'Note 2' },
-      };
+      });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'Updated note');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'Updated note');
 
-      expect(template.sessions[0].itemStates['item-1'].notes).toBe('Updated note');
-      expect(template.sessions[0].itemStates['item-2'].notes).toBe('Note 2'); // unchanged
+      expect(sessionsOf(g)[0].itemStates['item-1'].notes).toBe('Updated note');
+      expect(sessionsOf(g)[0].itemStates['item-2'].notes).toBe('Note 2'); // unchanged
     });
 
-    it('should throw error if session not found', () => {
-      expect(() => {
-        updateSessionItemNotes(account, 'template-1', 'non-existent', 'item-1', 'Note');
-      }).toThrow('Session non-existent not found');
+    it('should throw error if session not found', async () => {
+      const g = seedNotes({});
+      await expect(
+        updateSessionItemNotes(g, 'template-1', 'non-existent', 'item-1', 'Note'),
+      ).rejects.toThrow('Session non-existent not found');
     });
 
-    it('should throw error if template not found', () => {
-      expect(() => {
-        updateSessionItemNotes(account, 'non-existent', 'session-1', 'item-1', 'Note');
-      }).toThrow();
+    it('should throw error if template not found', async () => {
+      const g = seedNotes({});
+      await expect(
+        updateSessionItemNotes(g, 'non-existent', 'session-1', 'item-1', 'Note'),
+      ).rejects.toThrow();
     });
 
-    it('should preserve selectedAt and checkedAt timestamps', () => {
-      const selectedAt = new Date('2024-01-01');
-      const checkedAt = new Date('2024-01-02');
-      template.sessions[0].itemStates = {
-        'item-1': {
-          selected: true,
-          checked: true,
-          selectedAt,
-          checkedAt,
-        },
-      };
+    it('should preserve selectedAt and checkedAt timestamps', async () => {
+      const selectedAt = 1_704_067_200_000; // 2024-01-01
+      const checkedAt = 1_704_153_600_000; // 2024-01-02
+      const g = seedNotes({
+        'item-1': { selected: true, checked: true, selectedAt, checkedAt },
+      });
 
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', 'A note');
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', 'A note');
 
-      expect(template.sessions[0].itemStates['item-1'].selectedAt).toEqual(selectedAt);
-      expect(template.sessions[0].itemStates['item-1'].checkedAt).toEqual(checkedAt);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selectedAt).toBe(selectedAt);
+      expect(sessionsOf(g)[0].itemStates['item-1'].checkedAt).toBe(checkedAt);
     });
 
-    it('should handle multiline notes', () => {
-      template.sessions[0].itemStates = {};
+    it('should handle multiline notes', async () => {
+      const g = seedNotes({});
 
       const multilineNote = 'Line 1\nLine 2\nLine 3';
-      updateSessionItemNotes(account, 'template-1', 'session-1', 'item-1', multilineNote);
+      await updateSessionItemNotes(g, 'template-1', 'session-1', 'item-1', multilineNote);
 
-      expect(template.sessions[0].itemStates['item-1'].notes).toBe(multilineNote);
+      expect(sessionsOf(g)[0].itemStates['item-1'].notes).toBe(multilineNote);
     });
   });
 });

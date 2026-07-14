@@ -1,289 +1,227 @@
 /**
- * Batch selection tests
+ * Batch selection tests (rowboat port, slice-2).
  *
- * Tests for batch select, toggle all, and invert selection.
- * Uses jazz-mock for CoValue mocking.
+ * Batch select, toggle-all, and invert-selection — over an in-memory `makeGraph()` graph
+ * (no Jazz, no React). All timestamps are epoch-ms NUMBERS.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { beforeEach, describe, expect, it } from 'vitest';
-import type { Account, FolderNode, TemplateItem } from '../schema';
-import type { SessionData } from '../schema/tree';
-
+import { describe, expect, it } from 'vitest';
+import type { FolderRow, ItemState, SessionData, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import { batchSelectItems, invertItemSelection, toggleSelectAllItems } from './sessionService';
 
-// TODO(slice-2): sessions still read a Jazz FolderNode/session; this whole file is
-// skip-pending until sessions land on rowboat (see docs/superpowers/d-t4-report.md). Local
-// replacement for the old jazz-mock `createMockCoMap` helper — good enough shape for a
-// skipped suite, no jazz-mock dependency required.
-function createMockCoMap<T extends object>(
-  data: T,
-  options: { id?: string; trackMutations?: boolean } = {},
-) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
-}
+type Graph = ReturnType<typeof makeGraph>;
 
-// Helper to create mock session data (plain object, not a CoValue)
-const createMockSession = (): SessionData => ({
+const item = (id: string, name: string, path: string, sortOrder: number): TemplateItem => ({
+  id,
+  name,
+  type: 'item',
+  path,
+  sortOrder,
+  archived: false,
+  expanded: false,
+  defaultQuantity: '',
+  createdAt: 0,
+});
+
+/** Build a session (all epoch-ms number timestamps). */
+const session = (itemStates: Record<string, ItemState> = {}): SessionData => ({
   id: 'session-1',
-  itemStates: {},
+  itemStates,
   archived: false,
   categoryExpanded: {},
   viewMode: 'zone-in-hierarchy',
   selectedCount: 0,
   checkedCount: 0,
   remainingCount: 0,
-  createdAt: new Date(),
-  lastActivityAt: new Date(),
+  createdAt: 1_700_000_000_000,
+  lastActivityAt: 1_700_000_000_000,
 });
 
-// Helper to create mock template using jazz-mock
-const createMockTemplate = (session: SessionData) => {
-  const item1 = {
-    id: 'item-1',
-    name: 'Item 1',
-    type: 'item',
-    path: 'category1/item-1',
-    sortOrder: 0,
-    archived: false,
-  } as InstanceOfSchema<typeof TemplateItem>;
+/** Build a complete template-folder row with three leaf items and one session. */
+const templateFolder = (s: SessionData): FolderRow => ({
+  id: 'template-1',
+  owner_group_id: 'group-1',
+  name: 'Test Template',
+  type: 'template-folder',
+  parent_id: null,
+  sharing_mode: 'private',
+  archived: false,
+  expanded: true,
+  created_by: 'user-1',
+  created_at: 0,
+  updated_at: 0,
+  items: [
+    item('item-1', 'Item 1', 'category1/item-1', 0),
+    item('item-2', 'Item 2', 'category1/item-2', 1),
+    item('item-3', 'Item 3', 'category2/item-3', 0),
+  ],
+  sessions: [s],
+  default_items: {},
+  show_zone_headings: false,
+  auto_categorize_enabled: false,
+  autocomplete_domain: 'none',
+});
 
-  const item2 = {
-    id: 'item-2',
-    name: 'Item 2',
-    type: 'item',
-    path: 'category1/item-2',
-    sortOrder: 1,
-    archived: false,
-  } as InstanceOfSchema<typeof TemplateItem>;
+const seed = (itemStates: Record<string, ItemState> = {}): Graph =>
+  makeGraph({ folder: [templateFolder(session(itemStates))] });
 
-  const item3 = {
-    id: 'item-3',
-    name: 'Item 3',
-    type: 'item',
-    path: 'category2/item-3',
-    sortOrder: 0,
-    archived: false,
-  } as InstanceOfSchema<typeof TemplateItem>;
-
-  return createMockCoMap(
-    {
-      name: 'Test Template',
-      items: [item1, item2, item3],
-      sessions: [session],
-      showZoneHeadings: false,
-      archived: false,
-      expanded: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    { id: 'template-1', trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof FolderNode>;
+/** Read a template's sessions, hard-erroring if the folder is missing. */
+const sessionsOf = (g: Graph, id = 'template-1'): SessionData[] => {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.sessions;
 };
 
-// Helper to create mock account using jazz-mock
-const createMockAccount = () =>
-  createMockCoMap(
-    {
-      root: createMockCoMap({ folders: [] as any[] }, { trackMutations: true }),
-    },
-    { trackMutations: true },
-  ) as unknown as InstanceOfSchema<typeof Account>;
-
-describe.skip('Batch Selection Functions', () => {
-  let account: InstanceOfSchema<typeof Account>;
-  let session: SessionData;
-  let template: InstanceOfSchema<typeof FolderNode>;
-
-  beforeEach(() => {
-    account = createMockAccount();
-    session = createMockSession();
-    template = createMockTemplate(session);
-    account.root.folders = [template];
-  });
-
+describe('Batch Selection Functions', () => {
   describe('batchSelectItems', () => {
-    it('should select multiple items when selected=true', () => {
-      const itemIds = ['item-1', 'item-2'];
+    it('should select multiple items when selected=true', async () => {
+      const g = seed();
 
-      batchSelectItems(account, 'template-1', 'session-1', itemIds, true);
+      await batchSelectItems(g, 'template-1', 'session-1', ['item-1', 'item-2'], true);
 
-      expect(template.sessions[0].itemStates['item-1']).toBeDefined();
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1']).toBeDefined();
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].checked).toBe(false);
 
-      expect(template.sessions[0].itemStates['item-2']).toBeDefined();
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-2'].checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2']).toBeDefined();
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2'].checked).toBe(false);
     });
 
-    it('should deselect multiple items when selected=false', () => {
-      // First select items
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-        'item-2': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should deselect multiple items when selected=false', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+        'item-2': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2'];
+      await batchSelectItems(g, 'template-1', 'session-1', ['item-1', 'item-2'], false);
 
-      batchSelectItems(account, 'template-1', 'session-1', itemIds, false);
-
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(false);
     });
 
-    it('should not affect items not in the batch', () => {
-      // Select item-3
-      template.sessions[0].itemStates = {
-        'item-3': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should not affect items not in the batch', async () => {
+      const g = seed({
+        'item-3': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2'];
+      await batchSelectItems(g, 'template-1', 'session-1', ['item-1', 'item-2'], true);
 
-      batchSelectItems(account, 'template-1', 'session-1', itemIds, true);
-
-      // item-3 should remain selected
-      expect(template.sessions[0].itemStates['item-3'].selected).toBe(true);
-      // item-1 and item-2 should be selected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-3'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
     });
   });
 
   describe('toggleSelectAllItems', () => {
-    it('should select all when none are selected', () => {
-      const itemIds = ['item-1', 'item-2'];
+    it('should select all when none are selected', async () => {
+      const g = seed();
 
-      toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
+      await toggleSelectAllItems(g, 'template-1', 'session-1', ['item-1', 'item-2']);
 
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
     });
 
-    it('should select all when some are selected', () => {
-      // Select only item-1
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should select all when some are selected', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2'];
+      await toggleSelectAllItems(g, 'template-1', 'session-1', ['item-1', 'item-2']);
 
-      toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
-
-      // Both should be selected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
     });
 
-    it('should deselect all when all are selected', () => {
-      // Select both items
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-        'item-2': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should deselect all when all are selected', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+        'item-2': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2'];
+      await toggleSelectAllItems(g, 'template-1', 'session-1', ['item-1', 'item-2']);
 
-      toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
-
-      // Both should be deselected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(false);
     });
 
-    it('should handle empty item list', () => {
-      const itemIds: string[] = [];
+    it('should handle empty item list', async () => {
+      const g = seed();
 
-      // Should not throw
-      expect(() => {
-        toggleSelectAllItems(account, 'template-1', 'session-1', itemIds);
-      }).not.toThrow();
+      await expect(toggleSelectAllItems(g, 'template-1', 'session-1', [])).resolves.toBeUndefined();
     });
   });
 
   describe('invertItemSelection', () => {
-    it('should invert selection for unselected items', () => {
-      const itemIds = ['item-1', 'item-2'];
+    it('should invert selection for unselected items', async () => {
+      const g = seed();
 
-      invertItemSelection(account, 'template-1', 'session-1', itemIds);
+      await invertItemSelection(g, 'template-1', 'session-1', ['item-1', 'item-2']);
 
-      // Both should now be selected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
     });
 
-    it('should invert selection for selected items', () => {
-      // Select both items
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-        'item-2': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should invert selection for selected items', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+        'item-2': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2'];
+      await invertItemSelection(g, 'template-1', 'session-1', ['item-1', 'item-2']);
 
-      invertItemSelection(account, 'template-1', 'session-1', itemIds);
-
-      // Both should now be deselected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(false);
     });
 
-    it('should invert mixed selection states', () => {
-      // Select only item-1
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should invert mixed selection states', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2', 'item-3'];
+      await invertItemSelection(g, 'template-1', 'session-1', ['item-1', 'item-2', 'item-3']);
 
-      invertItemSelection(account, 'template-1', 'session-1', itemIds);
-
-      // item-1 should be deselected, item-2 and item-3 should be selected
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-3'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-3'].selected).toBe(true);
     });
 
-    it('should preserve checked state when inverting from selected to unselected', () => {
-      // Select and check item-1
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: true, selectedAt: new Date(), checkedAt: new Date() },
-      };
+    it('should preserve checked state when inverting from selected to unselected', async () => {
+      const g = seed({
+        'item-1': {
+          selected: true,
+          checked: true,
+          selectedAt: 1_700_000_000_000,
+          checkedAt: 1_700_000_000_000,
+        },
+      });
 
-      const itemIds = ['item-1'];
+      await invertItemSelection(g, 'template-1', 'session-1', ['item-1']);
 
-      invertItemSelection(account, 'template-1', 'session-1', itemIds);
-
-      // item-1 should be deselected, and checked should be cleared
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-1'].checked).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].checked).toBe(false);
     });
 
-    it('should handle empty item list', () => {
-      const itemIds: string[] = [];
+    it('should handle empty item list', async () => {
+      const g = seed();
 
-      // Should not throw
-      expect(() => {
-        invertItemSelection(account, 'template-1', 'session-1', itemIds);
-      }).not.toThrow();
+      await expect(invertItemSelection(g, 'template-1', 'session-1', [])).resolves.toBeUndefined();
     });
 
-    it('should invert each item individually in mixed state', () => {
-      // Complex scenario: some selected, some not
-      template.sessions[0].itemStates = {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-        'item-2': { selected: false, checked: false, selectedAt: new Date() },
-        'item-3': { selected: true, checked: false, selectedAt: new Date() },
-      };
+    it('should invert each item individually in mixed state', async () => {
+      const g = seed({
+        'item-1': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+        'item-2': { selected: false, checked: false, selectedAt: 1_700_000_000_000 },
+        'item-3': { selected: true, checked: false, selectedAt: 1_700_000_000_000 },
+      });
 
-      const itemIds = ['item-1', 'item-2', 'item-3'];
+      await invertItemSelection(g, 'template-1', 'session-1', ['item-1', 'item-2', 'item-3']);
 
-      invertItemSelection(account, 'template-1', 'session-1', itemIds);
-
-      // Each should be inverted
-      expect(template.sessions[0].itemStates['item-1'].selected).toBe(false);
-      expect(template.sessions[0].itemStates['item-2'].selected).toBe(true);
-      expect(template.sessions[0].itemStates['item-3'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-1'].selected).toBe(false);
+      expect(sessionsOf(g)[0].itemStates['item-2'].selected).toBe(true);
+      expect(sessionsOf(g)[0].itemStates['item-3'].selected).toBe(false);
     });
   });
 });
