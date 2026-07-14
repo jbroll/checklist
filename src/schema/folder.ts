@@ -18,4 +18,11 @@
  * using the lower-level `useRowboat(schema, db)` hook, which the app reaches through the
  * `@/jazz` waist. See `src/lib/jazz.tsx`'s header comment.
  */
-export { Folder, type FolderRow, schema } from '../../shared/schema.js';
+export {
+  Folder,
+  type FolderRow,
+  type ItemState,
+  type SessionData,
+  schema,
+  type TemplateItem,
+} from '../../shared/schema.js';

@@ -1,113 +1,86 @@
 /**
- * Template Service
+ * templateService - pure functions over the rowboat relational graph implementing template
+ * folders and their hierarchical item tree (categories + leaf items, path-keyed).
  *
- * Manages template folders and their items.
- * Templates are now FolderNode CoValues in the hierarchical structure.
- * Handles hierarchical item structure using paths.
- * All Jazz database access for templates and items goes through this service.
+ * A "template" IS a folder row of `type: 'template-folder'`; its items live in the folder row's
+ * `items` json column and default-item flags in `default_items`. Ported off Jazz (slice-2) to
+ * mirror `folderOps.ts`: every function is headless, taking the graph `g` as its first argument
+ * and the folder id second — reads via `g.folder(id).$data`, writes via `g.folder.update(id, …)`.
+ * No React, no IndexedDB, no server; React wiring lives in the session components.
+ *
+ * All timestamps are epoch-ms NUMBERS (`Date.now()`), matching the item schema's `createdAt`.
+ *
+ * NO FALLBACKS: a missing template or item is a hard error (thrown), never a silent no-op.
  */
-
-import { walkTree } from '@jbr-jazz/hierarchy-shared';
-import type { InstanceOfSchema } from 'jazz-tools';
-import { isTemplateFolder } from '../hooks';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { FolderRow, schema, TemplateItem } from '@/schema/folder';
 import { generateId } from '../lib/utils';
-import type { Account, FolderNode, TemplateItem } from '../schema';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
+
+type Graph = RelationalGraph<typeof schema>;
 
 // ============================================================================
 // Internal Helper Functions
 // ============================================================================
 
-type Template = InstanceOfSchema<typeof FolderNode>;
-type AccountType = InstanceOfSchema<typeof Account>;
-
-/** Collect all template folders using jbr-jazz walkTree */
-function getAllTemplateFolders(account: AccountType, showArchived = false): Template[] {
-  if (!account?.root?.folders) return [];
-  const templates: Template[] = [];
-  walkTree([...account.root.folders] as Template[], (node) => {
-    if (!showArchived && node.archived) return 'skip';
-    if (isTemplateFolder(node)) templates.push(node);
-  });
-  return templates;
+function isTemplateFolder(row: FolderRow): boolean {
+  return row.type === 'template-folder';
 }
 
-/**
- * Get template by ID, throws if not found
- */
-function requireTemplate(account: InstanceOfSchema<typeof Account>, templateId: string): Template {
-  const template = getTemplate(account, templateId);
-  if (!template) throw new Error(`Template ${templateId} not found`);
-  return template;
+/** Read the template folder node, throwing if it doesn't exist or isn't a template folder. */
+function requireTemplate(g: Graph, templateId: string) {
+  const node = g.folder(templateId);
+  if (!node || !isTemplateFolder(node.$data)) {
+    throw new Error(`Template ${templateId} not found`);
+  }
+  return node;
 }
 
-/**
- * Find item index in template, throws if not found
- */
-function requireItemIndex(template: Template, itemId: string): number {
-  const index = template.items.findIndex((i: TemplateItem) => i.id === itemId);
+/** Find item index in the items array, throwing if not found. */
+function requireItemIndex(items: TemplateItem[], itemId: string): number {
+  const index = items.findIndex((i) => i.id === itemId);
   if (index === -1) throw new Error(`Item ${itemId} not found in template`);
   return index;
 }
 
-/**
- * Check for duplicate path, throws if exists
- */
-function assertNoDuplicatePath(template: Template, path: string, excludeItemId?: string): void {
-  const existingItem = template.items.find(
-    (i: TemplateItem) => i.path === path && !i.archived && i.id !== excludeItemId,
-  );
+/** Throw if a live (non-archived) item already occupies `path`. */
+function assertNoDuplicatePath(items: TemplateItem[], path: string, excludeItemId?: string): void {
+  const existingItem = items.find((i) => i.path === path && !i.archived && i.id !== excludeItemId);
   if (existingItem) {
     throw new Error(`Item already exists at path: ${path}`);
   }
-}
-
-/**
- * Update template's updatedAt timestamp
- */
-function touchTemplate(template: Template): void {
-  template.$jazz.set('updatedAt', new Date());
 }
 
 // ============================================================================
 // Template Operations
 // ============================================================================
 
-/**
- * Get template by ID
- */
-export function getTemplate(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): Template | null {
-  const templates = getAllTemplateFolders(account, true);
-  return templates.find((t) => t?.$jazz.id === templateId) || null;
+/** Get a template folder's row by ID (returns null if absent or not a template folder). */
+export function getTemplate(g: Graph, templateId: string): FolderRow | null {
+  const node = g.folder(templateId);
+  if (!node) return null;
+  const row = node.$data;
+  return isTemplateFolder(row) ? row : null;
 }
 
-/**
- * Get all templates
- */
-export function getAllTemplates(account: InstanceOfSchema<typeof Account>): Array<Template> {
-  return getAllTemplateFolders(account, false);
+/** Get all non-archived template folders. */
+export function getAllTemplates(g: Graph): FolderRow[] {
+  return g.folder
+    .all()
+    .map((f) => f.$data)
+    .filter((row) => isTemplateFolder(row) && !row.archived);
 }
 
-/**
- * Check if template exists
- */
-export function templateExists(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): boolean {
-  return getTemplate(account, templateId) != null;
+/** Check if a template folder exists. */
+export function templateExists(g: Graph, templateId: string): boolean {
+  return getTemplate(g, templateId) != null;
 }
 
 // ============================================================================
 // Item Operations
 // ============================================================================
 
-/**
- * Updates all descendant paths when a category's path changes
- */
+/** Updates all descendant paths when a category's path changes. */
 function updateDescendantPaths(
   items: TemplateItem[],
   oldParentPath: string,
@@ -123,220 +96,192 @@ function updateDescendantPaths(
   });
 }
 
-/**
- * Internal helper to create a template item (category or item)
- */
-function createTemplateItem(
-  template: Template,
+/** Internal helper to create a template item (category or item) and write it back. */
+async function createTemplateItem(
+  g: Graph,
+  templateId: string,
   type: 'category' | 'item',
   name: string,
   parentPath?: string,
   options?: { defaultQuantity?: string; sortOrder?: number; addToDefaults?: boolean },
-): string {
+): Promise<string> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
   const path = createChildPath(parentPath, name);
-  assertNoDuplicatePath(template, path);
+  assertNoDuplicatePath(items, path);
 
+  const now = Date.now();
   const newItem: TemplateItem = {
     id: generateId(),
     name,
     type,
     path,
     expanded: type === 'category', // Categories start expanded, items don't
-    sortOrder: options?.sortOrder ?? template.items.length,
+    sortOrder: options?.sortOrder ?? items.length,
     archived: false,
     defaultQuantity: options?.defaultQuantity || '',
-    createdAt: new Date(),
+    createdAt: now,
   };
 
-  template.$jazz.set('items', [...template.items, newItem]);
+  const update: Partial<FolderRow> = {
+    items: [...items, newItem],
+    updated_at: now,
+  };
 
-  // Auto-add new items to defaults if requested
+  // Auto-add new items to defaults if requested.
   if (options?.addToDefaults) {
-    const defaultItems = { ...(template.defaultItems || {}), [newItem.id]: true };
-    template.$jazz.set('defaultItems', defaultItems);
+    update.default_items = { ...node.$data.default_items, [newItem.id]: true };
   }
 
-  touchTemplate(template);
+  await g.folder.update(templateId, update);
   return newItem.id;
 }
 
-/**
- * Create a new category in a template
- */
+/** Create a new category in a template. */
 export function createCategory(
-  account: InstanceOfSchema<typeof Account>,
+  g: Graph,
   templateId: string,
   name: string,
   parentPath?: string,
   sortOrder?: number,
-): string {
-  const template = requireTemplate(account, templateId);
-  return createTemplateItem(template, 'category', name, parentPath, { sortOrder });
+): Promise<string> {
+  return createTemplateItem(g, templateId, 'category', name, parentPath, { sortOrder });
 }
 
-/**
- * Create a new item in a template
- */
+/** Create a new item in a template (auto-added to defaults). */
 export function createItem(
-  account: InstanceOfSchema<typeof Account>,
+  g: Graph,
   templateId: string,
   name: string,
   parentPath?: string,
   defaultQuantity?: string,
   sortOrder?: number,
-): string {
-  const template = requireTemplate(account, templateId);
-  return createTemplateItem(template, 'item', name, parentPath, {
+): Promise<string> {
+  return createTemplateItem(g, templateId, 'item', name, parentPath, {
     defaultQuantity,
     sortOrder,
     addToDefaults: true,
   });
 }
 
-/**
- * Get item by ID from a template
- */
-export function getItem(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  itemId: string,
-): TemplateItem | null {
-  const template = getTemplate(account, templateId);
+/** Get an item by ID from a template. */
+export function getItem(g: Graph, templateId: string, itemId: string): TemplateItem | null {
+  const template = getTemplate(g, templateId);
   if (!template) return null;
-
-  return template.items.find((i: TemplateItem) => i.id === itemId) || null;
+  return template.items.find((i) => i.id === itemId) || null;
 }
 
-/**
- * Get all non-archived items from a template (both categories and leaf items)
- */
-export function getItems(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): TemplateItem[] {
-  const template = getTemplate(account, templateId);
+/** Get all non-archived items (categories and leaf items). */
+export function getItems(g: Graph, templateId: string): TemplateItem[] {
+  const template = getTemplate(g, templateId);
   if (!template) return [];
-
-  return template.items.filter((i: TemplateItem) => !i.archived);
+  return template.items.filter((i) => !i.archived);
 }
 
-/**
- * Get only leaf items (not categories) from a template
- */
-export function getLeafItems(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-): TemplateItem[] {
-  const template = getTemplate(account, templateId);
+/** Get only non-archived leaf items (not categories). */
+export function getLeafItems(g: Graph, templateId: string): TemplateItem[] {
+  const template = getTemplate(g, templateId);
   if (!template) return [];
-
-  return template.items.filter((i: TemplateItem) => !i.archived && i.type === 'item');
+  return template.items.filter((i) => !i.archived && i.type === 'item');
 }
 
 /**
- * Rename an item or category
- * Updates the path and all descendant paths if it's a category
+ * Rename an item or category. Updates the path and all descendant paths if it's a category.
  */
-export function renameItem(
-  account: InstanceOfSchema<typeof Account>,
+export async function renameItem(
+  g: Graph,
   templateId: string,
   itemId: string,
   newName: string,
-): void {
-  const template = requireTemplate(account, templateId);
-  const itemIndex = requireItemIndex(template, itemId);
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const itemIndex = requireItemIndex(items, itemId);
 
-  const item = template.items[itemIndex];
+  const item = items[itemIndex];
   const oldPath = item.path;
   const parentPath = getParentPath(oldPath);
   const newPath = createChildPath(parentPath, newName);
 
   if (oldPath !== newPath) {
-    assertNoDuplicatePath(template, newPath, itemId);
+    assertNoDuplicatePath(items, newPath, itemId);
   }
 
-  let updatedItems = [...template.items];
+  let updatedItems = [...items];
   updatedItems[itemIndex] = { ...item, name: newName, path: newPath };
 
   if (item.type === 'category') {
     updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
   }
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
-/**
- * Update notes for an item or category
- */
-export function updateItemNotes(
-  account: InstanceOfSchema<typeof Account>,
+/** Update notes for an item or category (empty string clears the note). */
+export async function updateItemNotes(
+  g: Graph,
   templateId: string,
   itemId: string,
   notes: string,
-): void {
-  const template = requireTemplate(account, templateId);
-  const itemIndex = requireItemIndex(template, itemId);
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const itemIndex = requireItemIndex(items, itemId);
 
-  const updatedItems = [...template.items];
-  updatedItems[itemIndex] = { ...template.items[itemIndex], notes: notes || undefined };
+  const updatedItems = [...items];
+  updatedItems[itemIndex] = { ...items[itemIndex], notes: notes || undefined };
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
 /**
- * Archive (soft delete) an item or category
- * If it's a category, also archives all descendants
+ * Archive (soft delete) an item or category. If it's a category, also archives all descendants.
  */
-export function archiveItem(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  itemId: string,
-): void {
-  const template = requireTemplate(account, templateId);
-  const item = template.items.find((i: TemplateItem) => i.id === itemId);
+export async function archiveItem(g: Graph, templateId: string, itemId: string): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const item = items.find((i) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template`);
 
   const categoryPrefix = item.type === 'category' ? `${item.path}${PATH_SEPARATOR}` : null;
 
-  const updatedItems = template.items.map((i: TemplateItem) => {
+  const updatedItems = items.map((i) => {
     if (i.id === itemId || (categoryPrefix && i.path.startsWith(categoryPrefix))) {
       return { ...i, archived: true };
     }
     return i;
   });
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
 /**
- * Move an item to a different parent category
- * Updates the path and all descendant paths if it's a category
- * Optionally updates sortOrder in the same operation
+ * Move an item to a different parent category. Updates the path and all descendant paths if it's
+ * a category. Optionally updates sortOrder in the same operation. No-ops (no write) if neither the
+ * path nor the sortOrder change.
  */
-export function moveItem(
-  account: InstanceOfSchema<typeof Account>,
+export async function moveItem(
+  g: Graph,
   templateId: string,
   itemId: string,
   newParentPath: string | undefined,
   sortOrder?: number,
-): void {
-  const template = requireTemplate(account, templateId);
-  const itemIndex = requireItemIndex(template, itemId);
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const itemIndex = requireItemIndex(items, itemId);
 
-  const item = template.items[itemIndex];
+  const item = items[itemIndex];
   const oldPath = item.path;
   const newPath = createChildPath(newParentPath, item.name);
 
   if (oldPath === newPath && sortOrder === undefined) return;
 
   if (oldPath !== newPath) {
-    assertNoDuplicatePath(template, newPath, itemId);
+    assertNoDuplicatePath(items, newPath, itemId);
   }
 
-  let updatedItems = [...template.items];
+  let updatedItems = [...items];
   updatedItems[itemIndex] = {
     ...item,
     path: newPath,
@@ -347,75 +292,62 @@ export function moveItem(
     updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
   }
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
-/**
- * Get category expanded state
- */
-export function getCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
-  templateId: string,
-  itemId: string,
-): boolean {
-  const template = requireTemplate(account, templateId);
-  const item = template.items.find((i: TemplateItem) => i.id === itemId);
+/** Get category expanded state (throws if the item is not a category). */
+export function getCategoryExpanded(g: Graph, templateId: string, itemId: string): boolean {
+  const node = requireTemplate(g, templateId);
+  const item = node.$data.items.find((i) => i.id === itemId);
   if (!item) throw new Error(`Item ${itemId} not found in template`);
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
   return item.expanded;
 }
 
-/**
- * Set category expanded state explicitly
- */
-export function setCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
+/** Set category expanded state explicitly (throws if the item is not a category). */
+export async function setCategoryExpanded(
+  g: Graph,
   templateId: string,
   itemId: string,
   expanded: boolean,
-): void {
-  const template = requireTemplate(account, templateId);
-  const itemIndex = requireItemIndex(template, itemId);
-  const item = template.items[itemIndex];
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const itemIndex = requireItemIndex(items, itemId);
+  const item = items[itemIndex];
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
 
-  const updatedItems = [...template.items];
+  const updatedItems = [...items];
   updatedItems[itemIndex] = { ...item, expanded };
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
-/**
- * Toggle category expanded state (convenience function)
- */
-export function toggleCategoryExpanded(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle category expanded state (convenience). */
+export async function toggleCategoryExpanded(
+  g: Graph,
   templateId: string,
   itemId: string,
-): void {
-  const currentState = getCategoryExpanded(account, templateId, itemId);
-  setCategoryExpanded(account, templateId, itemId, !currentState);
+): Promise<void> {
+  const currentState = getCategoryExpanded(g, templateId, itemId);
+  await setCategoryExpanded(g, templateId, itemId, !currentState);
 }
 
-/**
- * Reorder an item by changing its sortOrder (fractional indexing)
- */
-export function reorderItem(
-  account: InstanceOfSchema<typeof Account>,
+/** Reorder an item by changing its sortOrder (fractional indexing). */
+export async function reorderItem(
+  g: Graph,
   templateId: string,
   itemId: string,
   newSortOrder: number,
-): void {
-  const template = requireTemplate(account, templateId);
-  const itemIndex = requireItemIndex(template, itemId);
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items;
+  const itemIndex = requireItemIndex(items, itemId);
 
-  const updatedItems = [...template.items];
+  const updatedItems = [...items];
   updatedItems[itemIndex] = { ...updatedItems[itemIndex], sortOrder: newSortOrder };
 
-  template.$jazz.set('items', updatedItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
 // ============================================================================
@@ -423,32 +355,31 @@ export function reorderItem(
 // ============================================================================
 
 /**
- * Calculate insertion parameters based on a selected item
- * Returns parentPath and sortOrder for inserting a new item
+ * Calculate insertion parameters (parentPath + sortOrder) for a new item, relative to a
+ * currently-selected item. Read-only.
  */
 export function calculateInsertionPoint(
-  template: InstanceOfSchema<typeof FolderNode>,
+  g: Graph,
+  templateId: string,
   selectedItemId: string | null,
 ): { parentPath: string | undefined; sortOrder: number } {
-  const items = template.items?.filter((item: TemplateItem) => !item.archived) || [];
+  const node = requireTemplate(g, templateId);
+  const items = node.$data.items.filter((item) => !item.archived);
 
   // If nothing selected, insert at top of root
   if (!selectedItemId) {
-    const rootItems = items.filter((item: TemplateItem) => {
-      const parentPath = getParentPath(item.path);
-      return parentPath === undefined;
-    });
+    const rootItems = items.filter((item) => getParentPath(item.path) === undefined);
 
     if (rootItems.length === 0) {
       return { parentPath: undefined, sortOrder: 0 };
     }
 
-    const minSortOrder = Math.min(...rootItems.map((item: TemplateItem) => item.sortOrder));
+    const minSortOrder = Math.min(...rootItems.map((item) => item.sortOrder));
     return { parentPath: undefined, sortOrder: minSortOrder - 1 };
   }
 
   // Find the selected item
-  const selectedItem = items.find((item: TemplateItem) => item.id === selectedItemId);
+  const selectedItem = items.find((item) => item.id === selectedItemId);
   if (!selectedItem) {
     // Fall back to root if selected item not found
     return { parentPath: undefined, sortOrder: 0 };
@@ -457,36 +388,28 @@ export function calculateInsertionPoint(
   // If selected item is a category, insert at top of that category
   if (selectedItem.type === 'category') {
     const categoryPath = selectedItem.path;
-    const childrenInCategory = items.filter((item: TemplateItem) => {
-      const parentPath = getParentPath(item.path);
-      return parentPath === categoryPath;
-    });
+    const childrenInCategory = items.filter((item) => getParentPath(item.path) === categoryPath);
 
     if (childrenInCategory.length === 0) {
       return { parentPath: categoryPath, sortOrder: 0 };
     }
 
-    const minSortOrder = Math.min(
-      ...childrenInCategory.map((item: TemplateItem) => item.sortOrder),
-    );
+    const minSortOrder = Math.min(...childrenInCategory.map((item) => item.sortOrder));
     return { parentPath: categoryPath, sortOrder: minSortOrder - 1 };
   }
 
   // If selected item is a regular item, insert after it in the same parent
   const parentPath = getParentPath(selectedItem.path);
-  const siblings = items.filter((item: TemplateItem) => {
-    const itemParentPath = getParentPath(item.path);
-    return itemParentPath === parentPath;
-  });
+  const siblings = items.filter((item) => getParentPath(item.path) === parentPath);
 
   // Sort siblings by sortOrder
-  siblings.sort((a: TemplateItem, b: TemplateItem) => a.sortOrder - b.sortOrder);
+  siblings.sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Find the position of the selected item
-  const selectedIndex = siblings.findIndex((item: TemplateItem) => item.id === selectedItemId);
+  const selectedIndex = siblings.findIndex((item) => item.id === selectedItemId);
   if (selectedIndex === -1) {
     // Fall back to end of siblings
-    const maxSortOrder = Math.max(...siblings.map((item: TemplateItem) => item.sortOrder));
+    const maxSortOrder = Math.max(...siblings.map((item) => item.sortOrder));
     return { parentPath, sortOrder: maxSortOrder + 1 };
   }
 
@@ -506,17 +429,15 @@ export function calculateInsertionPoint(
 // Default Items Operations
 // ============================================================================
 
-/**
- * Set whether an item is a default item (selected when creating new sessions)
- */
-export function setItemDefault(
-  account: InstanceOfSchema<typeof Account>,
+/** Set whether an item is a default item (pre-selected when creating new sessions). */
+export async function setItemDefault(
+  g: Graph,
   templateId: string,
   itemId: string,
   isDefault: boolean,
-): void {
-  const template = requireTemplate(account, templateId);
-  const defaultItems = { ...(template.defaultItems || {}) };
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const defaultItems = { ...node.$data.default_items };
 
   if (isDefault) {
     defaultItems[itemId] = true;
@@ -524,34 +445,29 @@ export function setItemDefault(
     delete defaultItems[itemId];
   }
 
-  template.$jazz.set('defaultItems', defaultItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
 }
 
-/**
- * Toggle item's default state
- */
-export function toggleItemDefault(
-  account: InstanceOfSchema<typeof Account>,
+/** Toggle an item's default state. */
+export async function toggleItemDefault(
+  g: Graph,
   templateId: string,
   itemId: string,
-): void {
-  const template = requireTemplate(account, templateId);
-  const isCurrentlyDefault = template.defaultItems?.[itemId] ?? false;
-  setItemDefault(account, templateId, itemId, !isCurrentlyDefault);
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const isCurrentlyDefault = node.$data.default_items[itemId] === true;
+  await setItemDefault(g, templateId, itemId, !isCurrentlyDefault);
 }
 
-/**
- * Batch set default items
- */
-export function batchSetItemsDefault(
-  account: InstanceOfSchema<typeof Account>,
+/** Batch set default state for many items. */
+export async function batchSetItemsDefault(
+  g: Graph,
   templateId: string,
   itemIds: string[],
   isDefault: boolean,
-): void {
-  const template = requireTemplate(account, templateId);
-  const defaultItems = { ...(template.defaultItems || {}) };
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const defaultItems = { ...node.$data.default_items };
 
   for (const itemId of itemIds) {
     if (isDefault) {
@@ -561,20 +477,17 @@ export function batchSetItemsDefault(
     }
   }
 
-  template.$jazz.set('defaultItems', defaultItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
 }
 
-/**
- * Invert default state for items
- */
-export function invertItemsDefault(
-  account: InstanceOfSchema<typeof Account>,
+/** Invert the default state for each of `itemIds`. */
+export async function invertItemsDefault(
+  g: Graph,
   templateId: string,
   itemIds: string[],
-): void {
-  const template = requireTemplate(account, templateId);
-  const defaultItems = { ...(template.defaultItems || {}) };
+): Promise<void> {
+  const node = requireTemplate(g, templateId);
+  const defaultItems = { ...node.$data.default_items };
 
   for (const itemId of itemIds) {
     if (defaultItems[itemId]) {
@@ -584,6 +497,5 @@ export function invertItemsDefault(
     }
   }
 
-  template.$jazz.set('defaultItems', defaultItems);
-  touchTemplate(template);
+  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
 }

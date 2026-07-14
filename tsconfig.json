@@ -65,10 +65,14 @@
     "src/services/checklistFolderFactory.ts",
     "src/components/editor/DialogManager.tsx",
 
-    /* Explicitly out of slice-1 scope per the port task, independent of the jazz-waist
-     * breakage above (task instruction: don't try to port these). */
+    /* Explicitly out of slice-2 scope per the port task, independent of the jazz-waist
+     * breakage above (task instruction: don't try to port these). `sessionService.ts` still
+     * reads a Jazz `Account` and is only imported by the already-excluded `src/components/
+     * session/**` — sessions are a later slice, so exclude it here (it would otherwise fail to
+     * typecheck against the now-rowboat `templateService.getTemplate`). `templateService.ts`
+     * itself is now ported to rowboat and NO LONGER excluded — it typechecks against the graph. */
     "src/services/testHelpers.ts",
-    "src/services/templateService.ts",
+    "src/services/sessionService.ts",
     "src/services/sessionCleanupService.ts"
   ]
 }
