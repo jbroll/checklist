@@ -53,7 +53,10 @@ interface PortContextValue {
 
 const PortContext = createContext<PortContextValue | null>(null);
 
-async function mintGroup(parentGroupId?: string): Promise<string> {
+// Authenticated mint: the server creates a scope group the caller admins. Anonymous users have
+// no session (the route 401s) and never sync, so an anon folder gets a purely-local group id —
+// its rows live in the anon store and are re-scoped to the user's group by adopt on sign-in (C2).
+async function serverMintGroup(parentGroupId?: string): Promise<string> {
   const res = await fetch('/api/folders/group', {
     method: 'POST',
     credentials: 'include',
@@ -145,7 +148,17 @@ function RowboatBridge({
     };
   }, [db, author]);
 
-  const value = useMemo<PortContextValue>(() => ({ graph, author, mintGroup }), [graph, author]);
+  // Anonymous users can't hit the auth-gated mint route — give them a local group id (adopt
+  // re-scopes on sign-in). Signed-in users mint a server-side group they admin.
+  const mintGroup = useMemo<PortContextValue['mintGroup']>(
+    () => (author ? serverMintGroup : async () => crypto.randomUUID()),
+    [author],
+  );
+
+  const value = useMemo<PortContextValue>(
+    () => ({ graph, author, mintGroup }),
+    [graph, author, mintGroup],
+  );
 
   return <PortContext.Provider value={value}>{children}</PortContext.Provider>;
 }
