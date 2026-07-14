@@ -1,8 +1,13 @@
 /**
  * Subscription Service
  *
- * Manages subscription state between backend (source of truth) and Jazz (cached for offline).
- * Provides limit checking and usage tracking for the freemium model.
+ * Manages subscription state between backend (source of truth) and the rowboat graph (cached for
+ * offline). Provides limit checking and usage tracking for the freemium model.
+ *
+ * Ported off Jazz (slice-2) to mirror `folderOps.ts`/`templateService.ts`: every function is
+ * headless, taking the relational graph `g` as its first argument. Subscription/preference state
+ * lives in the `user_settings` singleton row (one row whose `id` is the user's id); template-folder
+ * counts come from the `folder` table. No React, no Jazz account.
  *
  * Tier Limits:
  * - Free: 3 lists, 7-day session history
@@ -11,8 +16,11 @@
  * - Enterprise: Unlimited (contact sales)
  *
  * Beta Mode:
- * When subscription status is 'beta', users get Plus tier limits regardless of their
- * actual tier. This allows soft enforcement during beta testing.
+ * When subscription status is 'beta', users get Plus tier limits regardless of their actual tier.
+ * This allows soft enforcement during beta testing.
+ *
+ * The `?? 'free'` / `?? 'beta'` defaults when NO settings row exists are the DESIGNED defaults for a
+ * brand-new user (matching the Jazz version), not fallbacks papering over a bug.
  */
 
 import {
@@ -20,17 +28,15 @@ import {
   getEffectiveTier as getEffectiveTierFromBilling,
   getTierDisplayName,
   isPaidTier,
-} from '@jbr-jazz/billing-shared';
-import { walkTree } from '@jbr-jazz/hierarchy-shared';
-import type { InstanceOfSchema } from 'jazz-tools';
-import { isTemplateFolder } from '../hooks';
-import {
-  type AccountParam,
-  type FolderNode,
   type SubscriptionStatus,
   type SubscriptionTier,
-  UserSettings,
-} from '../schema';
+} from '@jbr-jazz/billing-shared';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '@/schema/folder';
+import type { UserSettingsRow } from '../../shared/schema.js';
+import { isTemplateFolder } from '../hooks';
+
+type Graph = RelationalGraph<typeof schema>;
 
 // Re-export display helpers from billing-shared
 export { getTierDisplayName, isPaidTier };
@@ -123,42 +129,54 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = Object.fromEntr
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;
 
 // ============================================================================
-// Subscription State (from Jazz cache)
+// Subscription State (from the user_settings cache)
 // ============================================================================
 
-/**
- * Get current subscription tier (from Jazz cache)
- * Note: This returns the user's actual tier, not the effective tier.
- * Use getEffectiveTier() for limit calculations during beta.
- */
-export function getSubscriptionTier(account: AccountParam): SubscriptionTier {
-  const userSettings = account?.root?.userSettings;
-  return (userSettings?.subscriptionTier as SubscriptionTier) ?? 'free';
+/** Read the per-user singleton settings row, or `undefined` for a brand-new user with no row yet. */
+function readSettings(g: Graph): UserSettingsRow | undefined {
+  return g.user_settings.all()[0]?.$data;
+}
+
+/** Read the singleton settings row, hard-erroring if absent (NO FALLBACKS — for write paths). */
+function requireSettings(g: Graph): UserSettingsRow {
+  const settings = readSettings(g);
+  if (!settings) {
+    throw new Error('user_settings row not initialized');
+  }
+  return settings;
 }
 
 /**
- * Get current subscription status (from Jazz cache)
+ * Get current subscription tier (from the user_settings cache).
+ * Note: This returns the user's actual tier, not the effective tier.
+ * Use getEffectiveTier() for limit calculations during beta.
  */
-export function getSubscriptionStatus(account: AccountParam): SubscriptionStatus {
-  const userSettings = account?.root?.userSettings;
-  return (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'beta';
+export function getSubscriptionTier(g: Graph): SubscriptionTier {
+  return (readSettings(g)?.subscription_tier as SubscriptionTier | undefined) ?? 'free';
+}
+
+/**
+ * Get current subscription status (from the user_settings cache)
+ */
+export function getSubscriptionStatus(g: Graph): SubscriptionStatus {
+  return (readSettings(g)?.subscription_status as SubscriptionStatus | undefined) ?? 'beta';
 }
 
 /**
  * Check if user is in beta mode
  */
-export function isBetaUser(account: AccountParam): boolean {
-  return getSubscriptionStatus(account) === 'beta';
+export function isBetaUser(g: Graph): boolean {
+  return getSubscriptionStatus(g) === 'beta';
 }
 
 /**
- * Get effective tier for limit calculations
+ * Get effective tier for limit calculations.
  * During beta, all users get Plus tier limits regardless of actual tier.
  * Uses billing-shared getEffectiveTier logic.
  */
-export function getEffectiveTier(account: AccountParam): SubscriptionTier {
-  const tier = getSubscriptionTier(account);
-  const status = getSubscriptionStatus(account);
+export function getEffectiveTier(g: Graph): SubscriptionTier {
+  const tier = getSubscriptionTier(g);
+  const status = getSubscriptionStatus(g);
   return getEffectiveTierFromBilling(tier, status);
 }
 
@@ -170,31 +188,31 @@ export function getBetaMessage(): string {
 }
 
 /**
- * Get full subscription info (from Jazz cache)
+ * Get full subscription info (from the user_settings cache).
  * Note: Limits are derived from effective tier (respects beta status).
  */
-export function getSubscriptionInfo(account: AccountParam): SubscriptionInfo {
-  const userSettings = account?.root?.userSettings;
-  const tier = (userSettings?.subscriptionTier as SubscriptionTier) ?? 'free';
-  const status = (userSettings?.subscriptionStatus as SubscriptionStatus) ?? 'beta';
+export function getSubscriptionInfo(g: Graph): SubscriptionInfo {
+  const settings = readSettings(g);
+  const tier = (settings?.subscription_tier as SubscriptionTier | undefined) ?? 'free';
+  const status = (settings?.subscription_status as SubscriptionStatus | undefined) ?? 'beta';
   const effectiveTier = status === 'beta' ? 'plus' : tier;
 
   return {
     tier,
     status,
-    endsAt: userSettings?.subscriptionEndsAt ?? null,
+    endsAt: settings?.subscription_ends_at ? settings.subscription_ends_at : null,
     limits: TIER_LIMITS[effectiveTier],
-    syncedAt: userSettings?.subscriptionSyncedAt ?? null,
+    syncedAt: settings?.subscription_synced_at ? settings.subscription_synced_at : null,
   };
 }
 
 /**
  * Check if subscription needs to be synced from backend
  */
-export function needsSubscriptionSync(account: AccountParam): boolean {
-  const userSettings = account?.root?.userSettings;
-  const syncedAt = userSettings?.subscriptionSyncedAt;
+export function needsSubscriptionSync(g: Graph): boolean {
+  const syncedAt = readSettings(g)?.subscription_synced_at;
 
+  // 0 (never synced) or absent row → needs a sync.
   if (!syncedAt) return true;
 
   const elapsed = Date.now() - syncedAt;
@@ -209,8 +227,8 @@ export function needsSubscriptionSync(account: AccountParam): boolean {
  * Get the maximum number of lists allowed for the effective tier
  * (respects beta status)
  */
-export function getMaxLists(account: AccountParam): number {
-  const effectiveTier = getEffectiveTier(account);
+export function getMaxLists(g: Graph): number {
+  const effectiveTier = getEffectiveTier(g);
   return TIER_LIMITS[effectiveTier].maxLists;
 }
 
@@ -218,79 +236,87 @@ export function getMaxLists(account: AccountParam): number {
  * Get the session retention period in days (-1 = unlimited)
  * (respects beta status)
  */
-export function getSessionRetentionDays(account: AccountParam): number {
-  const effectiveTier = getEffectiveTier(account);
+export function getSessionRetentionDays(g: Graph): number {
+  const effectiveTier = getEffectiveTier(g);
   return TIER_LIMITS[effectiveTier].sessionRetentionDays;
 }
 
 /**
- * Count the total number of template folders (lists) the user has
+ * Count the total number of template folders (lists) the user has.
+ * A list = a non-archived template folder in the graph.
  */
-export function countUserLists(account: AccountParam): number {
-  if (!account?.root?.folders) return 0;
-  let count = 0;
-  walkTree([...account.root.folders] as InstanceOfSchema<typeof FolderNode>[], (node) => {
-    if (node.archived) return 'skip';
-    if (isTemplateFolder(node)) count++;
-  });
-  return count;
+export function countUserLists(g: Graph): number {
+  return g.folder.all().filter((f) => {
+    const row = f.$data;
+    return !row.archived && isTemplateFolder(row);
+  }).length;
 }
 
 /**
  * Check if user is at their list limit
  */
-export function isAtListLimit(account: AccountParam): boolean {
-  const maxLists = getMaxLists(account);
+export function isAtListLimit(g: Graph): boolean {
+  const maxLists = getMaxLists(g);
   if (maxLists === -1) return false; // Unlimited
 
-  const currentCount = countUserLists(account);
+  const currentCount = countUserLists(g);
   return currentCount >= maxLists;
 }
 
 /**
  * Check if user can create a new list
  */
-export function canCreateList(account: AccountParam): boolean {
-  return !isAtListLimit(account);
+export function canCreateList(g: Graph): boolean {
+  return !isAtListLimit(g);
 }
 
 /**
  * Get the number of lists remaining before hitting the limit
  */
-export function getListsRemaining(account: AccountParam): number {
-  const maxLists = getMaxLists(account);
+export function getListsRemaining(g: Graph): number {
+  const maxLists = getMaxLists(g);
   if (maxLists === -1) return -1; // Unlimited
 
-  const currentCount = countUserLists(account);
+  const currentCount = countUserLists(g);
   return Math.max(0, maxLists - currentCount);
 }
 
 /**
  * Get usage as a percentage (0-100)
  */
-export function getUsagePercentage(account: AccountParam): number {
-  const maxLists = getMaxLists(account);
+export function getUsagePercentage(g: Graph): number {
+  const maxLists = getMaxLists(g);
   if (maxLists === -1) return 0; // Unlimited = 0%
 
-  const currentCount = countUserLists(account);
+  const currentCount = countUserLists(g);
   return Math.min(100, Math.round((currentCount / maxLists) * 100));
 }
 
 /**
  * Check if user is approaching their limit (80%+ usage)
  */
-export function isApproachingLimit(account: AccountParam): boolean {
-  return getUsagePercentage(account) >= 80;
+export function isApproachingLimit(g: Graph): boolean {
+  return getUsagePercentage(g) >= 80;
 }
 
 // ============================================================================
 // Backend Sync
 // ============================================================================
 
+/** Shape of the backend `/api/billing/subscription` response we consume. */
+interface BackendSubscriptionResponse {
+  subscription?: {
+    tierSlug: SubscriptionTier;
+    status: SubscriptionStatus;
+    currentPeriodEnd?: number;
+    tier?: { maxLists?: number; sessionRetentionDays?: number };
+  };
+}
+
 /**
- * Sync subscription status from backend to Jazz cache
+ * Sync subscription status from backend into the user_settings cache
  */
-export async function syncSubscriptionFromBackend(account: AccountParam): Promise<void> {
+export async function syncSubscriptionFromBackend(g: Graph): Promise<void> {
   try {
     const response = await fetch('/api/billing/subscription', {
       credentials: 'include',
@@ -301,7 +327,7 @@ export async function syncSubscriptionFromBackend(account: AccountParam): Promis
       return;
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as BackendSubscriptionResponse;
     const { subscription } = data;
 
     if (!subscription) {
@@ -309,20 +335,20 @@ export async function syncSubscriptionFromBackend(account: AccountParam): Promis
       return;
     }
 
-    // Update Jazz cache
-    const userSettings = ensureUserSettings(account);
-    userSettings.$jazz.set('subscriptionTier', subscription.tierSlug);
-    userSettings.$jazz.set('subscriptionStatus', subscription.status);
-    userSettings.$jazz.set(
-      'subscriptionEndsAt',
-      subscription.currentPeriodEnd ? subscription.currentPeriodEnd * 1000 : undefined,
-    );
-    userSettings.$jazz.set('maxLists', subscription.tier?.maxLists ?? TIER_LIMITS.free.maxLists);
-    userSettings.$jazz.set(
-      'sessionRetentionDays',
-      subscription.tier?.sessionRetentionDays ?? TIER_LIMITS.free.sessionRetentionDays,
-    );
-    userSettings.$jazz.set('subscriptionSyncedAt', Date.now());
+    // Update the user_settings cache row.
+    const settings = requireSettings(g);
+    const changes: Partial<UserSettingsRow> = {
+      subscription_tier: subscription.tierSlug,
+      subscription_status: subscription.status,
+      subscription_ends_at: subscription.currentPeriodEnd
+        ? subscription.currentPeriodEnd * 1000
+        : 0,
+      max_lists: subscription.tier?.maxLists ?? TIER_LIMITS.free.maxLists,
+      session_retention_days:
+        subscription.tier?.sessionRetentionDays ?? TIER_LIMITS.free.sessionRetentionDays,
+      subscription_synced_at: Date.now(),
+    };
+    await g.user_settings.update(settings.id, changes);
 
     if (import.meta.env.DEV)
       console.log('[subscription] Synced from backend:', subscription.tierSlug);
@@ -334,9 +360,9 @@ export async function syncSubscriptionFromBackend(account: AccountParam): Promis
 /**
  * Record current usage to backend (for analytics)
  */
-export async function recordUsageToBackend(account: AccountParam): Promise<void> {
+export async function recordUsageToBackend(g: Graph): Promise<void> {
   try {
-    const listCount = countUserLists(account);
+    const listCount = countUserLists(g);
 
     await fetch('/api/billing/usage', {
       method: 'POST',
@@ -428,36 +454,6 @@ export async function redirectToPortal(): Promise<void> {
   if (url) {
     window.location.href = url;
   }
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Ensure userSettings exists on the account
- */
-function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof UserSettings> {
-  if (!account?.root) {
-    throw new Error('Account root not initialized');
-  }
-
-  if (!account.root.userSettings) {
-    const userSettings = UserSettings.create(
-      {
-        enableAutoCategorization: true,
-        subscriptionTier: 'free',
-        subscriptionStatus: 'beta', // Default to beta during beta period
-        maxLists: TIER_LIMITS.plus.maxLists, // Beta users get Plus limits
-        sessionRetentionDays: TIER_LIMITS.plus.sessionRetentionDays,
-      },
-      { owner: account },
-    );
-    account.root.$jazz.set('userSettings', userSettings);
-    return userSettings;
-  }
-
-  return account.root.userSettings;
 }
 
 // ============================================================================

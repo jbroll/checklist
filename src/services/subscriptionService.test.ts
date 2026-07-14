@@ -1,11 +1,16 @@
 /**
- * SubscriptionService Unit Tests
+ * SubscriptionService Unit Tests (rowboat port, slice-2)
  *
- * Tests for subscription tier logic and limit checking.
- * Uses jazz-mock for CoValue mocking.
+ * Subscription/preference state lives in the `user_settings` singleton row; template-folder counts
+ * come from the `folder` table. Tests run against an in-memory `makeGraph()` graph — no Jazz, no
+ * React. A brand-new user has NO settings row, which is the DESIGNED default state (→ free/beta).
  */
 
+import type { Row } from '@jbroll/rowboat-schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FolderRow } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
+import type { UserSettingsRow } from '../../shared/schema.js';
 import {
   canCreateList,
   createCheckoutSession,
@@ -32,55 +37,79 @@ import {
   TIER_LIMITS,
 } from './subscriptionService';
 
-// TODO(slice-2): subscription/billing still reads a Jazz Account; skip-pending until it lands
-// on rowboat (see docs/superpowers/d-t4-report.md). Local replacements for the old jazz-mock
-// `createMockCoMap`/`createMockCoList` helpers — good enough shape for a skipped suite.
-function createMockCoMap<T extends object>(
-  data: T,
-  options: { id?: string; trackMutations?: boolean } = {},
-) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
+type Graph = ReturnType<typeof makeGraph>;
+
+/** Fields a test may set on the user_settings singleton (camelCase mirrors the old Jazz shape). */
+interface SettingsInput {
+  subscriptionTier?: UserSettingsRow['subscription_tier'];
+  subscriptionStatus?: UserSettingsRow['subscription_status'];
+  subscriptionEndsAt?: number;
+  subscriptionSyncedAt?: number;
+  maxLists?: number;
+  sessionRetentionDays?: number;
 }
-function createMockCoList<T>(items: T[] = []) {
-  return items;
+
+/** Build a complete user_settings row from a partial camelCase input (all columns present). */
+function settingsRow(input: SettingsInput): UserSettingsRow {
+  return {
+    id: 'u1',
+    owner_group_id: 'g1',
+    default_autocomplete_domain: 'none',
+    enable_auto_categorization: true,
+    subscription_tier: input.subscriptionTier ?? 'free',
+    subscription_status: input.subscriptionStatus ?? 'beta',
+    subscription_ends_at: input.subscriptionEndsAt ?? 0,
+    max_lists: input.maxLists ?? TIER_LIMITS.plus.maxLists,
+    session_retention_days: input.sessionRetentionDays ?? TIER_LIMITS.plus.sessionRetentionDays,
+    subscription_synced_at: input.subscriptionSyncedAt ?? 0,
+  };
 }
 
-// Mock account with Jazz structure using jazz-mock
-const createMockAccount = (settings: Record<string, any> = {}) => {
-  const mockUserSettings = createMockCoMap(
-    {
-      subscriptionTier: settings.subscriptionTier,
-      subscriptionStatus: settings.subscriptionStatus,
-      maxLists: settings.maxLists,
-      sessionRetentionDays: settings.sessionRetentionDays,
-      subscriptionSyncedAt: settings.subscriptionSyncedAt,
-      subscriptionEndsAt: settings.subscriptionEndsAt,
-    },
-    { trackMutations: true },
-  );
+let nextFolderId = 0;
+/** Build a complete non-archived template-folder row (all required Folder columns present). */
+function templateFolderRow(): FolderRow {
+  nextFolderId += 1;
+  const id = `f${nextFolderId}`;
+  return {
+    id,
+    owner_group_id: 'g1',
+    name: `Template ${id}`,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items: [],
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
+  };
+}
 
-  const folders = createMockCoList([], { trackMutations: true });
+/**
+ * Build a graph. Pass `settings` to seed the user_settings singleton (omit for a brand-new user
+ * with no row → free/beta defaults). `lists` seeds that many template folders.
+ */
+function makeAccount(settings?: SettingsInput, lists = 0): Graph {
+  const seed: Record<string, Row[]> = {};
+  if (settings) seed.user_settings = [settingsRow(settings)];
+  if (lists > 0) seed.folder = Array.from({ length: lists }, () => templateFolderRow());
+  return makeGraph(seed);
+}
 
-  const root = createMockCoMap(
-    { userSettings: mockUserSettings, folders },
-    { trackMutations: true },
-  );
+/** Read the (single) user_settings row, hard-erroring if absent. */
+function readSettings(g: Graph): UserSettingsRow {
+  const node = g.user_settings.all()[0];
+  if (!node) throw new Error('no user_settings row');
+  return node.$data;
+}
 
-  return createMockCoMap({ root }, { id: 'test-account', trackMutations: true }) as any;
-};
-
-// Helper to add mock template folders
-const addTemplateFolders = (account: any, count: number) => {
-  for (let i = 0; i < count; i++) {
-    account.root.folders.push({
-      name: `Template ${i}`,
-      items: [], // Has items = template folder
-      archived: false,
-    });
-  }
-};
-
-describe.skip('SubscriptionService', () => {
+describe('SubscriptionService', () => {
   describe('TIER_LIMITS', () => {
     it('should have correct limits for free tier', () => {
       expect(TIER_LIMITS.free.maxLists).toBe(3);
@@ -104,268 +133,181 @@ describe.skip('SubscriptionService', () => {
   });
 
   describe('getSubscriptionTier', () => {
-    it('should return tier from account settings', () => {
-      const account = createMockAccount({ subscriptionTier: 'plus' });
-
-      expect(getSubscriptionTier(account)).toBe('plus');
+    it('should return tier from settings row', () => {
+      expect(getSubscriptionTier(makeAccount({ subscriptionTier: 'plus' }))).toBe('plus');
     });
 
-    it('should default to free when not set', () => {
-      const account = createMockAccount({});
-
-      expect(getSubscriptionTier(account)).toBe('free');
-    });
-
-    it('should default to free for null account', () => {
-      expect(getSubscriptionTier(null as any)).toBe('free');
+    it('should default to free when no settings row exists', () => {
+      expect(getSubscriptionTier(makeAccount())).toBe('free');
     });
   });
 
   describe('isBetaUser', () => {
     it('should return true when status is beta', () => {
-      const account = createMockAccount({ subscriptionStatus: 'beta' });
-
-      expect(isBetaUser(account)).toBe(true);
+      expect(isBetaUser(makeAccount({ subscriptionStatus: 'beta' }))).toBe(true);
     });
 
     it('should return false when status is active', () => {
-      const account = createMockAccount({ subscriptionStatus: 'active' });
-
-      expect(isBetaUser(account)).toBe(false);
+      expect(isBetaUser(makeAccount({ subscriptionStatus: 'active' }))).toBe(false);
     });
 
-    it('should default to beta when status is not set', () => {
-      const account = createMockAccount({});
-
-      expect(isBetaUser(account)).toBe(true);
+    it('should default to beta when no settings row exists', () => {
+      expect(isBetaUser(makeAccount())).toBe(true);
     });
   });
 
   describe('getEffectiveTier', () => {
     it('should return plus for beta users regardless of tier', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
-
-      expect(getEffectiveTier(account)).toBe('plus');
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
+      expect(getEffectiveTier(g)).toBe('plus');
     });
 
     it('should return actual tier for non-beta users', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'premium',
-        subscriptionStatus: 'active',
-      });
-
-      expect(getEffectiveTier(account)).toBe('premium');
+      const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+      expect(getEffectiveTier(g)).toBe('premium');
     });
 
     it('should return free tier for non-beta free users', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-
-      expect(getEffectiveTier(account)).toBe('free');
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
+      expect(getEffectiveTier(g)).toBe('free');
     });
   });
 
   describe('getMaxLists', () => {
     it('should return maxLists based on effective tier (beta gets plus limits)', () => {
-      // Beta user with free tier gets plus limits
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
-
-      expect(getMaxLists(account)).toBe(30); // Plus tier limit
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
+      expect(getMaxLists(g)).toBe(30); // Plus tier limit
     });
 
     it('should return premium tier maxLists for active premium user', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'premium',
-        subscriptionStatus: 'active',
-      });
-
-      expect(getMaxLists(account)).toBe(300);
+      const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+      expect(getMaxLists(g)).toBe(300);
     });
 
-    it('should return plus tier limit for beta users by default', () => {
-      // Default status is beta, so free tier users get plus limits
-      const account = createMockAccount({});
-
-      expect(getMaxLists(account)).toBe(30); // Plus tier limit (beta default)
+    it('should return plus tier limit for a brand-new user by default (beta)', () => {
+      expect(getMaxLists(makeAccount())).toBe(30); // Plus tier limit (beta default)
     });
 
     it('should return free tier limit for active free users', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-
-      expect(getMaxLists(account)).toBe(3);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
+      expect(getMaxLists(g)).toBe(3);
     });
   });
 
   describe('getSessionRetentionDays', () => {
     it('should return retention based on effective tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'premium',
-        subscriptionStatus: 'active',
-      });
-
-      expect(getSessionRetentionDays(account)).toBe(365);
+      const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+      expect(getSessionRetentionDays(g)).toBe(365);
     });
 
     it('should return plus tier retention for beta users', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
-
-      expect(getSessionRetentionDays(account)).toBe(30); // Plus tier retention
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
+      expect(getSessionRetentionDays(g)).toBe(30); // Plus tier retention
     });
   });
 
   describe('isAtListLimit', () => {
     it('should return true when at limit (non-beta free user)', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 3); // free tier limit is 3
-
-      expect(isAtListLimit(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 3);
+      expect(isAtListLimit(g)).toBe(true);
     });
 
     it('should return true when over limit', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 5);
-
-      expect(isAtListLimit(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 5);
+      expect(isAtListLimit(g)).toBe(true);
     });
 
     it('should return false when under limit', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 2);
-
-      expect(isAtListLimit(account)).toBe(false);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 2);
+      expect(isAtListLimit(g)).toBe(false);
     });
 
     it('should return false for unlimited tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'enterprise',
-        subscriptionStatus: 'active',
-      });
-      addTemplateFolders(account, 1000);
-
-      expect(isAtListLimit(account)).toBe(false);
+      const g = makeAccount({ subscriptionTier: 'enterprise', subscriptionStatus: 'active' }, 1000);
+      expect(isAtListLimit(g)).toBe(false);
     });
 
     it('should use plus limits for beta users', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
-      addTemplateFolders(account, 3); // Would be at limit for free, but not for plus
-
-      expect(isAtListLimit(account)).toBe(false); // Beta gets plus limits (30)
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' }, 3);
+      expect(isAtListLimit(g)).toBe(false); // Beta gets plus limits (30)
     });
   });
 
   describe('canCreateList', () => {
     it('should return true when under limit', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 2);
-
-      expect(canCreateList(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 2);
+      expect(canCreateList(g)).toBe(true);
     });
 
     it('should return false when at limit', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 3);
-
-      expect(canCreateList(account)).toBe(false);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 3);
+      expect(canCreateList(g)).toBe(false);
     });
 
     it('should return true for unlimited tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'enterprise',
-        subscriptionStatus: 'active',
-      });
-      addTemplateFolders(account, 999);
-
-      expect(canCreateList(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'enterprise', subscriptionStatus: 'active' }, 999);
+      expect(canCreateList(g)).toBe(true);
     });
 
     it('should allow more lists for beta users', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
-      addTemplateFolders(account, 29); // Under plus limit of 30
-
-      expect(canCreateList(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' }, 29);
+      expect(canCreateList(g)).toBe(true); // Under plus limit of 30
     });
   });
 
   describe('getListsRemaining', () => {
     it('should return correct remaining count', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 1);
-
-      expect(getListsRemaining(account)).toBe(2); // 3 - 1 = 2
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 1);
+      expect(getListsRemaining(g)).toBe(2); // 3 - 1 = 2
     });
 
     it('should return 0 when at or over limit', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' });
-      addTemplateFolders(account, 5);
-
-      expect(getListsRemaining(account)).toBe(0);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 5);
+      expect(getListsRemaining(g)).toBe(0);
     });
 
     it('should return -1 for unlimited tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'enterprise',
-        subscriptionStatus: 'active',
-      });
-
-      expect(getListsRemaining(account)).toBe(-1);
+      const g = makeAccount({ subscriptionTier: 'enterprise', subscriptionStatus: 'active' });
+      expect(getListsRemaining(g)).toBe(-1);
     });
   });
 
   describe('getUsagePercentage', () => {
     it('should return correct percentage', () => {
-      const account = createMockAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }); // 30 lists
-      addTemplateFolders(account, 9); // 30%
-
-      expect(getUsagePercentage(account)).toBe(30);
+      const g = makeAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }, 9); // 30 max
+      expect(getUsagePercentage(g)).toBe(30);
     });
 
     it('should cap at 100%', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }); // 3 lists
-      addTemplateFolders(account, 10);
-
-      expect(getUsagePercentage(account)).toBe(100);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 10); // 3 max
+      expect(getUsagePercentage(g)).toBe(100);
     });
 
     it('should return 0 for unlimited tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'enterprise',
-        subscriptionStatus: 'active',
-      });
-      addTemplateFolders(account, 100);
-
-      expect(getUsagePercentage(account)).toBe(0);
+      const g = makeAccount({ subscriptionTier: 'enterprise', subscriptionStatus: 'active' }, 100);
+      expect(getUsagePercentage(g)).toBe(0);
     });
   });
 
   describe('isApproachingLimit', () => {
     it('should return true at 80% usage', () => {
-      const account = createMockAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }); // 30 lists
-      addTemplateFolders(account, 24); // 80%
-
-      expect(isApproachingLimit(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }, 24); // 80%
+      expect(isApproachingLimit(g)).toBe(true);
     });
 
     it('should return true at 100% usage', () => {
-      const account = createMockAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }); // 3 lists
-      addTemplateFolders(account, 3);
-
-      expect(isApproachingLimit(account)).toBe(true);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 3);
+      expect(isApproachingLimit(g)).toBe(true);
     });
 
     it('should return false below 80% usage', () => {
-      const account = createMockAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }); // 30 lists
-      addTemplateFolders(account, 21); // 70%
-
-      expect(isApproachingLimit(account)).toBe(false);
+      const g = makeAccount({ subscriptionTier: 'plus', subscriptionStatus: 'active' }, 21); // 70%
+      expect(isApproachingLimit(g)).toBe(false);
     });
 
     it('should return false for unlimited tier', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'enterprise',
-        subscriptionStatus: 'active',
-      });
-      addTemplateFolders(account, 1000);
-
-      expect(isApproachingLimit(account)).toBe(false);
+      const g = makeAccount({ subscriptionTier: 'enterprise', subscriptionStatus: 'active' }, 1000);
+      expect(isApproachingLimit(g)).toBe(false);
     });
   });
 
@@ -406,21 +348,19 @@ describe.skip('SubscriptionService', () => {
   });
 
   describe('getSubscriptionInfo', () => {
-    it('should return subscription info with defaults', () => {
-      const account = createMockAccount({});
-      const info = getSubscriptionInfo(account);
+    it('should return subscription info with defaults (no settings row)', () => {
+      const info = getSubscriptionInfo(makeAccount());
 
       expect(info.tier).toBe('free');
       expect(info.status).toBe('beta');
       expect(info.limits).toEqual(TIER_LIMITS.plus); // Beta gets plus limits
+      expect(info.endsAt).toBeNull();
+      expect(info.syncedAt).toBeNull();
     });
 
     it('should return subscription info for active user', () => {
-      const account = createMockAccount({
-        subscriptionTier: 'premium',
-        subscriptionStatus: 'active',
-      });
-      const info = getSubscriptionInfo(account);
+      const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+      const info = getSubscriptionInfo(g);
 
       expect(info.tier).toBe('premium');
       expect(info.status).toBe('active');
@@ -430,13 +370,13 @@ describe.skip('SubscriptionService', () => {
     it('should include endsAt and syncedAt when available', () => {
       const endsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
       const syncedAt = Date.now();
-      const account = createMockAccount({
+      const g = makeAccount({
         subscriptionTier: 'plus',
         subscriptionStatus: 'active',
         subscriptionEndsAt: endsAt,
         subscriptionSyncedAt: syncedAt,
       });
-      const info = getSubscriptionInfo(account);
+      const info = getSubscriptionInfo(g);
 
       expect(info.endsAt).toBe(endsAt);
       expect(info.syncedAt).toBe(syncedAt);
@@ -444,26 +384,25 @@ describe.skip('SubscriptionService', () => {
   });
 
   describe('needsSubscriptionSync', () => {
-    it('should return true if never synced', () => {
-      const account = createMockAccount({});
-      expect(needsSubscriptionSync(account)).toBe(true);
+    it('should return true if never synced (no settings row)', () => {
+      expect(needsSubscriptionSync(makeAccount())).toBe(true);
     });
 
     it('should return true if synced more than an hour ago', () => {
       const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-      const account = createMockAccount({ subscriptionSyncedAt: twoHoursAgo });
-      expect(needsSubscriptionSync(account)).toBe(true);
+      expect(needsSubscriptionSync(makeAccount({ subscriptionSyncedAt: twoHoursAgo }))).toBe(true);
     });
 
     it('should return false if synced recently', () => {
       const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      const account = createMockAccount({ subscriptionSyncedAt: fiveMinutesAgo });
-      expect(needsSubscriptionSync(account)).toBe(false);
+      expect(needsSubscriptionSync(makeAccount({ subscriptionSyncedAt: fiveMinutesAgo }))).toBe(
+        false,
+      );
     });
   });
 });
 
-describe.skip('SubscriptionService - Backend Integration', () => {
+describe('SubscriptionService - Backend Integration', () => {
   const mockFetch = vi.fn();
   const originalFetch = global.fetch;
   const originalLocation = window.location;
@@ -472,6 +411,7 @@ describe.skip('SubscriptionService - Backend Integration', () => {
     global.fetch = mockFetch;
     mockFetch.mockReset();
     // Mock window.location
+    // biome-ignore lint/suspicious/noExplicitAny: test-only teardown of a read-only DOM global
     delete (window as any).location;
     window.location = { href: '' } as Location;
   });
@@ -482,8 +422,8 @@ describe.skip('SubscriptionService - Backend Integration', () => {
   });
 
   describe('syncSubscriptionFromBackend', () => {
-    it('should sync subscription data on successful response', async () => {
-      const account = createMockAccount({});
+    it('should sync subscription data into the user_settings row on success', async () => {
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -497,56 +437,55 @@ describe.skip('SubscriptionService - Backend Integration', () => {
           }),
       });
 
-      await syncSubscriptionFromBackend(account);
+      await syncSubscriptionFromBackend(g);
 
       expect(mockFetch).toHaveBeenCalledWith('/api/billing/subscription', {
         credentials: 'include',
       });
-      expect(account.root.userSettings.$jazz.set).toHaveBeenCalledWith('subscriptionTier', 'plus');
-      expect(account.root.userSettings.$jazz.set).toHaveBeenCalledWith(
-        'subscriptionStatus',
-        'active',
-      );
+      const settings = readSettings(g);
+      expect(settings.subscription_tier).toBe('plus');
+      expect(settings.subscription_status).toBe('active');
+      expect(settings.max_lists).toBe(30);
+      expect(settings.session_retention_days).toBe(30);
+      expect(settings.subscription_synced_at).toBeGreaterThan(0);
     });
 
-    it('should handle failed response gracefully', async () => {
-      const account = createMockAccount({});
+    it('should not write on a failed response', async () => {
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
-      await syncSubscriptionFromBackend(account);
+      await syncSubscriptionFromBackend(g);
 
-      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+      const settings = readSettings(g);
+      expect(settings.subscription_tier).toBe('free');
+      expect(settings.subscription_synced_at).toBe(0);
     });
 
-    it('should handle missing subscription data', async () => {
-      const account = createMockAccount({});
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
+    it('should not write when subscription data is missing', async () => {
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
 
-      await syncSubscriptionFromBackend(account);
+      await syncSubscriptionFromBackend(g);
 
-      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+      expect(readSettings(g).subscription_synced_at).toBe(0);
     });
 
-    it('should handle network error gracefully', async () => {
-      const account = createMockAccount({});
+    it('should not write on a network error', async () => {
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      await syncSubscriptionFromBackend(account);
+      await syncSubscriptionFromBackend(g);
 
-      expect(account.root.userSettings.$jazz.set).not.toHaveBeenCalled();
+      expect(readSettings(g).subscription_synced_at).toBe(0);
     });
   });
 
   describe('recordUsageToBackend', () => {
     it('should send usage data to backend', async () => {
-      const account = createMockAccount({});
-      addTemplateFolders(account, 5);
+      const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'active' }, 5);
       mockFetch.mockResolvedValueOnce({ ok: true });
 
-      await recordUsageToBackend(account);
+      await recordUsageToBackend(g);
 
       expect(mockFetch).toHaveBeenCalledWith('/api/billing/usage', {
         method: 'POST',
@@ -557,11 +496,11 @@ describe.skip('SubscriptionService - Backend Integration', () => {
     });
 
     it('should handle errors silently', async () => {
-      const account = createMockAccount({});
+      const g = makeAccount();
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       // Should not throw
-      await recordUsageToBackend(account);
+      await recordUsageToBackend(g);
     });
   });
 
@@ -589,17 +528,13 @@ describe.skip('SubscriptionService - Backend Integration', () => {
         json: () => Promise.resolve({ error: 'Payment failed' }),
       });
 
-      const url = await createCheckoutSession('premium');
-
-      expect(url).toBeNull();
+      expect(await createCheckoutSession('premium')).toBeNull();
     });
 
     it('should return null on network error', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      const url = await createCheckoutSession('plus');
-
-      expect(url).toBeNull();
+      expect(await createCheckoutSession('plus')).toBeNull();
     });
   });
 
@@ -626,17 +561,13 @@ describe.skip('SubscriptionService - Backend Integration', () => {
         json: () => Promise.resolve({ error: 'Session expired' }),
       });
 
-      const url = await createPortalSession();
-
-      expect(url).toBeNull();
+      expect(await createPortalSession()).toBeNull();
     });
 
     it('should return null on network error', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      const url = await createPortalSession();
-
-      expect(url).toBeNull();
+      expect(await createPortalSession()).toBeNull();
     });
   });
 

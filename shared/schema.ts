@@ -78,6 +78,31 @@ export const Folder = z.object({
   autocomplete_domain: rb.text(),
 });
 
-export const schema = { folder: Folder };
+/**
+ * UserSettings - per-user singleton row (one row whose `id` IS the user's id) holding global
+ * preferences plus the subscription cache. In Jazz this was a `co.map` hanging off the account
+ * root; here it's a flat rb.* table. The subscription fields are a CACHE of the backend (the
+ * server is the source of truth); they exist so limit checks and tier display work offline.
+ *
+ * Numbers are epoch-ms / sentinel ints, never Jazz `Date`s or nullable optionals: `-1` means
+ * unlimited (max_lists / session_retention_days), `0` means "none / never" (subscription_ends_at,
+ * subscription_synced_at). This keeps every column present on every row (no absent-field
+ * fallbacks) while still expressing "no value".
+ */
+export const UserSettings = z.object({
+  id: rb.id(), // = the user's id (one singleton row per user)
+  owner_group_id: rb.scope(),
+  default_autocomplete_domain: rb.text(), // 'none'|'grocery'|'hardware'|'outdoor'|'all'
+  enable_auto_categorization: rb.bool(),
+  subscription_tier: rb.text(), // 'free'|'plus'|'premium'|'enterprise'
+  subscription_status: rb.text(), // 'active'|'past_due'|'cancelled'|'trialing'|'beta'
+  subscription_ends_at: rb.int(), // epoch ms (0 if none)
+  max_lists: rb.int(), // cached for offline display (-1 = unlimited)
+  session_retention_days: rb.int(), // cached (-1 = unlimited)
+  subscription_synced_at: rb.int(), // epoch ms (0 if never)
+});
+
+export const schema = { folder: Folder, user_settings: UserSettings };
 
 export type FolderRow = RowOf<typeof Folder>;
+export type UserSettingsRow = RowOf<typeof UserSettings>;
