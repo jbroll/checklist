@@ -528,9 +528,12 @@ test.describe('Data Sync Errors', () => {
     await expect(page.getByRole('button', { name: /new folder/i })).toBeVisible();
   });
 
-  // Note: Offline reload requires the PWA service worker to cache the app shell.
-  // In test mode (dev server), service worker isn't fully active.
-  // TODO: Enable when running against production build with installed service worker
+  // Offline reload requires the PWA service worker's PRECACHE of the app shell, which only a
+  // production `vite build` generates. Verified empirically: even with vite.config's
+  // `devOptions.enabled: true`, an offline reload against the dev server can't boot the app (the
+  // dev SW has no shell precache; the workbox runtimeCaching here covers only jazz.tools + images).
+  // The Jazz-era client ran the identical dev-server env and skipped this same test for the same
+  // reason. To enable: add a Playwright project served by `vite build` + `vite preview`.
   test.skip('should persist data locally when offline', async ({ page, context }) => {
     await page.goto('/');
     await waitForPageLoad(page);
