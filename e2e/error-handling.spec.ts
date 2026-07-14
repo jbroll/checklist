@@ -168,9 +168,11 @@ test.describe('Import Errors', () => {
       buffer,
     });
 
-    // Should show error message
+    // Oversized files are rejected with a modal alert ("File Too Large").
+    // Assert the alert heading specifically — the bare /10mb/ regex also matched
+    // the always-present "up to 10MB" dropzone helper (strict-mode violation).
     await expect(
-      page.getByText(/file size exceeds|too large|10mb/i)
+      page.getByRole('heading', { name: /file too large/i })
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -248,15 +250,12 @@ test.describe('Import Errors', () => {
       buffer: imageContent,
     });
 
-    await page.waitForTimeout(1000);
-
-    // Should either reject file or show error
-    const hasError = await page.getByText(/unsupported|invalid.*type/i).isVisible().catch(() => false);
-    const importButton = page.getByRole('button', { name: /^import$/i }).last();
-    const isDisabled = await importButton.isDisabled();
-
-    // Either error is shown or import is disabled
-    expect(hasError || isDisabled).toBeTruthy();
+    // An unsupported extension is rejected with a modal alert ("Invalid File Type").
+    // (Don't probe the Import button's disabled state — Radix's modal alert marks the
+    // underlying dialog aria-hidden, so getByRole can't see the button while it's open.)
+    await expect(
+      page.getByRole('heading', { name: /invalid file type/i })
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test('should handle malformed indented list format', async ({ page }) => {

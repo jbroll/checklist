@@ -127,11 +127,11 @@ test.describe('Share Dialog UI', () => {
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
     await page.waitForSelector('text=Collaborators (2)', { timeout: 10000 });
 
-    // Verify collaborators are shown
+    // Verify collaborators are shown. ShareDialog renders `name ?? email ?? accountId`
+    // per collaborator (the name wins when present), so assert the names — the emails
+    // are only surfaced for nameless collaborators.
     await expect(page.locator('text=Owner User')).toBeVisible();
-    await expect(page.locator('text=owner@example.com')).toBeVisible();
     await expect(page.locator('text=Editor User')).toBeVisible();
-    await expect(page.locator('text=editor@example.com')).toBeVisible();
   });
 
   test('should display pending invites in share dialog', async ({ page }) => {
@@ -202,9 +202,11 @@ test.describe('Share Dialog UI', () => {
       route.fulfill({
         status: 403,
         contentType: 'application/json',
+        // useSharing surfaces the response's `error` field as the thrown Error.message,
+        // which ShareDialog renders as the form error — put the human sentence there
+        // (rowboat's error contract, not Jazz's `{error, message}` split).
         body: JSON.stringify({
-          error: 'forbidden',
-          message: 'You do not have permission to share this folder',
+          error: 'You do not have permission to share this folder',
         }),
       });
     });
