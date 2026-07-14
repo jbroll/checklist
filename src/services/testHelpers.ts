@@ -20,6 +20,7 @@
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { isTemplateFolder } from '@/hooks';
 import type { FolderRow, schema } from '@/schema/folder';
+import { coerceBool } from '@/schema/folderData';
 import * as folderOps from './folderOps';
 import * as sessionService from './sessionService';
 import * as subscriptionService from './subscriptionService';
@@ -54,6 +55,25 @@ function findIdByPath(g: Graph, path: string): string | null {
     parentId = match.id;
   }
   return parentId;
+}
+
+/**
+ * Poll until `entryId` and its whole subtree reflect `archived` in the readable snapshot. The graph
+ * propagates writes (and their cascade) to the readable view asynchronously, so a read-back taken
+ * right after `setArchived` can race it; this waits (bounded) for it to settle.
+ */
+async function waitForArchived(g: Graph, entryId: string, archived: boolean): Promise<void> {
+  for (let i = 0; i < 100; i += 1) {
+    const node = g.folder(entryId);
+    if (
+      node &&
+      coerceBool(node.$data.archived) === archived &&
+      node.$closure('children').every((c) => coerceBool(c.$data.archived) === archived)
+    ) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 10));
+  }
 }
 
 interface DirectoryEntry {
@@ -166,9 +186,21 @@ export function exposeServicesToWindow(g: Graph): void {
         path: folderPath(g, f.id),
       })),
     rename: (entryId, newName) => folderOps.renameNode(g, entryId, newName, Date.now()),
-    archive: (entryId) => folderOps.setArchived(g, entryId, true, Date.now()),
-    unarchive: (entryId) => folderOps.setArchived(g, entryId, false, Date.now()),
-    delete: (entryId) => folderOps.deleteNode(g, entryId),
+    archive: async (entryId) => {
+      await folderOps.setArchived(g, entryId, true, Date.now());
+      await waitForArchived(g, entryId, true);
+    },
+    unarchive: async (entryId) => {
+      await folderOps.setArchived(g, entryId, false, Date.now());
+      await waitForArchived(g, entryId, false);
+    },
+    delete: async (entryId) => {
+      await folderOps.deleteNode(g, entryId);
+      // Wait for the removal (and its cascade) to land in the readable snapshot.
+      for (let i = 0; i < 100 && g.folder(entryId); i += 1) {
+        await new Promise((r) => setTimeout(r, 10));
+      }
+    },
     move: (entryId, newParentId) => folderOps.moveNode(g, entryId, newParentId ?? null, Date.now()),
     getPath: (entryId) => folderPath(g, entryId),
   };

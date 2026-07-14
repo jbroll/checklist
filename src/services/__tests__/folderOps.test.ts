@@ -115,6 +115,50 @@ describe('folderOps', () => {
     expect(findById(g, fid)?.archived).toBe(false);
   });
 
+  it('setArchived cascades to the entire subtree (archive and unarchive)', async () => {
+    const g = makeGraph();
+    const parent = id();
+    const child = id();
+    const grandchild = id();
+    await addFolder(g, {
+      id: parent,
+      name: 'Parent',
+      parentId: null,
+      type: 'folder',
+      ownerGroupId: OWNER_GROUP,
+      createdBy: CREATED_BY,
+      now: NOW,
+    });
+    await addFolder(g, {
+      id: child,
+      name: 'Child',
+      parentId: parent,
+      type: 'template-folder',
+      ownerGroupId: OWNER_GROUP,
+      createdBy: CREATED_BY,
+      now: NOW,
+    });
+    await addFolder(g, {
+      id: grandchild,
+      name: 'Grandchild',
+      parentId: child,
+      type: 'template-folder',
+      ownerGroupId: OWNER_GROUP,
+      createdBy: CREATED_BY,
+      now: NOW,
+    });
+
+    await setArchived(g, parent, true, NOW + 1);
+    expect(findById(g, parent)?.archived).toBe(true);
+    expect(findById(g, child)?.archived).toBe(true);
+    expect(findById(g, grandchild)?.archived).toBe(true);
+
+    await setArchived(g, parent, false, NOW + 2);
+    expect(findById(g, parent)?.archived).toBe(false);
+    expect(findById(g, child)?.archived).toBe(false);
+    expect(findById(g, grandchild)?.archived).toBe(false);
+  });
+
   it('generateUniqueName dedupes against siblings', async () => {
     const g = makeGraph();
     const parentId = id();

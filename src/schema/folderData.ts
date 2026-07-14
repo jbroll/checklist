@@ -23,12 +23,30 @@ function parseJsonColumn<T>(value: unknown, fallbackWhenNullish: T): T {
   return (value as T | null | undefined) ?? fallbackWhenNullish;
 }
 
-/** Parse a raw `FolderRow`'s json columns (`items`/`sessions`/`default_items`) for reading. */
+/**
+ * Coerce an `rb.bool` column back to a real JS boolean. The rowboat client stores booleans as
+ * numeric 0/1 (better-sqlite3 can't bind a JS boolean — the write-side counterpart of this), so a
+ * row read back out of the real IndexedDB store carries `archived`/`expanded`/… as 0/1, while the
+ * unit-test `reactiveArrayStore` holds them as true/false. Consumers compare strictly
+ * (`archived === false`), so normalize both shapes here at the read boundary.
+ */
+export function coerceBool(value: unknown): boolean {
+  return value === true || value === 1 || value === '1';
+}
+
+/**
+ * Parse a raw `FolderRow`'s json columns (`items`/`sessions`/`default_items`) and coerce its
+ * `rb.bool` columns to real booleans for reading.
+ */
 export function parseFolderRow(row: FolderRow): FolderRow {
   return {
     ...row,
     items: parseJsonColumn(row.items, []),
     sessions: parseJsonColumn(row.sessions, []),
     default_items: parseJsonColumn(row.default_items, {}),
+    archived: coerceBool(row.archived),
+    expanded: coerceBool(row.expanded),
+    show_zone_headings: coerceBool(row.show_zone_headings),
+    auto_categorize_enabled: coerceBool(row.auto_categorize_enabled),
   };
 }

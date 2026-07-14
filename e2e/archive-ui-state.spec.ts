@@ -78,13 +78,17 @@ test.describe('Archive UI State Management', () => {
   // is readable on the real IndexedDB-backed graph (see folderOps header) — so the immediate
   // directory.get read-backs here race the write. Delete-cascade itself is covered by the
   // folderOps unit tests. Re-enable with a reactive wait once the /test harness seeding settles.
-  test.skip('should recursively delete folder contents when deleting archived folder', async ({
+  test('should recursively delete folder contents when deleting archived folder', async ({
     page,
   }) => {
     // Create a folder with a template inside
-    const { folderId, templateId } = await page.evaluate(() => {
-      const folder = window.__testServices!.directory.create('Parent Folder', false);
-      const template = window.__testServices!.directory.create('Child Template', true, folder.path);
+    const { folderId, templateId } = await page.evaluate(async () => {
+      const folder = await window.__testServices!.directory.create('Parent Folder', false);
+      const template = await window.__testServices!.directory.create(
+        'Child Template',
+        true,
+        folder.path,
+      );
       return { folderId: folder.entryId, templateId: template.entryId };
     });
 
@@ -102,13 +106,13 @@ test.describe('Archive UI State Management', () => {
     expect(templateExists).toBe(true);
 
     // Archive the folder (should archive children too)
-    await page.evaluate((id) => {
-      window.__testServices!.directory.archive(id);
+    await page.evaluate(async (id) => {
+      await window.__testServices!.directory.archive(id);
     }, folderId);
 
     // Delete the folder
-    await page.evaluate((id) => {
-      window.__testServices!.directory.delete(id);
+    await page.evaluate(async (id) => {
+      await window.__testServices!.directory.delete(id);
     }, folderId);
 
     // Verify folder and template are both deleted
@@ -126,14 +130,16 @@ test.describe('Archive UI State Management', () => {
     expect(templateExists).toBe(false);
   });
 
-  // TODO(e2e): the rowboat port's folderOps.setArchived is PER-NODE — archiving a parent no longer
-  // cascades to its children (unlike the Jazz recursive archiveNode this test asserted). Re-enable
-  // if/when cascade archive is restored in the folder service.
-  test.skip('should archive children when archiving parent folder', async ({ page }) => {
+  // folderOps.setArchived cascades to the subtree (restored Jazz parity — see folderOps.ts).
+  test('should archive children when archiving parent folder', async ({ page }) => {
     // Create a folder with a template inside
-    const { folderId, templateId } = await page.evaluate(() => {
-      const folder = window.__testServices!.directory.create('Parent Folder', false);
-      const template = window.__testServices!.directory.create('Child Template', true, folder.path);
+    const { folderId, templateId } = await page.evaluate(async () => {
+      const folder = await window.__testServices!.directory.create('Parent Folder', false);
+      const template = await window.__testServices!.directory.create(
+        'Child Template',
+        true,
+        folder.path,
+      );
       return { folderId: folder.entryId, templateId: template.entryId };
     });
 
@@ -149,8 +155,8 @@ test.describe('Archive UI State Management', () => {
     expect(templateEntry?.archived).toBe(false);
 
     // Archive the parent folder
-    await page.evaluate((id) => {
-      window.__testServices!.directory.archive(id);
+    await page.evaluate(async (id) => {
+      await window.__testServices!.directory.archive(id);
     }, folderId);
 
     // Verify both are now archived
@@ -165,14 +171,17 @@ test.describe('Archive UI State Management', () => {
     expect(templateEntry?.archived).toBe(true);
   });
 
-  // TODO(e2e): mirror of the archive-cascade skip above — folderOps.setArchived is per-node, so
-  // unarchiving a parent does not cascade to children. Re-enable if cascade is restored.
-  test.skip('should unarchive children when unarchiving parent folder', async ({ page }) => {
-    // Create a folder with a template inside, then archive both
-    const { folderId, templateId } = await page.evaluate(() => {
-      const folder = window.__testServices!.directory.create('Parent Folder', false);
-      const template = window.__testServices!.directory.create('Child Template', true, folder.path);
-      window.__testServices!.directory.archive(folder.entryId);
+  // Unarchiving cascades to the subtree (mirror of the archive-cascade test — see folderOps.ts).
+  test('should unarchive children when unarchiving parent folder', async ({ page }) => {
+    // Create a folder with a template inside, then archive the parent (cascades to the child)
+    const { folderId, templateId } = await page.evaluate(async () => {
+      const folder = await window.__testServices!.directory.create('Parent Folder', false);
+      const template = await window.__testServices!.directory.create(
+        'Child Template',
+        true,
+        folder.path,
+      );
+      await window.__testServices!.directory.archive(folder.entryId);
       return { folderId: folder.entryId, templateId: template.entryId };
     });
 
@@ -188,8 +197,8 @@ test.describe('Archive UI State Management', () => {
     expect(templateEntry?.archived).toBe(true);
 
     // Unarchive the parent folder
-    await page.evaluate((id) => {
-      window.__testServices!.directory.unarchive(id);
+    await page.evaluate(async (id) => {
+      await window.__testServices!.directory.unarchive(id);
     }, folderId);
 
     // Verify both are now unarchived

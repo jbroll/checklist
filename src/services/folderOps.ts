@@ -73,13 +73,22 @@ export async function renameNode(g: Graph, id: string, name: string, now: number
   await g.folder.update(id, { name, updated_at: now });
 }
 
+/**
+ * Set `archived` on `id` and its entire subtree. Archiving a container archives everything under
+ * it; unarchiving restores the whole subtree (mirrors the original Jazz recursive archiveNode, and
+ * the cascade shape of {@link deleteNode}). Hard-errors if `id` doesn't exist (NO FALLBACKS).
+ */
 export async function setArchived(
   g: Graph,
   id: string,
   archived: boolean,
   now: number,
 ): Promise<void> {
-  requireFolder(g, id);
+  const node = requireFolder(g, id);
+  const subtree = node.$closure('children'); // does not include `node` itself
+  for (const descendant of subtree) {
+    await g.folder.update(descendant.id, { archived, updated_at: now });
+  }
   await g.folder.update(id, { archived, updated_at: now });
 }
 
