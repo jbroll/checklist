@@ -53,15 +53,24 @@ interface PortContextValue {
 
 const PortContext = createContext<PortContextValue | null>(null);
 
-function mintGroup(parentGroupId?: string): Promise<string> {
-  return fetch('/api/folders/group', {
+async function mintGroup(parentGroupId?: string): Promise<string> {
+  const res = await fetch('/api/folders/group', {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ parentGroup: parentGroupId }),
-  })
-    .then((r) => r.json())
-    .then((j) => j.groupId);
+  });
+  // NO FALLBACKS: a non-ok response (401 when signed out, 5xx) must surface, not
+  // silently yield `undefined` and let a folder be created with no scope group.
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`mintGroup: POST /api/folders/group failed (${res.status}) ${body}`);
+  }
+  const { groupId } = (await res.json()) as { groupId?: unknown };
+  if (typeof groupId !== 'string' || groupId.length === 0) {
+    throw new Error(`mintGroup: response missing a groupId (${JSON.stringify(groupId)})`);
+  }
+  return groupId;
 }
 
 function RowboatBridge({
