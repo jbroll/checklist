@@ -1,7 +1,8 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
-import type { Account, FolderNode } from '@/schema';
+import { usePort, useRowboat } from '@/jazz';
+import type { FolderRow } from '@/schema/folder';
+import * as folderOps from '@/services/folderOps';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import {
   type ImportAsNewTemplateOptions,
@@ -22,14 +23,9 @@ function getFileId(file: File | null): string {
 }
 
 // Generate a unique folder name by checking siblings
-function generateUniqueFolderName(
-  baseName: string,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode> | null,
-): string {
-  const siblings = parentFolder?.children ?? account.root?.folders ?? [];
+function generateUniqueFolderName(baseName: string, siblings: FolderRow[]): string {
   const existingNames = new Set(
-    [...siblings].filter((f) => f && !f.archived).map((f) => f?.name?.toLowerCase()),
+    siblings.filter((f) => !f.archived).map((f) => f.name.toLowerCase()),
   );
 
   if (!existingNames.has(baseName.toLowerCase())) {
@@ -56,20 +52,20 @@ interface DialogConfig {
 }
 
 interface UseImportDialogProps {
-  account: InstanceOfSchema<typeof Account>;
-  folder?: InstanceOfSchema<typeof FolderNode>;
-  parentFolder?: InstanceOfSchema<typeof FolderNode>;
+  folder?: FolderRow;
+  parentFolder?: FolderRow;
   onImportComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }
 
 export function useImportDialog({
-  account,
   folder: template,
   parentFolder,
   onImportComplete,
   onOpenChange,
 }: UseImportDialogProps) {
+  const g = useRowboat();
+  const { author, mintGroup } = usePort();
   const [fileType, setFileType] = useState<'json' | 'txt' | 'csv' | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [autoCategorize, setAutoCategorize] = useState(false);
@@ -77,6 +73,7 @@ export function useImportDialog({
   const lastFileIdRef = useRef<string>('null');
 
   const isFolderLevel = !!template;
+  const parentId = parentFolder?.id ?? null;
 
   const resetState = () => {
     setFileType(null);
@@ -107,7 +104,6 @@ export function useImportDialog({
 
     // Auto-generate template name from metadata or filename (for TXT/CSV at top level)
     if (!isFolderLevel && detectedType !== 'json') {
-      // Read file to check for metadata (for TXT files)
       const generateName = async () => {
         let baseName = selectedFile.name.replace(/\.(txt|csv)$/i, '');
 
@@ -124,14 +120,13 @@ export function useImportDialog({
           }
         }
 
-        // Generate unique name to avoid duplicates
-        const uniqueName = generateUniqueFolderName(baseName, account, parentFolder);
-        setTemplateName(uniqueName);
+        const siblings = folderOps.childrenOf(g, parentId);
+        setTemplateName(generateUniqueFolderName(baseName, siblings));
       };
 
       generateName();
     }
-  }, [selectedFile, isFolderLevel, account, parentFolder]);
+  }, [selectedFile, isFolderLevel, g, parentId]);
 
   const handleSuccessfulImport = () => {
     setTimeout(() => {
@@ -149,11 +144,11 @@ export function useImportDialog({
     // Template-level import
     if (template) {
       if (detectedType === 'json') {
-        result = await importItemsFromJsonFile(file, template, account);
+        result = await importItemsFromJsonFile(g, template.id, file);
       } else if (detectedType === 'txt') {
-        result = await importItemsFromTxtFile(file, template, account);
+        result = await importItemsFromTxtFile(g, template.id, file);
       } else {
-        result = await importItemsFromCsvFile(file, template, account);
+        result = await importItemsFromCsvFile(g, template.id, file);
       }
 
       // Auto-close after successful import
@@ -161,24 +156,27 @@ export function useImportDialog({
         handleSuccessfulImport();
       }
     } else {
+      if (!author || !mintGroup) {
+        throw new Error('useImportDialog: no author/mintGroup available');
+      }
+      const ctx = { createdBy: author, mintGroup, parentId };
+
       // Top-level import
       if (detectedType === 'json') {
-        // Full account import (with optional parent folder)
-        result = await importFromFile(file, account, 'json', parentFolder);
+        // Full backup import (with optional parent folder)
+        result = await importFromFile(g, file, ctx, 'json');
       } else {
-        // Create new template at root
+        // Create new template at root (or under parentFolder)
         if (!templateName.trim()) {
           throw new Error('Please enter a list name');
         }
-        const options: ImportAsNewTemplateOptions = {
-          autoCategorize,
-        };
+        const options: ImportAsNewTemplateOptions = { autoCategorize };
         result = await importAsNewTemplate(
+          g,
           file,
-          account,
           templateName.trim(),
           detectedType,
-          parentFolder,
+          ctx,
           options,
         );
       }

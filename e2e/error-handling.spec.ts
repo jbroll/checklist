@@ -2,11 +2,18 @@
  * Error Handling E2E Tests (Phase 4.5)
  *
  * Network-error, authentication-error, data-sync and retry tests run against the rowboat app
- * unchanged (they only assert the app stays functional — the folder create/tree UI). Two groups
- * are `test.skip` for the rowboat port (see per-test TODO(e2e) notes): the Import-validation
- * tests open the Import dialog (wired as a no-op in TreeView), and the Subscription-limit tests
- * need list-limit enforcement + the Upgrade dialog, which AppContainer does not render (creation
- * is never blocked in this slice).
+ * unchanged (they only assert the app stays functional — the folder create/tree UI).
+ *
+ * The "Import Errors" group is un-skipped: the Import dialog is now wired (TreeView's "More
+ * options" → Import opens `ImportDialog`), so `openImportDialog` works.
+ *
+ * The "Subscription Limits" group stays `test.skip` (see per-test TODO(e2e) notes) — NOT because
+ * list-limit enforcement is unwired (it is: `AppContainer.handleAddFolder`/
+ * `handleAddTemplateClick` call `subscriptionService.canCreateList`/`isAtListLimit` and open the
+ * Upgrade dialog on the limit), but because these tests additionally depend on `/billing/success`
+ * successfully syncing a free-tier subscription onto an anonymous session, which hard-errors today
+ * (no code path creates the `user_settings` singleton row for a fresh anonymous user), and one test
+ * also needs the header's "Upgrade" menu item, which AppContainer never wires up.
  */
 
 import { expect, test } from '@playwright/test';
@@ -141,7 +148,10 @@ test.describe('Network Errors', () => {
 // ============================================================================
 
 test.describe('Import Errors', () => {
-  test.skip('should show error for oversized files', async ({ page }) => {
+  // The Import dialog is now wired (TreeView's "More options" → Import opens ImportDialog /
+  // FileUploadDialog — see src/components/import/ImportDialog.tsx), so openImportDialog works and
+  // every test below is un-skipped.
+  test('should show error for oversized files', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -164,9 +174,7 @@ test.describe('Import Errors', () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  // TODO(e2e): opens the Import dialog (openImportDialog) — TreeView wires onImport as a no-op in
-  // the rowboat port, so no dialog opens. Re-enable when the Import dialog is wired.
-  test.skip('should show error for invalid JSON format', async ({ page }) => {
+  test('should show error for invalid JSON format', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -195,8 +203,7 @@ test.describe('Import Errors', () => {
     }
   });
 
-  // TODO(e2e): opens the Import dialog (openImportDialog) — no-op in the rowboat port (see above).
-  test.skip('should handle empty import file', async ({ page }) => {
+  test('should handle empty import file', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -226,7 +233,7 @@ test.describe('Import Errors', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
-  test.skip('should validate file type', async ({ page }) => {
+  test('should validate file type', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -252,7 +259,7 @@ test.describe('Import Errors', () => {
     expect(hasError || isDisabled).toBeTruthy();
   });
 
-  test.skip('should handle malformed indented list format', async ({ page }) => {
+  test('should handle malformed indented list format', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -292,9 +299,16 @@ Category 2`;
 // ============================================================================
 
 test.describe('Subscription Limits', () => {
-  // TODO(e2e): needs list-limit enforcement + the Upgrade dialog + the /billing/success sync flow.
-  // AppContainer does not enforce a list limit or render UpgradeDialog in the rowboat port, so the
-  // Nth "New list" just opens the create dialog. Re-enable when limit enforcement is wired.
+  // TODO(e2e): list-limit enforcement itself IS now wired — AppContainer's handleAddFolder/
+  // handleAddTemplateClick call subscriptionService.canCreateList(g)/isAtListLimit(g) and open the
+  // Upgrade dialog on the limit (see src/components/editor/AppContainer.tsx). What's still missing
+  // is a way to get an anonymous Playwright session onto the free tier: this test drives that via
+  // `/billing/success`, which calls syncSubscriptionFromBackend(g) — but that hard-errors
+  // (`user_settings row not initialized`, subscriptionService.ts's `requireSettings`) because
+  // nothing in the app ever creates a user_settings row for a fresh anonymous session (no
+  // `g.user_settings.create(...)` call exists anywhere in src/ or backend/src/), so the page shows
+  // its error state ("Almost There"), not "Thank you for upgrading!". Re-enable once there's a
+  // row-creation path (or a test-only seeding hook) for user_settings.
   test.skip('should show upgrade dialog when list limit is reached', async ({ page }) => {
     // Mock subscription API to return free tier with 3 list limit
     await page.route('/api/billing/subscription', (route) => {
@@ -320,9 +334,9 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // Create lists up to the limit (3 for free tier)
-    // Note: "Quick Errands" is a default list, so we only need to create 2 more
-    for (let i = 1; i <= 2; i++) {
+    // Create lists up to the limit (3 for free tier). The rowboat port seeds no default list for
+    // a new anonymous session, so all 3 must be created here.
+    for (let i = 1; i <= 3; i++) {
       await createList(page, `Test List ${i}`);
     }
 
@@ -334,7 +348,8 @@ test.describe('Subscription Limits', () => {
     await expect(page.getByText(/limit reached/i)).toBeVisible();
   });
 
-  // TODO(e2e): needs list-limit enforcement + Upgrade dialog (not wired in the rowboat port — see above).
+  // TODO(e2e): same /billing/success + missing user_settings row gap as the test above — see its
+  // comment. List-limit enforcement itself is wired.
   test.skip('should prevent creating lists beyond limit', async ({ page }) => {
     // Mock free tier with strict limits
     await page.route('/api/billing/subscription', (route) => {
@@ -359,24 +374,30 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // Create 2 more lists (Quick Errands + 2 = 3 total, at limit)
-    for (let i = 1; i <= 2; i++) {
+    // Create 3 lists (no default list is seeded in the rowboat port, so 3 reaches the limit)
+    for (let i = 1; i <= 3; i++) {
       await createList(page, `Limited List ${i}`);
     }
 
     // Verify lists exist
     await expect(page.getByText('Limited List 1')).toBeVisible();
     await expect(page.getByText('Limited List 2')).toBeVisible();
+    await expect(page.getByText('Limited List 3')).toBeVisible();
 
-    // Try to create 4th list - should show upgrade dialog instead
+    // Try to create a 4th list - should show upgrade dialog instead
     await page.getByRole('button', { name: /new list/i }).click();
 
     // Should show upgrade dialog, not the create dialog
     await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
   });
 
-  // TODO(e2e): opens the Upgrade dialog from an "Upgrade" menu item — AppContainer does not wire
-  // onUpgradeClick, so there is no Upgrade menu item or dialog in the rowboat port. Re-enable when wired.
+  // TODO(e2e): opens the Upgrade dialog from an "Upgrade Plan" menu item in the header's "More
+  // options" dropdown. That path IS now wired — AppContainer forwards `subscriptionInfo`
+  // (onUpgradeClick/subscriptionTier/listCount/maxLists) through TreeView into TreeViewHeader,
+  // which renders the "Upgrade Plan" DropdownMenuItem. The ONLY remaining blocker is the same
+  // /billing/success + missing user_settings row gap noted on the tests above (this test still
+  // navigates through /billing/success to set the free tier). Re-enable once the user_settings
+  // row-creation gap is closed.
   test.skip('should show tier information in upgrade dialog', async ({ page }) => {
     // Mock free tier to ensure upgrade option is visible
     await page.route('/api/billing/subscription', (route) => {

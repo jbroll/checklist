@@ -1,9 +1,8 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { ItemImportResult } from '@/components/import/ItemImportResult';
 import { JsonImportResult } from '@/components/import/JsonImportResult';
 import { useImportDialog } from '@/components/import/useImportDialog';
 import { FileUploadDialog } from '@/components/ui/file-upload-dialog';
-import type { Account, FolderNode } from '@/schema';
+import type { FolderRow } from '@/schema/folder';
 import type { CsvImportResult } from '@/services/import/csvImporter';
 import type { TxtImportResult } from '@/services/import/txtImporter';
 import type { ImportResult } from '@/services/import/types';
@@ -11,11 +10,10 @@ import type { ImportResult } from '@/services/import/types';
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  account: InstanceOfSchema<typeof Account>;
   /** Optional folder for folder-level import (import items into existing template) */
-  folder?: InstanceOfSchema<typeof FolderNode>;
+  folder?: FolderRow;
   /** Optional parent folder for creating new templates in a specific location */
-  parentFolder?: InstanceOfSchema<typeof FolderNode>;
+  parentFolder?: FolderRow;
   onImportComplete?: () => void;
 }
 
@@ -24,14 +22,12 @@ type UnifiedImportResult = ImportResult | TxtImportResult | CsvImportResult;
 export function ImportDialog({
   open,
   onOpenChange,
-  account,
   folder: template,
   parentFolder,
   onImportComplete,
 }: ImportDialogProps) {
   const { resetState, handleUpload, getDialogConfig, renderFormFields, canUpload } =
     useImportDialog({
-      account,
       folder: template,
       parentFolder,
       onImportComplete,

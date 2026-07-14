@@ -1,22 +1,25 @@
 /**
  * E2E Tests for Sharing UI
  *
- * TODO(e2e): every test is `test.skip` for the rowboat port — two independent UI gaps:
+ * "Share Dialog UI" / "Share Dialog - Empty States": FolderNodeView's per-folder row menu now has
+ * a "Share" item (src/components/tree/FolderNodeView.tsx) that opens `ShareDialog`
+ * (src/components/sharing/ShareDialog.tsx, pre-existing + unit-tested, works against rowboat's
+ * `useSharing`). These tests are un-skipped, seeded via `window.__testServices` (the
+ * `window.testExports` alias — see src/services/testHelpers.ts), with two stale-selector/copy
+ * fixes made against the real component (not guessed): the recipient `<Input>` is `type="text"`
+ * (not `type="email"`), and the empty-state copy doesn't match what `ShareDialog` actually renders
+ * for zero collaborators/invites (no "(0)" suffix, and the "Pending Invites" section is omitted
+ * entirely when there are no invites, not shown with a "No pending invites" message) — both fixed
+ * to match the real markup.
  *
- *  - "Share Dialog UI" / "Share Dialog - Empty States": open the Share dialog from a folder-row
- *    menu, but FolderNodeView's row menu has NO Share item in the rowboat port (only
- *    rename/archive/delete — see src/components/tree/FolderNodeView.tsx; ShareDialog itself works
- *    against rowboat's useSharing, it's just not reachable from the tree yet).
- *
- *  - "Invite Accept Page UI": the ported InviteAcceptPage (src/components/sharing/InviteAcceptPage.tsx)
- *    is AUTH-GATED and reads through rowboat's `useSharing`. For an anonymous Playwright session it
- *    always shows the "Sign In to Continue" screen WITHOUT calling validate, so these Jazz-era
- *    tests — which mock `/api/shares/validate/*` with per-error-code bodies (not_found / expired /
- *    email_mismatch / a full valid invite) and expect the page to branch on them — no longer apply.
- *    A rowboat rewrite needs an authenticated session plus useSharing-shaped validate/accept mocks.
- *
- * Un-quarantined (renamed off .skip) but skipped until the Share menu item is wired and the
- * invite-accept tests are rewritten against the auth-gated useSharing flow.
+ * "Invite Accept Page UI" stays `test.skip` for every test: the ported InviteAcceptPage
+ * (src/components/sharing/InviteAcceptPage.tsx) is AUTH-GATED and reads through rowboat's
+ * `useSharing`. For an anonymous Playwright session it always shows the "Sign In to Continue"
+ * screen WITHOUT calling validate, so these Jazz-era tests — which mock `/api/shares/validate/*`
+ * with per-error-code bodies (not_found / expired / email_mismatch / a full valid invite) and
+ * expect the page to branch on them — no longer apply. A rowboat rewrite needs an authenticated
+ * session plus useSharing-shaped validate/accept mocks; that's a genuine remaining gap, not a
+ * simple wiring fix.
  */
 
 import { expect, test } from './fixtures/base';
@@ -108,7 +111,7 @@ test.describe('Share Dialog UI', () => {
     await page.getByRole('menuitem', { name: 'Share' }).click();
   }
 
-  test.skip('should open share dialog from folder menu', async ({ page }) => {
+  test('should open share dialog from folder menu', async ({ page }) => {
     await openShareDialog(page);
 
     // Verify dialog opens - look for the dialog title
@@ -116,7 +119,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('heading', { name: /Share.*Share Test Folder/i })).toBeVisible();
   });
 
-  test.skip('should display collaborators list in share dialog', async ({ page }) => {
+  test('should display collaborators list in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
     // Wait for dialog and loading to complete
@@ -131,7 +134,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=editor@example.com')).toBeVisible();
   });
 
-  test.skip('should display pending invites in share dialog', async ({ page }) => {
+  test('should display pending invites in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
     // Wait for dialog and loading to complete
@@ -144,7 +147,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=pending2@example.com')).toBeVisible();
   });
 
-  test.skip('should have disabled delivery buttons when email is empty', async ({ page }) => {
+  test('should have disabled delivery buttons when email is empty', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -154,19 +157,19 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('button', { name: 'Email invite' })).toBeDisabled();
   });
 
-  test.skip('should enable delivery buttons when valid email is entered', async ({ page }) => {
+  test('should enable delivery buttons when valid email is entered', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Enter email
-    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
+    await page.getByRole('dialog').getByPlaceholder('colleague@example.com').fill('newuser@example.com');
 
     // Delivery buttons should be enabled
     await expect(page.getByRole('button', { name: 'Copy link' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Email invite' })).toBeEnabled();
   });
 
-  test.skip('should generate invite link when clicking Email invite', async ({ page }) => {
+  test('should generate invite link when clicking Email invite', async ({ page }) => {
     // Mock the invite creation endpoint
     await page.route('**/api/shares/invite', (route) => {
       route.fulfill({
@@ -176,6 +179,7 @@ test.describe('Share Dialog UI', () => {
           token: 'new-invite-token-123',
           shareUrl: 'http://localhost:5173/invite/new-invite-token-123',
           agentAccountId: null, // No agent - simplifies test
+          emailSent: true, // useSharing's CreateInviteResult trusts this verbatim from the response
         }),
       });
     });
@@ -184,7 +188,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Enter email and click Email invite (desktop primary action)
-    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
+    await page.getByRole('dialog').getByPlaceholder('colleague@example.com').fill('newuser@example.com');
     await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify confirmation message and link display
@@ -192,7 +196,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('input[value*="/invite/new-invite-token-123"]')).toBeVisible();
   });
 
-  test.skip('should show error when invite generation fails', async ({ page }) => {
+  test('should show error when invite generation fails', async ({ page }) => {
     // Mock the invite creation endpoint to fail
     await page.route('**/api/shares/invite', (route) => {
       route.fulfill({
@@ -212,14 +216,14 @@ test.describe('Share Dialog UI', () => {
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
 
     // Enter email and click Email invite (desktop primary action)
-    await page.getByRole('dialog').locator('input[type="email"]').fill('newuser@example.com');
+    await page.getByRole('dialog').getByPlaceholder('colleague@example.com').fill('newuser@example.com');
     await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify error message (with longer timeout to allow for API call)
     await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
+  test('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -233,7 +237,7 @@ test.describe('Share Dialog UI', () => {
     await expect(permissionSelect.locator('option[value="admin"]')).toHaveText('Admin');
   });
 
-  test.skip('should have expiration dropdown with day options', async ({ page }) => {
+  test('should have expiration dropdown with day options', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -248,7 +252,7 @@ test.describe('Share Dialog UI', () => {
     await expect(expirationSelect.locator('option[value="30"]')).toHaveText('30 days');
   });
 
-  test.skip('should close dialog when clicking Done', async ({ page }) => {
+  test('should close dialog when clicking Done', async ({ page }) => {
     await openShareDialog(page);
 
     // Verify dialog is open
@@ -487,7 +491,7 @@ test.describe('Invite Accept Page UI', () => {
 });
 
 test.describe('Share Dialog - Empty States', () => {
-  test.skip('should show empty collaborators message', async ({ page }) => {
+  test('should show empty collaborators message', async ({ page }) => {
     // Mock empty collaborators
     await page.route('**/api/shares/targets/*/collaborators', (route) => {
       route.fulfill({
@@ -532,10 +536,13 @@ test.describe('Share Dialog - Empty States', () => {
     // Wait for loading to complete (spinner to disappear)
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Verify empty states
-    await expect(page.locator('text=Collaborators (0)')).toBeVisible({ timeout: 10000 });
+    // Verify empty states. ShareDialog only appends "(N)" to the "Collaborators" heading when
+    // N > 0 (`collaborators.length > 0 && \`(${collaborators.length})\``), so the zero case
+    // renders the bare word. The "Pending Invites" section is gated the same way but on the
+    // OUTER block, so at zero invites the whole section — heading and any "no invites" copy — is
+    // absent from the DOM entirely (there is no "No pending invites" message to show).
+    await expect(page.getByText('Collaborators', { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=No collaborators yet')).toBeVisible();
-    await expect(page.locator('text=Pending Invites (0)')).toBeVisible();
-    await expect(page.locator('text=No pending invites')).toBeVisible();
+    await expect(page.getByText(/Pending Invites/)).toHaveCount(0);
   });
 });

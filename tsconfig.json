@@ -55,10 +55,7 @@
      * are no longer imported from the app's entry graph, so excluding them here only
      * silences `tsc --noEmit` — `vite build` does not process them at all. */
     "src/components/auth/MergeAccountFlow.tsx",
-    "src/components/import/**",
-    "src/services/import/**",
     "src/services/checklistFolderFactory.ts",
-    "src/components/editor/DialogManager.tsx",
 
     /* `useViewStateCleanup` still reads a Jazz `Account` (`account.root.viewState`); its service,
      * `viewStateService`, is now rowboat-graph-based, so the hook no longer typechecks. Hooks are a

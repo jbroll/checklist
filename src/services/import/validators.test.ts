@@ -1,26 +1,45 @@
 /**
- * Unit tests for import validators
+ * Unit tests for import validators (rowboat port, slice-2).
+ *
+ * `validateJsonData(g, data)` takes the rowboat graph `g` instead of a Jazz account;
+ * conflict-detection reads `folderOps.childrenOf(g, null)` (top-level folders).
  */
 
 import { describe, expect, it } from 'vitest';
+import type { FolderRow } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import type { ExportedData } from '../export/types';
 import { validateJsonData } from './validators';
 
-// Mock Account for testing (minimal structure)
-const createMockAccount = (existingNames: string[] = []) => {
-  // Create mock folders from existing names for duplicate detection
-  const folders = existingNames.map((name) => ({
-    name,
-    archived: false,
-    $jazz: { id: `folder-${name}` },
-  }));
+type Graph = ReturnType<typeof makeGraph>;
 
+/** Build a top-level (organizational) folder row for duplicate-name detection tests. */
+function orgFolder(id: string, name: string, extra: Partial<FolderRow> = {}): FolderRow {
   return {
-    root: {
-      folders,
-    },
-  } as any;
-};
+    id,
+    owner_group_id: 'group-1',
+    name,
+    type: 'folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items: [],
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
+    ...extra,
+  };
+}
+
+function graphWith(...folders: FolderRow[]): Graph {
+  return makeGraph({ folder: folders });
+}
 
 describe('validators', () => {
   describe('validateJsonData', () => {
@@ -32,16 +51,14 @@ describe('validators', () => {
     };
 
     it('should validate correct JSON data structure', () => {
-      const account = createMockAccount();
-      const result = validateJsonData(validData, account);
+      const result = validateJsonData(makeGraph(), validData);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should reject non-object data', () => {
-      const account = createMockAccount();
-      const result = validateJsonData('just a string', account);
+      const result = validateJsonData(makeGraph(), 'just a string');
 
       expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
@@ -49,49 +66,45 @@ describe('validators', () => {
     });
 
     it('should reject data without version field', () => {
-      const account = createMockAccount();
       const invalidData = {
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [],
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing required field: version');
     });
 
     it('should reject data without exportDate field', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         appVersion: '1.0.0',
         folders: [],
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing required field: exportDate');
     });
 
     it('should reject data without folders field', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing required field: folders');
     });
 
     it('should reject data with folders not being an array', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -99,14 +112,13 @@ describe('validators', () => {
         folders: 'not-an-array',
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some((err) => err.includes('must be an array'))).toBe(true);
     });
 
     it('should validate data with valid folders', () => {
-      const account = createMockAccount();
       const dataWithFolders: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -115,7 +127,6 @@ describe('validators', () => {
           {
             name: 'Test Folder',
             type: 'template-folder',
-            path: '/test-folder',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [],
@@ -124,14 +135,13 @@ describe('validators', () => {
         ],
       };
 
-      const result = validateJsonData(dataWithFolders, account);
+      const result = validateJsonData(makeGraph(), dataWithFolders);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should reject folder without required name field', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -139,21 +149,19 @@ describe('validators', () => {
         folders: [
           {
             type: 'template-folder',
-            path: '/test',
             items: [],
             sessions: [],
           },
         ],
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some((err) => err.includes('name'))).toBe(true);
     });
 
     it('should reject folder with invalid type', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -162,21 +170,19 @@ describe('validators', () => {
           {
             name: 'Test',
             type: 'invalid-type',
-            path: '/test',
             items: [],
             sessions: [],
           },
         ],
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some((err) => err.includes('type'))).toBe(true);
     });
 
     it('should validate folder with valid items', () => {
-      const account = createMockAccount();
       const dataWithItems: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -185,7 +191,6 @@ describe('validators', () => {
           {
             name: 'Test Folder',
             type: 'template-folder',
-            path: '/test-folder',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
@@ -195,7 +200,6 @@ describe('validators', () => {
                 type: 'item',
                 expanded: false,
                 sortOrder: 0,
-                icon: '🍎',
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },
@@ -205,14 +209,13 @@ describe('validators', () => {
         ],
       };
 
-      const result = validateJsonData(dataWithItems, account);
+      const result = validateJsonData(makeGraph(), dataWithItems);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should reject item with invalid type', () => {
-      const account = createMockAccount();
       const invalidData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -221,7 +224,6 @@ describe('validators', () => {
           {
             name: 'Test',
             type: 'template-folder',
-            path: '/test',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
@@ -239,14 +241,13 @@ describe('validators', () => {
         ],
       };
 
-      const result = validateJsonData(invalidData, account);
+      const result = validateJsonData(makeGraph(), invalidData);
 
       expect(result.isValid).toBe(false);
       expect(result.errors.some((err) => err.includes('type'))).toBe(true);
     });
 
     it('should accept optional defaultQuantity field', () => {
-      const account = createMockAccount();
       const dataWithQuantity: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -255,7 +256,6 @@ describe('validators', () => {
           {
             name: 'Test',
             type: 'template-folder',
-            path: '/test',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
             items: [
@@ -275,33 +275,32 @@ describe('validators', () => {
         ],
       };
 
-      const result = validateJsonData(dataWithQuantity, account);
+      const result = validateJsonData(makeGraph(), dataWithQuantity);
 
       expect(result.isValid).toBe(true);
     });
 
     it('should warn about missing appVersion', () => {
-      const account = createMockAccount();
       const dataWithoutAppVersion = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         folders: [],
       };
 
-      const result = validateJsonData(dataWithoutAppVersion, account);
+      const result = validateJsonData(makeGraph(), dataWithoutAppVersion);
 
       expect(result.warnings.some((w) => w.includes('appVersion'))).toBe(true);
     });
 
-    it('should detect duplicate folders by path', () => {
-      const account = createMockAccount(['Grocery List']); // Path is NOT normalized anymore
+    it('should detect duplicate folders by name against existing top-level folders', () => {
+      const g = graphWith(orgFolder('f1', 'Grocery List'));
       const dataWithDuplicate: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
         appVersion: '1.0.0',
         folders: [
           {
-            name: 'Grocery List', // Path will be "Grocery List" (no normalization)
+            name: 'Grocery List',
             type: 'template-folder',
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
@@ -311,7 +310,7 @@ describe('validators', () => {
         ],
       };
 
-      const result = validateJsonData(dataWithDuplicate, account);
+      const result = validateJsonData(g, dataWithDuplicate);
 
       expect(result.isValid).toBe(true); // Still valid, just has duplicates
       expect(result.stats.duplicateFolders).toBe(1);

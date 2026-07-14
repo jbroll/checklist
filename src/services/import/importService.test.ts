@@ -1,694 +1,407 @@
 /**
- * Unit tests for Import Service
+ * Unit tests for the main import service (rowboat port, slice-2).
  *
- * Tests importAsNewTemplate functionality including:
- * - Metadata-based template naming
- * - Duplicate name detection
- * - Fallback to filename
+ * NOTE (scope): `importSessionFromCsvFile` / session-CSV import is REMOVED — dead code that was
+ * never wired into `ImportDialog`/`useImportDialog` even pre-port. Its old test coverage is
+ * dropped, not preserved. New template creation goes through `folderOps.addFolder` +
+ * `folderOps.generateUniqueName` instead of the old `checklistFolderFactory`.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as CheckListFolder from '../checklistFolderFactory';
-import { parseTextMetadata } from './txtImporter';
-
-// Mock checklistFolderFactory
-vi.mock('../checklistFolderFactory', () => ({
-  createFolder: vi.fn(),
-}));
-
-// Mock file reading - include all exports used by importService
-vi.mock('../../utils/fileUpload', () => ({
-  readFileAsText: vi.fn(),
-  isValidFileType: vi.fn().mockReturnValue(true),
-  isValidFileSize: vi.fn().mockReturnValue(true),
-  getFileExtension: vi.fn((name: string) => name.split('.').pop() || ''),
-  formatFileSize: vi.fn((bytes: number) => `${bytes} bytes`),
-}));
-
-import { readFileAsText } from '../../utils/fileUpload';
+import { describe, expect, it } from 'vitest';
+import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
+import * as folderOps from '../folderOps';
 import {
   importAsNewTemplate,
   importFromFile,
   importItemsFromCsvFile,
   importItemsFromJsonFile,
   importItemsFromTxtFile,
-  importSessionFromCsvFile,
 } from './importService';
-import { validateImportFile } from './importValidator';
+import type { JsonImportContext } from './jsonImporter';
 
-// Mock jsonImporter for importFromFile tests
-vi.mock('./jsonImporter', () => ({
-  importJson: vi.fn(),
-  importItemsFromJson: vi
-    .fn()
-    .mockReturnValue({ imported: 0, skipped: 0, errors: [], duplicates: [] }),
-}));
+type Graph = ReturnType<typeof makeGraph>;
 
-import { importJson } from './jsonImporter';
-
-// Mock the import validator
-vi.mock('./importValidator', () => ({
-  validateImportFile: vi.fn(),
-  MAX_FILE_SIZE_MB: 10,
-}));
-
-// Create mock file
-function createMockFile(name: string, content: string): File {
-  const blob = new Blob([content], { type: 'text/plain' });
-  return new File([blob], name, { type: 'text/plain' });
+function templateFolder(
+  id: string,
+  name: string,
+  items: TemplateItem[] = [],
+  extra: Partial<FolderRow> = {},
+): FolderRow {
+  return {
+    id,
+    owner_group_id: 'group-1',
+    name,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items,
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
+    ...extra,
+  };
 }
 
-// Mock account
-const createMockAccount = () => ({
-  root: {
-    folders: [] as any[],
-  },
-  $jazz: { id: 'account-1' },
-});
+function graphWith(...folders: FolderRow[]): Graph {
+  return makeGraph({ folder: folders });
+}
 
-// Mock template (returned by createFolder)
-const createMockTemplate = () => ({
-  name: 'Test Template',
-  items: [] as any[],
-  $jazz: {
-    set: vi.fn(),
-  },
-});
+function itemsOf(g: Graph, id: string): TemplateItem[] {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.items;
+}
+
+function ctx(overrides: Partial<JsonImportContext> = {}): JsonImportContext {
+  return {
+    createdBy: 'user-1',
+    mintGroup: async () => 'group-new',
+    ...overrides,
+  };
+}
+
+function createFile(name: string, content: string): File {
+  return new File([content], name, { type: 'text/plain' });
+}
 
 describe('importService', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  describe('importItemsFromTxtFile', () => {
+    it('imports items from a valid txt file', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const file = createFile('list.txt', 'Apples\nBananas');
+
+      const result = await importItemsFromTxtFile(g, 't1', file);
+
+      expect(result.imported).toBe(2);
+      expect(result.errors).toHaveLength(0);
+      expect(itemsOf(g, 't1')).toHaveLength(2);
+    });
+
+    it('returns error for invalid extension without throwing', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const file = createFile('list.json', 'Apples');
+
+      const result = await importItemsFromTxtFile(g, 't1', file);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors[0]).toContain('Invalid file type');
+      expect(result.metadata).toEqual({});
+    });
+  });
+
+  describe('importItemsFromJsonFile', () => {
+    it('imports items from a valid json file', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const items = [
+        {
+          id: 'item-1',
+          name: 'Eggs',
+          type: 'item',
+          sortOrder: 0,
+          createdAt: '2024-11-01T00:00:00.000Z',
+          updatedAt: '2024-11-01T00:00:00.000Z',
+        },
+      ];
+      const file = createFile('items.json', JSON.stringify(items));
+
+      const result = await importItemsFromJsonFile(g, 't1', file);
+
+      expect(result.imported).toBe(1);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('returns error for invalid extension without throwing', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const file = createFile('items.txt', '[]');
+
+      const result = await importItemsFromJsonFile(g, 't1', file);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors[0]).toContain('Invalid file type');
+    });
+  });
+
+  describe('importItemsFromCsvFile', () => {
+    it('imports items from a valid csv file', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const file = createFile('items.csv', 'name\nApples\nBananas');
+
+      const result = await importItemsFromCsvFile(g, 't1', file);
+
+      expect(result.imported).toBe(2);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('returns error for invalid extension without throwing', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
+      const file = createFile('items.json', 'name\nApples');
+
+      const result = await importItemsFromCsvFile(g, 't1', file);
+
+      expect(result.imported).toBe(0);
+      expect(result.errors[0]).toContain('Invalid file type');
+    });
+  });
+
+  describe('importFromFile', () => {
+    it('auto-detects JSON file type and delegates to importJson', async () => {
+      const g = makeGraph();
+      const exportData = {
+        version: '2.0',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            name: 'Groceries',
+            type: 'template-folder',
+            items: [],
+            sessions: [],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+      const file = createFile('data.json', JSON.stringify(exportData));
+
+      const result = await importFromFile(g, file, ctx());
+
+      expect(result.success).toBe(true);
+      expect(result.stats.foldersCreated).toBe(1);
+    });
+
+    it('directs TXT files to importAsNewTemplate instead of importing directly', async () => {
+      const g = makeGraph();
+      const file = createFile('items.txt', 'Item1\nItem2');
+
+      const result = await importFromFile(g, file, ctx());
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Use importAsNewTemplate()');
+    });
+
+    it('directs CSV files to importAsNewTemplate instead of importing directly', async () => {
+      const g = makeGraph();
+      const file = createFile('data.csv', 'name\nItem1');
+
+      const result = await importFromFile(g, file, ctx());
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Use importAsNewTemplate()');
+    });
+
+    it('uses explicit fileType override to skip extension-based detection', async () => {
+      const g = makeGraph();
+      const exportData = {
+        version: '2.0',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [],
+      };
+      // No extension at all — detectFileType() would return null and importFromFile would
+      // short-circuit with "Unable to determine file type" before ever validating the file.
+      // Passing fileType explicitly skips that step (validateImportFile below still checks the
+      // real extension against ['json'], so the filename must end in .json to pass).
+      const file = createFile('data.json', JSON.stringify(exportData));
+
+      const result = await importFromFile(g, file, ctx(), 'json');
+
+      expect(result.success).toBe(true);
+    });
+
+    it('returns error when file type cannot be detected', async () => {
+      const g = makeGraph();
+      const file = createFile('data.xyz', 'content');
+
+      const result = await importFromFile(g, file, ctx());
+
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Unable to determine file type');
+    });
   });
 
   describe('importAsNewTemplate', () => {
-    describe('template naming', () => {
-      it('uses metadata name when present in TXT file', async () => {
-        const fileContent = `
+    it('uses metadata name when present in TXT file', async () => {
+      const g = makeGraph();
+      const fileContent = `
 # name: My Custom List
 # description: Test description
 
 Item1
 Item2
-        `.trim();
+      `.trim();
+      const file = createFile('some-filename.txt', fileContent);
 
-        const file = createMockFile('some-filename.txt', fileContent);
-        const account = createMockAccount();
-        const mockTemplate = createMockTemplate();
+      const result = await importAsNewTemplate(g, file, undefined, 'txt', ctx());
 
-        vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
+      expect(result.success).toBe(true);
+      const created = folderOps.topLevelFolders(g);
+      expect(created).toHaveLength(1);
+      expect(created[0].name).toBe('My Custom List');
+    });
 
-        await importAsNewTemplate(file, account as any, undefined, 'txt');
-
-        // Should use metadata name, not filename
-        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
-          account,
-          'My Custom List',
-          true,
-          undefined,
-        );
-      });
-
-      it('uses provided templateName over metadata name', async () => {
-        const fileContent = `
+    it('uses provided templateName over metadata name', async () => {
+      const g = makeGraph();
+      const fileContent = `
 # name: Metadata Name
 
 Item1
-        `.trim();
+      `.trim();
+      const file = createFile('filename.txt', fileContent);
 
-        const file = createMockFile('filename.txt', fileContent);
-        const account = createMockAccount();
-        const mockTemplate = createMockTemplate();
+      await importAsNewTemplate(g, file, 'Explicit Name', 'txt', ctx());
 
-        vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
+      const created = folderOps.topLevelFolders(g);
+      expect(created[0].name).toBe('Explicit Name');
+    });
 
-        await importAsNewTemplate(file, account as any, 'Explicit Name', 'txt');
-
-        // Should use explicit name, not metadata
-        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
-          account,
-          'Explicit Name',
-          true,
-          undefined,
-        );
-      });
-
-      it('falls back to filename when no metadata and no explicit name', async () => {
-        const fileContent = `
+    it('falls back to filename when no metadata and no explicit name', async () => {
+      const g = makeGraph();
+      const fileContent = `
 Item1
 Item2
-        `.trim();
+      `.trim();
+      const file = createFile('my-shopping-list.txt', fileContent);
 
-        const file = createMockFile('my-shopping-list.txt', fileContent);
-        const account = createMockAccount();
-        const mockTemplate = createMockTemplate();
+      await importAsNewTemplate(g, file, undefined, 'txt', ctx());
 
-        vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
+      const created = folderOps.topLevelFolders(g);
+      expect(created[0].name).toBe('my-shopping-list');
+    });
 
-        await importAsNewTemplate(file, account as any, undefined, 'txt');
-
-        // Should use filename without extension
-        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(
-          account,
-          'my-shopping-list',
-          true,
-          undefined,
-        );
-      });
-
-      it('does not use metadata for CSV files', async () => {
-        const fileContent = `name,category
+    it('does not use metadata for CSV files (falls back to filename)', async () => {
+      const g = makeGraph();
+      const fileContent = `name,category
 Item1,Cat1
 Item2,Cat2`;
+      const file = createFile('data.csv', fileContent);
 
-        const file = createMockFile('data.csv', fileContent);
-        const account = createMockAccount();
-        const mockTemplate = createMockTemplate();
+      await importAsNewTemplate(g, file, undefined, 'csv', ctx());
 
-        vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
-
-        await importAsNewTemplate(file, account as any, undefined, 'csv');
-
-        // Should use filename, not try to parse CSV for metadata
-        expect(CheckListFolder.createFolder).toHaveBeenCalledWith(account, 'data', true, undefined);
-      });
+      const created = folderOps.topLevelFolders(g);
+      expect(created[0].name).toBe('data');
     });
 
-    describe('error handling', () => {
-      it('returns error when folder creation fails', async () => {
-        const fileContent = `# name: Test\n\nItem1`;
-        const file = createMockFile('test.txt', fileContent);
-        const account = createMockAccount();
+    it('dedupes the new template name against existing siblings', async () => {
+      const g = graphWith(templateFolder('t1', 'my-list'));
+      const file = createFile('my-list.txt', 'Item1');
 
-        vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-        vi.mocked(CheckListFolder.createFolder).mockReturnValue(null as any);
+      const result = await importAsNewTemplate(g, file, undefined, 'txt', ctx());
 
-        const result = await importAsNewTemplate(file, account as any, undefined, 'txt');
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Failed to create template');
-      });
-    });
-  });
-
-  describe('parseTextMetadata', () => {
-    it('extracts name from well-formatted metadata', () => {
-      const content = `# name: Grocery List\n# description: Weekly shopping\n\nApples\nBananas`;
-      const metadata = parseTextMetadata(content);
-
-      expect(metadata.name).toBe('Grocery List');
-      expect(metadata.description).toBe('Weekly shopping');
-    });
-
-    it('handles various spacing patterns', () => {
-      const content = `#name:NoSpaces\n#  name:  Extra Spaces  \n# NAME: Uppercase`;
-      const metadata = parseTextMetadata(content);
-
-      // Last one wins (all same key normalized to lowercase)
-      expect(metadata.name).toBe('Uppercase');
-    });
-  });
-
-  describe('validateAndReadFile error handling', () => {
-    const mockTemplate = () =>
-      ({
-        name: 'Test',
-        items: [] as any[],
-        $jazz: { id: 'template-1', set: vi.fn() },
-      }) as any;
-
-    beforeEach(() => {
-      vi.mocked(validateImportFile).mockImplementation(() => {
-        // Default: no validation error
-      });
-    });
-
-    describe('validation errors', () => {
-      it('returns error when file extension is invalid (TXT import)', async () => {
-        const file = createMockFile('test.invalid', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('Invalid file type. Expected: txt');
-        });
-
-        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Invalid file type');
-      });
-
-      it('returns error when file extension is invalid (JSON import)', async () => {
-        const file = createMockFile('test.txt', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('Invalid file type. Expected: json');
-        });
-
-        const result = await importItemsFromJsonFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Invalid file type');
-      });
-
-      it('returns error when file extension is invalid (CSV import)', async () => {
-        const file = createMockFile('test.json', 'name,category');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('Invalid file type. Expected: csv');
-        });
-
-        const result = await importItemsFromCsvFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Invalid file type');
-      });
-
-      it('returns error when file is too large', async () => {
-        const file = createMockFile('test.txt', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('File too large. Maximum size: 10MB');
-        });
-
-        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('File too large');
-      });
-
-      it('returns error for session CSV import when validation fails', async () => {
-        const file = createMockFile('session.csv', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('Invalid file type');
-        });
-
-        const result = await importSessionFromCsvFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(false);
-        expect(result.errors[0]).toContain('Invalid file type');
-      });
-
-      it('returns error for importAsNewTemplate when validation fails', async () => {
-        const file = createMockFile('test.txt', 'Item1');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('Validation failed');
-        });
-
-        const result = await importAsNewTemplate(file, account as any, 'Test', 'txt');
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Validation failed');
-      });
-
-      it('handles non-Error validation exceptions', async () => {
-        const file = createMockFile('test.txt', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw 'String error'; // Non-Error exception
-        });
-
-        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toBe('Validation failed');
-      });
-    });
-
-    describe('file read errors', () => {
-      it('returns error when file read fails (TXT import)', async () => {
-        const file = createMockFile('test.txt', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('Network error'));
-
-        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Network error');
-      });
-
-      it('returns error when file read fails (JSON import)', async () => {
-        const file = createMockFile('test.json', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('Permission denied'));
-
-        const result = await importItemsFromJsonFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Permission denied');
-      });
-
-      it('returns error when file read fails (CSV import)', async () => {
-        const file = createMockFile('test.csv', 'name,category');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('Disk error'));
-
-        const result = await importItemsFromCsvFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Disk error');
-      });
-
-      it('returns error when file read fails (session import)', async () => {
-        const file = createMockFile('session.csv', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('Read timeout'));
-
-        const result = await importSessionFromCsvFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(false);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Read timeout');
-      });
-
-      it('returns error when file read fails (importAsNewTemplate)', async () => {
-        const file = createMockFile('test.txt', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('File corrupted'));
-
-        const result = await importAsNewTemplate(file, account as any, 'Test', 'txt');
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('File corrupted');
-      });
-
-      it('handles non-Error read exceptions', async () => {
-        const file = createMockFile('test.txt', 'content');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue('Unknown failure'); // Non-Error
-
-        const result = await importItemsFromTxtFile(file, mockTemplate(), account as any);
-
-        expect(result.imported).toBe(0);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Unknown error');
-      });
-    });
-  });
-
-  describe('importFromFile', () => {
-    beforeEach(() => {
-      vi.mocked(validateImportFile).mockImplementation(() => {
-        // Default: no validation error
-      });
-    });
-
-    describe('file type detection', () => {
-      it('auto-detects JSON file type from extension', async () => {
-        const file = createMockFile('data.json', '{"items": []}');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockResolvedValue('{"items": []}');
-        vi.mocked(importJson).mockResolvedValue({
-          success: true,
-          errors: [],
-          warnings: [],
-          stats: {},
-        });
-
-        await importFromFile(file, account as any);
-
-        expect(importJson).toHaveBeenCalledWith('{"items": []}', account, undefined);
-      });
-
-      it('auto-detects TXT file type from extension', async () => {
-        const file = createMockFile('items.txt', 'Item1\nItem2');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockResolvedValue('Item1\nItem2');
-
-        const result = await importFromFile(file, account as any);
-
-        // TXT files should return error directing to use importAsNewTemplate
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Use importAsNewTemplate()');
-      });
-
-      it('auto-detects CSV file type from extension', async () => {
-        const file = createMockFile('data.csv', 'name,category\nItem1,Cat1');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockResolvedValue('name,category\nItem1,Cat1');
-
-        const result = await importFromFile(file, account as any);
-
-        // CSV files should return error directing to use importAsNewTemplate
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Use importAsNewTemplate()');
-      });
-
-      it('uses explicit file type when provided', async () => {
-        const file = createMockFile('data.txt', '{"items": []}'); // Wrong extension
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockResolvedValue('{"items": []}');
-        vi.mocked(importJson).mockResolvedValue({
-          success: true,
-          errors: [],
-          warnings: [],
-          stats: {},
-        });
-
-        await importFromFile(file, account as any, 'json');
-
-        expect(importJson).toHaveBeenCalled();
-      });
-
-      it('returns error when file type cannot be detected', async () => {
-        const file = createMockFile('data.xyz', 'content');
-        const account = createMockAccount();
-
-        const result = await importFromFile(file, account as any);
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Unable to determine file type');
-      });
-    });
-
-    describe('validation errors', () => {
-      it('returns error when validation fails', async () => {
-        const file = createMockFile('data.json', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw new Error('File too large');
-        });
-
-        const result = await importFromFile(file, account as any);
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('File too large');
-      });
-
-      it('handles non-Error validation exceptions', async () => {
-        const file = createMockFile('data.json', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(validateImportFile).mockImplementation(() => {
-          throw 'String error';
-        });
-
-        const result = await importFromFile(file, account as any);
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toBe('Validation failed');
-      });
-    });
-
-    describe('file read errors', () => {
-      it('returns error when file read fails', async () => {
-        const file = createMockFile('data.json', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue(new Error('Read error'));
-
-        const result = await importFromFile(file, account as any);
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Failed to read file');
-        expect(result.errors[0]).toContain('Read error');
-      });
-
-      it('handles non-Error read exceptions', async () => {
-        const file = createMockFile('data.json', '{}');
-        const account = createMockAccount();
-
-        vi.mocked(readFileAsText).mockRejectedValue('Unknown error');
-
-        const result = await importFromFile(file, account as any);
-
-        expect(result.success).toBe(false);
-        expect(result.errors[0]).toContain('Unknown error');
-      });
-    });
-
-    describe('JSON import', () => {
-      it('passes parent folder to importJson when provided', async () => {
-        const file = createMockFile('data.json', '{}');
-        const account = createMockAccount();
-        const parentFolder = { name: 'Parent', $jazz: { id: 'folder-1' } };
-
-        vi.mocked(readFileAsText).mockResolvedValue('{}');
-        vi.mocked(importJson).mockResolvedValue({
-          success: true,
-          errors: [],
-          warnings: [],
-          stats: {},
-        });
-
-        await importFromFile(file, account as any, 'json', parentFolder as any);
-
-        expect(importJson).toHaveBeenCalledWith('{}', account, parentFolder);
-      });
-    });
-  });
-
-  describe('importAsNewTemplate additional cases', () => {
-    it('returns success with 0 items for empty file', async () => {
-      const fileContent = 'Item1'; // Single item content
-      const file = createMockFile('single.txt', fileContent);
-      const account = createMockAccount();
-      const mockTemplate = createMockTemplate();
-
-      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
-
-      const result = await importAsNewTemplate(file, account as any, 'Single', 'txt');
-
-      // Should succeed with items imported
       expect(result.success).toBe(true);
+      const created = folderOps.topLevelFolders(g).find((f) => f.id !== 't1');
+      expect(created?.name).toBe('my-list (2)');
     });
 
-    it('handles CSV import with duplicate items warning', async () => {
-      const fileContent = 'name,category\nItem1,Cat1\nItem1,Cat1'; // Duplicate
-      const file = createMockFile('data.csv', fileContent);
-      const account = createMockAccount();
-      const mockTemplate = createMockTemplate();
+    it('returns error and creates nothing when the file fails validation', async () => {
+      const g = makeGraph();
+      const file = createFile('test.invalid', 'content');
 
-      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
+      const result = await importAsNewTemplate(g, file, 'Test', 'txt', ctx());
 
-      const result = await importAsNewTemplate(file, account as any, 'Test', 'csv');
-
-      // The import should succeed but may have duplicate warnings
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toContain('Invalid file type');
+      expect(folderOps.topLevelFolders(g)).toHaveLength(0);
     });
 
-    it('sets defaultItems for all imported items', async () => {
-      const fileContent = 'Butter\nMilk\nBread\nEggs';
-      const file = createMockFile('groceries.txt', fileContent);
-      const account = createMockAccount();
+    it('cleans up the created template if the import yields zero items and errors', async () => {
+      const g = makeGraph();
+      // Empty CSV (header only) -> "No items found" error, 0 imported.
+      const file = createFile('empty.csv', 'name,path');
 
-      // Create a mock template that tracks $jazz.set calls and updates items
-      const mockTemplate: {
-        name: string;
-        items: any[];
-        defaultItems?: Record<string, boolean>;
-        $jazz: { set: ReturnType<typeof vi.fn> };
-      } = {
-        name: 'Test Template',
-        items: [],
-        $jazz: {
-          set: vi.fn((key: string, value: any) => {
-            if (key === 'items') {
-              mockTemplate.items = value;
-            } else if (key === 'defaultItems') {
-              mockTemplate.defaultItems = value;
-            }
-          }),
-        },
-      };
+      const result = await importAsNewTemplate(g, file, 'Empty', 'csv', ctx());
 
-      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
+      expect(result.success).toBe(false);
+      expect(folderOps.topLevelFolders(g)).toHaveLength(0);
+    });
 
-      const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
+    it('succeeds with 0 items imported for a single-line TXT file (no error)', async () => {
+      const g = makeGraph();
+      const file = createFile('single.txt', 'Item1');
 
-      // Should succeed
+      const result = await importAsNewTemplate(g, file, 'Single', 'txt', ctx());
+
       expect(result.success).toBe(true);
-      expect(result.stats?.itemsAdded).toBe(4);
+      expect(result.stats.itemsAdded).toBe(1);
+    });
 
-      // Verify defaultItems was set
-      expect(mockTemplate.$jazz.set).toHaveBeenCalledWith('defaultItems', expect.any(Object));
+    it('sets defaultItems for all imported leaf items', async () => {
+      const g = makeGraph();
+      const file = createFile('groceries.txt', 'Butter\nMilk\nBread\nEggs');
 
-      // Verify all 4 items are in defaultItems
-      expect(mockTemplate.defaultItems).toBeDefined();
-      expect(Object.keys(mockTemplate.defaultItems ?? {}).length).toBe(4);
+      const result = await importAsNewTemplate(g, file, 'Groceries', 'txt', ctx());
 
-      // Each item should have defaultItems[id] = true
-      for (const item of mockTemplate.items) {
-        expect(mockTemplate.defaultItems?.[item.id]).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.stats.itemsAdded).toBe(4);
+      const created = folderOps.topLevelFolders(g)[0];
+      const items = itemsOf(g, created.id);
+      const defaults = g.folder(created.id)?.$data.default_items ?? {};
+      expect(Object.keys(defaults)).toHaveLength(4);
+      for (const item of items) {
+        expect(defaults[item.id]).toBe(true);
       }
     });
 
-    it('only sets defaultItems for items (not categories)', async () => {
+    it('only sets defaultItems for items, not categories', async () => {
+      const g = makeGraph();
       // TXT with indentation creates both category and item nodes
-      const fileContent = 'Dairy\n  Butter\n  Milk';
-      const file = createMockFile('groceries.txt', fileContent);
-      const account = createMockAccount();
+      const file = createFile('groceries.txt', 'Dairy\n  Butter\n  Milk');
 
-      const mockTemplate: {
-        name: string;
-        items: any[];
-        defaultItems?: Record<string, boolean>;
-        $jazz: { set: ReturnType<typeof vi.fn> };
-      } = {
-        name: 'Test Template',
-        items: [],
-        $jazz: {
-          set: vi.fn((key: string, value: any) => {
-            if (key === 'items') {
-              mockTemplate.items = value;
-            } else if (key === 'defaultItems') {
-              mockTemplate.defaultItems = value;
-            }
-          }),
-        },
-      };
-
-      vi.mocked(readFileAsText).mockResolvedValue(fileContent);
-      vi.mocked(CheckListFolder.createFolder).mockReturnValue(mockTemplate as any);
-
-      const result = await importAsNewTemplate(file, account as any, 'Groceries', 'txt');
+      const result = await importAsNewTemplate(g, file, 'Groceries', 'txt', ctx());
 
       expect(result.success).toBe(true);
+      const created = folderOps.topLevelFolders(g)[0];
+      const items = itemsOf(g, created.id);
+      // 3 items total: 1 category (Dairy) + 2 items (Butter, Milk)
+      expect(items).toHaveLength(3);
 
-      // Should have 3 items total: 1 category (Dairy) + 2 items (Butter, Milk)
-      expect(mockTemplate.items.length).toBe(3);
-
-      // But defaultItems should only have the 2 leaf items
-      expect(mockTemplate.defaultItems).toBeDefined();
-      expect(Object.keys(mockTemplate.defaultItems ?? {}).length).toBe(2);
-
-      // Verify only items (not categories) are in defaultItems
-      for (const item of mockTemplate.items) {
+      const defaults = g.folder(created.id)?.$data.default_items ?? {};
+      expect(Object.keys(defaults)).toHaveLength(2);
+      for (const item of items) {
         if (item.type === 'item') {
-          expect(mockTemplate.defaultItems?.[item.id]).toBe(true);
+          expect(defaults[item.id]).toBe(true);
         } else {
-          expect(mockTemplate.defaultItems?.[item.id]).toBeUndefined();
+          expect(defaults[item.id]).toBeUndefined();
         }
       }
+    });
+
+    it('reports duplicate-item warning for CSV imports with duplicate rows', async () => {
+      const g = makeGraph();
+      const file = createFile('data.csv', 'name,category\nItem1,Cat1\nItem1,Cat1');
+
+      const result = await importAsNewTemplate(g, file, 'Test', 'csv', ctx());
+
+      expect(result.success).toBe(true);
+      expect(result.warnings.some((w) => w.includes('duplicate'))).toBe(true);
+    });
+
+    it('enables auto_categorize_enabled when options.autoCategorize is set', async () => {
+      const g = makeGraph();
+      const file = createFile('list.txt', 'Item1');
+
+      await importAsNewTemplate(g, file, 'Test', 'txt', ctx(), { autoCategorize: true });
+
+      const created = folderOps.topLevelFolders(g)[0];
+      expect(created.auto_categorize_enabled).toBe(true);
+    });
+
+    it('creates the template under ctx.parentId when provided', async () => {
+      const g = graphWith(templateFolder('parent-1', 'Parent'));
+      const file = createFile('list.txt', 'Item1');
+
+      await importAsNewTemplate(g, file, 'Child', 'txt', ctx({ parentId: 'parent-1' }));
+
+      const created = folderOps.childrenOf(g, 'parent-1');
+      expect(created).toHaveLength(1);
+      expect(created[0].name).toBe('Child');
     });
   });
 });

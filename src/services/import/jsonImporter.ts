@@ -1,15 +1,20 @@
 /**
- * JSON import functionality
+ * JSON import functionality (rowboat port, slice-2)
  *
- * Imports folder structures with all template items and session history from JSON format.
- * Supports v2.0 (hierarchical with IDs) format.
+ * Imports template folders (with items + session history) from JSON format. Supports v2.0
+ * (hierarchical items with IDs) format — see `../export/jsonExporter.ts`, whose output this
+ * mirrors: `ExportedData.folders` is a FLAT array of template folders (the export format never
+ * nests organizational folders), so import creates one new top-level `template-folder` row per
+ * entry — no folder-tree recursion needed.
+ *
+ * Ported off Jazz: takes the rowboat graph `g` + a `mintGroup`/`createdBy` pair (same contract
+ * as `useCheckListHierarchy.addFolder`) instead of a Jazz `Account`, and writes plain `FolderRow`s
+ * via `folderOps.addFolder` instead of `FolderNode.create`/`Group.create`.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import { Group } from '@/jazz';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { generateId } from '../../lib/utils';
-import { type Account, FolderNode, type SessionData } from '../../schema';
-import type { ItemState, TemplateItem } from '../../schema/tree';
+import type { ItemState, SessionData, schema, TemplateItem } from '../../schema/folder';
 import { createChildPath } from '../../utils/pathUtils';
 import type {
   ExportedData,
@@ -17,24 +22,35 @@ import type {
   ExportedSession,
   ExportedTemplateItem,
 } from '../export/types';
+import * as folderOps from '../folderOps';
 import { type BaseImportResult, type ItemToImport, importItems } from './baseImporter';
 import type { ImportResult } from './types';
 import { validateJsonData } from './validators';
 
+type Graph = RelationalGraph<typeof schema>;
+
+export interface JsonImportContext {
+  /** Who newly-created folders are attributed to (`created_by`). */
+  createdBy: string;
+  /** Mints a fresh owner_group_id for a new folder — same contract as `useCheckListHierarchy`. */
+  mintGroup: (parentGroupId?: string) => Promise<string>;
+  /** Optional parent — new template folders are created under it (root if omitted). */
+  parentId?: string | null;
+}
+
 /**
- * Import JSON data into user's account
+ * Import JSON data (a full/partial backup) into the graph.
  *
+ * @param g - The rowboat graph
  * @param jsonString - JSON string to import
- * @param account - User's Account
- * @param parentFolder - Optional parent folder (if not provided, imports to root)
+ * @param ctx - group-minting + attribution context
  * @returns Import result with success/failure info
  */
 export async function importJson(
+  g: Graph,
   jsonString: string,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
+  ctx: JsonImportContext,
 ): Promise<ImportResult> {
-  // Parse JSON
   let data: unknown;
   try {
     data = JSON.parse(jsonString);
@@ -47,8 +63,7 @@ export async function importJson(
     };
   }
 
-  // Validate data
-  const validation = validateJsonData(data, account);
+  const validation = validateJsonData(g, data);
   if (!validation.isValid) {
     return {
       success: false,
@@ -58,9 +73,8 @@ export async function importJson(
     };
   }
 
-  // Import folders
   const exportData = data as ExportedData;
-  const result = await importFolders(exportData, account, parentFolder);
+  const result = await importFolders(g, exportData, ctx);
 
   return {
     ...result,
@@ -69,24 +83,23 @@ export async function importJson(
 }
 
 /**
- * Import items from JSON into an existing template
+ * Import items from JSON into an existing template.
  *
  * Accepts multiple JSON formats:
  * - ExportedData (full export) - extracts items from all folders
  * - ExportedFolder (single folder) - extracts items directly
  * - ExportedTemplateItem[] (items array) - uses items directly
  *
+ * @param g - The rowboat graph
+ * @param templateId - Template folder to import items into
  * @param jsonString - JSON string containing items
- * @param template - FolderNode to import items into
- * @param account - User's Account
  * @returns Import result with statistics
  */
-export function importItemsFromJson(
+export async function importItemsFromJson(
+  g: Graph,
+  templateId: string,
   jsonString: string,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
-): BaseImportResult {
-  // Parse JSON
+): Promise<BaseImportResult> {
   let data: unknown;
   try {
     data = JSON.parse(jsonString);
@@ -99,7 +112,6 @@ export function importItemsFromJson(
     };
   }
 
-  // Extract items based on JSON structure
   const exportedItems = extractItemsFromJson(data);
   if (!exportedItems) {
     return {
@@ -119,28 +131,17 @@ export function importItemsFromJson(
     };
   }
 
-  // Convert ExportedTemplateItem[] to ItemToImport[]
   const itemsToImport = flattenExportedItemsToImport(exportedItems, undefined);
-
-  // Import items using shared base importer
-  return importItems(itemsToImport, template, account);
+  return importItems(g, templateId, itemsToImport);
 }
 
-/**
- * Extract items from various JSON formats
- *
- * @param data - Parsed JSON data
- * @returns Array of ExportedTemplateItem or null if format not recognized
- */
 function extractItemsFromJson(data: unknown): ExportedTemplateItem[] | null {
   if (!data || typeof data !== 'object') {
     return null;
   }
 
-  // Check if it's ExportedData (full export with folders)
   if ('folders' in data && Array.isArray((data as ExportedData).folders)) {
     const exportData = data as ExportedData;
-    // Collect items from all folders
     const allItems: ExportedTemplateItem[] = [];
     for (const folder of exportData.folders) {
       if (folder.items && Array.isArray(folder.items)) {
@@ -150,14 +151,11 @@ function extractItemsFromJson(data: unknown): ExportedTemplateItem[] | null {
     return allItems;
   }
 
-  // Check if it's ExportedFolder (single folder)
   if ('name' in data && 'items' in data && Array.isArray((data as ExportedFolder).items)) {
     return (data as ExportedFolder).items || [];
   }
 
-  // Check if it's an array of ExportedTemplateItem
   if (Array.isArray(data)) {
-    // Validate that items have required fields
     const isValidItemArray = data.every(
       (item) => item && typeof item === 'object' && 'name' in item && typeof item.name === 'string',
     );
@@ -169,13 +167,6 @@ function extractItemsFromJson(data: unknown): ExportedTemplateItem[] | null {
   return null;
 }
 
-/**
- * Flatten ExportedTemplateItem[] to ItemToImport[] (with paths)
- *
- * @param exportedItems - Hierarchical exported items
- * @param parentPath - Parent path for context
- * @returns Flat array of items with paths
- */
 function flattenExportedItemsToImport(
   exportedItems: ExportedTemplateItem[],
   parentPath: string | undefined,
@@ -192,28 +183,18 @@ function flattenExportedItemsToImport(
       defaultQuantity: exportedItem.defaultQuantity || '',
     });
 
-    // Recursively flatten children
     if (exportedItem.children && exportedItem.children.length > 0) {
-      const childItems = flattenExportedItemsToImport(exportedItem.children, itemPath);
-      items.push(...childItems);
+      items.push(...flattenExportedItemsToImport(exportedItem.children, itemPath));
     }
   }
 
   return items;
 }
 
-/**
- * Import folders from validated export data
- *
- * @param data - Validated export data
- * @param account - User's Account
- * @param parentFolder - Optional parent folder
- * @returns Import result
- */
 async function importFolders(
+  g: Graph,
   data: ExportedData,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
+  ctx: JsonImportContext,
 ): Promise<ImportResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -222,41 +203,54 @@ async function importFolders(
   let itemsAdded = 0;
   let sessionsCreated = 0;
 
-  // Ensure root exists
-  if (!account.root) {
-    errors.push('Account root not initialized');
-    return {
-      success: false,
-      errors,
-      warnings,
-      stats: {},
-    };
-  }
+  const parentId = ctx.parentId ?? null;
+  const parentGroupId = parentId ? folderOps.findById(g, parentId)?.owner_group_id : undefined;
+  const siblingNames = new Set(folderOps.childrenOf(g, parentId).map((f) => f.name));
 
-  // Import each folder
   for (const exportedFolder of data.folders) {
     try {
-      const { folder, stats } = await importFolder(exportedFolder, account, parentFolder);
-
-      // Add folder to hierarchy
-      if (parentFolder?.children) {
-        parentFolder.children.$jazz.push(folder);
-      } else if (account.root.folders) {
-        account.root.folders.$jazz.push(folder);
+      let finalName = exportedFolder.name;
+      let nameConflict = false;
+      if (siblingNames.has(finalName)) {
+        let counter = 1;
+        while (siblingNames.has(`${exportedFolder.name} (${counter})`)) counter++;
+        finalName = `${exportedFolder.name} (${counter})`;
+        nameConflict = true;
       }
+      siblingNames.add(finalName);
 
-      // Track stats
+      const idMap = new Map<string, string>();
+      const items = exportedFolder.items
+        ? flattenHierarchicalItems(exportedFolder.items, undefined, idMap)
+        : [];
+      const sessions = (exportedFolder.sessions ?? []).map((s) => importSession(s, items, idMap));
+
+      const ownerGroupId = await ctx.mintGroup(parentGroupId);
+      const now = Date.now();
+      const row = await folderOps.addFolder(g, {
+        id: generateId(),
+        name: finalName,
+        parentId,
+        type: 'template-folder',
+        ownerGroupId,
+        createdBy: ctx.createdBy,
+        now,
+      });
+      await g.folder.update(row.id, {
+        items,
+        sessions,
+        created_at: new Date(exportedFolder.createdAt).getTime(),
+        updated_at: new Date(exportedFolder.updatedAt).getTime(),
+      });
+
       foldersCreated++;
-      itemsAdded += stats.itemsAdded;
-      sessionsCreated += stats.sessionsCreated;
+      itemsAdded += items.length;
+      sessionsCreated += sessions.length;
+      folderIds.push(row.id);
 
-      if (folder.$jazz?.id) {
-        folderIds.push(folder.$jazz.id);
-      }
-
-      if (stats.nameConflict) {
+      if (nameConflict) {
         warnings.push(
-          `Template "${exportedFolder.name}" imported as "${folder.name}" due to name conflict`,
+          `Template "${exportedFolder.name}" imported as "${finalName}" due to name conflict`,
         );
       }
     } catch (error) {
@@ -270,72 +264,11 @@ async function importFolders(
     success: errors.length === 0,
     errors,
     warnings,
-    stats: {
-      foldersCreated,
-      itemsAdded,
-      sessionsCreated,
-    },
-    data: {
-      folderIds,
-    },
+    stats: { foldersCreated, itemsAdded, sessionsCreated },
+    data: { folderIds },
   };
 }
 
-/**
- * Import a single folder
- *
- * @param exportedFolder - Exported folder data
- * @param account - User's account
- * @param parentFolder - Optional parent folder
- * @returns Created folder and stats
- */
-async function importFolder(
-  exportedFolder: ExportedFolder,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
-): Promise<{
-  folder: InstanceOfSchema<typeof FolderNode>;
-  stats: { itemsAdded: number; sessionsCreated: number; nameConflict: boolean };
-}> {
-  // Check for name conflict in target parent's children (excluding archived folders)
-  const siblings = parentFolder?.children || account.root?.folders || [];
-  const activeSiblings = Array.from(siblings).filter(
-    (f: InstanceOfSchema<typeof FolderNode> | null) => f && !f.archived,
-  );
-  let finalName = exportedFolder.name;
-  let nameConflict = false;
-
-  // Check if name already exists in active siblings
-  const existingFolder = activeSiblings.find(
-    (f: InstanceOfSchema<typeof FolderNode> | null) => f?.name === finalName,
-  );
-  if (existingFolder) {
-    // Append a number to make it unique
-    let counter = 1;
-    while (
-      activeSiblings.some(
-        (f: InstanceOfSchema<typeof FolderNode> | null) =>
-          f?.name === `${exportedFolder.name} (${counter})`,
-      )
-    ) {
-      counter++;
-    }
-    finalName = `${exportedFolder.name} (${counter})`;
-    nameConflict = true;
-  }
-
-  // All templates support items and sessions
-  return importTemplateFolder(exportedFolder, finalName, account, parentFolder, nameConflict);
-}
-
-/**
- * Flatten hierarchical items to path-based items
- *
- * @param exportedItems - Hierarchical exported items
- * @param parentPath - Parent path for context
- * @param idMap - Map to track old ID → new ID for session state mapping
- * @returns Flattened array of TemplateItems with paths
- */
 function flattenHierarchicalItems(
   exportedItems: ExportedTemplateItem[],
   parentPath: string | undefined,
@@ -345,18 +278,12 @@ function flattenHierarchicalItems(
   let sortOrderCounter = 0;
 
   for (const exportedItem of exportedItems) {
-    // Generate new ID for this item (using nanoid for compact IDs)
     const newId = generateId();
+    if (exportedItem.id) idMap.set(exportedItem.id, newId);
 
-    // Track ID mapping for session states (if export has ID)
-    if (exportedItem.id) {
-      idMap.set(exportedItem.id, newId);
-    }
-
-    // Reconstruct path from hierarchy - use name as-is without normalization
     const itemPath = createChildPath(parentPath, exportedItem.name);
 
-    const item: TemplateItem = {
+    items.push({
       id: newId,
       name: exportedItem.name,
       type: exportedItem.type,
@@ -365,140 +292,45 @@ function flattenHierarchicalItems(
       sortOrder: exportedItem.sortOrder ?? sortOrderCounter++,
       archived: false,
       defaultQuantity: exportedItem.defaultQuantity || '',
-      createdAt: new Date(exportedItem.createdAt),
-    };
+      createdAt: new Date(exportedItem.createdAt).getTime(),
+    });
 
-    items.push(item);
-
-    // Recursively flatten children
     if (exportedItem.children && exportedItem.children.length > 0) {
-      const childItems = flattenHierarchicalItems(exportedItem.children, itemPath, idMap);
-      items.push(...childItems);
+      items.push(...flattenHierarchicalItems(exportedItem.children, itemPath, idMap));
     }
   }
 
   return items;
 }
 
-/**
- * Import a template folder with items and sessions
- *
- * @param exportedFolder - Exported template folder data
- * @param name - Final name (after conflict resolution)
- * @param account - User's account
- * @param parentFolder - Optional parent folder
- * @param nameConflict - Whether name was changed
- * @returns Created folder and stats
- */
-async function importTemplateFolder(
-  exportedFolder: ExportedFolder,
-  name: string,
-  account: InstanceOfSchema<typeof Account>,
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
-  nameConflict = false,
-): Promise<{
-  folder: InstanceOfSchema<typeof FolderNode>;
-  stats: { itemsAdded: number; sessionsCreated: number; nameConflict: boolean };
-}> {
-  // Import template items as plain objects
-  const items: TemplateItem[] = [];
-  const idMap = new Map<string, string>(); // Maps old exported IDs to new IDs
-
-  if (exportedFolder.items) {
-    // Flatten hierarchical format
-    const flattenedItems = flattenHierarchicalItems(exportedFolder.items, undefined, idMap);
-    items.push(...flattenedItems);
-  }
-
-  // Create sessions array (plain objects, not CoList)
-  const sessionsList: SessionData[] = [];
-
-  // Import sessions
-  if (exportedFolder.sessions) {
-    for (const exportedSession of exportedFolder.sessions) {
-      const session = importSession(exportedSession, items, idMap);
-      sessionsList.push(session);
-    }
-  }
-
-  // Create a new group for this folder to enable sharing
-  const folderGroup = Group.create({ owner: account });
-
-  // Add creator explicitly to members for consistency
-  // (group owner has implicit admin rights, but adding explicitly makes UI/logic simpler)
-  folderGroup.addMember(account, 'admin');
-
-  // Create FolderNode for template with jbr-jazz required fields
-  const folder = FolderNode.create(
-    {
-      name,
-      type: 'template-folder',
-      sharingMode: 'private' as const,
-      expanded: false,
-      archived: false,
-      createdBy: account.$jazz.id,
-      createdAt: new Date(exportedFolder.createdAt),
-      updatedAt: new Date(exportedFolder.updatedAt),
-      items,
-      sessions: sessionsList,
-      showZoneHeadings: false, // Hide zone headings by default
-      parent: parentFolder,
-      owner: account,
-    },
-    { owner: folderGroup },
-  );
-
-  return {
-    folder,
-    stats: {
-      itemsAdded: items.length,
-      sessionsCreated: sessionsList.length,
-      nameConflict,
-    },
-  };
-}
-
-/**
- * Import a session
- *
- * @param exportedSession - Exported session data
- * @param items - Array of template items
- * @param account - User's account
- * @param idMap - Map of old exported IDs to new IDs
- * @returns Created session
- */
 function importSession(
   exportedSession: ExportedSession,
   items: TemplateItem[],
   idMap: Map<string, string>,
 ): SessionData {
-  // Reconstruct item states with new item IDs as plain objects
   const itemStates: Record<string, ItemState> = {};
 
-  // Map exported item states to new item IDs
   for (const [oldItemId, exportedState] of Object.entries(exportedSession.itemStates)) {
-    // Use idMap to find the new ID
     const newItemId = idMap.get(oldItemId);
-
     if (newItemId) {
-      const itemState: ItemState = {
+      itemStates[newItemId] = {
         selected: exportedState.selected,
         checked: exportedState.checked,
-        selectedAt: exportedState.selectedAt ? new Date(exportedState.selectedAt) : undefined,
-        checkedAt: exportedState.checkedAt ? new Date(exportedState.checkedAt) : undefined,
+        selectedAt: exportedState.selectedAt
+          ? new Date(exportedState.selectedAt).getTime()
+          : undefined,
+        checkedAt: exportedState.checkedAt
+          ? new Date(exportedState.checkedAt).getTime()
+          : undefined,
       };
-
-      itemStates[newItemId] = itemState;
     }
   }
 
-  // Calculate counts
   const selectedCount = Object.values(itemStates).filter((s) => s.selected).length;
   const checkedCount = Object.values(itemStates).filter((s) => s.checked).length;
   const remainingCount = items.length - checkedCount;
 
-  // Create session (plain object, not CoValue)
-  const session: SessionData = {
+  return {
     id: generateId(),
     itemStates,
     archived: exportedSession.archived ?? false,
@@ -507,9 +339,7 @@ function importSession(
     selectedCount,
     checkedCount,
     remainingCount,
-    createdAt: new Date(exportedSession.createdAt),
-    lastActivityAt: new Date(exportedSession.lastActivityAt),
+    createdAt: new Date(exportedSession.createdAt).getTime(),
+    lastActivityAt: new Date(exportedSession.lastActivityAt).getTime(),
   };
-
-  return session;
 }

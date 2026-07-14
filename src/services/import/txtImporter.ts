@@ -1,5 +1,5 @@
 /**
- * TXT Importer
+ * TXT Importer (rowboat port, slice-2)
  *
  * Imports template items from plain text format.
  * Supports two formats:
@@ -11,8 +11,8 @@
  *   # description: Optional description
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schema';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '../../schema/folder';
 import { parseTextList } from '../../utils/csvParser';
 import {
   isIndentedFormat,
@@ -21,8 +21,23 @@ import {
 } from '../../utils/indentedListParser';
 import { type BaseImportResult, importItems } from './baseImporter';
 
+type Graph = RelationalGraph<typeof schema>;
+
 export interface TxtImportResult extends BaseImportResult {
   metadata: ListMetadata;
+}
+
+/**
+ * Parse metadata from text content without importing
+ *
+ * Useful for extracting the list name before creating a template.
+ *
+ * @param textContent - Plain text content
+ * @returns Metadata extracted from comments
+ */
+export function parseTextMetadata(textContent: string): ListMetadata {
+  const { metadata } = parseIndentedListWithMetadata(textContent);
+  return metadata;
 }
 
 /**
@@ -41,29 +56,16 @@ export interface TxtImportResult extends BaseImportResult {
  * - Leaf items become items (type='item')
  * - Paths are generated from hierarchy
  *
+ * @param g - The rowboat graph
+ * @param templateId - Template folder to import items into
  * @param textContent - Plain text content
- * @param template - FolderNode to import items into
- * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
-/**
- * Parse metadata from text content without importing
- *
- * Useful for extracting the list name before creating a template.
- *
- * @param textContent - Plain text content
- * @returns Metadata extracted from comments
- */
-export function parseTextMetadata(textContent: string): ListMetadata {
-  const { metadata } = parseIndentedListWithMetadata(textContent);
-  return metadata;
-}
-
-export function importItemsFromText(
+export async function importItemsFromText(
+  g: Graph,
+  templateId: string,
   textContent: string,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
-): TxtImportResult {
+): Promise<TxtImportResult> {
   // Detect format
   if (isIndentedFormat(textContent)) {
     // Parse indented format with metadata
@@ -77,7 +79,7 @@ export function importItemsFromText(
     }));
 
     // Use base importer to handle the actual import
-    const result = importItems(itemsToImport, template, account);
+    const result = await importItems(g, templateId, itemsToImport);
     return { ...result, metadata };
   }
 
@@ -92,6 +94,6 @@ export function importItemsFromText(
   }));
 
   // Use base importer to handle the actual import
-  const result = importItems(itemsToImport, template, account);
+  const result = await importItems(g, templateId, itemsToImport);
   return { ...result, metadata };
 }

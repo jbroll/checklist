@@ -1,27 +1,100 @@
 /**
- * Unit tests for JSON import functionality
+ * Unit tests for JSON import functionality (rowboat port, slice-2).
  *
- * Tests hierarchical format validation and error handling.
- * Note: Full integration tests with Jazz are in E2E tests.
+ * `importJson(g, jsonString, ctx)` creates new top-level `template-folder` rows via
+ * `folderOps.addFolder` — `ExportedData.folders` is FLAT, so no folder-tree recursion is
+ * involved. `importItemsFromJson(g, templateId, jsonString)` imports items into an existing
+ * template via `importItems` (see `baseImporter.test.ts`).
  */
 
 import { describe, expect, it } from 'vitest';
+import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import type { ExportedData, ExportedFolder, ExportedTemplateItem } from '../export/types';
-import { importItemsFromJson, importJson } from './jsonImporter';
+import * as folderOps from '../folderOps';
+import { importItemsFromJson, importJson, type JsonImportContext } from './jsonImporter';
 
-// Minimal mock account for validation testing
-const createMockAccount = () => ({
-  root: {
-    templates: [],
-    directory: [],
-  },
-  $jazz: { id: 'account-1' },
-});
+type Graph = ReturnType<typeof makeGraph>;
+
+function templateFolder(
+  id: string,
+  name: string,
+  items: TemplateItem[] = [],
+  extra: Partial<FolderRow> = {},
+): FolderRow {
+  return {
+    id,
+    owner_group_id: 'group-1',
+    name,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items,
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
+    ...extra,
+  };
+}
+
+function graphWith(...folders: FolderRow[]): Graph {
+  return makeGraph({ folder: folders });
+}
+
+function itemsOf(g: Graph, id: string): TemplateItem[] {
+  const node = g.folder(id);
+  if (!node) throw new Error(`template ${id} not found`);
+  return node.$data.items;
+}
+
+/** Default group-minting/attribution context for `importJson`. */
+function ctx(overrides: Partial<JsonImportContext> = {}): JsonImportContext {
+  return {
+    createdBy: 'user-1',
+    mintGroup: async () => 'group-new',
+    ...overrides,
+  };
+}
 
 describe('jsonImporter', () => {
-  describe('format validation', () => {
-    it('should validate hierarchical format structure', async () => {
+  describe('importJson', () => {
+    it('creates a new top-level template-folder for each flat entry in folders', async () => {
+      const exportData: ExportedData = {
+        version: '2.0',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            name: 'Groceries',
+            type: 'template-folder',
+            items: [],
+            sessions: [],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      expect(result.stats.foldersCreated).toBe(1);
+      const created = folderOps.topLevelFolders(g);
+      expect(created).toHaveLength(1);
+      expect(created[0].name).toBe('Groceries');
+      expect(created[0].type).toBe('template-folder');
+    });
+
+    it('flattens hierarchical exported items into path-keyed TemplateItems', async () => {
       const exportData: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -35,37 +108,18 @@ describe('jsonImporter', () => {
                 id: 'cat-1',
                 name: 'Produce',
                 type: 'category',
+                sortOrder: 0,
                 children: [
                   {
-                    id: 'cat-2',
-                    name: 'Fruits',
-                    type: 'category',
-                    children: [
-                      {
-                        id: 'item-1',
-                        name: 'Apples',
-                        type: 'item',
-                        sortOrder: 0,
-                        defaultQuantity: '5 lbs',
-                        createdAt: '2024-11-01T00:00:00.000Z',
-                        updatedAt: '2024-11-01T00:00:00.000Z',
-                      },
-                      {
-                        id: 'item-2',
-                        name: 'Bananas',
-                        type: 'item',
-                        sortOrder: 1,
-                        defaultQuantity: '1 bunch',
-                        createdAt: '2024-11-01T00:00:00.000Z',
-                        updatedAt: '2024-11-01T00:00:00.000Z',
-                      },
-                    ],
+                    id: 'item-1',
+                    name: 'Apples',
+                    type: 'item',
                     sortOrder: 0,
+                    defaultQuantity: '5 lbs',
                     createdAt: '2024-11-01T00:00:00.000Z',
                     updatedAt: '2024-11-01T00:00:00.000Z',
                   },
                 ],
-                sortOrder: 0,
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },
@@ -77,17 +131,23 @@ describe('jsonImporter', () => {
         ],
       };
 
-      const account = createMockAccount();
-      const _result = await importJson(JSON.stringify(exportData), account as any);
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
 
-      // Should validate the format successfully (creation will fail due to missing Jazz infrastructure)
-      // But we can verify it detected the format correctly
-      expect(exportData.version).toBe('2.0');
-      expect(exportData.folders[0].items?.[0].children).toBeDefined();
-      expect(exportData.folders[0].items?.[0].id).toBe('cat-1');
+      expect(result.success).toBe(true);
+      expect(result.stats.itemsAdded).toBe(2);
+      const folderId = result.data?.folderIds?.[0];
+      expect(folderId).toBeDefined();
+      const items = itemsOf(g, folderId as string);
+      expect(items).toHaveLength(2);
+      expect(items[0].name).toBe('Produce');
+      expect(items[0].path).toBe('Produce');
+      expect(items[1].name).toBe('Apples');
+      expect(items[1].path).toBe(`Produce${PATH_SEPARATOR}Apples`);
+      expect(items[1].defaultQuantity).toBe('5 lbs');
     });
 
-    it('should recognize session states using neutral terminology', async () => {
+    it('remaps session itemStates from exported item ids to newly generated ids', async () => {
       const exportData: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -106,15 +166,6 @@ describe('jsonImporter', () => {
                 createdAt: '2024-11-01T00:00:00.000Z',
                 updatedAt: '2024-11-01T00:00:00.000Z',
               },
-              {
-                id: 'exported-item-2',
-                name: 'Bread',
-                type: 'item',
-                sortOrder: 1,
-                defaultQuantity: '1 loaf',
-                createdAt: '2024-11-01T00:00:00.000Z',
-                updatedAt: '2024-11-01T00:00:00.000Z',
-              },
             ],
             sessions: [
               {
@@ -124,11 +175,6 @@ describe('jsonImporter', () => {
                 itemStates: {
                   'exported-item-1': {
                     selected: true,
-                    checked: false,
-                    selectedAt: '2024-11-01T10:00:00.000Z',
-                  },
-                  'exported-item-2': {
-                    selected: true,
                     checked: true,
                     selectedAt: '2024-11-01T10:00:00.000Z',
                     checkedAt: '2024-11-01T11:00:00.000Z',
@@ -144,160 +190,24 @@ describe('jsonImporter', () => {
         ],
       };
 
-      const account = createMockAccount();
-      const _result = await importJson(JSON.stringify(exportData), account as any);
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
 
-      // Verify format structure - neutral terminology
-      expect(exportData.folders[0].sessions[0].itemStates['exported-item-1'].selected).toBe(true);
-      expect(exportData.folders[0].sessions[0].itemStates['exported-item-1'].checked).toBe(false);
-      expect(exportData.folders[0].sessions[0].itemStates['exported-item-2'].checked).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.stats.sessionsCreated).toBe(1);
+      const folderId = result.data?.folderIds?.[0] as string;
+      const items = itemsOf(g, folderId);
+      const newItemId = items[0].id;
+      expect(newItemId).not.toBe('exported-item-1');
+      const sessions = g.folder(folderId)?.$data.sessions ?? [];
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].itemStates[newItemId]).toBeDefined();
+      expect(sessions[0].itemStates[newItemId].selected).toBe(true);
+      expect(sessions[0].itemStates[newItemId].checked).toBe(true);
     });
 
-    it('should recognize hierarchical items with IDs for session mapping', async () => {
-      const exportData: ExportedData = {
-        version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
-        appVersion: '1.0.0',
-        folders: [
-          {
-            name: 'Task List',
-            type: 'template-folder',
-            items: [
-              {
-                id: 'task-1',
-                name: 'Task 1',
-                type: 'item',
-                sortOrder: 0,
-                createdAt: '2024-11-01T00:00:00.000Z',
-                updatedAt: '2024-11-01T00:00:00.000Z',
-              },
-            ],
-            sessions: [
-              {
-                name: '[2024-11-01]',
-                archived: false,
-                viewMode: 'flat',
-                itemStates: {
-                  'task-1': {
-                    selected: true,
-                    checked: true,
-                    selectedAt: '2024-11-01T10:00:00.000Z',
-                    checkedAt: '2024-11-01T11:00:00.000Z',
-                  },
-                },
-                createdAt: '2024-11-01T10:00:00.000Z',
-                lastActivityAt: '2024-11-01T11:00:00.000Z',
-              },
-            ],
-            createdAt: '2024-11-01T00:00:00.000Z',
-            updatedAt: '2024-11-01T00:00:00.000Z',
-          },
-        ],
-      };
-
-      const account = createMockAccount();
-      const _result = await importJson(JSON.stringify(exportData), account as any);
-
-      // Verify that IDs are present
-      expect(exportData.folders[0].items[0].id).toBe('task-1');
-      expect(exportData.folders[0].sessions[0].itemStates['task-1']).toBeDefined();
-    });
-
-    it('should recognize deep nesting structure (3+ levels)', async () => {
-      const exportData: ExportedData = {
-        version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
-        appVersion: '1.0.0',
-        folders: [
-          {
-            name: 'Deep Structure',
-            type: 'template-folder',
-            items: [
-              {
-                id: 'level-1',
-                name: 'Level 1',
-                type: 'category',
-                children: [
-                  {
-                    id: 'level-2',
-                    name: 'Level 2',
-                    type: 'category',
-                    children: [
-                      {
-                        id: 'level-3',
-                        name: 'Level 3',
-                        type: 'category',
-                        children: [
-                          {
-                            id: 'deep-item',
-                            name: 'Deep Item',
-                            type: 'item',
-                            sortOrder: 0,
-                            createdAt: '2024-11-01T00:00:00.000Z',
-                            updatedAt: '2024-11-01T00:00:00.000Z',
-                          },
-                        ],
-                        sortOrder: 0,
-                        createdAt: '2024-11-01T00:00:00.000Z',
-                        updatedAt: '2024-11-01T00:00:00.000Z',
-                      },
-                    ],
-                    sortOrder: 0,
-                    createdAt: '2024-11-01T00:00:00.000Z',
-                    updatedAt: '2024-11-01T00:00:00.000Z',
-                  },
-                ],
-                sortOrder: 0,
-                createdAt: '2024-11-01T00:00:00.000Z',
-                updatedAt: '2024-11-01T00:00:00.000Z',
-              },
-            ],
-            sessions: [],
-            createdAt: '2024-11-01T00:00:00.000Z',
-            updatedAt: '2024-11-01T00:00:00.000Z',
-          },
-        ],
-      };
-
-      const account = createMockAccount();
-      const _result = await importJson(JSON.stringify(exportData), account as any);
-
-      // Verify deep nesting structure
-      const level1 = exportData.folders[0].items[0];
-      expect(level1.id).toBe('level-1');
-      expect(level1.children).toBeDefined();
-      expect(level1.children?.[0].children).toBeDefined();
-      expect(level1.children?.[0].children?.[0].children).toBeDefined();
-    });
-  });
-
-  describe('parentPath support', () => {
-    it('should import templates to root when no parentPath is provided', async () => {
-      const exportData: ExportedData = {
-        version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
-        appVersion: '1.0.0',
-        folders: [
-          {
-            name: 'My List',
-            type: 'template-folder',
-            items: [],
-            sessions: [],
-            createdAt: '2024-11-01T00:00:00.000Z',
-            updatedAt: '2024-11-01T00:00:00.000Z',
-          },
-        ],
-      };
-
-      const account = createMockAccount();
-      const _result = await importJson(JSON.stringify(exportData), account as any);
-
-      // Should create path at root (normalized name only)
-      // Actual path checking would require full Jazz setup
-      expect(exportData.folders[0].name).toBe('My List');
-    });
-
-    it('should import templates to specified parent folder when parentPath is provided', async () => {
+    it('creates folders under ctx.parentId when provided', async () => {
+      const g = graphWith(templateFolder('parent-1', 'Parent'));
       const exportData: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -314,57 +224,15 @@ describe('jsonImporter', () => {
         ],
       };
 
-      const account = createMockAccount();
-      const parentPath = `grocery-stores${PATH_SEPARATOR}wegmans`;
-      const _result = await importJson(JSON.stringify(exportData), account as any, parentPath);
+      const result = await importJson(g, JSON.stringify(exportData), ctx({ parentId: 'parent-1' }));
 
-      // Should create path under parent folder
-      // Path would be: grocery-stores<SEP>wegmans<SEP>Weekly-Shopping
-      expect(exportData.folders[0].name).toBe('Weekly Shopping');
-    });
-  });
-
-  describe('error handling', () => {
-    it('should reject invalid JSON', async () => {
-      const account = createMockAccount();
-      const result = await importJson('invalid json{{{', account as any);
-
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('Invalid JSON');
+      expect(result.success).toBe(true);
+      const folderId = result.data?.folderIds?.[0] as string;
+      expect(folderOps.findById(g, folderId)?.parent_id).toBe('parent-1');
     });
 
-    it('should validate export format version', async () => {
-      const invalidData = {
-        version: 'unknown',
-        folders: [],
-      };
-
-      const account = createMockAccount();
-      const result = await importJson(JSON.stringify(invalidData), account as any);
-
-      expect(result.success).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-    });
-  });
-});
-
-// Mock template for importItemsFromJson tests
-const createMockTemplate = () => ({
-  items: [] as any[],
-  $jazz: {
-    set: (key: string, value: any) => {
-      if (key === 'items') {
-        (createMockTemplate as any)._items = value;
-      }
-    },
-  },
-  updatedAt: new Date(),
-});
-
-describe('importItemsFromJson', () => {
-  describe('format detection', () => {
-    it('should import items from ExportedData (full export)', () => {
+    it('renames on name conflict with existing sibling and warns', async () => {
+      const g = graphWith(templateFolder('t1', 'Groceries'));
       const exportData: ExportedData = {
         version: '2.0',
         exportDate: '2024-11-01T00:00:00.000Z',
@@ -373,7 +241,147 @@ describe('importItemsFromJson', () => {
           {
             name: 'Groceries',
             type: 'template-folder',
-            items: [
+            items: [],
+            sessions: [],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const folderId = result.data?.folderIds?.[0] as string;
+      expect(folderOps.findById(g, folderId)?.name).toBe('Groceries (1)');
+      expect(result.warnings.some((w) => w.includes('name conflict'))).toBe(true);
+    });
+
+    describe('error handling', () => {
+      it('should reject invalid JSON', async () => {
+        const result = await importJson(makeGraph(), 'invalid json{{{', ctx());
+
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain('Invalid JSON');
+      });
+
+      it('should validate export format version', async () => {
+        const invalidData = {
+          version: 'unknown',
+          folders: [],
+        };
+
+        const result = await importJson(makeGraph(), JSON.stringify(invalidData), ctx());
+
+        expect(result.success).toBe(false);
+        expect(result.errors.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('importItemsFromJson', () => {
+    describe('format detection', () => {
+      it('should import items from ExportedData (full export)', async () => {
+        const exportData: ExportedData = {
+          version: '2.0',
+          exportDate: '2024-11-01T00:00:00.000Z',
+          appVersion: '1.0.0',
+          folders: [
+            {
+              name: 'Groceries',
+              type: 'template-folder',
+              items: [
+                {
+                  id: 'item-1',
+                  name: 'Apples',
+                  type: 'item',
+                  sortOrder: 0,
+                  createdAt: '2024-11-01T00:00:00.000Z',
+                  updatedAt: '2024-11-01T00:00:00.000Z',
+                },
+              ],
+              createdAt: '2024-11-01T00:00:00.000Z',
+              updatedAt: '2024-11-01T00:00:00.000Z',
+            },
+          ],
+        };
+
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', JSON.stringify(exportData));
+
+        expect(result.imported).toBe(1);
+        expect(result.errors).toHaveLength(0);
+      });
+
+      it('should import items from ExportedFolder (single folder)', async () => {
+        const folder: ExportedFolder = {
+          name: 'Shopping List',
+          type: 'template-folder',
+          items: [
+            {
+              id: 'item-1',
+              name: 'Milk',
+              type: 'item',
+              sortOrder: 0,
+              createdAt: '2024-11-01T00:00:00.000Z',
+              updatedAt: '2024-11-01T00:00:00.000Z',
+            },
+            {
+              id: 'item-2',
+              name: 'Bread',
+              type: 'item',
+              sortOrder: 1,
+              createdAt: '2024-11-01T00:00:00.000Z',
+              updatedAt: '2024-11-01T00:00:00.000Z',
+            },
+          ],
+          createdAt: '2024-11-01T00:00:00.000Z',
+          updatedAt: '2024-11-01T00:00:00.000Z',
+        };
+
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', JSON.stringify(folder));
+
+        expect(result.imported).toBe(2);
+        expect(result.errors).toHaveLength(0);
+      });
+
+      it('should import items from ExportedTemplateItem[] (items array)', async () => {
+        const items: ExportedTemplateItem[] = [
+          {
+            id: 'item-1',
+            name: 'Eggs',
+            type: 'item',
+            sortOrder: 0,
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+          {
+            id: 'item-2',
+            name: 'Butter',
+            type: 'item',
+            sortOrder: 1,
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ];
+
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', JSON.stringify(items));
+
+        expect(result.imported).toBe(2);
+        expect(result.errors).toHaveLength(0);
+      });
+
+      it('should flatten hierarchical items', async () => {
+        const items: ExportedTemplateItem[] = [
+          {
+            id: 'cat-1',
+            name: 'Produce',
+            type: 'category',
+            sortOrder: 0,
+            children: [
               {
                 id: 'item-1',
                 name: 'Apples',
@@ -386,144 +394,61 @@ describe('importItemsFromJson', () => {
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
           },
-        ],
-      };
+        ];
 
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson(
-        JSON.stringify(exportData),
-        template as any,
-        account as any,
-      );
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', JSON.stringify(items));
 
-      expect(result.imported).toBe(1);
-      expect(result.errors).toHaveLength(0);
+        // Should import category + item
+        expect(result.imported).toBe(2);
+        expect(result.errors).toHaveLength(0);
+      });
     });
 
-    it('should import items from ExportedFolder (single folder)', () => {
-      const folder: ExportedFolder = {
-        name: 'Shopping List',
-        type: 'template-folder',
-        items: [
+    describe('error handling', () => {
+      it('should reject invalid JSON', async () => {
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', 'not valid json{{{');
+
+        expect(result.imported).toBe(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain('Invalid JSON');
+      });
+
+      it('should reject unrecognized format', async () => {
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', '{"foo": "bar"}');
+
+        expect(result.imported).toBe(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain('does not contain recognizable');
+      });
+
+      it('should reject empty items array', async () => {
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', '[]');
+
+        expect(result.imported).toBe(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain('No items found');
+      });
+
+      it('throws if the template does not exist', async () => {
+        const items: ExportedTemplateItem[] = [
           {
             id: 'item-1',
-            name: 'Milk',
+            name: 'Eggs',
             type: 'item',
             sortOrder: 0,
             createdAt: '2024-11-01T00:00:00.000Z',
             updatedAt: '2024-11-01T00:00:00.000Z',
           },
-          {
-            id: 'item-2',
-            name: 'Bread',
-            type: 'item',
-            sortOrder: 1,
-            createdAt: '2024-11-01T00:00:00.000Z',
-            updatedAt: '2024-11-01T00:00:00.000Z',
-          },
-        ],
-        createdAt: '2024-11-01T00:00:00.000Z',
-        updatedAt: '2024-11-01T00:00:00.000Z',
-      };
+        ];
 
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson(JSON.stringify(folder), template as any, account as any);
-
-      expect(result.imported).toBe(2);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should import items from ExportedTemplateItem[] (items array)', () => {
-      const items: ExportedTemplateItem[] = [
-        {
-          id: 'item-1',
-          name: 'Eggs',
-          type: 'item',
-          sortOrder: 0,
-          createdAt: '2024-11-01T00:00:00.000Z',
-          updatedAt: '2024-11-01T00:00:00.000Z',
-        },
-        {
-          id: 'item-2',
-          name: 'Butter',
-          type: 'item',
-          sortOrder: 1,
-          createdAt: '2024-11-01T00:00:00.000Z',
-          updatedAt: '2024-11-01T00:00:00.000Z',
-        },
-      ];
-
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson(JSON.stringify(items), template as any, account as any);
-
-      expect(result.imported).toBe(2);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should flatten hierarchical items', () => {
-      const items: ExportedTemplateItem[] = [
-        {
-          id: 'cat-1',
-          name: 'Produce',
-          type: 'category',
-          sortOrder: 0,
-          children: [
-            {
-              id: 'item-1',
-              name: 'Apples',
-              type: 'item',
-              sortOrder: 0,
-              createdAt: '2024-11-01T00:00:00.000Z',
-              updatedAt: '2024-11-01T00:00:00.000Z',
-            },
-          ],
-          createdAt: '2024-11-01T00:00:00.000Z',
-          updatedAt: '2024-11-01T00:00:00.000Z',
-        },
-      ];
-
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson(JSON.stringify(items), template as any, account as any);
-
-      // Should import category + item
-      expect(result.imported).toBe(2);
-      expect(result.errors).toHaveLength(0);
-    });
-  });
-
-  describe('error handling', () => {
-    it('should reject invalid JSON', () => {
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson('not valid json{{{', template as any, account as any);
-
-      expect(result.imported).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('Invalid JSON');
-    });
-
-    it('should reject unrecognized format', () => {
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson('{"foo": "bar"}', template as any, account as any);
-
-      expect(result.imported).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('does not contain recognizable');
-    });
-
-    it('should reject empty items array', () => {
-      const template = createMockTemplate();
-      const account = createMockAccount();
-      const result = importItemsFromJson('[]', template as any, account as any);
-
-      expect(result.imported).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('No items found');
+        await expect(
+          importItemsFromJson(makeGraph(), 'nonexistent', JSON.stringify(items)),
+        ).rejects.toThrow('Template nonexistent not found');
+      });
     });
   });
 });

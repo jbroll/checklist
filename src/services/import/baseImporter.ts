@@ -1,13 +1,19 @@
 /**
- * Base importer utilities
+ * Base importer utilities (rowboat port, slice-2).
  *
- * Shared logic for CSV and TXT importers to reduce duplication.
+ * Shared logic for CSV and TXT importers. Ported off Jazz: takes the rowboat graph `g` and a
+ * `templateId` instead of a Jazz `Account`/`FolderNode` — items are appended to the template
+ * folder row's `items` json column via `g.folder.update`, matching `templateService.ts`.
+ *
+ * NO FALLBACKS: a missing template is a hard error (thrown) — callers only reach this after
+ * opening the import dialog for a template that exists in the graph.
  */
-
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { generateId } from '../../lib/utils';
-import type { Account, FolderNode } from '../../schema';
-import type { TemplateItem } from '../../schema/tree';
+import type { schema, TemplateItem } from '../../schema/folder';
+import { getTemplate } from '../templateService';
+
+type Graph = RelationalGraph<typeof schema>;
 
 export interface BaseImportResult {
   imported: number;
@@ -25,61 +31,30 @@ export interface ItemToImport {
   context?: string;
 }
 
-/**
- * Get existing item paths from template (case-insensitive)
- *
- * @param template - FolderNode to check
- * @returns Set of existing paths (lowercase)
- */
-export function getExistingPaths(template: InstanceOfSchema<typeof FolderNode>): Set<string> {
-  const existingPaths = new Set<string>();
-
-  if (template.items) {
-    for (const item of template.items) {
-      if (item && !item.archived) {
-        existingPaths.add(item.path.toLowerCase());
-      }
-    }
-  }
-
-  return existingPaths;
+/** Read the template folder row, throwing if it doesn't exist or isn't a template folder. */
+function requireTemplate(g: Graph, templateId: string) {
+  const template = getTemplate(g, templateId);
+  if (!template) throw new Error(`Template ${templateId} not found`);
+  return template;
 }
 
 /**
- * Calculate next available sort order for items in template
- *
- * @param template - FolderNode to check
- * @returns Next available sort order
- */
-export function calculateNextSortOrder(template: InstanceOfSchema<typeof FolderNode>): number {
-  let nextSortOrder = 0;
-
-  if (template.items) {
-    for (const item of template.items) {
-      if (item && item.sortOrder >= nextSortOrder) {
-        nextSortOrder = item.sortOrder + 1;
-      }
-    }
-  }
-
-  return nextSortOrder;
-}
-
-/**
- * Import multiple items into a template
+ * Import multiple items into a template.
  *
  * Handles duplicate detection, item creation, and error tracking.
  *
+ * @param g - The rowboat graph
+ * @param templateId - Template folder to import into
  * @param items - Items to import
- * @param template - FolderNode to import into
- * @param account - User account (for ownership)
  * @returns Import result with statistics
  */
-export function importItems(
+export async function importItems(
+  g: Graph,
+  templateId: string,
   items: ItemToImport[],
-  template: InstanceOfSchema<typeof FolderNode>,
-  _account: InstanceOfSchema<typeof Account>,
-): BaseImportResult {
+): Promise<BaseImportResult> {
+  const template = requireTemplate(g, templateId);
+
   const result: BaseImportResult = {
     imported: 0,
     skipped: 0,
@@ -92,14 +67,18 @@ export function importItems(
     return result;
   }
 
-  // Get existing paths and next sort order
-  const existingPaths = getExistingPaths(template);
-  let nextSortOrder = calculateNextSortOrder(template);
+  // Get existing paths (case-insensitive) and next sort order
+  const existingPaths = new Set(
+    template.items.filter((i) => !i.archived).map((i) => i.path.toLowerCase()),
+  );
+  let nextSortOrder = 0;
+  for (const existing of template.items) {
+    if (existing.sortOrder >= nextSortOrder) nextSortOrder = existing.sortOrder + 1;
+  }
 
-  // Collect new items to add
+  const now = Date.now();
   const newItems: TemplateItem[] = [];
 
-  // Import each item
   for (const item of items) {
     const { name, path, type = 'item', defaultQuantity = '', context } = item;
 
@@ -111,20 +90,18 @@ export function importItems(
     }
 
     try {
-      // Create new template item as plain object (using nanoid for compact IDs)
       const newItem: TemplateItem = {
         id: generateId(),
         name,
-        type, // Use provided type or default to 'item'
+        type,
         path,
         expanded: false,
         sortOrder: nextSortOrder++,
         archived: false,
         defaultQuantity,
-        createdAt: new Date(),
+        createdAt: now,
       };
 
-      // Collect item for batch add
       newItems.push(newItem);
       result.imported++;
 
@@ -136,13 +113,12 @@ export function importItems(
     }
   }
 
-  // Add all new items to template using Jazz API
   if (newItems.length > 0) {
-    template.$jazz.set('items', [...template.items, ...newItems]);
+    await g.folder.update(templateId, {
+      items: [...template.items, ...newItems],
+      updated_at: now,
+    });
   }
-
-  // Update template timestamp
-  template.$jazz.set('updatedAt', new Date());
 
   return result;
 }

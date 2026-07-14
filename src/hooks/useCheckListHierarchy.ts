@@ -96,6 +96,15 @@ export function useCheckListHierarchy(
     [allFolders, showArchived],
   );
 
+  const templateFolders = useSelect(
+    () =>
+      g.folder
+        .all()
+        .map((n) => n.$data)
+        .filter((row) => row.type === 'template-folder'),
+    arraysEqualById,
+  );
+
   const addFolder = useCallback(
     async (name: string, parentId: string | null, type: string): Promise<FolderRow> => {
       if (!mintGroup) {
@@ -147,10 +156,14 @@ export function useCheckListHierarchy(
 
   const canCreate = useCallback(() => true, []);
 
-  // TODO(slice-2): trash/template/items/account-wipe. See UseCheckListHierarchyResult.
+  // TODO(slice-2 follow-up): trash/duplicate/account-wipe still aren't ported (items and
+  // sessions live in the row itself now, so `duplicateTemplate`/`deleteAllUserData`/
+  // `emptyTrash` need a designed rowboat-native equivalent, not a stub) — see
+  // UseCheckListHierarchyResult. `getAllTemplateFolders` IS live: template rows carry their
+  // own items/sessions in this slice, so there's no missing data blocking it.
   const emptyTrash = useCallback(async () => {}, []);
   const duplicateTemplate = useCallback((_id: string) => undefined, []);
-  const getAllTemplateFolders = useCallback(() => [] as FolderRow[], []);
+  const getAllTemplateFolders = useCallback(() => templateFolders, [templateFolders]);
   const deleteAllUserData = useCallback(async () => {}, []);
 
   return {

@@ -1,24 +1,27 @@
 /**
- * Main import service
+ * Main import service (rowboat port, slice-2)
  *
  * Orchestrates all import operations (JSON, TXT, CSV).
+ *
+ * NOTE (scope): session-CSV import (`sessionImporter.ts` in the pre-port app) is NOT ported —
+ * it was never wired into `ImportDialog`/`useImportDialog` even before the port (dead code), so
+ * there is no behavior regression. Folder-tree JSON import here only creates NEW template
+ * folders (matching `../export/jsonExporter.ts`'s flat `ExportedData.folders` shape — the export
+ * format never nests organizational folders, so import doesn't need to either).
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schema';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '../../schema/folder';
 import { readFileAsText } from '../../utils/fileUpload';
-import * as CheckListFolder from '../checklistFolderFactory';
+import * as folderOps from '../folderOps';
 import { type CsvImportResult, importItemsFromCsv } from './csvImporter';
 import { MAX_FILE_SIZE_MB, validateImportFile } from './importValidator';
-import { importItemsFromJson, importJson } from './jsonImporter';
+import { importItemsFromJson, importJson, type JsonImportContext } from './jsonImporter';
 import { createErrorResult, createSuccessResult } from './resultHelpers';
-import {
-  importSessionFromCsv,
-  type SessionImportOptions,
-  type SessionImportResult,
-} from './sessionImporter';
 import { importItemsFromText, parseTextMetadata, type TxtImportResult } from './txtImporter';
 import type { ImportFileType, ImportResult } from './types';
+
+type Graph = RelationalGraph<typeof schema>;
 
 /**
  * Result of validating and reading a file
@@ -27,10 +30,6 @@ type FileReadResult = { success: true; content: string } | { success: false; err
 
 /**
  * Validate and read a file, returning content or error
- *
- * @param file - File to validate and read
- * @param extensions - Valid file extensions
- * @returns Content string or error message
  */
 async function validateAndReadFile(file: File, extensions: string[]): Promise<FileReadResult> {
   try {
@@ -55,9 +54,6 @@ async function validateAndReadFile(file: File, extensions: string[]): Promise<Fi
 
 /**
  * Detect file type from filename
- *
- * @param file - File object
- * @returns Detected file type or null
  */
 function detectFileType(file: File): ImportFileType | null {
   const filename = file.name.toLowerCase();
@@ -71,9 +67,6 @@ function detectFileType(file: File): ImportFileType | null {
 
 /**
  * Get valid file extensions for a file type
- *
- * @param fileType - File type
- * @returns Array of valid extensions
  */
 function getValidExtensions(fileType: ImportFileType): string[] {
   switch (fileType) {
@@ -89,27 +82,25 @@ function getValidExtensions(fileType: ImportFileType): string[] {
 }
 
 /**
- * Import data from a file
+ * Import a full/partial JSON backup from a file.
  *
+ * @param g - The rowboat graph
  * @param file - File object from input or drag-and-drop
- * @param account - User's Account
+ * @param ctx - group-minting + attribution context (see `jsonImporter.JsonImportContext`)
  * @param fileType - Expected file type (optional, auto-detected from extension)
- * @param parentFolder - Optional parent folder for JSON imports
  * @returns Import result with success/failure info
  */
 export async function importFromFile(
+  g: Graph,
   file: File,
-  account: InstanceOfSchema<typeof Account>,
+  ctx: JsonImportContext,
   fileType?: ImportFileType,
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
 ): Promise<ImportResult> {
-  // Determine file type
   const detectedType = fileType || detectFileType(file);
   if (!detectedType) {
     return createErrorResult('Unable to determine file type. Expected .json, .txt, or .csv');
   }
 
-  // Validate file
   const validExtensions = getValidExtensions(detectedType);
   try {
     validateImportFile(file, validExtensions, MAX_FILE_SIZE_MB);
@@ -117,7 +108,6 @@ export async function importFromFile(
     return createErrorResult(error instanceof Error ? error : 'Validation failed');
   }
 
-  // Read file content
   let content: string;
   try {
     content = await readFileAsText(file);
@@ -127,115 +117,55 @@ export async function importFromFile(
     );
   }
 
-  // Import based on type
   switch (detectedType) {
     case 'json':
-      return await importJson(content, account, parentFolder);
-
+      return await importJson(g, content, ctx);
     case 'txt':
-      // TXT imports handled by importItemsFromTxtFile() or importAsNewTemplate()
       return createErrorResult('Use importAsNewTemplate() for TXT files');
-
     case 'csv':
-      // CSV imports handled by importItemsFromCsvFile() or importAsNewTemplate()
       return createErrorResult('Use importAsNewTemplate() for CSV files');
-
     default:
       return createErrorResult(`Unsupported file type: ${detectedType}`);
   }
 }
 
-/**
- * Import template items from TXT file
- *
- * @param file - TXT file with one item per line
- * @param template - FolderNode to import items into
- * @param account - User's Account
- * @returns Import result with statistics
- */
+/** Import template items from a TXT file into an existing template. */
 export async function importItemsFromTxtFile(
+  g: Graph,
+  templateId: string,
   file: File,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
 ): Promise<TxtImportResult> {
   const result = await validateAndReadFile(file, ['txt']);
   if (!result.success) {
     return { imported: 0, skipped: 0, errors: [result.error], duplicates: [], metadata: {} };
   }
-  return importItemsFromText(result.content, template, account);
+  return importItemsFromText(g, templateId, result.content);
 }
 
-/**
- * Import template items from JSON file
- *
- * Accepts multiple JSON formats:
- * - Full export (ExportedData) - extracts items from all folders
- * - Single folder (ExportedFolder) - extracts items directly
- * - Items array (ExportedTemplateItem[]) - uses items directly
- *
- * @param file - JSON file with items
- * @param template - FolderNode to import items into
- * @param account - User's Account
- * @returns Import result with statistics
- */
+/** Import template items from a JSON file into an existing template. */
 export async function importItemsFromJsonFile(
+  g: Graph,
+  templateId: string,
   file: File,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
 ): Promise<CsvImportResult> {
   const result = await validateAndReadFile(file, ['json']);
   if (!result.success) {
     return { imported: 0, skipped: 0, errors: [result.error], duplicates: [] };
   }
-  return importItemsFromJson(result.content, template, account);
+  return importItemsFromJson(g, templateId, result.content);
 }
 
-/**
- * Import template items from CSV file
- *
- * @param file - CSV file with header row
- * @param template - FolderNode to import items into
- * @param account - User's Account
- * @returns Import result with statistics
- */
+/** Import template items from a CSV file into an existing template. */
 export async function importItemsFromCsvFile(
+  g: Graph,
+  templateId: string,
   file: File,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
 ): Promise<CsvImportResult> {
   const result = await validateAndReadFile(file, ['csv']);
   if (!result.success) {
     return { imported: 0, skipped: 0, errors: [result.error], duplicates: [] };
   }
-  return importItemsFromCsv(result.content, template, account);
-}
-
-/**
- * Import session from CSV file
- *
- * @param file - CSV file with session data
- * @param template - FolderNode to import session into
- * @param account - User's Account
- * @param options - Import options (session name, add missing items)
- * @returns Import result with statistics
- */
-export async function importSessionFromCsvFile(
-  file: File,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
-  options: SessionImportOptions = {},
-): Promise<SessionImportResult> {
-  const result = await validateAndReadFile(file, ['csv']);
-  if (!result.success) {
-    return {
-      imported: false,
-      matched: 0,
-      unmatched: 0,
-      errors: [result.error],
-      unmatchedItems: [],
-    };
-  }
-  return importSessionFromCsv(result.content, template, account, options);
+  return importItemsFromCsv(g, templateId, result.content);
 }
 
 export interface ImportAsNewTemplateOptions {
@@ -244,26 +174,18 @@ export interface ImportAsNewTemplateOptions {
 }
 
 /**
- * Import TXT/CSV file as a new template
+ * Import a TXT/CSV file as a brand-new template folder.
  *
- * Creates a new template with the given name and imports all items into it.
- * For TXT files, if the file contains a `# name:` metadata comment, it will
- * be used as the template name (unless overridden by templateName parameter).
- *
- * @param file - TXT or CSV file with items
- * @param account - User's Account
- * @param templateName - Name for the new template folder (optional for TXT files with metadata)
- * @param fileType - File type ('txt' or 'csv')
- * @param parentFolder - Optional parent folder (if not provided, creates at root)
- * @param options - Import options (autoCategorize, etc.)
- * @returns Import result with statistics
+ * Creates a new template with the given name and imports all items into it. For TXT files, if
+ * the file contains a `# name:` metadata comment, it is used as the template name (unless
+ * overridden by `templateName`).
  */
 export async function importAsNewTemplate(
+  g: Graph,
   file: File,
-  account: InstanceOfSchema<typeof Account>,
   templateName: string | undefined,
   fileType: 'txt' | 'csv',
-  parentFolder?: InstanceOfSchema<typeof FolderNode>,
+  ctx: JsonImportContext,
   options: ImportAsNewTemplateOptions = {},
 ): Promise<ImportResult> {
   const result = await validateAndReadFile(file, [fileType]);
@@ -272,10 +194,8 @@ export async function importAsNewTemplate(
   }
   const content = result.content;
 
-  // Determine the template name
   let finalTemplateName = templateName;
 
-  // For TXT files, check for metadata name if no explicit name provided
   if (fileType === 'txt' && !finalTemplateName) {
     const metadata = parseTextMetadata(content);
     if (metadata.name) {
@@ -283,56 +203,51 @@ export async function importAsNewTemplate(
     }
   }
 
-  // Fall back to filename without extension if still no name
   if (!finalTemplateName) {
     finalTemplateName = file.name.replace(/\.(txt|csv)$/i, '');
   }
 
-  // Create new template using CheckListFolder factory
-  const newTemplate = CheckListFolder.createFolder(account, finalTemplateName, true, parentFolder);
+  const parentId = ctx.parentId ?? null;
+  const parentGroupId = parentId ? folderOps.findById(g, parentId)?.owner_group_id : undefined;
+  const ownerGroupId = await ctx.mintGroup(parentGroupId);
+  const now = Date.now();
+  const newTemplate = await folderOps.addFolder(g, {
+    id: crypto.randomUUID(),
+    name: folderOps.generateUniqueName(g, finalTemplateName, parentId),
+    parentId,
+    type: 'template-folder',
+    ownerGroupId,
+    createdBy: ctx.createdBy,
+    now,
+  });
 
-  if (!newTemplate) {
-    return createErrorResult('Failed to create template');
-  }
-
-  // Set auto-categorize if requested
   if (options.autoCategorize) {
-    newTemplate.autoCategorizeEnabled = true;
+    await g.folder.update(newTemplate.id, { auto_categorize_enabled: true });
   }
 
-  // Import items into the new template
-  let importResult: TxtImportResult | CsvImportResult;
-  if (fileType === 'txt') {
-    importResult = importItemsFromText(content, newTemplate, account);
-  } else {
-    importResult = importItemsFromCsv(content, newTemplate, account);
-  }
+  const importResult =
+    fileType === 'txt'
+      ? await importItemsFromText(g, newTemplate.id, content)
+      : await importItemsFromCsv(g, newTemplate.id, content);
 
-  // Check if import succeeded - if not, clean up the created template
+  // Check if import succeeded - if not, clean up the empty template we created.
   if (importResult.errors.length > 0 && importResult.imported === 0) {
-    // Delete the empty template we created
-    CheckListFolder.deleteFolder(account, newTemplate);
+    await folderOps.deleteNode(g, newTemplate.id);
     return createErrorResult(importResult.errors[0]);
   }
 
-  // Set all imported items as default items so they're selected when opening the list
-  try {
-    const items = newTemplate.items;
-    if (items && items.length > 0) {
-      const defaultItems: Record<string, boolean> = {};
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item && item.type === 'item' && !item.archived) {
-          defaultItems[item.id] = true;
-        }
-      }
-      if (Object.keys(defaultItems).length > 0) {
-        newTemplate.$jazz.set('defaultItems', defaultItems);
+  // Set all imported items as default items so they're selected when opening the list.
+  const created = folderOps.findById(g, newTemplate.id);
+  if (created && created.items.length > 0) {
+    const defaultItems: Record<string, boolean> = {};
+    for (const item of created.items) {
+      if (item.type === 'item' && !item.archived) {
+        defaultItems[item.id] = true;
       }
     }
-  } catch (error) {
-    // Don't fail the import if setting default items fails
-    console.warn('[importService] Failed to set default items:', error);
+    if (Object.keys(defaultItems).length > 0) {
+      await g.folder.update(newTemplate.id, { default_items: defaultItems });
+    }
   }
 
   return createSuccessResult(

@@ -1,13 +1,16 @@
 /**
- * CSV Importer
+ * CSV Importer (rowboat port, slice-2)
  *
- * Imports template items and sessions from CSV format.
+ * Imports template items from CSV format.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account, FolderNode } from '../../schema';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '../../schema/folder';
 import { parseCsv } from '../../utils/csvParser';
+import { createChildPath } from '../../utils/pathUtils';
 import { type BaseImportResult, importItems } from './baseImporter';
+
+type Graph = RelationalGraph<typeof schema>;
 
 export type CsvImportResult = BaseImportResult;
 
@@ -20,16 +23,16 @@ export type CsvImportResult = BaseImportResult;
  * All imported items are created as leaf items (type='item').
  * Items with the same category are grouped together.
  *
+ * @param g - The rowboat graph
+ * @param templateId - Template folder to import items into
  * @param csvContent - CSV content string
- * @param template - FolderNode to import items into
- * @param account - User's Account (for ownership)
  * @returns Import result with statistics
  */
-export function importItemsFromCsv(
+export async function importItemsFromCsv(
+  g: Graph,
+  templateId: string,
   csvContent: string,
-  template: InstanceOfSchema<typeof FolderNode>,
-  account: InstanceOfSchema<typeof Account>,
-): CsvImportResult {
+): Promise<CsvImportResult> {
   // Parse CSV
   let rows: Record<string, string>[];
   try {
@@ -64,7 +67,7 @@ export function importItemsFromCsv(
     if (explicitPath) {
       path = explicitPath;
     } else if (category) {
-      path = `${category}/${itemName}`;
+      path = createChildPath(category, itemName);
     } else {
       path = itemName;
     }
@@ -78,5 +81,5 @@ export function importItemsFromCsv(
   }
 
   // Use base importer to handle the actual import
-  return importItems(itemsToImport, template, account);
+  return importItems(g, templateId, itemsToImport);
 }

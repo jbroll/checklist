@@ -1,19 +1,23 @@
 /**
  * E2E tests for Export/Import functionality
  *
- * TODO(e2e): every test here opens the Export or Import dialog, but the rowboat port has NOT
- * wired those dialogs into the app yet — TreeView passes `onExport={() => {}}`/`onImport={() =>
- * {}}` no-ops (the menu items are visible but do nothing) because export/import operate on
- * template items/sessions that the session UI slice hasn't wired. So `page.getByRole('dialog')`
- * never appears and every assertion would fail. Un-quarantined (renamed off .skip) but each test
- * is `test.skip` until the Export/Import dialogs are wired into TreeView/AppContainer. The
- * export/import SERVICES themselves are ported and unit-tested; this is purely a UI-wiring gap.
+ * The Export and Import dialogs are now wired into the app: `TreeView`'s header "More options"
+ * menu opens them via `DialogManager` → `ExportDialog` (src/components/export/ExportDialog.tsx)
+ * and `ImportDialog` (src/components/import/ImportDialog.tsx, backed by
+ * `src/components/ui/file-upload-dialog.tsx`'s generic `FileUploadDialog`). All tests below run
+ * against the plain `/` app (no `window.testExports` seeding needed — they only open/close the
+ * dialogs and read their static copy) and are un-skipped, with copy assertions checked against
+ * the actual component text.
+ *
+ * One test stays `test.skip`: "should not open both dialogs at the same time" — pre-existing
+ * flakiness from Radix dialog overlay animation timing (see its inline comment), unrelated to
+ * the export/import wiring.
  */
 
 import { expect, test } from '@playwright/test';
 
 test.describe('Export Functionality', () => {
-  test.skip('should open export dialog and show options', async ({ page }) => {
+  test('should open export dialog and show options', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -30,7 +34,7 @@ test.describe('Export Functionality', () => {
     await expect(dialog.getByText(/export to json for backup or transfer/i)).toBeVisible();
   });
 
-  test.skip('should close export dialog on cancel', async ({ page }) => {
+  test('should close export dialog on cancel', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -47,7 +51,7 @@ test.describe('Export Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test.skip('should have export button enabled', async ({ page }) => {
+  test('should have export button enabled', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -63,7 +67,7 @@ test.describe('Export Functionality', () => {
 });
 
 test.describe('Import Functionality', () => {
-  test.skip('should open import dialog and show upload area', async ({ page }) => {
+  test('should open import dialog and show upload area', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -84,7 +88,7 @@ test.describe('Import Functionality', () => {
     await expect(dialog.getByText(/browse files/i)).toBeVisible();
   });
 
-  test.skip('should show file size and type restrictions', async ({ page }) => {
+  test('should show file size and type restrictions', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -97,7 +101,7 @@ test.describe('Import Functionality', () => {
     await expect(dialog.getByText(/json, txt, csv files, up to 10mb/i)).toBeVisible();
   });
 
-  test.skip('should close import dialog on cancel', async ({ page }) => {
+  test('should close import dialog on cancel', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -114,7 +118,7 @@ test.describe('Import Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test.skip('should have import button disabled when no file is selected', async ({ page }) => {
+  test('should have import button disabled when no file is selected', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -132,7 +136,7 @@ test.describe('Import Functionality', () => {
 test.describe('Export/Import Dialog Interactions', () => {
   // Run these tests serially to avoid dialog overlay conflicts in parallel execution
   test.describe.configure({ mode: 'serial' });
-  test.skip('should close export dialog when pressing Escape', async ({ page }) => {
+  test('should close export dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -149,7 +153,7 @@ test.describe('Export/Import Dialog Interactions', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test.skip('should close import dialog when pressing Escape', async ({ page }) => {
+  test('should close import dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -170,7 +174,8 @@ test.describe('Export/Import Dialog Interactions', () => {
   // The underlying issue is that Radix dialog overlays can persist briefly after
   // the dialog is closed, causing pointer event interception. The actual
   // functionality (only one dialog can be open at a time) is enforced by React
-  // state management and has been verified manually.
+  // state management and has been verified manually. Unrelated to the rowboat
+  // port's export/import wiring (both dialogs ARE wired — see file header).
   test.skip('should not open both dialogs at the same time', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({

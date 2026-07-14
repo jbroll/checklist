@@ -1,23 +1,26 @@
 /**
  * Unified UI E2E Tests — shopping/session interface.
  *
- * TODO(e2e): every test opens the SESSION VIEW (clicking a template navigates to its shopping
- * session, then asserts on items / edit mode / batch controls / New-session). The rowboat port
- * has NOT wired the session view into the app yet: AppContainer renders only TreeView (folder
- * rows) and clicking a folder merely highlights it — there is no SessionView route (see
- * src/components/editor/AppContainer.tsx). The session SERVICES + components exist and are
- * unit-tested (src/services/sessionService.ts, src/components/session/**), they're just not
- * mounted in the navigation. The first test also expects a default "Quick Errands" list, which
- * was Jazz account-migration seeding with no rowboat equivalent. Un-quarantined but every test
- * is `test.skip` until the session view is wired into TreeView/AppContainer; the seeding calls
- * still reference the Jazz test API and must be rewritten to window.testExports.{templateService,
- * sessionService} (all g-first) at that time.
+ * The rowboat port now wires SessionView into the app: `AppContainer` (see
+ * src/components/editor/AppContainer.tsx) creates/finds a session and renders `<SessionView>`
+ * when a template row is clicked in `TreeView`. All tests below seed through the rowboat
+ * `window.testExports` API (src/services/testHelpers.ts — `directory.create` for
+ * folders/templates, `templateService.createItem` for template items, both g-first/async) and
+ * are un-skipped.
+ *
+ * One test stays `test.skip`: "should show default Quick Errands list for new users" — that was
+ * Jazz account-migration seeding with no rowboat equivalent; new anonymous sessions start with an
+ * empty tree.
  */
 
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
   test.skip('should show default Quick Errands list for new users', async ({ page }) => {
+    // TODO(e2e): the pre-port Jazz app seeded a default "Quick Errands" template for brand-new
+    // accounts as part of account migration. The rowboat port has no equivalent seeding — new
+    // anonymous sessions start with an empty tree. Leave skipped; there is no gap to close here,
+    // just a removed feature with no rowboat design.
     await page.goto('/');
 
     // Wait for page to load
@@ -29,32 +32,20 @@ test.describe('UI - Template Selection', () => {
     await expect(page.getByText(/quick errands/i)).toBeVisible();
   });
 
-  test.skip('should navigate to session view when selecting a template', async ({ page }) => {
-    await page.goto('/test'); // Use test page to set up data
-
-    // Wait for test page to load
+  test('should navigate to session view when selecting a template', async ({ page }) => {
+    await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
     // Create a test template using the test API
-    await page.evaluate(() => {
-      const templateService = (window as any).testExports.templateService;
-      const directoryService = (window as any).testExports.directoryService;
-      const me = (window as any).testExports.account;
-
-      // Create directory entry and template
-      directoryService.createDirectoryEntry(me, 'Test List', true);
+    await page.evaluate(async () => {
+      await window.testExports!.directory.create('Test List', true);
     });
 
-    // Wait a bit for Jazz to sync the data
-    await page.waitForTimeout(500);
-
-    // Navigate to home
-    await page.goto('/');
+    // Wait for the template to appear before clicking
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
-
-    // Should see the template in the list
     await expect(page.getByText('Test List')).toBeVisible({ timeout: 10000 });
 
     // Click on the template
@@ -69,33 +60,18 @@ test.describe('UI - Template Selection', () => {
 test.describe('UI - Session View', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
-    // Create a test template with items
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      // Create template
-      directoryService.createDirectoryEntry(me, 'Shopping List', true);
-
-      // Get the template (get all templates and find the one we just created)
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Shopping List');
-
-      // Add items
-      templateService.createItem(me, template.$jazz.id, 'Milk', 'item');
-      templateService.createItem(me, template.$jazz.id, 'Bread', 'item');
-      templateService.createItem(me, template.$jazz.id, 'Eggs', 'item');
+    // Create a test template with items (createItem auto-adds each item to defaults)
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Shopping List', true);
+      await templateService.createItem(g, templateId, 'Milk');
+      await templateService.createItem(g, templateId, 'Bread');
+      await templateService.createItem(g, templateId, 'Eggs');
     });
 
-    // Wait a bit for Jazz to sync the data
-    await page.waitForTimeout(500);
-
-    // Navigate to home
-    await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
     });
@@ -107,7 +83,7 @@ test.describe('UI - Session View', () => {
     await page.getByText('Shopping List').click();
   });
 
-  test.skip('should display session header with controls', async ({ page }) => {
+  test('should display session header with controls', async ({ page }) => {
     // Verify header elements - SessionView has view mode toggle and add/edit buttons
     await expect(page.getByRole('heading', { name: /shopping list/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
@@ -117,14 +93,14 @@ test.describe('UI - Session View', () => {
     await expect(page.getByRole('button', { name: /add and edit items/i })).toBeVisible();
   });
 
-  test.skip('should display items', async ({ page }) => {
+  test('should display items', async ({ page }) => {
     // Items should be visible
     await expect(page.getByText('Milk')).toBeVisible();
     await expect(page.getByText('Bread')).toBeVisible();
     await expect(page.getByText('Eggs')).toBeVisible();
   });
 
-  test.skip('should navigate back to template selector when clicking Done', async ({ page }) => {
+  test('should navigate back to template selector when clicking Done', async ({ page }) => {
     // Click Done button
     await page.getByRole('button', { name: /done/i }).click();
 
@@ -134,36 +110,21 @@ test.describe('UI - Session View', () => {
 });
 
 test.describe('UI - Default Items', () => {
-  test.skip('should show empty state when no items are selected', async ({ page }) => {
+  test('should show empty state when no items are selected', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
-    // Create a template with items but clear the defaults
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      // Create template
-      directoryService.createDirectoryEntry(me, 'Empty Session List', true);
-
-      // Get the template
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Empty Session List');
-
-      // Add items (they'll be auto-added to defaults)
-      templateService.createItem(me, template.$jazz.id, 'Apple');
-      templateService.createItem(me, template.$jazz.id, 'Banana');
-
-      // Clear the defaults so session starts empty
-      template.$jazz.set('defaultItems', {});
+    // Create a template with items, then clear the defaults so the session starts empty
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Empty Session List', true);
+      await templateService.createItem(g, templateId, 'Apple');
+      await templateService.createItem(g, templateId, 'Banana');
+      await g.folder.update(templateId, { default_items: {} });
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Empty Session List')).toBeVisible({ timeout: 10000 });
     await page.getByText('Empty Session List').click();
@@ -173,28 +134,20 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText(/edit to select default items/i)).toBeVisible();
   });
 
-  test.skip('should enter edit mode when clicking Edit button', async ({ page }) => {
+  test('should enter edit mode when clicking Edit button', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
     // Create a template with items
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      directoryService.createDirectoryEntry(me, 'Edit Mode List', true);
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Edit Mode List');
-      templateService.createItem(me, template.$jazz.id, 'Item One');
-      templateService.createItem(me, template.$jazz.id, 'Item Two');
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Edit Mode List', true);
+      await templateService.createItem(g, templateId, 'Item One');
+      await templateService.createItem(g, templateId, 'Item Two');
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Edit Mode List')).toBeVisible({ timeout: 10000 });
     await page.getByText('Edit Mode List').click();
@@ -209,27 +162,19 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByPlaceholder(/item name/i)).toBeVisible();
   });
 
-  test.skip('should toggle item default state in edit mode via deselect all', async ({ page }) => {
+  test('should toggle item default state in edit mode via deselect all', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
     // Create a template with items
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      directoryService.createDirectoryEntry(me, 'Toggle Default List', true);
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Toggle Default List');
-      templateService.createItem(me, template.$jazz.id, 'Toggle Item');
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Toggle Default List', true);
+      await templateService.createItem(g, templateId, 'Toggle Item');
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Toggle Default List')).toBeVisible({ timeout: 10000 });
     await page.getByText('Toggle Default List').click();
@@ -243,10 +188,12 @@ test.describe('UI - Default Items', () => {
     // Wait for edit mode UI
     await expect(page.getByText('Default Items')).toBeVisible();
 
-    // Use the Deselect All batch button (third batch button in the header)
-    // The batch buttons are in a group near "Default Items"
-    const batchButtonGroup = page.locator('text=Default Items').locator('..').first();
-    const deselectAllButton = batchButtonGroup.locator('button').nth(2); // 0=expand, 1=select all, 2=toggle, 3=deselect
+    // The batch buttons (Select All, Toggle, Deselect All — icon-only, no accessible text) live
+    // in the "Default Items" zone header, as siblings of the title span; the zone's own
+    // expand/collapse toggle is a SEPARATE button outside that header row (see IndentedRow), so
+    // this locator only picks up the 3 batch buttons: 0=select all, 1=toggle, 2=deselect all.
+    const zoneHeaderRow = page.locator('text=Default Items').locator('..').first();
+    const deselectAllButton = zoneHeaderRow.locator('button').nth(2);
     await deselectAllButton.click();
 
     // Exit edit mode
@@ -256,28 +203,20 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText(/no items selected/i)).toBeVisible();
   });
 
-  test.skip('should show batch operation buttons in edit mode', async ({ page }) => {
+  test('should show batch operation buttons in edit mode', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
     // Create a template with items
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      directoryService.createDirectoryEntry(me, 'Batch Ops List', true);
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Batch Ops List');
-      templateService.createItem(me, template.$jazz.id, 'Batch Item 1');
-      templateService.createItem(me, template.$jazz.id, 'Batch Item 2');
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Batch Ops List', true);
+      await templateService.createItem(g, templateId, 'Batch Item 1');
+      await templateService.createItem(g, templateId, 'Batch Item 2');
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Batch Ops List')).toBeVisible({ timeout: 10000 });
     await page.getByText('Batch Ops List').click();
@@ -295,21 +234,17 @@ test.describe('UI - Default Items', () => {
     await expect(batchButtons).toHaveCount(3); // 3 batch buttons (no expand toggle since zone is always expanded)
   });
 
-  test.skip('should add new items as defaults', async ({ page }) => {
+  test('should add new items as defaults', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
     // Create an empty template
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const me = (window as any).testExports.account;
-      directoryService.createDirectoryEntry(me, 'New Items List', true);
+    await page.evaluate(async () => {
+      await window.testExports!.directory.create('New Items List', true);
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('New Items List')).toBeVisible({ timeout: 10000 });
     await page.getByText('New Items List').click();
@@ -338,30 +273,20 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText('New Default Item')).toBeVisible();
   });
 
-  test.skip('should inherit defaults when creating new session', async ({ page }) => {
+  test('should inherit defaults when creating new session', async ({ page }) => {
     await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
-    // Create a template with items and specific defaults
-    await page.evaluate(() => {
-      const directoryService = (window as any).testExports.directoryService;
-      const templateService = (window as any).testExports.templateService;
-      const folderService = (window as any).testExports.folderService;
-      const me = (window as any).testExports.account;
-
-      directoryService.createDirectoryEntry(me, 'Inherit Defaults List', true);
-      const templates = folderService.getAllTemplates();
-      const template = templates.find((t: any) => t.name === 'Inherit Defaults List');
-
-      // Add items - they'll be auto-added to defaults
-      templateService.createItem(me, template.$jazz.id, 'Default Item A');
-      templateService.createItem(me, template.$jazz.id, 'Default Item B');
+    // Create a template with items and specific defaults (createItem auto-adds to defaults)
+    await page.evaluate(async () => {
+      const { g, directory, templateService } = window.testExports!;
+      const { entryId: templateId } = await directory.create('Inherit Defaults List', true);
+      await templateService.createItem(g, templateId, 'Default Item A');
+      await templateService.createItem(g, templateId, 'Default Item B');
     });
 
-    await page.waitForTimeout(500);
-
-    // Navigate to home and open the template
-    await page.goto('/');
+    // Open the template
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Inherit Defaults List')).toBeVisible({ timeout: 10000 });
     await page.getByText('Inherit Defaults List').click();

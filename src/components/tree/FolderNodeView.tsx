@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { Archive, ArchiveX, Folder, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { Archive, ArchiveX, Folder, MoreVertical, Pencil, Share2, Trash2 } from 'lucide-react';
+import { lazy, memo, Suspense, useEffect, useState } from 'react';
 import { ListIcon } from '@/components/ui/BrandIcon';
 import {
   DropdownMenu,
@@ -13,6 +13,10 @@ import { isTemplateFolder } from '@/hooks';
 import { useDialog } from '@/lib/dialog-context';
 import type { FolderRow } from '@/schema/folder';
 import { IndentedRow } from './IndentedRow';
+
+const ShareDialog = lazy(() =>
+  import('@/components/sharing/ShareDialog').then((m) => ({ default: m.ShareDialog })),
+);
 
 interface FolderNodeViewProps {
   folder: FolderRow;
@@ -31,13 +35,14 @@ interface FolderNodeViewProps {
 }
 
 /**
- * FolderNodeView — slice 1 (folders-only). Renders one row of the folder tree.
+ * FolderNodeView — renders one row of the folder tree.
  *
- * Drops the pre-port version's item count, duplicate, autocomplete-domain menu, and
- * import/export/share dialogs — all Jazz `FolderNode`/items-shaped features not in the
- * rowboat `Folder` table yet (see `docs/superpowers/d-t4-report.md`). Rename/archive/delete
- * and drag-and-drop reparenting are fully wired to the rowboat graph via `TreeView`'s
- * `useCheckListHierarchy` handlers.
+ * Rename/archive/delete/Share and drag-and-drop reparenting are wired to the rowboat graph via
+ * `TreeView`'s `useCheckListHierarchy` handlers and `ShareDialog` (keyed by
+ * `folder.owner_group_id`). Still dropped vs. the pre-port version: item count, Duplicate, and
+ * the autocomplete-domain submenu — those are items-tree features with their own follow-up
+ * (see `docs/superpowers/d-t2-report.md`); per-folder Import/Export are not here either —
+ * export/import now live on `TreeViewHeader` (template-scoped, not per-row).
  */
 export const FolderNodeView = memo(function FolderNodeView({
   folder,
@@ -63,6 +68,7 @@ export const FolderNodeView = memo(function FolderNodeView({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(name);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const { showConfirm } = useDialog();
 
   // Auto-start editing when requested (e.g., right after creation)
@@ -244,8 +250,14 @@ export const FolderNodeView = memo(function FolderNodeView({
                     <Pencil className="mr-2 h-4 w-4" />
                     Rename
                   </DropdownMenuItem>
-                  {/* TODO(slice-2): Duplicate/Share/Autocomplete/Import/Export — items and
-                      sharing aren't ported to rowboat yet. */}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                  {/* TODO(slice-2 follow-up): Duplicate/Autocomplete — items-tree features not
+                      ported to rowboat yet; Import/Export now live on the tree row itself
+                      (template-level) via TreeViewHeader, not this per-folder menu. */}
                   {!hideArchiveAction && (
                     <>
                       <DropdownMenuSeparator />
@@ -277,6 +289,10 @@ export const FolderNodeView = memo(function FolderNodeView({
       </div>
 
       {children}
+
+      <Suspense fallback={null}>
+        <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} folder={folder} />
+      </Suspense>
     </div>
   );
 });

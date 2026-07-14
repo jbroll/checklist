@@ -2,11 +2,15 @@
  * Deployment Smoke Tests
  *
  * Tests that run against deployed environments (test/prod) without authentication, in
- * anonymous local-only mode. The infrastructure/health, performance and folder/list-creation
- * tests run unchanged. Tests that drive the SESSION VIEW (opening a list's shopping session) or
- * the EXPORT/IMPORT dialogs are `test.skip` for the rowboat port — those UI surfaces are not
- * wired into AppContainer/TreeView yet (see the per-test TODO(e2e) notes and
- * src/components/editor/AppContainer.tsx).
+ * anonymous local-only mode. The infrastructure/health, performance, folder/list-creation, and
+ * session-view/export-import tests all run against the real UI (no `window.testExports` seeding —
+ * these hit a deployed environment, not the `/test` harness page) and pass now that SessionView
+ * and the Export/Import dialogs are wired into AppContainer/TreeView.
+ *
+ * One test stays `test.skip`: "navigation - browser back/forward works" — the tree→session
+ * transition is local React state, not a browser-history entry (see its inline TODO(e2e)), so
+ * browser back/forward doesn't toggle between TreeView and SessionView. That's a genuine,
+ * documented gap (AppContainer.tsx's own doc comment), not a wiring gap.
  *
  * Run with:
  *   npm run test:smoke:test   # Test environment
@@ -143,9 +147,7 @@ test.describe('Performance', () => {
 test.describe('Mobile Compatibility', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-  // TODO(e2e): navigates into a list's session view (asserts the list heading after clicking it) —
-  // the session view is not wired into AppContainer/TreeView in the rowboat port yet.
-  test.skip('mobile viewport - app works on small screens', async ({ page }) => {
+  test('mobile viewport - app works on small screens', async ({ page }) => {
     await page.goto('/');
 
     // Core UI should be visible
@@ -236,9 +238,7 @@ test.describe('Core Functionality', () => {
     console.log('  Create list: OK');
   });
 
-  // TODO(e2e): opens the list's session view + edit mode to add items — session view not wired
-  // into AppContainer/TreeView in the rowboat port yet.
-  test.skip('add items - can add items to a list', async ({ page }) => {
+  test('add items - can add items to a list', async ({ page }) => {
     // Create a list first
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Items Test ${Date.now()}`;
@@ -275,8 +275,7 @@ test.describe('Core Functionality', () => {
     console.log('  Add items: OK');
   });
 
-  // TODO(e2e): opens the list's session view (session controls) — not wired in the rowboat port yet.
-  test.skip('shopping session - can view session UI', async ({ page }) => {
+  test('shopping session - can view session UI', async ({ page }) => {
     // Create a list
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Session Test ${Date.now()}`;
@@ -299,9 +298,7 @@ test.describe('Core Functionality', () => {
     console.log('  Shopping session: OK');
   });
 
-  // TODO(e2e): opens the Export/Import dialogs — TreeView wires onExport/onImport as no-op stubs
-  // in the rowboat port, so no dialog opens. Re-enable when export/import dialogs are wired.
-  test.skip('export/import UI - dialogs open correctly', async ({ page }) => {
+  test('export/import UI - dialogs open correctly', async ({ page }) => {
     // Open More options menu
     await page.locator('header').getByLabel('More options').click();
 
@@ -330,8 +327,13 @@ test.describe('Core Functionality', () => {
     console.log('  Export/Import UI: OK');
   });
 
-  // TODO(e2e): navigates into a list's session view and back — session view not wired in the
-  // rowboat port yet, so the session-view heading never appears.
+  // TODO(e2e): session view IS wired now, but the tree→session transition is deliberately LOCAL
+  // React state (`currentSessionId` in AppContainer), not a browser-history entry — see
+  // AppContainer.tsx's own doc comment: "no cross-tab/browser-back session restore yet". Clicking
+  // a template never calls `history.pushState`, so `page.goBack()`/`goForward()` here would just
+  // navigate whatever real browser-history entries preceded this page load, not toggle between
+  // TreeView and SessionView. This is a genuine, documented gap, not a wiring gap — re-enable if
+  // template→session navigation is ever given its own history entry.
   test.skip('navigation - browser back/forward works', async ({ page }) => {
     // Create a list
     await page.getByRole('button', { name: 'New list' }).click();

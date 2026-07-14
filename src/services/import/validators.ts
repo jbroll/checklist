@@ -1,13 +1,16 @@
 /**
- * Import validation logic
+ * Import validation logic (rowboat port, slice-2)
  *
- * Validates imported data before creating CoValues.
+ * Validates imported JSON export data before writing it to the graph.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { Account } from '../../schema';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '../../schema/folder';
 import type { ExportedData, ExportedFolder } from '../export/types';
+import * as folderOps from '../folderOps';
 import type { ValidationResult } from './types';
+
+type Graph = RelationalGraph<typeof schema>;
 
 const CURRENT_VERSION = '2.0';
 const SUPPORTED_VERSIONS = ['2.0'];
@@ -33,14 +36,11 @@ function countItemsRecursively(items: unknown[]): number {
 /**
  * Validate JSON export data
  *
+ * @param g - The rowboat graph (for conflict detection against existing top-level folders)
  * @param data - Parsed JSON data
- * @param account - User's account (for conflict detection)
  * @returns Validation result with errors, warnings, and stats
  */
-export function validateJsonData(
-  data: unknown,
-  account: InstanceOfSchema<typeof Account>,
-): ValidationResult {
+export function validateJsonData(g: Graph, data: unknown): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const stats = {
@@ -90,6 +90,8 @@ export function validateJsonData(
   } else if (!Array.isArray(exportData.folders)) {
     errors.push('Field "folders" must be an array');
   } else {
+    const existingNames = new Set(folderOps.childrenOf(g, null).map((f) => f.name.trim()));
+
     // Validate each folder
     for (let i = 0; i < exportData.folders.length; i++) {
       const folder = exportData.folders[i];
@@ -113,8 +115,7 @@ export function validateJsonData(
         }
 
         // Check for name conflicts (use name as-is without normalization)
-        const normalizedName = folder.name.trim();
-        if (directoryPathExists(normalizedName, account)) {
+        if (existingNames.has(folder.name.trim())) {
           stats.duplicateFolders++;
         }
       }
@@ -300,22 +301,4 @@ function validateSession(session: unknown, index: number, prefix: string): strin
 function isValidISODate(dateString: string): boolean {
   const date = new Date(dateString);
   return !Number.isNaN(date.getTime());
-}
-
-/**
- * Check if a folder name already exists in the root folders
- *
- * @param name - Folder name to check
- * @param account - User's account
- * @returns true if name exists in root folders
- */
-function directoryPathExists(name: string, account: InstanceOfSchema<typeof Account>): boolean {
-  if (!account.root?.folders) {
-    return false;
-  }
-
-  // Check if any root-level folder has this name (case-sensitive)
-  return Array.from(account.root.folders).some(
-    (folder) => folder && folder.name.trim() === name && !folder.archived,
-  );
 }

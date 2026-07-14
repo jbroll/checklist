@@ -12,12 +12,14 @@ import {
 } from '@dnd-kit/core';
 import { useCallback, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
-import { arraysEqualById, useCheckListHierarchy } from '@/hooks';
+import { arraysEqualById, isTemplateFolder, useCheckListHierarchy } from '@/hooks';
 import { usePort, useRowboat, useSelect } from '@/jazz';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import type { FolderRow } from '@/schema/folder';
+import * as sessionService from '@/services/sessionService';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
+import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
 
 // Tree structure for rendering
@@ -30,12 +32,17 @@ interface TreeNode {
 // Grouped prop interfaces to reduce prop drilling
 export interface TreeViewSelectionHandlers {
   onFolderSelect?: (folderId: string) => void;
+  onTemplateSelect?: (templateId: string) => void;
+  onOpenSession?: (templateId: string, sessionId: string) => void;
+  onExportSession?: (templateId: string, sessionId: string) => void;
 }
 
 export interface TreeViewHeaderActions {
   onHeaderClick?: () => void;
   onAddFolder?: () => void;
   onAddTemplate?: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
 }
 
 export interface TreeViewAuthProps {
@@ -53,12 +60,21 @@ export interface TreeViewArchiveSettings {
   hideArchiveAction?: boolean;
 }
 
+export interface TreeViewSubscriptionInfo {
+  subscriptionTier?: string;
+  listCount?: number;
+  maxLists?: number;
+  onUpgradeClick?: () => void;
+}
+
 interface TreeViewProps {
+  selectedTemplateId?: string | null;
   selectedFolderId?: string | null;
   selectionHandlers?: TreeViewSelectionHandlers;
   headerActions?: TreeViewHeaderActions;
   authProps?: TreeViewAuthProps;
   archiveSettings?: TreeViewArchiveSettings;
+  subscriptionInfo?: TreeViewSubscriptionInfo;
 }
 
 /** Build the hierarchical tree from a flat `FolderRow[]` (reactive selector output). */
@@ -88,14 +104,17 @@ function buildFolderTree(folders: FolderRow[], showArchived: boolean): TreeNode[
 }
 
 export function TreeView({
+  selectedTemplateId,
   selectedFolderId,
   selectionHandlers = {},
   headerActions = {},
   authProps = {},
   archiveSettings = {},
+  subscriptionInfo = {},
 }: TreeViewProps) {
-  const { onFolderSelect } = selectionHandlers;
-  const { onHeaderClick, onAddFolder, onAddTemplate } = headerActions;
+  const { onFolderSelect, onTemplateSelect, onOpenSession, onExportSession } = selectionHandlers;
+  const { onHeaderClick, onAddFolder, onAddTemplate, onExport, onImport } = headerActions;
+  const { subscriptionTier, listCount, maxLists, onUpgradeClick } = subscriptionInfo;
   const {
     onSignOut,
     onSignIn,
@@ -104,7 +123,12 @@ export function TreeView({
     showProfileDialog,
     onShowProfileDialogChange,
   } = authProps;
-  const { hideArchivedTemplatesToggle = false, hideArchiveAction = false } = archiveSettings;
+  const {
+    hideArchivedTemplatesToggle = false,
+    hideArchivedSessionsToggle = false,
+    hideArchiveAction = false,
+  } = archiveSettings;
+  const [showArchivedSessions, setShowArchivedSessions] = useState(false);
 
   const { author, mintGroup } = usePort();
   const {
@@ -187,6 +211,24 @@ export function TreeView({
     [deleteNode],
   );
 
+  const handleToggleArchiveSession = useCallback(
+    (templateId: string, sessionId: string, archived: boolean) => {
+      if (archived) {
+        void sessionService.unarchiveSession(g, templateId, sessionId);
+      } else {
+        void sessionService.archiveSession(g, templateId, sessionId);
+      }
+    },
+    [g],
+  );
+
+  const handleDeleteSession = useCallback(
+    (templateId: string, sessionId: string) => {
+      void sessionService.deleteSession(g, templateId, sessionId);
+    },
+    [g],
+  );
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const folderId = event.active.data.current?.folderId as string;
     setActiveFolderId(folderId);
@@ -242,7 +284,34 @@ export function TreeView({
 
   const renderNode = (node: TreeNode): React.ReactNode => {
     const { folder, children } = node;
-    const hasChildren = children.length > 0;
+    const isTemplate = isTemplateFolder(folder);
+
+    let sessionChildren: React.ReactNode[] = [];
+    if (isTemplate) {
+      const activeSessions = folder.sessions
+        .filter((s) => showArchivedSessions || !s.archived)
+        .slice()
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      sessionChildren = activeSessions.map((session) => (
+        <SessionRowView
+          key={session.id}
+          session={session}
+          templateName={folder.name}
+          level={node.level + 1}
+          onOpen={(sessionId) => onOpenSession?.(folder.id, sessionId)}
+          onArchive={(sessionId) =>
+            handleToggleArchiveSession(folder.id, sessionId, session.archived)
+          }
+          onDelete={(sessionId) => handleDeleteSession(folder.id, sessionId)}
+          onExport={(sessionId) => onExportSession?.(folder.id, sessionId)}
+          allSessions={activeSessions}
+          hideArchiveAction={hideArchiveAction}
+        />
+      ));
+    }
+
+    const hasChildren = children.length > 0 || sessionChildren.length > 0;
 
     return (
       <FolderNodeView
@@ -250,8 +319,11 @@ export function TreeView({
         folder={folder}
         level={node.level}
         hasChildren={hasChildren}
-        isSelected={selectedFolderId === folder.id}
-        onSelect={() => onFolderSelect?.(folder.id)}
+        isSelected={selectedFolderId === folder.id || selectedTemplateId === folder.id}
+        onSelect={() => {
+          onFolderSelect?.(folder.id);
+          if (isTemplate) onTemplateSelect?.(folder.id);
+        }}
         onToggleExpand={() => handleToggleFolderExpand(folder)}
         onRename={(newName) => handleRenameFolder(folder, newName)}
         onArchive={() => handleToggleArchiveFolder(folder)}
@@ -260,6 +332,7 @@ export function TreeView({
         onAutoEditStarted={() => setEditingFolderId(null)}
         hideArchiveAction={hideArchiveAction}
       >
+        {folder.expanded && sessionChildren}
         {folder.expanded &&
           children.map((childNode, childIndex) => (
             <div key={childNode.folder.id}>
@@ -299,17 +372,17 @@ export function TreeView({
           isDragging={!!activeFolderId}
           canCreateFolderOrList={true}
           showArchivedTemplates={showArchivedTemplates}
+          showArchivedSessions={showArchivedSessions}
           hideArchivedTemplatesToggle={hideArchivedTemplatesToggle}
-          // TODO(slice-2): session archiving isn't ported yet — always hide that toggle.
-          hideArchivedSessionsToggle={true}
+          hideArchivedSessionsToggle={hideArchivedSessionsToggle}
           hasArchivedTemplates={hasArchivedTemplates}
           onHeaderClick={onHeaderClick || (() => {})}
           onAddFolder={onAddFolder || (() => {})}
           onAddTemplate={onAddTemplate || (() => {})}
-          // TODO(slice-2): export/import operate on template items, not ported yet.
-          onExport={() => {}}
-          onImport={() => {}}
+          onExport={onExport || (() => {})}
+          onImport={onImport || (() => {})}
           onToggleShowArchivedTemplates={() => setShowArchivedTemplates((v) => !v)}
+          onToggleShowArchivedSessions={() => setShowArchivedSessions((v) => !v)}
           onEmptyTrash={handleEmptyTrash}
           onSignOut={onSignOut}
           onSignIn={onSignIn}
@@ -322,6 +395,10 @@ export function TreeView({
           onAbout={() => {
             window.location.href = '/about.html';
           }}
+          subscriptionTier={subscriptionTier}
+          listCount={listCount}
+          maxLists={maxLists}
+          onUpgradeClick={onUpgradeClick}
         />
 
         {folderTree.length === 0 ? (
