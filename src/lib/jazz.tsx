@@ -86,9 +86,25 @@ function RowboatBridge({
   }
   const db = dbRef.current;
 
+  // Debounced close: React StrictMode dev-mode double-invokes effects (mount -> cleanup ->
+  // mount, synchronously, to surface unsafe cleanup) to simulate a remount. A synchronous
+  // `db.close()` here would permanently close this singleton on the very first render — the
+  // component function itself isn't re-invoked by that simulation, so nothing ever reopens it,
+  // and every subsequent read/write (including `syncWithServer`) fails with a Dexie
+  // `DatabaseClosedError` for the rest of the page's life. Deferring the close and letting the
+  // immediate StrictMode remount cancel it (same pattern as any StrictMode-fragile resource
+  // teardown) makes this correct in dev while still closing normally on a genuine unmount.
+  const pendingCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (pendingCloseRef.current !== null) {
+      clearTimeout(pendingCloseRef.current);
+      pendingCloseRef.current = null;
+    }
     return () => {
-      db.close();
+      pendingCloseRef.current = setTimeout(() => {
+        db.close();
+        pendingCloseRef.current = null;
+      }, 0);
     };
   }, [db]);
 

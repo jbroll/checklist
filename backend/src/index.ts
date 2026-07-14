@@ -183,6 +183,13 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
 
 function configFromEnv(): ServerConfig {
   const isProd = process.env.NODE_ENV === 'production';
+  // Explicit, named test-only switch (never a silent default): with no SMTP configured, the
+  // pre-port design already requires an admin/manual verification path in prod (see
+  // buildSendEmail above), so e2e cannot go through real email delivery. CHECKLIST_TEST_AUTH=1
+  // is the one narrow escape hatch — it disables the verification REQUIREMENT (not the feature)
+  // so Playwright can sign up + immediately use an email/password account. Unset in prod/dev,
+  // verification stays on exactly as before.
+  const isTestAuth = process.env.CHECKLIST_TEST_AUTH === '1';
   const dbPath = process.env.AUTH_DB_PATH || (isProd ? './data/auth.db' : './auth.db');
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -238,7 +245,7 @@ function configFromEnv(): ServerConfig {
       : undefined,
     emailAuth: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: !isTestAuth,
       minPasswordLength: 8,
       maxPasswordLength: 128,
     },

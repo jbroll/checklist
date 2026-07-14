@@ -161,6 +161,14 @@ export default defineConfig({
           BETTER_AUTH_SECRET: 'e2e-test-secret-do-not-use-in-prod-00000000',
           FRONTEND_URL: 'http://localhost:8765',
           PORT: '3001',
+          // Test-only escape hatch (backend/src/index.ts configFromEnv): disables the
+          // requireEmailVerification requirement so email/password signup can be exercised
+          // without SMTP/GreenMail. Unset means prod/dev behaviour (verification ON) is
+          // untouched — this is the one env var that turns it off, and only in the
+          // Playwright-launched dev server.
+          CHECKLIST_TEST_AUTH: '1',
         },
+        stdout: 'pipe',
+        stderr: 'pipe',
       },
 });
