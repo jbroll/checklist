@@ -21,43 +21,53 @@ SERVICES="$HOME/.config/checklist/services.env"
 export ORG_HOOKS="${ORG_HOOKS:-$HOME/src/org-hooks}"
 
 # ── Sibling file: dependencies ────────────────────────────────────────────────
-# checklist depends on @jbr-jazz/* and jazz-mock via file:../*. CI worktrees land
-# in ~/ci-worktrees/checklist-<id>/ where these siblings don't exist; link them
-# from ci-workspace so npm install resolves. Cross-filesystem symlinks break
-# npm's file: resolution, so on a device mismatch rsync (without node_modules).
+# checklist depends on rowboat (@jbroll/*), @jbr-jazz/* and jazz-mock via
+# file:../*. CI worktrees land in ~/ci-worktrees/checklist-<id>/ where these
+# siblings don't exist; provide them from ci-workspace so npm install resolves.
+# Same fs → symlink. Cross fs → rsync (a cross-fs symlink of the sibling dir
+# breaks npm's file: resolution). The job runs in a mount namespace where
+# ci-workspace (/home) and ci-worktrees (/data) are SEPARATE devices, so in
+# practice CI takes the rsync path.
 CI_WORKSPACE="${CI_WORKSPACE:-$HOME/ci-workspace}"
-for sibling in rowboat jbr-jazz jazz-mock; do
-    target="$CI_WORKSPACE/$sibling"
-    link="$(dirname "$WORKTREE")/$sibling"
-    [ -d "$target" ] || continue
-    target_dev="$(stat -c '%d' "$target"               2>/dev/null || echo x)"
-    link_dev="$(  stat -c '%d' "$(dirname "$WORKTREE")" 2>/dev/null || echo y)"
-    if [ "$target_dev" = "$link_dev" ]; then
-        # Same filesystem: the sibling must be a SYMLINK to the pre-built
-        # ci-workspace copy (which carries dist + node_modules). Self-heal a
-        # stale real-dir copy (e.g. a partial-dist leftover) that would
-        # otherwise shadow the symlink and break @jbroll/* resolution.
-        if [ "$(readlink "$link" 2>/dev/null)" != "$target" ]; then
-            rm -rf "$link"
-            ln -s "$target" "$link"
-            echo "[ci/setup] symlinked $sibling -> $target"
-        fi
-    else
-        [ -e "$link" ] && continue
-        mkdir -p "$link"
-        rsync -a --delete --exclude='node_modules' --exclude='.git' "$target/" "$link/"
-        echo "[ci/setup] rsynced $sibling -> $link (cross-fs)"
-    fi
-done
+WT_PARENT="$(dirname "$WORKTREE")"
 
-# rowboat packages (@jbroll/rowboat-*) are consumed as built dist — checklist file:
-# links to ../rowboat/packages/*. On this host ci-workspace and ci-worktrees share
-# a filesystem, so the sibling above is a SYMLINK into ci-workspace/rowboat — a
-# checkout SHARED by every consumer's CI run. So we do NOT install/build it here:
-# rebuilding a shared checkout per-run races concurrent jobs and a failed --clean
-# rebuild leaves its dist broken. ci-workspace/rowboat is kept current+built out of
-# band (rebuilt on rowboat land). We only verify its dist is present.
-ROWBOAT="$(dirname "$WORKTREE")/rowboat"
+# link_sibling NAME — refresh $WT_PARENT/NAME from $CI_WORKSPACE/NAME every run
+# (a stale copy silently ships old/partial dist — the bug this replaces).
+link_sibling() {
+    name="$1"; target="$CI_WORKSPACE/$name"; link="$WT_PARENT/$name"
+    [ -d "$target" ] || return 0
+    tdev="$(stat -c '%d' "$target"    2>/dev/null || echo x)"
+    ldev="$(stat -c '%d' "$WT_PARENT" 2>/dev/null || echo y)"
+    if [ "$tdev" = "$ldev" ]; then
+        [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && return 0
+        rm -rf "$link"; ln -s "$target" "$link"
+        echo "[ci/setup] symlinked $name -> $target"
+    else
+        rm -rf "$link"; mkdir -p "$link"
+        rsync -a --delete --exclude='node_modules' --exclude='.git' "$target/" "$link/"
+        echo "[ci/setup] rsynced $name -> $link (cross-fs)"
+    fi
+}
+
+# jbr-jazz/jazz-mock are legacy siblings still imported by not-yet-ported code;
+# they get a fresh node_modules from their own build step below.
+link_sibling jbr-jazz
+link_sibling jazz-mock
+
+# rowboat is consumed as PRE-BUILT dist (no per-worktree build — ci-workspace/
+# rowboat is kept current+built out of band, rebuilt on rowboat land). Its dist
+# imports zod/better-auth/cross-@jbroll by bare specifier, and vite resolves
+# those from the package's realpath — so the copy MUST carry a node_modules.
+# Same-fs symlink gets it via the whole-dir link; the cross-fs rsync excludes
+# node_modules, so symlink it back to the pre-built ci-workspace copy (a cross-fs
+# symlink resolves fine for node module lookup — only the file: sibling dir
+# itself can't be a cross-fs symlink).
+link_sibling rowboat
+ROWBOAT="$WT_PARENT/rowboat"
+if [ ! -e "$ROWBOAT/node_modules" ] && [ -d "$CI_WORKSPACE/rowboat/node_modules" ]; then
+    ln -sfn "$CI_WORKSPACE/rowboat/node_modules" "$ROWBOAT/node_modules"
+    echo "[ci/setup] linked rowboat node_modules -> $CI_WORKSPACE/rowboat/node_modules"
+fi
 if [ -f "$ROWBOAT/packages/schema/dist/index.d.ts" ] && [ -f "$ROWBOAT/packages/auth-betterauth/dist/index.d.ts" ]; then
     echo "[ci/setup] rowboat dist present ($ROWBOAT)"
 else
