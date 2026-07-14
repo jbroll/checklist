@@ -40,6 +40,14 @@ export async function addFolder(g: Graph, input: AddFolderInput): Promise<Folder
     created_by: input.createdBy,
     created_at: input.now,
     updated_at: input.now,
+    // Template-folder payload: empty for a fresh folder (organizational OR template) — items and
+    // sessions are added later via templateService/sessionService.
+    items: [],
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
   };
   // g.folder.create resolving without throwing IS the success signal. Do NOT read the row
   // back here: on the real IndexedDB-backed graph the write propagates to the readable view
