@@ -129,6 +129,13 @@ export function exposeServicesToWindow(g: Graph): void {
         createdBy: 'test',
         now: Date.now(),
       });
+      // The real IndexedDB-backed graph propagates a create to the READABLE view
+      // asynchronously (the app is reactive so it repaints, but a test that seeds
+      // then immediately queries by id races the propagation). Wait for the row to
+      // be readable before returning so subsequent test operations find it.
+      for (let i = 0; i < 100 && !g.folder(row.id); i += 1) {
+        await new Promise((r) => setTimeout(r, 10));
+      }
       return {
         entryId: row.id,
         templateId: isTemplate ? row.id : undefined,
