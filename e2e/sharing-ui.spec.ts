@@ -12,17 +12,16 @@
  * entirely when there are no invites, not shown with a "No pending invites" message) — both fixed
  * to match the real markup.
  *
- * "Invite Accept Page UI" stays `test.skip` for every test: the ported InviteAcceptPage
- * (src/components/sharing/InviteAcceptPage.tsx) is AUTH-GATED and reads through rowboat's
- * `useSharing`. For an anonymous Playwright session it always shows the "Sign In to Continue"
- * screen WITHOUT calling validate, so these Jazz-era tests — which mock `/api/shares/validate/*`
- * with per-error-code bodies (not_found / expired / email_mismatch / a full valid invite) and
- * expect the page to branch on them — no longer apply. A rowboat rewrite needs an authenticated
- * session plus useSharing-shaped validate/accept mocks; that's a genuine remaining gap, not a
- * simple wiring fix.
+ * "Invite Accept Page UI" is rewritten for rowboat's model (see the describe block's own header):
+ * the ported InviteAcceptPage is CLIENT-GATED (anon → "Sign In to Continue", never validates) and
+ * rowboat's validate collapses every failure to `{ valid: false }` (no-leak design), returning
+ * `{ valid: true, inviterEmail, role }` on success. The tests authenticate via the
+ * CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock validate in that shape.
  */
 
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/base';
+import { signUpAndSignIn, uniqueAuthedEmail } from './helpers/rowboat-auth';
 
 // Mock data for tests
 const mockCollaborators = [
@@ -269,225 +268,146 @@ test.describe('Share Dialog UI', () => {
 });
 
 test.describe('Invite Accept Page UI', () => {
-  test.skip('should show loading state initially', async ({ page }) => {
-    // Delay the API response significantly to ensure loading state is visible
-    await page.route('**/api/shares/validate/*', async (route) => {
-      await new Promise(r => setTimeout(r, 2000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: true, senderEmail: 'sender@example.com', recipientEmail: 'recipient@example.com', permission: 'writer' }),
-      });
+  // The ported InviteAcceptPage is CLIENT-GATED and reads through rowboat's `useSharing`:
+  //  - An anonymous visitor sees "Sign In to Continue" and validate is NEVER called, so nothing
+  //    about the invite is disclosed.
+  //  - Only an authenticated user validates. rowboat's server deliberately collapses every
+  //    validate failure (invalid / revoked / expired / not-yours) to `{ valid: false }` — a
+  //    no-leak-to-non-owners design — and returns `{ valid: true, inviterEmail, role }` on success.
+  //    Email-mismatch is surfaced only at ACCEPT time (a 403), never from validate.
+  // So these tests authenticate via the CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock
+  // validate in rowboat's shape. They assert rowboat's (coarser, more private) behavior, not the
+  // Jazz per-error-code screens the originals encoded.
+
+  const PASSWORD = 'Checklist-Invite-Test-2026!';
+
+  function authenticate(page: Page, prefix: string): Promise<void> {
+    return signUpAndSignIn(page, {
+      email: uniqueAuthedEmail(prefix),
+      password: PASSWORD,
+      name: 'Invite Tester',
     });
+  }
 
-    await page.goto('/invite/test-token-123');
+  function mockValidate(page: Page, body: Record<string, unknown>): Promise<void> {
+    return page.route('**/api/shares/validate/*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }),
+    );
+  }
 
-    // Should show loading state - use a short timeout since we expect it to appear quickly
-    await expect(page.locator('text=Loading invite...')).toBeVisible({ timeout: 3000 });
-  });
+  test('shows the sign-in gate (and no invite details) to an unauthenticated visitor', async ({
+    page,
+  }) => {
+    // Anonymous: the page shows the sign-in prompt WITHOUT calling validate, so nothing about the
+    // invite (sender, role, or even that the token resolves) is disclosed.
+    await page.goto('/invite/some-token');
 
-  test.skip('should show error for invalid token', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: false, error: 'not_found' }),
-      });
-    });
-
-    await page.goto('/invite/invalid-token');
-
-    // Should show error state
-    await expect(page.locator('text=Invite Error')).toBeVisible();
-    await expect(page.locator('text=This invite link is invalid or has been revoked.')).toBeVisible();
-  });
-
-  test.skip('should show error for expired token', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: false, error: 'expired' }),
-      });
-    });
-
-    await page.goto('/invite/expired-token');
-
-    // Should show expired error
-    await expect(page.locator('text=Invite Error')).toBeVisible();
-    await expect(page.locator('text=This invite link has expired.')).toBeVisible();
-  });
-
-  test.skip('should show invite details for an authenticated user', async ({ page }) => {
-    // The backend only returns invite details to an authenticated checklist
-    // user; a valid response therefore represents that authenticated case.
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'alice@example.com',
-          permission: 'writer',
-        }),
-      });
-    });
-
-    await page.goto('/invite/valid-token');
-
-    // Should show invite details
-    await expect(page.locator('text=Folder Invitation')).toBeVisible();
-    await expect(page.locator('text=alice@example.com has invited you to collaborate')).toBeVisible();
-    await expect(page.locator('text=Writer')).toBeVisible();
-
-    // Should show accept/decline buttons
-    await expect(page.locator('button:has-text("Accept Invite")')).toBeVisible();
-    await expect(page.locator('button:has-text("Decline")')).toBeVisible();
-  });
-
-  test.skip('should not disclose invite details to an unauthenticated user', async ({ page }) => {
-    // Unauthenticated callers get no invite data from the backend, only a
-    // signal to sign in first. The page must show a sign-in prompt and must
-    // NOT reveal the sender, permission, or that the token even resolves.
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: false, error: 'unauthenticated' }),
-      });
-    });
-
-    await page.goto('/invite/valid-token');
-
-    // Sign-in prompt shown immediately (no "Accept" step that leaks details)
     await expect(page.locator('text=Sign In to Continue')).toBeVisible();
     await expect(page.locator('text=Continue with Google')).toBeVisible();
     await expect(page.locator('text=Continue with Apple')).toBeVisible();
 
-    // No invite details disclosed
     await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
     await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
     await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
   });
 
-  test.skip('should not disclose the sender to an authenticated non-recipient', async ({ page }) => {
-    // The backend returns email_mismatch (no sender/permission) when the signed-in
-    // user is not the invited recipient. The page shows the wrong-account screen
-    // and must not reveal the sender or any invite details.
-    await page.route('**/api/shares/validate/*', (route) => {
+  test('shows the loading state while validating', async ({ page }) => {
+    await authenticate(page, 'invite-loading');
+    await page.route('**/api/shares/validate/*', async (route) => {
+      await new Promise((r) => setTimeout(r, 2000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ valid: false, error: 'email_mismatch' }),
+        body: JSON.stringify({ valid: true, inviterEmail: 'sender@example.com', role: 'writer' }),
       });
     });
+
+    await page.goto('/invite/loading-token');
+
+    await expect(page.locator('text=Loading invite...')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('shows invite details for a valid invite', async ({ page }) => {
+    await authenticate(page, 'invite-valid');
+    await mockValidate(page, { valid: true, inviterEmail: 'alice@example.com', role: 'writer' });
 
     await page.goto('/invite/valid-token');
 
-    await expect(page.locator('text=Wrong Account')).toBeVisible();
-
-    // No sender or invite details disclosed
-    await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
-    await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
-    await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
-  });
-
-  test.skip('should show reader permission description', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'sender@example.com',
-          recipientEmail: 'recipient@example.com',
-          permission: 'reader',
-        }),
-      });
-    });
-
-    await page.goto('/invite/reader-token');
-
-    await expect(page.locator('text=Reader')).toBeVisible();
-    await expect(page.locator('text=You can view items in this folder')).toBeVisible();
-  });
-
-  test.skip('should show writer permission description', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'sender@example.com',
-          recipientEmail: 'recipient@example.com',
-          permission: 'writer',
-        }),
-      });
-    });
-
-    await page.goto('/invite/writer-token');
-
+    await expect(page.locator('text=Folder Invitation')).toBeVisible();
+    await expect(
+      page.locator('text=alice@example.com has invited you to collaborate'),
+    ).toBeVisible();
     await expect(page.locator('text=Writer')).toBeVisible();
-    await expect(page.locator('text=You can view and modify items in this folder')).toBeVisible();
+    await expect(page.locator('button:has-text("Accept Invite")')).toBeVisible();
+    await expect(page.locator('button:has-text("Decline")')).toBeVisible();
   });
 
-  test.skip('should show admin permission description', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'sender@example.com',
-          recipientEmail: 'recipient@example.com',
-          permission: 'admin',
-        }),
-      });
-    });
-
-    await page.goto('/invite/admin-token');
-
-    await expect(page.locator('text=Admin')).toBeVisible();
-    await expect(page.locator('text=You have full control including sharing permissions')).toBeVisible();
-  });
-
-  test.skip('should have Go to Dashboard button on error page', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ valid: false, error: 'not_found' }),
-      });
-    });
+  test('shows a generic error for an invalid, revoked, or expired invite', async ({ page }) => {
+    // rowboat's validate returns `{ valid: false }` for ANY unusable token, so there is one
+    // generic message — the Jazz per-code copy ("invalid or revoked" / "has expired") is gone.
+    await authenticate(page, 'invite-invalid');
+    await mockValidate(page, { valid: false });
 
     await page.goto('/invite/invalid-token');
 
-    // Should have dashboard button
-    const dashboardButton = page.locator('button:has-text("Go to Dashboard")');
-    await expect(dashboardButton).toBeVisible();
+    await expect(page.locator('text=Invite Error')).toBeVisible();
+    await expect(page.locator('text=This invite link is no longer valid.')).toBeVisible();
   });
 
-  test.skip('should navigate to dashboard when clicking Decline', async ({ page }) => {
-    await page.route('**/api/shares/validate/*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          valid: true,
-          senderEmail: 'sender@example.com',
-          recipientEmail: 'recipient@example.com',
-          permission: 'writer',
-        }),
-      });
+  test('does not disclose the invite to an authenticated non-recipient', async ({ page }) => {
+    // A signed-in user who is not the recipient gets `{ valid: false }` (no sender/role leaked),
+    // rendering the generic error screen — never the sender or invite details.
+    await authenticate(page, 'invite-nonrecipient');
+    await mockValidate(page, { valid: false });
+
+    await page.goto('/invite/not-yours-token');
+
+    await expect(page.locator('text=Invite Error')).toBeVisible();
+    await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
+    await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
+    await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
+  });
+
+  for (const { role, label, description } of [
+    { role: 'reader', label: 'Reader', description: 'You can view items in this folder' },
+    {
+      role: 'writer',
+      label: 'Writer',
+      description: 'You can view and modify items in this folder',
+    },
+    {
+      role: 'admin',
+      label: 'Admin',
+      description: 'You have full control including sharing permissions',
+    },
+  ]) {
+    test(`shows the ${role} permission description`, async ({ page }) => {
+      await authenticate(page, `invite-${role}`);
+      await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role });
+
+      await page.goto(`/invite/${role}-token`);
+
+      await expect(page.locator(`text=${label}`).first()).toBeVisible();
+      await expect(page.locator(`text=${description}`)).toBeVisible();
     });
+  }
+
+  test('shows the Go to Dashboard button on the error page', async ({ page }) => {
+    await authenticate(page, 'invite-error-dash');
+    await mockValidate(page, { valid: false });
+
+    await page.goto('/invite/invalid-token');
+
+    await expect(page.locator('button:has-text("Go to Dashboard")')).toBeVisible();
+  });
+
+  test('navigates to the dashboard when clicking Decline', async ({ page }) => {
+    await authenticate(page, 'invite-decline');
+    await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role: 'writer' });
 
     await page.goto('/invite/valid-token');
-
-    // Click Decline
     await page.click('button:has-text("Decline")');
 
-    // Should navigate to dashboard
     await page.waitForURL('/');
   });
 });
