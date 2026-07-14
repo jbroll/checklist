@@ -16,11 +16,10 @@
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
-  test.skip('should show default Quick Errands list for new users', async ({ page }) => {
-    // TODO(e2e): the pre-port Jazz app seeded a default "Quick Errands" template for brand-new
-    // accounts as part of account migration. The rowboat port has no equivalent seeding — new
-    // anonymous sessions start with an empty tree. Leave skipped; there is no gap to close here,
-    // just a removed feature with no rowboat design.
+  test('should show default Quick Errands list for new users', async ({ page }) => {
+    // A brand-new user is seeded the default "Quick Errands" list at account-init (jazz.tsx
+    // RowboatBridge → defaultData.seedDefaultFolders), the rowboat equivalent of the Jazz account
+    // migration's Step 6. Seeded only when there's no pre-existing user_settings row.
     await page.goto('/');
 
     // Wait for page to load

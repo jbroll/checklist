@@ -304,7 +304,9 @@ test.describe('Subscription Limits', () => {
   // subscriptionService.ensureUserSettings), so /billing/success's syncSubscriptionFromBackend has
   // a row to update — the free tier flows through and the upgrade dialog shows real tier info.
   test('should show upgrade dialog when list limit is reached', async ({ page }) => {
-    // Mock subscription API to return free tier with 3 list limit
+    // Free tier enforces a 3-list limit (from TIER_LIMITS.free; the mocked tier.maxLists is only a
+    // cached display value, not the enforced limit). A new user is seeded the default "Quick
+    // Errands" list, which takes 1 of the 3 slots.
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
         status: 200,
@@ -328,9 +330,8 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // Create lists up to the limit (3 for free tier). The rowboat port seeds no default list for
-    // a new anonymous session, so all 3 must be created here.
-    for (let i = 1; i <= 3; i++) {
+    // Quick Errands takes 1 of the 3 slots; create 2 more to reach the limit.
+    for (let i = 1; i <= 2; i++) {
       await createList(page, `Test List ${i}`);
     }
 
@@ -343,7 +344,8 @@ test.describe('Subscription Limits', () => {
   });
 
   test('should prevent creating lists beyond limit', async ({ page }) => {
-    // Mock free tier with strict limits
+    // Free tier enforces a 3-list limit (from TIER_LIMITS.free); the seeded "Quick Errands" list
+    // takes 1 slot.
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
         status: 200,
@@ -366,17 +368,17 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // Create 3 lists (no default list is seeded in the rowboat port, so 3 reaches the limit)
-    for (let i = 1; i <= 3; i++) {
+    // The seeded "Quick Errands" list takes 1 of the 3 slots; create 2 more to reach the limit.
+    for (let i = 1; i <= 2; i++) {
       await createList(page, `Limited List ${i}`);
     }
 
-    // Verify lists exist
+    // Verify the seeded + created lists exist (3 total = the limit)
+    await expect(page.getByText('Quick Errands')).toBeVisible();
     await expect(page.getByText('Limited List 1')).toBeVisible();
     await expect(page.getByText('Limited List 2')).toBeVisible();
-    await expect(page.getByText('Limited List 3')).toBeVisible();
 
-    // Try to create a 4th list - should show upgrade dialog instead
+    // Try to create one more list beyond the limit - should show upgrade dialog instead
     await page.getByRole('button', { name: /new list/i }).click();
 
     // Should show upgrade dialog, not the create dialog
