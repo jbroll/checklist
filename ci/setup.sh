@@ -44,15 +44,17 @@ for sibling in rowboat jbr-jazz jazz-mock; do
 done
 
 # rowboat packages (@jbroll/rowboat-*) are consumed as built dist — checklist file:
-# links to ../rowboat/packages/*. Ensure they're installed + built in CI.
+# links to ../rowboat/packages/*. On this host ci-workspace and ci-worktrees share
+# a filesystem, so the sibling above is a SYMLINK into ci-workspace/rowboat — a
+# checkout SHARED by every consumer's CI run. So we do NOT install/build it here:
+# rebuilding a shared checkout per-run races concurrent jobs and a failed --clean
+# rebuild leaves its dist broken. ci-workspace/rowboat is kept current+built out of
+# band (rebuilt on rowboat land). We only verify its dist is present.
 ROWBOAT="$(dirname "$WORKTREE")/rowboat"
-if [ -d "$ROWBOAT" ]; then
-    ( cd "$ROWBOAT" && npm install --silent && npm run build --silent ) \
-        && echo "[ci/setup] built rowboat packages" \
-        || echo "[ci/setup] WARN: rowboat build failed" >&2
+if [ -f "$ROWBOAT/packages/schema/dist/index.d.ts" ] && [ -f "$ROWBOAT/packages/auth-betterauth/dist/index.d.ts" ]; then
+    echo "[ci/setup] rowboat dist present ($ROWBOAT)"
 else
-    echo "[ci/setup] ERROR: rowboat sibling missing at $ROWBOAT — @jbroll/rowboat-* cannot resolve." >&2
-    echo "[ci/setup]        place a rowboat checkout in \$CI_WORKSPACE ($CI_WORKSPACE/rowboat)." >&2
+    echo "[ci/setup] ERROR: rowboat dist missing at $ROWBOAT — build \$CI_WORKSPACE/rowboat (git reset --hard origin/main && npm ci && npm run build)." >&2
 fi
 
 # jbr-jazz packages are consumed as built dist; ensure they're built in CI (legacy,
