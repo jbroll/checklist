@@ -139,6 +139,14 @@ async function createTemplateItem(
   }
 
   await g.folder.update(templateId, update);
+  // The IndexedDB graph propagates a write to the readable view asynchronously, so a follow-up
+  // read-modify-write on this same row (e.g. adding several items back-to-back) would otherwise
+  // read a STALE items array and drop the just-added item (last-write-wins). Wait for this write
+  // to be readable before returning so consecutive item creates compose correctly.
+  for (let i = 0; i < 100; i += 1) {
+    if (getItem(g, templateId, newItem.id)) break;
+    await new Promise((r) => setTimeout(r, 10));
+  }
   return newItem.id;
 }
 
