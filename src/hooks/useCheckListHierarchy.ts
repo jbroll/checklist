@@ -176,16 +176,38 @@ export function useCheckListHierarchy(
 }
 
 /**
- * Shared `useSelect` equality check for `FolderRow[]` snapshots (id + updated_at shallow
- * compare). Also used directly by `TreeView` (which reads the whole table, not just
- * top-level folders) — every `useSelect` selector that maps/filters into a new array MUST
- * pass an `isEqual`, or `useSyncExternalStore`'s default `Object.is` never matches a
- * freshly-mapped array and the render loops forever (`getSnapshot should be cached`).
+ * Shared `useSelect` equality check for `FolderRow[]` snapshots. Also used directly by
+ * `TreeView` (which reads the whole table, not just top-level folders) — every `useSelect`
+ * selector that maps/filters into a new array MUST pass an `isEqual`, or
+ * `useSyncExternalStore`'s default `Object.is` never matches a freshly-mapped array and the
+ * render loops forever (`getSnapshot should be cached`).
+ *
+ * Compares ALL columns, not just `id` + `updated_at`: `updated_at` is stamped with
+ * `Date.now()`, so a create and an immediately-following edit can share a millisecond and
+ * thus an `updated_at`. Keying only on `updated_at` then reports the snapshot as unchanged
+ * and the mutated row (renamed, archived, moved) never reaches the UI. A full field compare
+ * still returns `true` for an unchanged snapshot, so the loop-prevention guarantee holds.
  */
 export function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
-    if (a[i].id !== b[i].id || a[i].updated_at !== b[i].updated_at) return false;
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.id !== y.id ||
+      x.owner_group_id !== y.owner_group_id ||
+      x.name !== y.name ||
+      x.type !== y.type ||
+      x.parent_id !== y.parent_id ||
+      x.sharing_mode !== y.sharing_mode ||
+      x.archived !== y.archived ||
+      x.expanded !== y.expanded ||
+      x.created_by !== y.created_by ||
+      x.created_at !== y.created_at ||
+      x.updated_at !== y.updated_at
+    ) {
+      return false;
+    }
   }
   return true;
 }

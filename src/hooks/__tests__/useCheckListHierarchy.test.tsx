@@ -134,4 +134,30 @@ describe('useCheckListHierarchy', () => {
     });
     expect(result.current.findById(id)?.archived).toBe(false);
   });
+
+  it('folders reflects a mutation that lands in the same millisecond as create (updated_at collision)', async () => {
+    // Pin the clock so addFolder and archiveNode stamp an identical updated_at.
+    // The reactive snapshot equality must still detect the archived change — this
+    // is what makes the rename/archive tests above flaky when the ms happens to
+    // not tick over between the two mutations.
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      const { result } = renderHook(() =>
+        useCheckListHierarchy({ createdBy: CREATED_BY, mintGroup }),
+      );
+
+      let id = '';
+      await act(async () => {
+        id = (await result.current.addFolder('Same MS', null, 'folder')).id;
+      });
+      await act(async () => {
+        await result.current.archiveNode(id);
+      });
+
+      expect(result.current.findById(id)?.archived).toBe(true);
+      expect(result.current.folders.map((f) => f.id)).not.toContain(id);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 });
