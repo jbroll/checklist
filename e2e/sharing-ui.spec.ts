@@ -1,16 +1,22 @@
-// TODO(slice-2): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Depends on the pre-port /test route + window.__testServices.directory (Jazz-era
-// test-only service, not ported) AND a folder-row "Share" menu item that
-// docs/superpowers/d-t5-report.md documents as not yet wired into the live UI
-// (ShareDialog itself works against rowboat's useSharing, per that report — it's
-// just not reachable from the tree UI yet). Re-enable once both land.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it.
-
 /**
  * E2E Tests for Sharing UI
  *
- * Tests the share dialog and invite acceptance page UI.
- * Uses API mocking for reliable, fast tests.
+ * TODO(e2e): every test is `test.skip` for the rowboat port — two independent UI gaps:
+ *
+ *  - "Share Dialog UI" / "Share Dialog - Empty States": open the Share dialog from a folder-row
+ *    menu, but FolderNodeView's row menu has NO Share item in the rowboat port (only
+ *    rename/archive/delete — see src/components/tree/FolderNodeView.tsx; ShareDialog itself works
+ *    against rowboat's useSharing, it's just not reachable from the tree yet).
+ *
+ *  - "Invite Accept Page UI": the ported InviteAcceptPage (src/components/sharing/InviteAcceptPage.tsx)
+ *    is AUTH-GATED and reads through rowboat's `useSharing`. For an anonymous Playwright session it
+ *    always shows the "Sign In to Continue" screen WITHOUT calling validate, so these Jazz-era
+ *    tests — which mock `/api/shares/validate/*` with per-error-code bodies (not_found / expired /
+ *    email_mismatch / a full valid invite) and expect the page to branch on them — no longer apply.
+ *    A rowboat rewrite needs an authenticated session plus useSharing-shaped validate/accept mocks.
+ *
+ * Un-quarantined (renamed off .skip) but skipped until the Share menu item is wired and the
+ * invite-accept tests are rewritten against the auth-gated useSharing flow.
  */
 
 import { expect, test } from './fixtures/base';
@@ -102,7 +108,7 @@ test.describe('Share Dialog UI', () => {
     await page.getByRole('menuitem', { name: 'Share' }).click();
   }
 
-  test('should open share dialog from folder menu', async ({ page }) => {
+  test.skip('should open share dialog from folder menu', async ({ page }) => {
     await openShareDialog(page);
 
     // Verify dialog opens - look for the dialog title
@@ -110,7 +116,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('heading', { name: /Share.*Share Test Folder/i })).toBeVisible();
   });
 
-  test('should display collaborators list in share dialog', async ({ page }) => {
+  test.skip('should display collaborators list in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
     // Wait for dialog and loading to complete
@@ -125,7 +131,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=editor@example.com')).toBeVisible();
   });
 
-  test('should display pending invites in share dialog', async ({ page }) => {
+  test.skip('should display pending invites in share dialog', async ({ page }) => {
     await openShareDialog(page);
 
     // Wait for dialog and loading to complete
@@ -138,7 +144,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=pending2@example.com')).toBeVisible();
   });
 
-  test('should have disabled delivery buttons when email is empty', async ({ page }) => {
+  test.skip('should have disabled delivery buttons when email is empty', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -148,7 +154,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('button', { name: 'Email invite' })).toBeDisabled();
   });
 
-  test('should enable delivery buttons when valid email is entered', async ({ page }) => {
+  test.skip('should enable delivery buttons when valid email is entered', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -160,7 +166,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.getByRole('button', { name: 'Email invite' })).toBeEnabled();
   });
 
-  test('should generate invite link when clicking Email invite', async ({ page }) => {
+  test.skip('should generate invite link when clicking Email invite', async ({ page }) => {
     // Mock the invite creation endpoint
     await page.route('**/api/shares/invite', (route) => {
       route.fulfill({
@@ -186,7 +192,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('input[value*="/invite/new-invite-token-123"]')).toBeVisible();
   });
 
-  test('should show error when invite generation fails', async ({ page }) => {
+  test.skip('should show error when invite generation fails', async ({ page }) => {
     // Mock the invite creation endpoint to fail
     await page.route('**/api/shares/invite', (route) => {
       route.fulfill({
@@ -213,7 +219,7 @@ test.describe('Share Dialog UI', () => {
     await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
+  test.skip('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -227,7 +233,7 @@ test.describe('Share Dialog UI', () => {
     await expect(permissionSelect.locator('option[value="admin"]')).toHaveText('Admin');
   });
 
-  test('should have expiration dropdown with day options', async ({ page }) => {
+  test.skip('should have expiration dropdown with day options', async ({ page }) => {
     await openShareDialog(page);
     await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -242,7 +248,7 @@ test.describe('Share Dialog UI', () => {
     await expect(expirationSelect.locator('option[value="30"]')).toHaveText('30 days');
   });
 
-  test('should close dialog when clicking Done', async ({ page }) => {
+  test.skip('should close dialog when clicking Done', async ({ page }) => {
     await openShareDialog(page);
 
     // Verify dialog is open
@@ -257,7 +263,7 @@ test.describe('Share Dialog UI', () => {
 });
 
 test.describe('Invite Accept Page UI', () => {
-  test('should show loading state initially', async ({ page }) => {
+  test.skip('should show loading state initially', async ({ page }) => {
     // Delay the API response significantly to ensure loading state is visible
     await page.route('**/api/shares/validate/*', async (route) => {
       await new Promise(r => setTimeout(r, 2000));
@@ -274,7 +280,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=Loading invite...')).toBeVisible({ timeout: 3000 });
   });
 
-  test('should show error for invalid token', async ({ page }) => {
+  test.skip('should show error for invalid token', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -290,7 +296,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=This invite link is invalid or has been revoked.')).toBeVisible();
   });
 
-  test('should show error for expired token', async ({ page }) => {
+  test.skip('should show error for expired token', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -306,7 +312,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=This invite link has expired.')).toBeVisible();
   });
 
-  test('should show invite details for an authenticated user', async ({ page }) => {
+  test.skip('should show invite details for an authenticated user', async ({ page }) => {
     // The backend only returns invite details to an authenticated checklist
     // user; a valid response therefore represents that authenticated case.
     await page.route('**/api/shares/validate/*', (route) => {
@@ -333,7 +339,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('button:has-text("Decline")')).toBeVisible();
   });
 
-  test('should not disclose invite details to an unauthenticated user', async ({ page }) => {
+  test.skip('should not disclose invite details to an unauthenticated user', async ({ page }) => {
     // Unauthenticated callers get no invite data from the backend, only a
     // signal to sign in first. The page must show a sign-in prompt and must
     // NOT reveal the sender, permission, or that the token even resolves.
@@ -358,7 +364,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
   });
 
-  test('should not disclose the sender to an authenticated non-recipient', async ({ page }) => {
+  test.skip('should not disclose the sender to an authenticated non-recipient', async ({ page }) => {
     // The backend returns email_mismatch (no sender/permission) when the signed-in
     // user is not the invited recipient. The page shows the wrong-account screen
     // and must not reveal the sender or any invite details.
@@ -380,7 +386,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
   });
 
-  test('should show reader permission description', async ({ page }) => {
+  test.skip('should show reader permission description', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -400,7 +406,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=You can view items in this folder')).toBeVisible();
   });
 
-  test('should show writer permission description', async ({ page }) => {
+  test.skip('should show writer permission description', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -420,7 +426,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=You can view and modify items in this folder')).toBeVisible();
   });
 
-  test('should show admin permission description', async ({ page }) => {
+  test.skip('should show admin permission description', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -440,7 +446,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('text=You have full control including sharing permissions')).toBeVisible();
   });
 
-  test('should have Go to Dashboard button on error page', async ({ page }) => {
+  test.skip('should have Go to Dashboard button on error page', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -456,7 +462,7 @@ test.describe('Invite Accept Page UI', () => {
     await expect(dashboardButton).toBeVisible();
   });
 
-  test('should navigate to dashboard when clicking Decline', async ({ page }) => {
+  test.skip('should navigate to dashboard when clicking Decline', async ({ page }) => {
     await page.route('**/api/shares/validate/*', (route) => {
       route.fulfill({
         status: 200,
@@ -481,7 +487,7 @@ test.describe('Invite Accept Page UI', () => {
 });
 
 test.describe('Share Dialog - Empty States', () => {
-  test('should show empty collaborators message', async ({ page }) => {
+  test.skip('should show empty collaborators message', async ({ page }) => {
     // Mock empty collaborators
     await page.route('**/api/shares/targets/*/collaborators', (route) => {
       route.fulfill({

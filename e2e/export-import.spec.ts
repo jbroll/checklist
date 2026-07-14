@@ -1,18 +1,19 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Later-slice UI/flow (items/sessions/export/billing/deploy) — out of sub-project D slice-1 scope.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
-
 /**
  * E2E tests for Export/Import functionality
  *
- * Tests the complete user flows for exporting and importing grocery data.
+ * TODO(e2e): every test here opens the Export or Import dialog, but the rowboat port has NOT
+ * wired those dialogs into the app yet — TreeView passes `onExport={() => {}}`/`onImport={() =>
+ * {}}` no-ops (the menu items are visible but do nothing) because export/import operate on
+ * template items/sessions that the session UI slice hasn't wired. So `page.getByRole('dialog')`
+ * never appears and every assertion would fail. Un-quarantined (renamed off .skip) but each test
+ * is `test.skip` until the Export/Import dialogs are wired into TreeView/AppContainer. The
+ * export/import SERVICES themselves are ported and unit-tested; this is purely a UI-wiring gap.
  */
 
 import { expect, test } from '@playwright/test';
 
 test.describe('Export Functionality', () => {
-  test('should open export dialog and show options', async ({ page }) => {
+  test.skip('should open export dialog and show options', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -29,7 +30,7 @@ test.describe('Export Functionality', () => {
     await expect(dialog.getByText(/export to json for backup or transfer/i)).toBeVisible();
   });
 
-  test('should close export dialog on cancel', async ({ page }) => {
+  test.skip('should close export dialog on cancel', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -46,7 +47,7 @@ test.describe('Export Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test('should have export button enabled', async ({ page }) => {
+  test.skip('should have export button enabled', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -62,7 +63,7 @@ test.describe('Export Functionality', () => {
 });
 
 test.describe('Import Functionality', () => {
-  test('should open import dialog and show upload area', async ({ page }) => {
+  test.skip('should open import dialog and show upload area', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -83,7 +84,7 @@ test.describe('Import Functionality', () => {
     await expect(dialog.getByText(/browse files/i)).toBeVisible();
   });
 
-  test('should show file size and type restrictions', async ({ page }) => {
+  test.skip('should show file size and type restrictions', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -96,7 +97,7 @@ test.describe('Import Functionality', () => {
     await expect(dialog.getByText(/json, txt, csv files, up to 10mb/i)).toBeVisible();
   });
 
-  test('should close import dialog on cancel', async ({ page }) => {
+  test.skip('should close import dialog on cancel', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -113,7 +114,7 @@ test.describe('Import Functionality', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test('should have import button disabled when no file is selected', async ({ page }) => {
+  test.skip('should have import button disabled when no file is selected', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -131,7 +132,7 @@ test.describe('Import Functionality', () => {
 test.describe('Export/Import Dialog Interactions', () => {
   // Run these tests serially to avoid dialog overlay conflicts in parallel execution
   test.describe.configure({ mode: 'serial' });
-  test('should close export dialog when pressing Escape', async ({ page }) => {
+  test.skip('should close export dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,
@@ -148,7 +149,7 @@ test.describe('Export/Import Dialog Interactions', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test('should close import dialog when pressing Escape', async ({ page }) => {
+  test.skip('should close import dialog when pressing Escape', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
       timeout: 10000,

@@ -1,17 +1,12 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Later-slice UI/flow (items/sessions/export/billing/deploy) — out of sub-project D slice-1 scope.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
-
 /**
  * Error Handling E2E Tests (Phase 4.5)
  *
- * Tests error scenarios and recovery flows for:
- * - Network errors and API failures
- * - Import validation and file errors
- * - Subscription limit enforcement
- * - Authentication edge cases
- * - Data sync error recovery
+ * Network-error, authentication-error, data-sync and retry tests run against the rowboat app
+ * unchanged (they only assert the app stays functional — the folder create/tree UI). Two groups
+ * are `test.skip` for the rowboat port (see per-test TODO(e2e) notes): the Import-validation
+ * tests open the Import dialog (wired as a no-op in TreeView), and the Subscription-limit tests
+ * need list-limit enforcement + the Upgrade dialog, which AppContainer does not render (creation
+ * is never blocked in this slice).
  */
 
 import { expect, test } from '@playwright/test';
@@ -169,7 +164,9 @@ test.describe('Import Errors', () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show error for invalid JSON format', async ({ page }) => {
+  // TODO(e2e): opens the Import dialog (openImportDialog) — TreeView wires onImport as a no-op in
+  // the rowboat port, so no dialog opens. Re-enable when the Import dialog is wired.
+  test.skip('should show error for invalid JSON format', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -198,7 +195,8 @@ test.describe('Import Errors', () => {
     }
   });
 
-  test('should handle empty import file', async ({ page }) => {
+  // TODO(e2e): opens the Import dialog (openImportDialog) — no-op in the rowboat port (see above).
+  test.skip('should handle empty import file', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
     await openImportDialog(page);
@@ -294,7 +292,10 @@ Category 2`;
 // ============================================================================
 
 test.describe('Subscription Limits', () => {
-  test('should show upgrade dialog when list limit is reached', async ({ page }) => {
+  // TODO(e2e): needs list-limit enforcement + the Upgrade dialog + the /billing/success sync flow.
+  // AppContainer does not enforce a list limit or render UpgradeDialog in the rowboat port, so the
+  // Nth "New list" just opens the create dialog. Re-enable when limit enforcement is wired.
+  test.skip('should show upgrade dialog when list limit is reached', async ({ page }) => {
     // Mock subscription API to return free tier with 3 list limit
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -333,7 +334,8 @@ test.describe('Subscription Limits', () => {
     await expect(page.getByText(/limit reached/i)).toBeVisible();
   });
 
-  test('should prevent creating lists beyond limit', async ({ page }) => {
+  // TODO(e2e): needs list-limit enforcement + Upgrade dialog (not wired in the rowboat port — see above).
+  test.skip('should prevent creating lists beyond limit', async ({ page }) => {
     // Mock free tier with strict limits
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -373,7 +375,9 @@ test.describe('Subscription Limits', () => {
     await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show tier information in upgrade dialog', async ({ page }) => {
+  // TODO(e2e): opens the Upgrade dialog from an "Upgrade" menu item — AppContainer does not wire
+  // onUpgradeClick, so there is no Upgrade menu item or dialog in the rowboat port. Re-enable when wired.
+  test.skip('should show tier information in upgrade dialog', async ({ page }) => {
     // Mock free tier to ensure upgrade option is visible
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({

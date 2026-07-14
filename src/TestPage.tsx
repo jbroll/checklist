@@ -5,60 +5,31 @@
  * via direct URL in development/test environments.
  *
  * Access: http://localhost:5173/test
+ *
+ * Rowboat port (slice-2): reads the bound graph via `useRowboat()` (was Jazz `useAccount`) and
+ * hands it to `exposeServicesToWindow(g)`, which publishes the graph + ported services on
+ * `window.testExports` for Playwright seeding. The graph is always available inside
+ * `<JazzProvider>`, so — unlike the Jazz version — there is no "waiting for account" state.
  */
 
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
-import { useAccount, useLogOut } from '@/lib/jazz';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
+import { useRowboat } from '@/jazz';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 
 export function TestPage() {
-  // Jazz 0.19: useAccount returns MaybeLoaded, need explicit type handling
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
-  const logOut = useLogOut();
+  const g = useRowboat();
 
   // Expose services to window for E2E tests
   useEffect(() => {
-    if (me) {
-      exposeServicesToWindow(() => me);
-      console.log('[TestPage] Test mode active - services exposed to window.testExports');
+    exposeServicesToWindow(g);
+    console.log('[TestPage] Test mode active - services exposed to window.testExports');
 
-      // Add visual indicator that we're in test mode
-      document.body.style.border = '5px solid orange';
-      document.title = `TEST MODE - ${document.title}`;
-    }
-  }, [me]);
-
-  const handleSignOut = async () => {
-    try {
-      await logOut();
-      window.location.href = '/test';
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
-
-  if (!me) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-orange-50">
-        <div className="max-w-md rounded-lg border-4 border-orange-500 bg-white p-8 text-center shadow-lg">
-          <div className="mb-4 flex justify-center">
-            <Beaker className="h-16 w-16 text-orange-500" />
-          </div>
-          <h1 className="mb-2 text-2xl font-bold text-orange-900">Test Mode</h1>
-          <p className="mb-4 text-neutral-600">
-            This is a test page for E2E testing.
-            <br />
-            Waiting for Jazz account to initialize...
-          </p>
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-orange-300 border-t-orange-900"></div>
-        </div>
-      </div>
-    );
-  }
+    // Add visual indicator that we're in test mode
+    document.body.style.border = '5px solid orange';
+    document.title = `TEST MODE - ${document.title}`;
+  }, [g]);
 
   return (
     <div className="relative">
@@ -70,7 +41,7 @@ export function TestPage() {
 
       {/* Main app with offset for banner */}
       <div className="pt-10">
-        <AppContainer onSignOut={handleSignOut} isAuthenticated={true} />
+        <AppContainer isAuthenticated={true} />
       </div>
     </div>
   );

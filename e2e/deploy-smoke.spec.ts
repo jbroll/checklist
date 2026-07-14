@@ -1,21 +1,16 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Later-slice UI/flow (items/sessions/export/billing/deploy) — out of sub-project D slice-1 scope.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
-
 /**
  * Deployment Smoke Tests
  *
- * Tests that run against deployed environments (test/prod) without authentication.
- * Uses anonymous Jazz accounts in local-only mode.
+ * Tests that run against deployed environments (test/prod) without authentication, in
+ * anonymous local-only mode. The infrastructure/health, performance and folder/list-creation
+ * tests run unchanged. Tests that drive the SESSION VIEW (opening a list's shopping session) or
+ * the EXPORT/IMPORT dialogs are `test.skip` for the rowboat port — those UI surfaces are not
+ * wired into AppContainer/TreeView yet (see the per-test TODO(e2e) notes and
+ * src/components/editor/AppContainer.tsx).
  *
  * Run with:
  *   npm run test:smoke:test   # Test environment
  *   npm run test:smoke:prod   # Production
- *
- * For monitoring:
- *   npm run monitor:test      # Lightweight health checks
- *   npm run monitor:prod      # Lightweight health checks
  */
 
 import { expect, test } from '@playwright/test';
@@ -148,7 +143,9 @@ test.describe('Performance', () => {
 test.describe('Mobile Compatibility', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-  test('mobile viewport - app works on small screens', async ({ page }) => {
+  // TODO(e2e): navigates into a list's session view (asserts the list heading after clicking it) —
+  // the session view is not wired into AppContainer/TreeView in the rowboat port yet.
+  test.skip('mobile viewport - app works on small screens', async ({ page }) => {
     await page.goto('/');
 
     // Core UI should be visible
@@ -239,7 +236,9 @@ test.describe('Core Functionality', () => {
     console.log('  Create list: OK');
   });
 
-  test('add items - can add items to a list', async ({ page }) => {
+  // TODO(e2e): opens the list's session view + edit mode to add items — session view not wired
+  // into AppContainer/TreeView in the rowboat port yet.
+  test.skip('add items - can add items to a list', async ({ page }) => {
     // Create a list first
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Items Test ${Date.now()}`;
@@ -276,7 +275,8 @@ test.describe('Core Functionality', () => {
     console.log('  Add items: OK');
   });
 
-  test('shopping session - can view session UI', async ({ page }) => {
+  // TODO(e2e): opens the list's session view (session controls) — not wired in the rowboat port yet.
+  test.skip('shopping session - can view session UI', async ({ page }) => {
     // Create a list
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Session Test ${Date.now()}`;
@@ -299,7 +299,9 @@ test.describe('Core Functionality', () => {
     console.log('  Shopping session: OK');
   });
 
-  test('export/import UI - dialogs open correctly', async ({ page }) => {
+  // TODO(e2e): opens the Export/Import dialogs — TreeView wires onExport/onImport as no-op stubs
+  // in the rowboat port, so no dialog opens. Re-enable when export/import dialogs are wired.
+  test.skip('export/import UI - dialogs open correctly', async ({ page }) => {
     // Open More options menu
     await page.locator('header').getByLabel('More options').click();
 
@@ -328,7 +330,9 @@ test.describe('Core Functionality', () => {
     console.log('  Export/Import UI: OK');
   });
 
-  test('navigation - browser back/forward works', async ({ page }) => {
+  // TODO(e2e): navigates into a list's session view and back — session view not wired in the
+  // rowboat port yet, so the session-view heading never appears.
+  test.skip('navigation - browser back/forward works', async ({ page }) => {
     // Create a list
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Nav Test ${Date.now()}`;

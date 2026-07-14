@@ -1,12 +1,9 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Later-slice UI/flow (items/sessions/export/billing/deploy) — out of sub-project D slice-1 scope.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
-
 /**
  * E2E Tests for Billing Pages
  *
- * Tests the /billing/success and /billing/cancel routes.
+ * Tests the /billing/success and /billing/cancel routes. Both pages are ported to rowboat
+ * (BillingSuccessPage reads the graph via useRowboat and defaults an anonymous user to the
+ * Free tier) and re-routed in src/App.tsx, so these run unchanged from the pre-port suite.
  */
 
 import { expect, test } from '@playwright/test';

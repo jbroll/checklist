@@ -1,19 +1,23 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Later-slice UI/flow (items/sessions/export/billing/deploy) — out of sub-project D slice-1 scope.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
-
 /**
- * Unified UI E2E Tests
+ * Unified UI E2E Tests — shopping/session interface.
  *
- * Tests for the shopping interface - clicking templates opens latest session,
- * sessions are always visible in TreeView.
+ * TODO(e2e): every test opens the SESSION VIEW (clicking a template navigates to its shopping
+ * session, then asserts on items / edit mode / batch controls / New-session). The rowboat port
+ * has NOT wired the session view into the app yet: AppContainer renders only TreeView (folder
+ * rows) and clicking a folder merely highlights it — there is no SessionView route (see
+ * src/components/editor/AppContainer.tsx). The session SERVICES + components exist and are
+ * unit-tested (src/services/sessionService.ts, src/components/session/**), they're just not
+ * mounted in the navigation. The first test also expects a default "Quick Errands" list, which
+ * was Jazz account-migration seeding with no rowboat equivalent. Un-quarantined but every test
+ * is `test.skip` until the session view is wired into TreeView/AppContainer; the seeding calls
+ * still reference the Jazz test API and must be rewritten to window.testExports.{templateService,
+ * sessionService} (all g-first) at that time.
  */
 
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
-  test('should show default Quick Errands list for new users', async ({ page }) => {
+  test.skip('should show default Quick Errands list for new users', async ({ page }) => {
     await page.goto('/');
 
     // Wait for page to load
@@ -25,7 +29,7 @@ test.describe('UI - Template Selection', () => {
     await expect(page.getByText(/quick errands/i)).toBeVisible();
   });
 
-  test('should navigate to session view when selecting a template', async ({ page }) => {
+  test.skip('should navigate to session view when selecting a template', async ({ page }) => {
     await page.goto('/test'); // Use test page to set up data
 
     // Wait for test page to load
@@ -103,7 +107,7 @@ test.describe('UI - Session View', () => {
     await page.getByText('Shopping List').click();
   });
 
-  test('should display session header with controls', async ({ page }) => {
+  test.skip('should display session header with controls', async ({ page }) => {
     // Verify header elements - SessionView has view mode toggle and add/edit buttons
     await expect(page.getByRole('heading', { name: /shopping list/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
@@ -113,14 +117,14 @@ test.describe('UI - Session View', () => {
     await expect(page.getByRole('button', { name: /add and edit items/i })).toBeVisible();
   });
 
-  test('should display items', async ({ page }) => {
+  test.skip('should display items', async ({ page }) => {
     // Items should be visible
     await expect(page.getByText('Milk')).toBeVisible();
     await expect(page.getByText('Bread')).toBeVisible();
     await expect(page.getByText('Eggs')).toBeVisible();
   });
 
-  test('should navigate back to template selector when clicking Done', async ({ page }) => {
+  test.skip('should navigate back to template selector when clicking Done', async ({ page }) => {
     // Click Done button
     await page.getByRole('button', { name: /done/i }).click();
 
@@ -130,7 +134,7 @@ test.describe('UI - Session View', () => {
 });
 
 test.describe('UI - Default Items', () => {
-  test('should show empty state when no items are selected', async ({ page }) => {
+  test.skip('should show empty state when no items are selected', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
@@ -169,7 +173,7 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText(/edit to select default items/i)).toBeVisible();
   });
 
-  test('should enter edit mode when clicking Edit button', async ({ page }) => {
+  test.skip('should enter edit mode when clicking Edit button', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
@@ -205,7 +209,7 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByPlaceholder(/item name/i)).toBeVisible();
   });
 
-  test('should toggle item default state in edit mode via deselect all', async ({ page }) => {
+  test.skip('should toggle item default state in edit mode via deselect all', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
@@ -252,7 +256,7 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText(/no items selected/i)).toBeVisible();
   });
 
-  test('should show batch operation buttons in edit mode', async ({ page }) => {
+  test.skip('should show batch operation buttons in edit mode', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
@@ -291,7 +295,7 @@ test.describe('UI - Default Items', () => {
     await expect(batchButtons).toHaveCount(3); // 3 batch buttons (no expand toggle since zone is always expanded)
   });
 
-  test('should add new items as defaults', async ({ page }) => {
+  test.skip('should add new items as defaults', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 
@@ -334,7 +338,7 @@ test.describe('UI - Default Items', () => {
     await expect(page.getByText('New Default Item')).toBeVisible();
   });
 
-  test('should inherit defaults when creating new session', async ({ page }) => {
+  test.skip('should inherit defaults when creating new session', async ({ page }) => {
     await page.goto('/test');
     await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
 

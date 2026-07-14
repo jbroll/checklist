@@ -70,12 +70,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-// TODO(slice-2): TestPage/BillingSuccessPage/MergeAccountFlow still read a Jazz `Account` (via
-// the old `@/lib/jazz` `useAccount`/`useTypedAccount`), which the rowboat port's provider no
-// longer supplies (see `src/lib/jazz.tsx`). Rather than stub those pages out in place, their
-// routes stay disabled here for slice 1 (folders-only) — the files are untouched on disk (still
-// compile against the unchanged Jazz schema in `src/schema/index.ts`) but are no longer
-// imported, so they're not part of the production bundle. See `docs/superpowers/d-t4-report.md`.
+// slice-2: TestPage and BillingSuccessPage are ported onto rowboat (`useRowboat()`) and their
+// routes are re-enabled below (TestPage only outside PROD). MergeAccountFlow still reads a Jazz
+// `Account` and stays excluded from `tsconfig` (see `docs/superpowers/d-t4-report.md`).
 // InviteAcceptPage was ported onto rowboat's `useSharing` in the sharing slice (see
 // `docs/superpowers/d-t5-report.md`) and is re-enabled below.
 
@@ -100,12 +97,24 @@ const VerifyEmailPage = lazy(() =>
   })),
 );
 
-// Lazy load billing cancel page (no Account access needed, unlike BillingSuccessPage)
+// Lazy load billing cancel page
 const BillingCancelPage = lazy(() =>
   import('./components/billing/BillingCancelPage').then((module) => ({
     default: module.BillingCancelPage,
   })),
 );
+
+// Lazy load billing success page (ported to rowboat in slice-2, reads the graph via
+// useRowboat() — see src/components/billing/BillingSuccessPage.tsx).
+const BillingSuccessPage = lazy(() =>
+  import('./components/billing/BillingSuccessPage').then((module) => ({
+    default: module.BillingSuccessPage,
+  })),
+);
+
+// Lazy load TestPage only in development to avoid bundling it in production. Rendered at /test
+// (blocked in PROD below); exposes the rowboat graph + services on window.testExports for E2E.
+const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
 
 function App() {
   // Check for in-app browser (Facebook, Instagram, etc.) which don't support
@@ -152,6 +161,8 @@ function App() {
   const isResetPasswordPage = pathname === '/reset-password';
   const isVerifyEmailPage = pathname === '/verify-email';
   const isBillingCancel = pathname === '/billing/cancel';
+  const isBillingSuccess = pathname === '/billing/success';
+  const isTestPage = pathname === '/test';
 
   // Block in-app browsers (Facebook, Instagram, etc.) which don't support
   // OAuth and have unreliable local storage for offline data
@@ -185,6 +196,14 @@ function App() {
             ) : isBillingCancel ? (
               <Suspense fallback={<LoadingScreen />}>
                 <BillingCancelPage />
+              </Suspense>
+            ) : isBillingSuccess ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <BillingSuccessPage />
+              </Suspense>
+            ) : isTestPage && !import.meta.env.PROD ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <TestPage />
               </Suspense>
             ) : (
               <AuthGate />

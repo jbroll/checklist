@@ -1,7 +1,8 @@
-// TODO(slice-2/3): quarantined during the rowboat e2e port (sub-project D, slice 1).
-// Jazz-specific — needs a rewrite against rowboat's sync model, not a straight port.
-// Renamed .spec.ts -> .spec.ts.skip so Playwright's **/*.spec.ts testMatch skips it;
-// rename back and fix up once its dependencies land on rowboat.
+// RETIRED (rowboat e2e port, slice-2): drives Jazz's peer-to-peer CoValue sync (jazz-mock
+// multi-client). rowboat sync is server-based and covered by the rowboat integration torture
+// suite plus folders-authed.spec.ts's server round-trip; a rowboat cross-device e2e is a
+// separate future spec, not a port of this one. Renamed to .spec.ts.retired so Playwright
+// never collects it.
 
 /**
  * Cross-Device Real Sync Tests

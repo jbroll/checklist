@@ -54,20 +54,11 @@
      * compile against the unchanged Jazz schema in `src/schema/index.ts` on their own) and
      * are no longer imported from the app's entry graph, so excluding them here only
      * silences `tsc --noEmit` — `vite build` does not process them at all. */
-    "src/TestPage.tsx",
     "src/components/auth/MergeAccountFlow.tsx",
     "src/components/import/**",
     "src/services/import/**",
     "src/services/checklistFolderFactory.ts",
     "src/components/editor/DialogManager.tsx",
-
-    /* `testHelpers.ts` is test-environment-only scaffolding that still imports the OLD Jazz
-     * `Account`/`FolderNode` schema plus the still-excluded `checklistFolderFactory`/
-     * `services/import/**` — independent of the session-subtree port below, and out of scope
-     * on its own. `sessionService.ts`/`templateService.ts` are both ported to rowboat (headless,
-     * graph-first) and NO LONGER excluded — see `src/components/session/**` below, which is the
-     * slice-2 port of the session UI onto them. */
-    "src/services/testHelpers.ts",
 
     /* `useViewStateCleanup` still reads a Jazz `Account` (`account.root.viewState`); its service,
      * `viewStateService`, is now rowboat-graph-based, so the hook no longer typechecks. Hooks are a
