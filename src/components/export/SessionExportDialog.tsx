@@ -1,4 +1,3 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,8 +10,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useRowboat } from '@/jazz';
 import { useDialog } from '@/lib/dialog-context';
-import type { Account, Template } from '@/schema';
+import type { FolderRow } from '@/schema/folder';
 import { exportSessionToCsv, exportSessionToText } from '@/services/export/exportService';
 import { downloadCsv, downloadText } from '@/utils/fileDownload';
 import { buildExportFilename } from '@/utils/fileUtils';
@@ -20,10 +20,9 @@ import { buildExportFilename } from '@/utils/fileUtils';
 interface SessionExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   sessionId: string;
   sessionName: string;
-  account: InstanceOfSchema<typeof Account>;
 }
 
 export function SessionExportDialog({
@@ -32,8 +31,8 @@ export function SessionExportDialog({
   template,
   sessionId,
   sessionName,
-  account,
 }: SessionExportDialogProps) {
+  const g = useRowboat();
   const [format, setFormat] = useState<'txt' | 'csv'>('txt');
   const [isExporting, setIsExporting] = useState(false);
   const { showAlert } = useDialog();
@@ -42,19 +41,16 @@ export function SessionExportDialog({
     setIsExporting(true);
 
     try {
-      const folderId = template.$jazz?.id;
-      if (!folderId) {
-        throw new Error('Folder ID not found');
-      }
+      const folderId = template.id;
 
       // Generate filename
       const filename = buildExportFilename(sessionName, format, true, 'session');
 
       if (format === 'txt') {
-        const content = exportSessionToText(account, folderId, sessionId);
+        const content = exportSessionToText(g, folderId, sessionId);
         downloadText(content, filename);
       } else {
-        const content = exportSessionToCsv(account, folderId, sessionId);
+        const content = exportSessionToCsv(g, folderId, sessionId);
         downloadCsv(content, filename);
       }
 

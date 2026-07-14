@@ -1,100 +1,129 @@
 /**
- * Unit tests for JSON exporter functions
+ * Unit tests for the JSON exporter (rowboat port, slice-2).
+ *
+ * A template is a folder row of `type: 'template-folder'`; its items/sessions live in the row's
+ * `items`/`sessions` json columns, with epoch-ms NUMBER timestamps. Tests seed an in-memory
+ * `makeGraph()` graph — no Jazz — and assert on the exported ISO-string shape.
  */
 
 import { describe, expect, it } from 'vitest';
+import type { FolderRow, ItemState, SessionData, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import { exportAllFolders, exportTemplate, toJsonString } from './jsonExporter';
 import type { ExportedData } from './types';
 
-// Mock Jazz data structures
-const createMockAccount = (options: { withTemplates?: boolean; datesAsStrings?: boolean }) => {
-  const { withTemplates = true, datesAsStrings = false } = options;
-  const date = datesAsStrings ? '2024-11-01T00:00:00.000Z' : new Date('2024-11-01T00:00:00.000Z');
+type Graph = ReturnType<typeof makeGraph>;
 
-  const mockTemplate = withTemplates
-    ? {
-        $jazz: { id: 'template-1' },
-        name: 'Test Template',
-        items: [
-          {
-            id: 'item-1',
-            name: 'Test Item',
-            type: 'item' as const,
-            path: 'test-item',
-            expanded: false,
-            sortOrder: 0,
-            archived: false,
-            defaultQuantity: '1',
-            createdAt: date,
-          },
-        ],
-        sessions: [
-          {
-            $jazz: { id: 'session-1' },
-            archived: false,
-            viewMode: 'flat' as const,
-            itemStates: {
-              'item-1': {
-                selected: true,
-                checked: false,
-                selectedAt: date,
-              },
-            },
-            categoryExpanded: {},
-            selectedCount: 1,
-            checkedCount: 0,
-            remainingCount: 1,
-            createdAt: date,
-            lastActivityAt: date,
-          },
-        ],
-        showZoneHeadings: false,
-        archived: false,
-        expanded: true,
-        createdAt: date,
-        updatedAt: date,
-      }
-    : null;
+/** Epoch-ms for the ISO string the old Jazz mocks used. */
+const NOV_1 = new Date('2024-11-01T00:00:00.000Z').getTime();
+const NOV_1_ISO = '2024-11-01T00:00:00.000Z';
 
+/** Build a complete template-folder row (all required Folder columns present). */
+function templateFolder(
+  id: string,
+  name: string,
+  items: TemplateItem[] = [],
+  sessions: SessionData[] = [],
+  extra: Partial<FolderRow> = {},
+): FolderRow {
   return {
-    root: {
-      folders: withTemplates && mockTemplate ? [mockTemplate] : [],
-    },
+    id,
+    owner_group_id: 'group-1',
+    name,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: NOV_1,
+    updated_at: NOV_1,
+    items,
+    sessions,
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
+    ...extra,
   };
-};
+}
 
-// TODO(slice-2): jsonExporter still reads a Jazz Account/FolderNode; skip-pending until export
-// lands on rowboat (see docs/superpowers/d-t4-report.md).
-describe.skip('jsonExporter', () => {
+/** Build a template item. `path` defaults to `name`; categories default to expanded. */
+function item(
+  id: string,
+  name: string,
+  type: 'category' | 'item' = 'item',
+  path?: string,
+  sortOrder = 0,
+  extra: Partial<TemplateItem> = {},
+): TemplateItem {
+  return {
+    id,
+    name,
+    type,
+    path: path ?? name,
+    expanded: type === 'category',
+    sortOrder,
+    archived: false,
+    defaultQuantity: '',
+    createdAt: NOV_1,
+    ...extra,
+  };
+}
+
+/** Build a session. */
+function session(
+  id: string,
+  itemStates: Record<string, ItemState> = {},
+  extra: Partial<SessionData> = {},
+): SessionData {
+  return {
+    id,
+    itemStates,
+    archived: false,
+    categoryExpanded: {},
+    viewMode: 'flat',
+    selectedCount: 0,
+    checkedCount: 0,
+    remainingCount: 0,
+    createdAt: NOV_1,
+    lastActivityAt: NOV_1,
+    ...extra,
+  };
+}
+
+function graphWith(...folders: FolderRow[]): Graph {
+  return makeGraph({ folder: folders });
+}
+
+describe('jsonExporter', () => {
   describe('toJsonString', () => {
     it('should convert exported data to JSON string with pretty formatting', () => {
       const data: ExportedData = {
         version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
+        exportDate: NOV_1_ISO,
         appVersion: '1.0.0',
         folders: [],
       };
 
       const result = toJsonString(data, true);
 
-      // Should be pretty-printed with indentation
       expect(result).toContain('\n');
-      expect(result).toContain('  '); // Indentation
+      expect(result).toContain('  '); // indentation
       expect(result).toContain('"version": "2.0"');
     });
 
     it('should convert exported data to compact JSON string', () => {
       const data: ExportedData = {
         version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
+        exportDate: NOV_1_ISO,
         appVersion: '1.0.0',
         folders: [],
       };
 
       const result = toJsonString(data, false);
 
-      // Should be compact (no unnecessary whitespace)
       expect(result).not.toContain('\n  ');
       expect(result).toContain('{"version":"2.0"');
     });
@@ -102,26 +131,25 @@ describe.skip('jsonExporter', () => {
     it('should handle complex nested data structures', () => {
       const data: ExportedData = {
         version: '2.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
+        exportDate: NOV_1_ISO,
         appVersion: '1.0.0',
         folders: [
           {
             name: 'Test Folder',
             type: 'template-folder',
-            path: '/test-folder',
             items: [
               {
                 id: 'item-1',
                 name: 'Test Item',
                 type: 'item',
                 sortOrder: 0,
-                createdAt: '2024-11-01T00:00:00.000Z',
-                updatedAt: '2024-11-01T00:00:00.000Z',
+                createdAt: NOV_1_ISO,
+                updatedAt: NOV_1_ISO,
               },
             ],
             sessions: [],
-            createdAt: '2024-11-01T00:00:00.000Z',
-            updatedAt: '2024-11-01T00:00:00.000Z',
+            createdAt: NOV_1_ISO,
+            updatedAt: NOV_1_ISO,
           },
         ],
       };
@@ -135,7 +163,7 @@ describe.skip('jsonExporter', () => {
     it('should preserve date strings in ISO format', () => {
       const dateStr = '2024-11-01T12:00:00.000Z';
       const data: ExportedData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: dateStr,
         appVersion: '1.0.0',
         folders: [],
@@ -148,8 +176,8 @@ describe.skip('jsonExporter', () => {
 
     it('should handle empty folders array', () => {
       const data: ExportedData = {
-        version: '1.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
+        version: '2.0',
+        exportDate: NOV_1_ISO,
         appVersion: '1.0.0',
         folders: [],
       };
@@ -159,42 +187,53 @@ describe.skip('jsonExporter', () => {
       expect(result).toContain('"folders": []');
     });
 
-    it('should handle optional fields correctly', () => {
+    it('should omit undefined optional fields', () => {
       const data: ExportedData = {
-        version: '1.0',
-        exportDate: '2024-11-01T00:00:00.000Z',
+        version: '2.0',
+        exportDate: NOV_1_ISO,
         appVersion: '1.0.0',
         folders: [
           {
             name: 'Test',
             type: 'template-folder',
-            path: '/test',
             items: [
               {
+                id: 'item-1',
                 name: 'Item',
-                category: 'other',
+                type: 'item',
                 sortOrder: 0,
+                createdAt: NOV_1_ISO,
+                updatedAt: NOV_1_ISO,
                 // defaultQuantity is optional and not provided
               },
             ],
             sessions: [],
+            createdAt: NOV_1_ISO,
+            updatedAt: NOV_1_ISO,
           },
         ],
       };
 
       const result = toJsonString(data, false);
 
-      // Should not include undefined optional fields
       expect(JSON.parse(result)).toBeDefined();
       expect(result).toContain('"name":"Item"');
+      expect(result).not.toContain('defaultQuantity');
     });
   });
 
   describe('exportAllFolders', () => {
-    it('should export all folders with Date objects', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+    it('should export all template folders with their items and sessions', () => {
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Test Template',
+          [item('item-1', 'Test Item', 'item', 'test-item', 0, { defaultQuantity: '1' })],
+          [session('session-1', { 'item-1': { selected: true, checked: false } })],
+        ),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
@@ -203,110 +242,129 @@ describe.skip('jsonExporter', () => {
       expect(result.folders[0].sessions).toHaveLength(1);
     });
 
-    it('should export all folders with date strings (Jazz deserialization)', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: true });
+    it('should export epoch-ms timestamps as ISO strings', () => {
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Test Template',
+          [item('item-1', 'Test Item')],
+          [session('session-1')],
+        ),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
-      expect(result.version).toBe('2.0');
-      expect(result.folders).toHaveLength(1);
-      expect(result.folders[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
-      expect(result.folders[0].items?.[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
-      expect(result.folders[0].sessions?.[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].createdAt).toBe(NOV_1_ISO);
+      expect(result.folders[0].updatedAt).toBe(NOV_1_ISO);
+      expect(result.folders[0].items?.[0].createdAt).toBe(NOV_1_ISO);
+      expect(result.folders[0].sessions?.[0].createdAt).toBe(NOV_1_ISO);
     });
 
-    it('should handle empty templates list', () => {
-      const account = createMockAccount({ withTemplates: false });
-
-      const result = exportAllFolders(account as any);
+    it('should handle an empty graph', () => {
+      const result = exportAllFolders(makeGraph());
 
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(0);
     });
 
     it('should skip archived items', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
-      // Add archived item
-      account.root.folders[0].items.push({
-        id: 'item-2',
-        name: 'Archived Item',
-        type: 'item' as const,
-        path: 'archived-item',
-        expanded: false,
-        sortOrder: 1,
-        archived: true, // This should be skipped
-        defaultQuantity: '1',
-        createdAt: new Date('2024-11-01T00:00:00.000Z'),
-      });
+      const g = graphWith(
+        templateFolder('t1', 'Test Template', [
+          item('item-1', 'Test Item'),
+          item('item-2', 'Archived Item', 'item', 'archived-item', 1, { archived: true }),
+        ]),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
       expect(result.folders[0].items).toHaveLength(1);
       expect(result.folders[0].items?.[0].name).toBe('Test Item');
     });
 
-    it('should export session item states with dates', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+    it('should skip archived template folders and their subtrees', () => {
+      const g = graphWith(
+        templateFolder('t1', 'Live'),
+        templateFolder('t2', 'Archived', [], [], { archived: true }),
+        templateFolder('org', 'Org', [], [], { type: 'folder' }),
+        // a template nested under an archived organizational folder must be skipped
+        templateFolder('archived-org', 'Archived Org', [], [], {
+          type: 'folder',
+          archived: true,
+        }),
+        templateFolder('t3', 'Hidden Under Archived', [], [], { parent_id: 'archived-org' }),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
-      const session = result.folders[0].sessions?.[0];
-      expect(session).toBeDefined();
-      expect(session?.itemStates['item-1']).toEqual({
+      expect(result.folders.map((f) => f.name)).toEqual(['Live']);
+    });
+
+    it('should not export organizational folders', () => {
+      const g = graphWith(templateFolder('org', 'Org Folder', [], [], { type: 'folder' }));
+
+      const result = exportAllFolders(g);
+
+      expect(result.folders).toHaveLength(0);
+    });
+
+    it('should export session item states with ISO dates', () => {
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Test Template',
+          [item('item-1', 'Test Item')],
+          [
+            session('session-1', {
+              'item-1': { selected: true, checked: false, selectedAt: NOV_1 },
+            }),
+          ],
+        ),
+      );
+
+      const result = exportAllFolders(g);
+
+      const exported = result.folders[0].sessions?.[0];
+      expect(exported).toBeDefined();
+      expect(exported?.itemStates['item-1']).toEqual({
         selected: true,
         checked: false,
-        selectedAt: '2024-11-01T00:00:00.000Z',
+        selectedAt: NOV_1_ISO,
       });
     });
   });
 
   describe('exportTemplate', () => {
-    it('should export a single template with Date objects', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
-      const template = account.root.folders[0];
+    it('should export a single template folder', () => {
+      const folder = templateFolder('t1', 'Test Template', [item('item-1', 'Test Item')]);
 
-      const result = exportTemplate(template as any, '/test-template');
+      const result = exportTemplate(folder);
 
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Test Template');
     });
 
-    it('should export a single template with date strings', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: true });
-      const template = account.root.folders[0];
+    it('should export timestamps as ISO strings', () => {
+      const folder = templateFolder('t1', 'Test Template');
 
-      const result = exportTemplate(template as any, '/test-template');
+      const result = exportTemplate(folder);
 
-      expect(result.version).toBe('2.0');
-      expect(result.folders[0].createdAt).toBe('2024-11-01T00:00:00.000Z');
-      expect(result.folders[0].updatedAt).toBe('2024-11-01T00:00:00.000Z');
+      expect(result.folders[0].createdAt).toBe(NOV_1_ISO);
+      expect(result.folders[0].updatedAt).toBe(NOV_1_ISO);
     });
 
-    it('should not include currentSessionId (removed from FolderNode)', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
-      const template = account.root.folders[0];
+    it('should not include currentSessionId (removed from schema)', () => {
+      const folder = templateFolder('t1', 'Test Template');
 
-      const result = exportTemplate(template as any, '/test-template');
+      const result = exportTemplate(folder);
 
-      // currentSessionId is not part of FolderNode schema, so it should not be exported
       expect(result.folders[0].currentSessionId).toBeUndefined();
     });
 
-    it('should handle template without items or sessions', () => {
-      const template = {
-        $jazz: { id: 'template-2' },
-        name: 'Empty Template',
-        items: [],
-        sessions: [],
-        showZoneHeadings: false,
-        archived: false,
-        expanded: true,
-        createdAt: new Date('2024-11-01T00:00:00.000Z'),
-        updatedAt: new Date('2024-11-01T00:00:00.000Z'),
-      };
+    it('should handle a template without items or sessions', () => {
+      const folder = templateFolder('t2', 'Empty Template');
 
-      const result = exportTemplate(template as any, '/empty-template');
+      const result = exportTemplate(folder);
 
       expect(result.folders[0].items).toEqual([]);
       expect(result.folders[0].sessions).toEqual([]);
@@ -316,92 +374,50 @@ describe.skip('jsonExporter', () => {
 
   describe('v2.0 hierarchical format', () => {
     it('should export items in hierarchical structure with nested children', () => {
-      const date = new Date('2024-11-01T00:00:00.000Z');
-      const account = {
-        root: {
-          folders: [
+      const g = graphWith(
+        templateFolder('t1', 'Groceries', [
+          item('cat-1', 'Produce', 'category', 'produce', 0),
+          item('cat-2', 'Fruits', 'category', `produce${PATH_SEPARATOR}fruits`, 1),
+          item(
+            'item-1',
+            'Apples',
+            'item',
+            `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples`,
+            2,
             {
-              $jazz: { id: 'template-1' },
-              name: 'Groceries',
-              items: [
-                {
-                  id: 'cat-1',
-                  name: 'Produce',
-                  type: 'category' as const,
-                  path: 'produce',
-                  expanded: true,
-                  sortOrder: 0,
-                  archived: false,
-                  defaultQuantity: '',
-                  createdAt: date,
-                },
-                {
-                  id: 'cat-2',
-                  name: 'Fruits',
-                  type: 'category' as const,
-                  path: `produce${PATH_SEPARATOR}fruits`,
-                  expanded: true,
-                  sortOrder: 1,
-                  archived: false,
-                  defaultQuantity: '',
-                  createdAt: date,
-                },
-                {
-                  id: 'item-1',
-                  name: 'Apples',
-                  type: 'item' as const,
-                  path: `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}apples`,
-                  expanded: false,
-                  sortOrder: 2,
-                  archived: false,
-                  defaultQuantity: '5 lbs',
-                  createdAt: date,
-                },
-                {
-                  id: 'item-2',
-                  name: 'Bananas',
-                  type: 'item' as const,
-                  path: `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}bananas`,
-                  expanded: false,
-                  sortOrder: 3,
-                  archived: false,
-                  defaultQuantity: '1 bunch',
-                  createdAt: date,
-                },
-              ],
-              sessions: [],
-              showZoneHeadings: false,
-              archived: false,
-              expanded: true,
-              createdAt: date,
-              updatedAt: date,
+              defaultQuantity: '5 lbs',
             },
-          ],
-        },
-      };
+          ),
+          item(
+            'item-2',
+            'Bananas',
+            'item',
+            `produce${PATH_SEPARATOR}fruits${PATH_SEPARATOR}bananas`,
+            3,
+            { defaultQuantity: '1 bunch' },
+          ),
+        ]),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
 
       const items = result.folders[0].items;
       expect(items).toBeDefined();
-      expect(items).toHaveLength(1); // Only 1 root category
+      expect(items).toHaveLength(1); // only 1 root category
 
-      // Check hierarchical structure
       const produce = items?.[0];
       expect(produce?.id).toBe('cat-1');
       expect(produce?.name).toBe('Produce');
       expect(produce?.type).toBe('category');
-      expect(produce?.children).toBeDefined();
-      expect(produce?.children).toHaveLength(1); // Fruits category
+      expect(produce?.children).toHaveLength(1); // Fruits
 
       const fruits = produce?.children?.[0];
       expect(fruits?.id).toBe('cat-2');
       expect(fruits?.name).toBe('Fruits');
       expect(fruits?.type).toBe('category');
-      expect(fruits?.children).toBeDefined();
       expect(fruits?.children).toHaveLength(2); // Apples and Bananas
 
       const apples = fruits?.children?.[0];
@@ -409,7 +425,7 @@ describe.skip('jsonExporter', () => {
       expect(apples?.name).toBe('Apples');
       expect(apples?.type).toBe('item');
       expect(apples?.defaultQuantity).toBe('5 lbs');
-      expect(apples?.children).toBeUndefined(); // Items don't have children
+      expect(apples?.children).toBeUndefined(); // items have no children
 
       const bananas = fruits?.children?.[1];
       expect(bananas?.id).toBe('item-2');
@@ -418,173 +434,78 @@ describe.skip('jsonExporter', () => {
     });
 
     it('should export session states with neutral terminology and item IDs', () => {
-      const date = new Date('2024-11-01T00:00:00.000Z');
-      const account = {
-        root: {
-          folders: [
-            {
-              $jazz: { id: 'template-1' },
-              name: 'Shopping List',
-              items: [
-                {
-                  id: 'item-1',
-                  name: 'Milk',
-                  type: 'item' as const,
-                  path: 'milk',
-                  expanded: false,
-                  sortOrder: 0,
-                  archived: false,
-                  defaultQuantity: '1 gallon',
-                  createdAt: date,
-                },
-                {
-                  id: 'item-2',
-                  name: 'Bread',
-                  type: 'item' as const,
-                  path: 'bread',
-                  expanded: false,
-                  sortOrder: 1,
-                  archived: false,
-                  defaultQuantity: '1 loaf',
-                  createdAt: date,
-                },
-              ],
-              sessions: [
-                {
-                  $jazz: { id: 'session-1' },
-                  archived: false,
-                  viewMode: 'flat' as const,
-                  itemStates: {
-                    'item-1': {
-                      selected: true,
-                      checked: false,
-                      selectedAt: date,
-                    },
-                    'item-2': {
-                      selected: true,
-                      checked: true,
-                      selectedAt: date,
-                      checkedAt: date,
-                    },
-                  },
-                  categoryExpanded: {},
-                  selectedCount: 2,
-                  checkedCount: 1,
-                  remainingCount: 1,
-                  createdAt: date,
-                  lastActivityAt: date,
-                },
-              ],
-              showZoneHeadings: false,
-              archived: false,
-              expanded: true,
-              createdAt: date,
-              updatedAt: date,
-            },
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Shopping List',
+          [
+            item('item-1', 'Milk', 'item', 'milk', 0, { defaultQuantity: '1 gallon' }),
+            item('item-2', 'Bread', 'item', 'bread', 1, { defaultQuantity: '1 loaf' }),
           ],
-        },
-      };
+          [
+            session('session-1', {
+              'item-1': { selected: true, checked: false, selectedAt: NOV_1 },
+              'item-2': { selected: true, checked: true, selectedAt: NOV_1, checkedAt: NOV_1 },
+            }),
+          ],
+        ),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
-      const session = result.folders[0].sessions?.[0];
-      expect(session).toBeDefined();
+      const exported = result.folders[0].sessions?.[0];
+      expect(exported).toBeDefined();
 
-      // Check neutral terminology (not inCart/purchased)
-      expect(session?.itemStates['item-1']).toEqual({
+      expect(exported?.itemStates['item-1']).toEqual({
         selected: true,
         checked: false,
-        selectedAt: '2024-11-01T00:00:00.000Z',
+        selectedAt: NOV_1_ISO,
       });
 
-      expect(session?.itemStates['item-2']).toEqual({
+      expect(exported?.itemStates['item-2']).toEqual({
         selected: true,
         checked: true,
-        selectedAt: '2024-11-01T00:00:00.000Z',
-        checkedAt: '2024-11-01T00:00:00.000Z',
+        selectedAt: NOV_1_ISO,
+        checkedAt: NOV_1_ISO,
       });
     });
 
     it('should include item IDs in exported items for session state mapping', () => {
-      const account = createMockAccount({ withTemplates: true, datesAsStrings: false });
+      const g = graphWith(templateFolder('t1', 'Test Template', [item('item-1', 'Test Item')]));
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
       const items = result.folders[0].items;
-      expect(items).toBeDefined();
-      expect(items?.[0].id).toBeDefined();
       expect(items?.[0].id).toBe('item-1');
     });
 
     it('should export multiple levels of nesting correctly', () => {
-      const date = new Date('2024-11-01T00:00:00.000Z');
-      const account = {
-        root: {
-          folders: [
-            {
-              $jazz: { id: 'template-1' },
-              name: 'Deep Structure',
-              items: [
-                {
-                  id: 'level-1',
-                  name: 'Level 1',
-                  type: 'category' as const,
-                  path: 'level-1',
-                  expanded: true,
-                  sortOrder: 0,
-                  archived: false,
-                  defaultQuantity: '',
-                  createdAt: date,
-                },
-                {
-                  id: 'level-2',
-                  name: 'Level 2',
-                  type: 'category' as const,
-                  path: `level-1${PATH_SEPARATOR}level-2`,
-                  expanded: true,
-                  sortOrder: 1,
-                  archived: false,
-                  defaultQuantity: '',
-                  createdAt: date,
-                },
-                {
-                  id: 'level-3',
-                  name: 'Level 3',
-                  type: 'category' as const,
-                  path: `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3`,
-                  expanded: true,
-                  sortOrder: 2,
-                  archived: false,
-                  defaultQuantity: '',
-                  createdAt: date,
-                },
-                {
-                  id: 'deep-item',
-                  name: 'Deep Item',
-                  type: 'item' as const,
-                  path: `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3${PATH_SEPARATOR}deep-item`,
-                  expanded: false,
-                  sortOrder: 3,
-                  archived: false,
-                  defaultQuantity: '1',
-                  createdAt: date,
-                },
-              ],
-              sessions: [],
-              showZoneHeadings: false,
-              archived: false,
-              expanded: true,
-              createdAt: date,
-              updatedAt: date,
-            },
-          ],
-        },
-      };
+      const g = graphWith(
+        templateFolder('t1', 'Deep Structure', [
+          item('level-1', 'Level 1', 'category', 'level-1', 0),
+          item('level-2', 'Level 2', 'category', `level-1${PATH_SEPARATOR}level-2`, 1),
+          item(
+            'level-3',
+            'Level 3',
+            'category',
+            `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3`,
+            2,
+          ),
+          item(
+            'deep-item',
+            'Deep Item',
+            'item',
+            `level-1${PATH_SEPARATOR}level-2${PATH_SEPARATOR}level-3${PATH_SEPARATOR}deep-item`,
+            3,
+            { defaultQuantity: '1' },
+          ),
+        ]),
+      );
 
-      const result = exportAllFolders(account as any);
+      const result = exportAllFolders(g);
 
       const items = result.folders[0].items;
-      expect(items).toHaveLength(1); // Only 1 root
+      expect(items).toHaveLength(1);
 
       const level1 = items?.[0];
       expect(level1?.name).toBe('Level 1');

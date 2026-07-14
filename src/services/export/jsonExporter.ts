@@ -1,18 +1,25 @@
 /**
- * JSON export functionality
+ * JSON export functionality (rowboat port, slice-2).
  *
  * Exports folder structures with all template items and session history to JSON format.
- * Version 2.0: Uses hierarchical structure and neutral terminology.
+ * Version 2.0: hierarchical structure and neutral terminology.
+ *
+ * Ported off Jazz: reads the rowboat relational graph instead of an `Account`/`FolderNode`.
+ * `exportAllFolders(g)` walks the folder tree (top-level folders + descendants, skipping
+ * archived subtrees) and exports every template folder. Item/session timestamps live in the
+ * folder row's json columns as epoch-ms NUMBERS; the shared `buildItemTree`/`generateSessionName`
+ * helpers are still Jazz-typed (Date), so numbers are converted to `Date` at that boundary
+ * (`toDatedItem`/`toDatedSession`) before those helpers run. Own timestamps (folder/item/session
+ * createdAt) are required columns, so they convert directly — NO FALLBACKS for a missing date.
  */
 
-import { walkTree } from '@jbr-jazz/hierarchy-shared';
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import packageJson from '../../../package.json';
-import { isTemplateFolder } from '../../hooks';
 import { generateSessionName } from '../../lib/utils';
-import type { Account, FolderNode, SessionData } from '../../schema';
-import type { TemplateItem } from '../../schema/tree';
-import { toISOString } from '../../utils/dateUtils';
+// Date-carrying (Jazz-shaped) views used only to satisfy the still-Jazz-typed
+// `buildItemTree`/`generateSessionName` helpers (they read Date timestamps).
+import type { TemplateItem as DatedItem, SessionData as DatedSession } from '../../schema';
+import type { FolderRow, SessionData, schema, TemplateItem } from '../../schema/folder';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import type {
   ExportedData,
@@ -22,108 +29,143 @@ import type {
   ExportedTemplateItem,
 } from './types';
 
+type Graph = RelationalGraph<typeof schema>;
+
+/** A "template" is a folder row of `type: 'template-folder'`. */
+function isTemplateFolder(row: FolderRow): boolean {
+  return row.type === 'template-folder';
+}
+
+/** Convert a rowboat template item (epoch-ms createdAt) to the Date-carrying shape. */
+function toDatedItem(item: TemplateItem): DatedItem {
+  return { ...item, createdAt: new Date(item.createdAt) };
+}
+
+/** Convert a rowboat session (epoch-ms timestamps) to the Date-carrying shape. */
+function toDatedSession(session: SessionData): DatedSession {
+  const itemStates: DatedSession['itemStates'] = {};
+  for (const [itemId, state] of Object.entries(session.itemStates)) {
+    itemStates[itemId] = {
+      selected: state.selected,
+      checked: state.checked,
+      ...(state.selectedAt != null ? { selectedAt: new Date(state.selectedAt) } : {}),
+      ...(state.checkedAt != null ? { checkedAt: new Date(state.checkedAt) } : {}),
+      ...(state.notes != null ? { notes: state.notes } : {}),
+    };
+  }
+  return {
+    id: session.id,
+    itemStates,
+    archived: session.archived,
+    categoryExpanded: session.categoryExpanded,
+    viewMode: session.viewMode,
+    selectedCount: session.selectedCount,
+    checkedCount: session.checkedCount,
+    remainingCount: session.remainingCount,
+    createdAt: new Date(session.createdAt),
+    lastActivityAt: new Date(session.lastActivityAt),
+  };
+}
+
 /**
- * Export all folders from a user's account
+ * Collect every non-archived template folder in the graph, walking top-level folders and their
+ * descendants. An archived folder is skipped along with its whole subtree (mirrors the old
+ * `walkTree(... => 'skip')`).
+ */
+function collectTemplateFolders(g: Graph): FolderRow[] {
+  const childrenByParent = new Map<string | null, FolderRow[]>();
+  for (const node of g.folder.all()) {
+    const row = node.$data;
+    const bucket = childrenByParent.get(row.parent_id);
+    if (bucket) {
+      bucket.push(row);
+    } else {
+      childrenByParent.set(row.parent_id, [row]);
+    }
+  }
+
+  const out: FolderRow[] = [];
+  const visit = (row: FolderRow): void => {
+    if (row.archived) return; // skip node + subtree
+    if (isTemplateFolder(row)) out.push(row);
+    for (const child of childrenByParent.get(row.id) ?? []) {
+      visit(child);
+    }
+  };
+  for (const root of childrenByParent.get(null) ?? []) {
+    visit(root);
+  }
+  return out;
+}
+
+/**
+ * Export all template folders from the graph.
  *
- * @param account - The user's Account
+ * @param g - The rowboat relational graph
  * @returns Complete export data structure
  */
-export function exportAllFolders(account: InstanceOfSchema<typeof Account>): ExportedData {
-  const folders: ExportedFolder[] = [];
-
-  // Get all template folders from the hierarchy using walkTree
-  if (account?.root?.folders) {
-    walkTree([...account.root.folders] as InstanceOfSchema<typeof FolderNode>[], (node) => {
-      if (node.archived) return 'skip';
-      if (isTemplateFolder(node)) {
-        folders.push(exportTemplateNode(node));
-      }
-    });
-  }
-
+export function exportAllFolders(g: Graph): ExportedData {
   return {
     version: '2.0',
     exportDate: new Date().toISOString(),
     appVersion: packageJson.version,
-    folders,
+    folders: collectTemplateFolders(g).map(exportTemplateFolder),
   };
 }
 
 /**
- * Export a single template
+ * Export a single template folder row.
  *
- * @param template - The FolderNode to export
+ * @param folder - The template folder row to export
  * @returns Export data containing single template
  */
-export function exportTemplate(template: InstanceOfSchema<typeof FolderNode>): ExportedData {
+export function exportTemplate(folder: FolderRow): ExportedData {
   return {
     version: '2.0',
     exportDate: new Date().toISOString(),
     appVersion: packageJson.version,
-    folders: [exportTemplateNode(template)],
+    folders: [exportTemplateFolder(folder)],
   };
 }
 
 /**
- * Convert a FolderNode to exported format
- *
- * @param template - The FolderNode to convert
- * @returns Exported folder structure
+ * Convert a template folder row to exported format.
  */
-function exportTemplateNode(template: InstanceOfSchema<typeof FolderNode>): ExportedFolder {
-  const baseFolder: ExportedFolder = {
-    name: template.name,
-    type: 'template-folder', // All templates are template-folders in the export format
-    createdAt: toISOString(template.createdAt) || new Date().toISOString(),
-    updatedAt: toISOString(template.updatedAt) || new Date().toISOString(),
+function exportTemplateFolder(folder: FolderRow): ExportedFolder {
+  return {
+    name: folder.name,
+    type: 'template-folder', // all templates are template-folders in the export format
+    items: exportTemplateItems(folder.items),
+    sessions: exportSessions(folder.sessions),
+    createdAt: new Date(folder.created_at).toISOString(),
+    updatedAt: new Date(folder.updated_at).toISOString(),
+    // NOTE: currentSessionId removed from schema — tracked locally per-device.
   };
-
-  // Add template data
-  if (template.items && template.sessions) {
-    baseFolder.items = exportTemplateItems(template.items);
-    baseFolder.sessions = exportSessions(template.sessions);
-    // NOTE: currentSessionId removed from schema - it's tracked locally per-device
-    // Left in export format for backwards compatibility with old exports
-  }
-
-  return baseFolder;
 }
 
 /**
- * Export template items in hierarchical structure (v2.0)
+ * Export template items in hierarchical structure (v2.0).
  *
- * Uses buildItemTree() to convert flat items to hierarchical structure.
- *
- * @param items - Array of TemplateItems (flat with paths)
- * @returns Hierarchical array of exported template items
+ * Uses `buildItemTree()` to convert flat path-keyed items to a nested structure.
  */
 function exportTemplateItems(items: TemplateItem[]): ExportedTemplateItem[] {
-  // Build hierarchical tree from flat items (reuses existing code!)
-  const itemTree = buildItemTree(items);
-
-  // Convert tree nodes to export format
+  const itemTree = buildItemTree(items.map(toDatedItem));
   return itemTree.map((node) => convertTreeNodeToExport(node));
 }
 
-/**
- * Recursively convert ItemTreeNode to ExportedTemplateItem
- *
- * @param node - ItemTreeNode from buildItemTree()
- * @returns ExportedTemplateItem with nested children
- */
+/** Recursively convert an ItemTreeNode to an ExportedTemplateItem. */
 function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
   const { item, children } = node;
 
   const exportedItem: ExportedTemplateItem = {
-    id: item.id, // Required for session state references
+    id: item.id, // required for session state references
     name: item.name,
     type: item.type,
     sortOrder: item.sortOrder,
-    createdAt: toISOString(item.createdAt) || new Date().toISOString(),
-    updatedAt: toISOString(item.createdAt) || new Date().toISOString(), // Use createdAt for both since plain items don't have updatedAt
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.createdAt.toISOString(), // plain items have no separate updatedAt
   };
 
-  // Add optional fields
   if (item.expanded) {
     exportedItem.expanded = item.expanded;
   }
@@ -131,7 +173,6 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
     exportedItem.defaultQuantity = item.defaultQuantity;
   }
 
-  // Recursively add children for categories
   if (item.type === 'category' && children.length > 0) {
     exportedItem.children = children.map((child) => convertTreeNodeToExport(child));
   }
@@ -140,64 +181,41 @@ function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
 }
 
 /**
- * Export shopping sessions from a CoList
- *
- * @param sessions - CoList of Sessions
- * @returns Array of exported sessions
+ * Export sessions with neutral terminology (v2.0).
  */
 function exportSessions(sessions: SessionData[]): ExportedSession[] {
-  // Convert to array once for easier manipulation
-  const sessionArray = Array.from(sessions);
+  const datedSessions = sessions.map(toDatedSession);
 
-  // Pre-compute sessions with normalized dates (O(n) instead of O(n²))
-  const sessionsWithDates = sessionArray.map((s) => ({
-    ...s,
-    createdAt: typeof s.createdAt === 'string' ? new Date(s.createdAt) : s.createdAt,
-  })) as readonly (SessionData | null)[];
-
-  return sessionArray.map((session) => {
+  return datedSessions.map((session) => {
     const itemStates: Record<string, ExportedItemState> = {};
 
-    // Export item states with neutral terminology (v2.0)
     for (const [itemId, state] of Object.entries(session.itemStates)) {
       const exportedState: ExportedItemState = {
         selected: state.selected,
         checked: state.checked,
       };
-
-      const selectedAt = toISOString(state.selectedAt);
-      if (selectedAt) {
-        exportedState.selectedAt = selectedAt;
+      if (state.selectedAt) {
+        exportedState.selectedAt = state.selectedAt.toISOString();
       }
-      const checkedAt = toISOString(state.checkedAt);
-      if (checkedAt) {
-        exportedState.checkedAt = checkedAt;
+      if (state.checkedAt) {
+        exportedState.checkedAt = state.checkedAt.toISOString();
       }
-
       itemStates[itemId] = exportedState;
     }
 
-    // Generate name from createdAt
-    const createdAtRaw = session.createdAt;
-    if (!createdAtRaw) {
-      throw new Error('Session missing createdAt field');
-    }
-    const createdAt = typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : createdAtRaw;
-    const name = generateSessionName(createdAt, sessionsWithDates);
-
     return {
-      name,
-      archived: session.archived || false,
+      name: generateSessionName(session.createdAt, datedSessions),
+      archived: session.archived,
       viewMode: session.viewMode,
       itemStates,
-      createdAt: toISOString(session.createdAt) || new Date().toISOString(),
-      lastActivityAt: toISOString(session.lastActivityAt) || new Date().toISOString(),
+      createdAt: session.createdAt.toISOString(),
+      lastActivityAt: session.lastActivityAt.toISOString(),
     };
   });
 }
 
 /**
- * Convert export data to JSON string
+ * Convert export data to a JSON string.
  *
  * @param data - Export data structure
  * @param pretty - Whether to pretty-print the JSON (default: true)

@@ -1,11 +1,13 @@
 /**
- * Unit tests for exportService
+ * Unit tests for exportService (rowboat port, slice-2).
+ *
+ * Every entry point takes the rowboat graph `g` and resolves a template folder by id from it.
+ * Tests seed an in-memory `makeGraph()` graph — no Jazz.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
 import { describe, expect, it } from 'vitest';
-import type { Account, FolderNode, TemplateItem } from '../../schema';
-import type { SessionData } from '../../schema/tree';
+import type { FolderRow, ItemState, SessionData, TemplateItem } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
 import {
   exportSessionToCsv,
   exportSessionToText,
@@ -16,15 +18,18 @@ import {
   generateFilename,
 } from './exportService';
 
-// Mock helpers
-const createMockTemplateItem = (
+type Graph = ReturnType<typeof makeGraph>;
+
+const JAN_1 = new Date('2024-01-01T00:00:00.000Z').getTime();
+
+function templateItem(
   id: string,
   name: string,
   type: 'item' | 'category' = 'item',
   path?: string,
   sortOrder = 0,
-): TemplateItem =>
-  ({
+): TemplateItem {
+  return {
     id,
     name,
     type,
@@ -33,60 +38,62 @@ const createMockTemplateItem = (
     archived: false,
     expanded: type === 'category',
     defaultQuantity: '',
-    createdAt: new Date('2024-01-01'),
-  }) as TemplateItem;
+    createdAt: JAN_1,
+  };
+}
 
-const createMockSession = (id: string, itemStates: Record<string, any> = {}): SessionData => ({
-  id,
-  itemStates,
-  archived: false,
-  categoryExpanded: {},
-  viewMode: 'zone-in-hierarchy' as const,
-  selectedCount: 0,
-  checkedCount: 0,
-  remainingCount: 0,
-  createdAt: new Date('2024-01-15T10:00:00Z'),
-  lastActivityAt: new Date('2024-01-15T12:00:00Z'),
-});
+function templateSession(id: string, itemStates: Record<string, ItemState> = {}): SessionData {
+  return {
+    id,
+    itemStates,
+    archived: false,
+    categoryExpanded: {},
+    viewMode: 'zone-in-hierarchy',
+    selectedCount: 0,
+    checkedCount: 0,
+    remainingCount: 0,
+    createdAt: JAN_1,
+    lastActivityAt: JAN_1,
+  };
+}
 
-const createMockTemplate = (
+function templateFolder(
   id: string,
   name: string,
   items: TemplateItem[] = [],
   sessions: SessionData[] = [],
-): InstanceOfSchema<typeof FolderNode> => {
-  const template: any = {
+): FolderRow {
+  return {
+    id,
+    owner_group_id: 'group-1',
     name,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: JAN_1,
+    updated_at: JAN_1,
     items,
     sessions,
-    showZoneHeadings: false,
-    archived: false,
-    expanded: true,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-10'),
-    $jazz: { id },
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'none',
   };
-  return template;
-};
+}
 
-const createMockAccount = (
-  templates: InstanceOfSchema<typeof FolderNode>[] = [],
-): InstanceOfSchema<typeof Account> =>
-  ({
-    root: {
-      folders: templates,
-    },
-  }) as any;
+function graphWith(...folders: FolderRow[]): Graph {
+  return makeGraph({ folder: folders });
+}
 
-// TODO(slice-2): export still reads a Jazz Account/FolderNode; skip-pending until export
-// lands on rowboat (see docs/superpowers/d-t4-report.md).
-describe.skip('exportService', () => {
+describe('exportService', () => {
   describe('generateFilename', () => {
     it('should generate filename for all-folders export with JSON format', () => {
       const scope = { type: 'all-folders' as const };
       const filename = generateFilename(scope, 'json');
 
-      // Should match pattern: checklist-data-YYYY-MM-DD.json
       expect(filename).toMatch(/^checklist-data-\d{4}-\d{2}-\d{2}\.json$/);
     });
 
@@ -101,7 +108,6 @@ describe.skip('exportService', () => {
       const scope = { type: 'single-folder' as const, folderId: 'test-id' };
       const filename = generateFilename(scope, 'json', 'Shopping List');
 
-      // Should sanitize folder name and include it
       expect(filename).toMatch(/^shopping-list-\d{4}-\d{2}-\d{2}\.json$/);
     });
 
@@ -109,7 +115,6 @@ describe.skip('exportService', () => {
       const scope = { type: 'single-folder' as const, folderId: 'test-id' };
       const filename = generateFilename(scope, 'json', 'My Folder #1!');
 
-      // Should replace non-alphanumeric characters with hyphens (# becomes - and ! becomes -)
       expect(filename).toMatch(/^my-folder--1--\d{4}-\d{2}-\d{2}\.json$/);
     });
 
@@ -131,14 +136,14 @@ describe.skip('exportService', () => {
 
   describe('exportToJson', () => {
     it('should export all folders', () => {
-      const items = [
-        createMockTemplateItem('item-1', 'Milk'),
-        createMockTemplateItem('item-2', 'Bread'),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [
+          templateItem('item-1', 'Milk'),
+          templateItem('item-2', 'Bread'),
+        ]),
+      );
 
-      const result = exportToJson(account, { type: 'all-folders' });
+      const result = exportToJson(g, { type: 'all-folders' });
 
       expect(result.version).toBe('2.0');
       expect(result.folders).toHaveLength(1);
@@ -148,65 +153,70 @@ describe.skip('exportService', () => {
     });
 
     it('should export single folder by ID', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [templateItem('item-1', 'Milk')]),
+      );
 
-      const result = exportToJson(account, { type: 'single-folder', folderId: 'template-1' });
+      const result = exportToJson(g, { type: 'single-folder', folderId: 'template-1' });
 
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Groceries');
     });
 
     it('should throw error for single-folder export without folderId', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportToJson(account, { type: 'single-folder' } as any);
+        exportToJson(g, { type: 'single-folder' });
       }).toThrow('Template ID required for single-template export');
     });
 
     it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportToJson(account, { type: 'single-folder', folderId: 'nonexistent' });
+        exportToJson(g, { type: 'single-folder', folderId: 'nonexistent' });
       }).toThrow('Template not found: nonexistent');
     });
 
     it('should export empty folders array when no templates exist', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
-      const result = exportToJson(account, { type: 'all-folders' });
+      const result = exportToJson(g, { type: 'all-folders' });
 
       expect(result.folders).toHaveLength(0);
     });
 
     it('should export template with hierarchical items', () => {
-      const items = [
-        createMockTemplateItem('cat-1', 'Dairy', 'category', 'dairy', 0),
-        createMockTemplateItem('item-1', 'Milk', 'item', 'dairy/milk', 1),
-        createMockTemplateItem('item-2', 'Cheese', 'item', 'dairy/cheese', 2),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [
+          templateItem('cat-1', 'Dairy', 'category', 'dairy', 0),
+          templateItem('item-1', 'Milk', 'item', 'dairy/milk', 1),
+          templateItem('item-2', 'Cheese', 'item', 'dairy/cheese', 2),
+        ]),
+      );
 
-      const result = exportToJson(account, { type: 'all-folders' });
+      const result = exportToJson(g, { type: 'all-folders' });
 
       expect(result.folders[0].items).toBeDefined();
-      // Items should be exported in hierarchical structure
       expect(result.folders[0].items?.length).toBeGreaterThan(0);
     });
 
     it('should export template with sessions', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: false, selectedAt: new Date() },
-      });
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder(
+          'template-1',
+          'Groceries',
+          [templateItem('item-1', 'Milk')],
+          [
+            templateSession('session-1', {
+              'item-1': { selected: true, checked: false, selectedAt: JAN_1 },
+            }),
+          ],
+        ),
+      );
 
-      const result = exportToJson(account, { type: 'all-folders' });
+      const result = exportToJson(g, { type: 'all-folders' });
 
       expect(result.folders[0].sessions).toBeDefined();
       expect(result.folders[0].sessions).toHaveLength(1);
@@ -215,26 +225,25 @@ describe.skip('exportService', () => {
 
   describe('exportToJsonString', () => {
     it('should export to pretty-printed JSON by default', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [templateItem('item-1', 'Milk')]),
+      );
 
-      const result = exportToJsonString(account, { type: 'all-folders' });
+      const result = exportToJsonString(g, { type: 'all-folders' });
 
       expect(result).toContain('\n');
-      expect(result).toContain('  '); // Indentation
+      expect(result).toContain('  '); // indentation
       const parsed = JSON.parse(result);
       expect(parsed.version).toBe('2.0');
     });
 
     it('should export to compact JSON when pretty=false', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [templateItem('item-1', 'Milk')]),
+      );
 
-      const result = exportToJsonString(account, { type: 'all-folders' }, false);
+      const result = exportToJsonString(g, { type: 'all-folders' }, false);
 
-      // Compact JSON should not have indentation newlines
       expect(result.split('\n')).toHaveLength(1);
       const parsed = JSON.parse(result);
       expect(parsed.version).toBe('2.0');
@@ -243,36 +252,36 @@ describe.skip('exportService', () => {
 
   describe('exportTemplateItemsToText', () => {
     it('should export items to plain text', () => {
-      const items = [
-        createMockTemplateItem('item-1', 'Milk', 'item', 'milk', 0),
-        createMockTemplateItem('item-2', 'Bread', 'item', 'bread', 1),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [
+          templateItem('item-1', 'Milk', 'item', 'milk', 0),
+          templateItem('item-2', 'Bread', 'item', 'bread', 1),
+        ]),
+      );
 
-      const result = exportTemplateItemsToText(account, 'template-1');
+      const result = exportTemplateItemsToText(g, 'template-1');
 
       expect(result).toContain('Milk');
       expect(result).toContain('Bread');
     });
 
     it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportTemplateItemsToText(account, 'nonexistent');
+        exportTemplateItemsToText(g, 'nonexistent');
       }).toThrow('Template not found: nonexistent');
     });
 
     it('should export hierarchical items with indentation', () => {
-      const items = [
-        createMockTemplateItem('cat-1', 'Dairy', 'category', 'dairy', 0),
-        createMockTemplateItem('item-1', 'Milk', 'item', 'dairy/milk', 1),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [
+          templateItem('cat-1', 'Dairy', 'category', 'dairy', 0),
+          templateItem('item-1', 'Milk', 'item', 'dairy/milk', 1),
+        ]),
+      );
 
-      const result = exportTemplateItemsToText(account, 'template-1');
+      const result = exportTemplateItemsToText(g, 'template-1');
 
       expect(result).toContain('Dairy');
       expect(result).toContain('Milk');
@@ -281,14 +290,14 @@ describe.skip('exportService', () => {
 
   describe('exportTemplateItemsToCsv', () => {
     it('should export items to CSV format', () => {
-      const items = [
-        createMockTemplateItem('item-1', 'Milk', 'item', 'dairy/milk', 0),
-        createMockTemplateItem('item-2', 'Bread', 'item', 'bakery/bread', 1),
-      ];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [
+          templateItem('item-1', 'Milk', 'item', 'dairy/milk', 0),
+          templateItem('item-2', 'Bread', 'item', 'bakery/bread', 1),
+        ]),
+      );
 
-      const result = exportTemplateItemsToCsv(account, 'template-1');
+      const result = exportTemplateItemsToCsv(g, 'template-1');
 
       expect(result).toContain('name,defaultQuantity,path');
       expect(result).toContain('Milk');
@@ -296,66 +305,78 @@ describe.skip('exportService', () => {
     });
 
     it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportTemplateItemsToCsv(account, 'nonexistent');
+        exportTemplateItemsToCsv(g, 'nonexistent');
       }).toThrow('Template not found: nonexistent');
     });
   });
 
   describe('exportSessionToText', () => {
     it('should export session with checkmarks', () => {
-      const items = [
-        createMockTemplateItem('item-1', 'Milk', 'item', 'milk', 0),
-        createMockTemplateItem('item-2', 'Bread', 'item', 'bread', 1),
-      ];
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: true },
-        'item-2': { selected: true, checked: false },
-      });
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder(
+          'template-1',
+          'Groceries',
+          [
+            templateItem('item-1', 'Milk', 'item', 'milk', 0),
+            templateItem('item-2', 'Bread', 'item', 'bread', 1),
+          ],
+          [
+            templateSession('session-1', {
+              'item-1': { selected: true, checked: true },
+              'item-2': { selected: true, checked: false },
+            }),
+          ],
+        ),
+      );
 
-      const result = exportSessionToText(account, 'template-1', 'session-1');
+      const result = exportSessionToText(g, 'template-1', 'session-1');
 
       expect(result).toContain('✓ Milk');
       expect(result).toContain('  Bread');
     });
 
     it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportSessionToText(account, 'nonexistent', 'session-1');
+        exportSessionToText(g, 'nonexistent', 'session-1');
       }).toThrow('Template not found: nonexistent');
     });
 
     it('should throw error if session not found', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [templateItem('item-1', 'Milk')]),
+      );
 
       expect(() => {
-        exportSessionToText(account, 'template-1', 'nonexistent');
+        exportSessionToText(g, 'template-1', 'nonexistent');
       }).toThrow('Session not found: nonexistent');
     });
   });
 
   describe('exportSessionToCsv', () => {
     it('should export session to CSV format', () => {
-      const items = [
-        createMockTemplateItem('item-1', 'Milk', 'item', 'dairy/milk', 0),
-        createMockTemplateItem('item-2', 'Bread', 'item', 'bakery/bread', 1),
-      ];
-      const session = createMockSession('session-1', {
-        'item-1': { selected: true, checked: true, selectedAt: new Date(), checkedAt: new Date() },
-        'item-2': { selected: true, checked: false, selectedAt: new Date() },
-      });
-      const template = createMockTemplate('template-1', 'Groceries', items, [session]);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder(
+          'template-1',
+          'Groceries',
+          [
+            templateItem('item-1', 'Milk', 'item', 'dairy/milk', 0),
+            templateItem('item-2', 'Bread', 'item', 'bakery/bread', 1),
+          ],
+          [
+            templateSession('session-1', {
+              'item-1': { selected: true, checked: true, selectedAt: JAN_1, checkedAt: JAN_1 },
+              'item-2': { selected: true, checked: false, selectedAt: JAN_1 },
+            }),
+          ],
+        ),
+      );
 
-      const result = exportSessionToCsv(account, 'template-1', 'session-1');
+      const result = exportSessionToCsv(g, 'template-1', 'session-1');
 
       expect(result).toContain('name,path,selected,checked,selectedAt,checkedAt');
       expect(result).toContain('Milk');
@@ -364,20 +385,20 @@ describe.skip('exportService', () => {
     });
 
     it('should throw error if template not found', () => {
-      const account = createMockAccount([]);
+      const g = makeGraph();
 
       expect(() => {
-        exportSessionToCsv(account, 'nonexistent', 'session-1');
+        exportSessionToCsv(g, 'nonexistent', 'session-1');
       }).toThrow('Template not found: nonexistent');
     });
 
     it('should throw error if session not found', () => {
-      const items = [createMockTemplateItem('item-1', 'Milk')];
-      const template = createMockTemplate('template-1', 'Groceries', items, []);
-      const account = createMockAccount([template]);
+      const g = graphWith(
+        templateFolder('template-1', 'Groceries', [templateItem('item-1', 'Milk')]),
+      );
 
       expect(() => {
-        exportSessionToCsv(account, 'template-1', 'nonexistent');
+        exportSessionToCsv(g, 'template-1', 'nonexistent');
       }).toThrow('Session not found: nonexistent');
     });
   });

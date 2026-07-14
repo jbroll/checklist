@@ -1,4 +1,3 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,8 +10,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useRowboat } from '@/jazz';
 import { useDialog } from '@/lib/dialog-context';
-import type { Account, Template } from '@/schema';
+import type { FolderRow } from '@/schema/folder';
 import {
   exportTemplateItemsToCsv,
   exportTemplateItemsToText,
@@ -26,12 +26,12 @@ import { buildExportFilename } from '@/utils/fileUtils';
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  account: InstanceOfSchema<typeof Account>;
   /** Optional folder for folder-level export */
-  folder?: InstanceOfSchema<typeof Template>;
+  folder?: FolderRow;
 }
 
-export function ExportDialog({ open, onOpenChange, account, folder }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, folder }: ExportDialogProps) {
+  const g = useRowboat();
   // For template-level export, allow format selection
   const [format, setFormat] = useState<'json' | 'txt' | 'csv'>('json');
   const [isExporting, setIsExporting] = useState(false);
@@ -43,28 +43,25 @@ export function ExportDialog({ open, onOpenChange, account, folder }: ExportDial
     try {
       if (folder) {
         // Template export: Export items with format selection
-        const fId = folder.$jazz?.id;
-        if (!fId) {
-          throw new Error('Template ID not found');
-        }
+        const fId = folder.id;
 
         const filename = buildExportFilename(folder.name, format, true, undefined);
 
         if (format === 'json') {
           const scope: ExportScope = { type: 'single-folder', folderId: fId };
-          const data = exportToJson(account, scope);
+          const data = exportToJson(g, scope);
           downloadJson(data, filename);
         } else if (format === 'txt') {
-          const content = exportTemplateItemsToText(account, fId);
+          const content = exportTemplateItemsToText(g, fId);
           downloadText(content, filename);
         } else {
-          const content = exportTemplateItemsToCsv(account, fId);
+          const content = exportTemplateItemsToCsv(g, fId);
           downloadCsv(content, filename);
         }
       } else {
         // Top-level: JSON only, export all templates
         const scope: ExportScope = { type: 'all-folders' };
-        const data = exportToJson(account, scope);
+        const data = exportToJson(g, scope);
         const filename = generateFilename(scope, 'json', undefined);
         downloadJson(data, filename);
       }
