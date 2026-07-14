@@ -30,13 +30,20 @@ for sibling in rowboat jbr-jazz jazz-mock; do
     target="$CI_WORKSPACE/$sibling"
     link="$(dirname "$WORKTREE")/$sibling"
     [ -d "$target" ] || continue
-    [ -e "$link"   ] && continue
     target_dev="$(stat -c '%d' "$target"               2>/dev/null || echo x)"
     link_dev="$(  stat -c '%d' "$(dirname "$WORKTREE")" 2>/dev/null || echo y)"
     if [ "$target_dev" = "$link_dev" ]; then
-        ln -s "$target" "$link"
-        echo "[ci/setup] symlinked $sibling -> $target"
+        # Same filesystem: the sibling must be a SYMLINK to the pre-built
+        # ci-workspace copy (which carries dist + node_modules). Self-heal a
+        # stale real-dir copy (e.g. a partial-dist leftover) that would
+        # otherwise shadow the symlink and break @jbroll/* resolution.
+        if [ "$(readlink "$link" 2>/dev/null)" != "$target" ]; then
+            rm -rf "$link"
+            ln -s "$target" "$link"
+            echo "[ci/setup] symlinked $sibling -> $target"
+        fi
     else
+        [ -e "$link" ] && continue
         mkdir -p "$link"
         rsync -a --delete --exclude='node_modules' --exclude='.git' "$target/" "$link/"
         echo "[ci/setup] rsynced $sibling -> $link (cross-fs)"
