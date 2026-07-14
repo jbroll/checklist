@@ -1,235 +1,161 @@
 /**
  * UserSettings Service
  *
- * Manages global user preferences for autocomplete and auto-categorization.
- * These are defaults that can be overridden per-template.
+ * Manages global user preferences for autocomplete and auto-categorization, plus the per-folder
+ * (per-template) settings. Ported off Jazz (slice-2) to mirror `subscriptionService.ts`: every
+ * function is headless, taking the relational graph `g` as its first argument.
+ *
+ * GLOBAL settings live in the `user_settings` singleton row's `default_autocomplete_domain` /
+ * `enable_auto_categorization` columns. PER-TEMPLATE settings live on the FOLDER row itself
+ * (`autocomplete_domain` / `auto_categorize_enabled`). In Jazz the per-folder values were
+ * overrides that fell back to the global default; here a folder's own column value IS the setting
+ * (`'none'` / `false` are the stored defaults), so there is no runtime inheritance to resolve.
+ *
+ * Writes go through `requireSettings` (global) or `g.folder.update` (per-template). A missing
+ * settings row is a hard error, never a silent fallback — the app provisions it at account-init.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '@/schema/folder';
+import type { UserSettingsRow } from '../../shared/schema.js';
 import type { AutocompleteDomain } from '../lib/categorization/types';
-import { type AccountParam, type FolderNode, UserSettings } from '../schema';
+
+type Graph = RelationalGraph<typeof schema>;
 
 /**
- * Type alias for FolderNode instances (same Jazz inference issue as Account)
- */
-// biome-ignore lint/suspicious/noExplicitAny: Jazz v0.18.x TypeScript inference workaround
-type FolderParam = InstanceOfSchema<typeof FolderNode> | any;
-
-// ============================================================================
-// Autocomplete Settings
-// ============================================================================
-
-/**
- * Get the default autocomplete domain for new templates
- */
-export function getDefaultAutocompleteDomain(account: AccountParam): AutocompleteDomain {
-  const userSettings = account?.root?.userSettings;
-  if (!userSettings) return DEFAULT_AUTOCOMPLETE_DOMAIN;
-  return (
-    (userSettings.defaultAutocompleteDomain as AutocompleteDomain) ?? DEFAULT_AUTOCOMPLETE_DOMAIN
-  );
-}
-
-/**
- * Set the default autocomplete domain for new templates
- */
-export function setDefaultAutocompleteDomain(
-  account: AccountParam,
-  domain: AutocompleteDomain,
-): void {
-  const userSettings = ensureUserSettingsWithDomain(account);
-  // Cast to schema type - only implemented domains are valid at runtime
-  userSettings.$jazz.set(
-    'defaultAutocompleteDomain',
-    domain as 'none' | 'grocery' | 'hardware' | 'all',
-  );
-}
-
-// ============================================================================
-// Auto-Categorization Settings
-// ============================================================================
-
-/**
- * Get whether auto-categorization is enabled globally
- */
-export function getEnableAutoCategorization(account: AccountParam): boolean {
-  const userSettings = account?.root?.userSettings;
-  if (!userSettings) return true; // Default to enabled
-  return userSettings.enableAutoCategorization ?? true;
-}
-
-/**
- * Set whether auto-categorization is enabled globally
- */
-export function setEnableAutoCategorization(account: AccountParam, enabled: boolean): void {
-  const userSettings = ensureUserSettings(account);
-  userSettings.$jazz.set('enableAutoCategorization', enabled);
-}
-
-/**
- * Toggle auto-categorization enabled state
- */
-export function toggleEnableAutoCategorization(account: AccountParam): void {
-  const current = getEnableAutoCategorization(account);
-  setEnableAutoCategorization(account, !current);
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Ensure userSettings exists on the account, creating it if needed
- */
-function ensureUserSettings(account: AccountParam): InstanceOfSchema<typeof UserSettings> {
-  if (!account?.root) {
-    throw new Error('Account root not initialized');
-  }
-
-  if (!account.root.userSettings) {
-    const userSettings = UserSettings.create(
-      {
-        enableAutoCategorization: true,
-      },
-      { owner: account },
-    );
-    account.root.$jazz.set('userSettings', userSettings);
-    return userSettings;
-  }
-
-  return account.root.userSettings;
-}
-
-/**
- * Ensure userSettings exists with defaultAutocompleteDomain field.
- */
-function ensureUserSettingsWithDomain(
-  account: AccountParam,
-): InstanceOfSchema<typeof UserSettings> {
-  if (!account?.root) {
-    throw new Error('Account root not initialized');
-  }
-
-  if (account.root.userSettings) {
-    return account.root.userSettings;
-  }
-
-  // Create new UserSettings
-  const newSettings = UserSettings.create(
-    {
-      enableAutoCategorization: true,
-      defaultAutocompleteDomain: DEFAULT_AUTOCOMPLETE_DOMAIN as
-        | 'none'
-        | 'grocery'
-        | 'hardware'
-        | 'all',
-    },
-    { owner: account },
-  );
-  account.root.$jazz.set('userSettings', newSettings);
-  return newSettings;
-}
-
-// ============================================================================
-// Template-Level Settings (Override Global Defaults)
-// ============================================================================
-
-/**
- * Default autocomplete domain when not explicitly set
+ * Default autocomplete domain used when neither the settings row nor a folder carries a usable
+ * value. A designed default (matches the Jazz version), not a fallback papering over a bug.
  */
 const DEFAULT_AUTOCOMPLETE_DOMAIN: AutocompleteDomain = 'grocery';
 
-/**
- * Get effective autocomplete domain for a template.
- * Returns template override if set, otherwise falls back to default.
- *
- * @returns AutocompleteDomain - 'none' | 'grocery' | 'hardware' | 'all'
- */
-export function getTemplateAutocompleteDomain(folder: FolderParam): AutocompleteDomain {
-  // Template-level setting takes precedence
-  if (folder?.autocompleteDomain !== undefined) {
-    return folder.autocompleteDomain as AutocompleteDomain;
+/** Read the per-user singleton settings row, or `undefined` for a brand-new user with no row yet. */
+function readSettings(g: Graph): UserSettingsRow | undefined {
+  return g.user_settings.all()[0]?.$data;
+}
+
+/** Read the singleton settings row, hard-erroring if absent (NO FALLBACKS — for write paths). */
+function requireSettings(g: Graph): UserSettingsRow {
+  const settings = readSettings(g);
+  if (!settings) {
+    throw new Error('user_settings row not initialized');
   }
-  // Fall back to default
-  return DEFAULT_AUTOCOMPLETE_DOMAIN;
+  return settings;
+}
+
+// ============================================================================
+// Global Autocomplete Settings
+// ============================================================================
+
+/** Get the default autocomplete domain for new templates. */
+export function getDefaultAutocompleteDomain(g: Graph): AutocompleteDomain {
+  return (
+    (readSettings(g)?.default_autocomplete_domain as AutocompleteDomain | undefined) ||
+    DEFAULT_AUTOCOMPLETE_DOMAIN
+  );
+}
+
+/** Set the default autocomplete domain for new templates. */
+export async function setDefaultAutocompleteDomain(
+  g: Graph,
+  domain: AutocompleteDomain,
+): Promise<void> {
+  const settings = requireSettings(g);
+  await g.user_settings.update(settings.id, { default_autocomplete_domain: domain });
+}
+
+// ============================================================================
+// Global Auto-Categorization Settings
+// ============================================================================
+
+/** Get whether auto-categorization is enabled globally (default: enabled). */
+export function getEnableAutoCategorization(g: Graph): boolean {
+  return readSettings(g)?.enable_auto_categorization ?? true;
+}
+
+/** Set whether auto-categorization is enabled globally. */
+export async function setEnableAutoCategorization(g: Graph, enabled: boolean): Promise<void> {
+  const settings = requireSettings(g);
+  await g.user_settings.update(settings.id, { enable_auto_categorization: enabled });
+}
+
+/** Toggle auto-categorization enabled state. */
+export async function toggleEnableAutoCategorization(g: Graph): Promise<void> {
+  await setEnableAutoCategorization(g, !getEnableAutoCategorization(g));
+}
+
+// ============================================================================
+// Per-Template (Per-Folder) Settings
+// ============================================================================
+
+/** Read a folder's autocomplete_domain column, or `undefined` if the folder doesn't exist. */
+function readFolderDomain(g: Graph, folderId: string): string | undefined {
+  return g.folder(folderId)?.$data.autocomplete_domain;
 }
 
 /**
- * Get whether template has an explicit autocomplete domain set (not default)
+ * Get the effective autocomplete domain for a template (folder). The folder's own
+ * `autocomplete_domain` IS the setting; an empty value or missing folder falls back to the
+ * designed default.
  */
-export function hasTemplateAutocompleteDomainSet(folder: FolderParam): boolean {
-  return folder?.autocompleteDomain !== undefined;
+export function getTemplateAutocompleteDomain(g: Graph, folderId: string): AutocompleteDomain {
+  return (
+    (readFolderDomain(g, folderId) as AutocompleteDomain | undefined) || DEFAULT_AUTOCOMPLETE_DOMAIN
+  );
 }
 
 /**
- * Set template autocomplete domain
- *
- * @param domain - 'none' | 'grocery' | 'hardware' | 'all' | undefined (to reset to default)
+ * Whether a template (folder) has an explicit, autocomplete-enabling domain set — i.e. anything
+ * other than the `'none'` default (or an empty/absent value).
  */
-export function setTemplateAutocompleteDomain(
-  folder: FolderParam,
+export function hasTemplateAutocompleteDomainSet(g: Graph, folderId: string): boolean {
+  const domain = readFolderDomain(g, folderId);
+  return domain !== undefined && domain !== '' && domain !== 'none';
+}
+
+/**
+ * Set a template (folder) autocomplete domain. Passing `undefined` resets it to the `'none'`
+ * default (autocomplete off).
+ */
+export async function setTemplateAutocompleteDomain(
+  g: Graph,
+  folderId: string,
   domain: AutocompleteDomain | undefined,
-): void {
-  if (domain === undefined) {
-    // Clear setting - use default
-    folder.$jazz.set('autocompleteDomain', undefined);
-  } else {
-    folder.$jazz.set('autocompleteDomain', domain);
-  }
+): Promise<void> {
+  await g.folder.update(folderId, { autocomplete_domain: domain ?? 'none' });
+}
+
+/** Whether autocomplete is effectively enabled for a template (folder) — domain is not `'none'`. */
+export function isTemplateAutocompleteEnabled(g: Graph, folderId: string): boolean {
+  return getTemplateAutocompleteDomain(g, folderId) !== 'none';
 }
 
 /**
- * Check if autocomplete is effectively enabled for a template
- * (domain is not 'none')
+ * Get the auto-categorization setting for a template (folder). The folder's own
+ * `auto_categorize_enabled` IS the setting (default `false`).
  */
-export function isTemplateAutocompleteEnabled(folder: FolderParam): boolean {
-  return getTemplateAutocompleteDomain(folder) !== 'none';
+export function getTemplateAutoCategorizeEnabled(g: Graph, folderId: string): boolean {
+  return g.folder(folderId)?.$data.auto_categorize_enabled ?? false;
+}
+
+/** Whether a template (folder) has auto-categorization explicitly enabled. */
+export function hasTemplateAutoCategorizeOverride(g: Graph, folderId: string): boolean {
+  return g.folder(folderId)?.$data.auto_categorize_enabled === true;
 }
 
 /**
- * Get effective auto-categorization setting for a template.
- * Returns template override if set, otherwise falls back to global setting.
+ * Set a template (folder) auto-categorize setting. Passing `undefined` resets it to the `false`
+ * default.
  */
-export function getTemplateAutoCategorizeEnabled(
-  account: AccountParam,
-  folder: FolderParam,
-): boolean {
-  // Template-level override takes precedence
-  if (folder?.autoCategorizeEnabled !== undefined) {
-    return folder.autoCategorizeEnabled;
-  }
-  // Fall back to global setting
-  return getEnableAutoCategorization(account);
-}
-
-/**
- * Get whether template has an explicit auto-categorize override (not inherited)
- */
-export function hasTemplateAutoCategorizeOverride(folder: FolderParam): boolean {
-  return folder?.autoCategorizeEnabled !== undefined;
-}
-
-/**
- * Set template auto-categorize override
- */
-export function setTemplateAutoCategorizeEnabled(
-  folder: FolderParam,
+export async function setTemplateAutoCategorizeEnabled(
+  g: Graph,
+  folderId: string,
   enabled: boolean | undefined,
-): void {
-  if (enabled === undefined) {
-    // Clear override - inherit from global
-    folder.$jazz.set('autoCategorizeEnabled', undefined);
-  } else {
-    folder.$jazz.set('autoCategorizeEnabled', enabled);
-  }
+): Promise<void> {
+  await g.folder.update(folderId, { auto_categorize_enabled: enabled ?? false });
 }
 
-/**
- * Toggle template auto-categorize setting.
- * If currently inherited, sets explicit override to opposite of inherited value.
- * If currently overridden, toggles the override value.
- */
-export function toggleTemplateAutoCategorize(account: AccountParam, folder: FolderParam): void {
-  const current = getTemplateAutoCategorizeEnabled(account, folder);
-  setTemplateAutoCategorizeEnabled(folder, !current);
+/** Toggle a template (folder) auto-categorize setting. */
+export async function toggleTemplateAutoCategorize(g: Graph, folderId: string): Promise<void> {
+  const current = getTemplateAutoCategorizeEnabled(g, folderId);
+  await setTemplateAutoCategorizeEnabled(g, folderId, !current);
 }

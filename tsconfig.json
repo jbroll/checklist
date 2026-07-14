@@ -71,6 +71,12 @@
      * session/**` — sessions are a later slice, so exclude it here (it would otherwise fail to
      * typecheck against the now-rowboat `templateService.getTemplate`). `templateService.ts`
      * itself is now ported to rowboat and NO LONGER excluded — it typechecks against the graph. */
-    "src/services/testHelpers.ts"
+    "src/services/testHelpers.ts",
+
+    /* `useViewStateCleanup` still reads a Jazz `Account` (`account.root.viewState`); its service,
+     * `viewStateService`, is now rowboat-graph-based, so the hook no longer typechecks. Hooks are a
+     * later slice — exclude it here (and its `src/hooks/index.ts` re-export is dropped so nothing
+     * in-scope pulls it back into the program). Untouched on disk, re-wired in the component slice. */
+    "src/hooks/useViewStateCleanup.ts"
   ]
 }

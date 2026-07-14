@@ -100,6 +100,11 @@ export const UserSettings = z.object({
   max_lists: rb.int(), // cached for offline display (-1 = unlimited)
   session_retention_days: rb.int(), // cached (-1 = unlimited)
   subscription_synced_at: rb.int(), // epoch ms (0 if never)
+  // Per-user view state (expand/collapse UI preferences), ported off the Jazz `ViewState` co.map.
+  // Each defaults to an empty map; `{}` is the designed "nothing customized yet" state.
+  view_folder_expanded: rb.json(z.record(z.string(), z.boolean())),
+  view_template_category_expanded: rb.json(z.record(z.string(), z.record(z.string(), z.boolean()))),
+  view_session_category_expanded: rb.json(z.record(z.string(), z.record(z.string(), z.boolean()))),
 });
 
 export const schema = { folder: Folder, user_settings: UserSettings };

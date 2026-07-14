@@ -1,10 +1,17 @@
 /**
- * Unit tests for user settings service
+ * Unit tests for user settings service (rowboat port, slice-2)
  *
- * Tests global and template-level autocomplete and auto-categorization settings.
+ * GLOBAL settings live in the `user_settings` singleton row (`default_autocomplete_domain` /
+ * `enable_auto_categorization`); PER-TEMPLATE settings live on the FOLDER row itself
+ * (`autocomplete_domain` / `auto_categorize_enabled`). Tests run against an in-memory
+ * `makeGraph()` graph — no Jazz, no React. The Jazz per-folder → global "inheritance" is gone: a
+ * folder's own column value IS the setting.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { FolderRow } from '@/schema/folder';
+import { makeGraph } from '@/test/rowboat';
+import type { UserSettingsRow } from '../../shared/schema.js';
 import {
   getDefaultAutocompleteDomain,
   getEnableAutoCategorization,
@@ -21,315 +28,299 @@ import {
   toggleTemplateAutoCategorize,
 } from './userSettingsService';
 
-// Mock UserSettings.create
-vi.mock('../schema', async (importOriginal) => {
-  const original = await importOriginal();
+type Graph = ReturnType<typeof makeGraph>;
+
+interface SettingsInput {
+  defaultAutocompleteDomain?: string;
+  enableAutoCategorization?: boolean;
+}
+
+/** Build a complete user_settings singleton row (all columns present). */
+function settingsRow(input: SettingsInput = {}): UserSettingsRow {
   return {
-    ...(original as object),
-    UserSettings: {
-      create: vi.fn((data: any, _options: any) => ({
-        ...data,
-        $jazz: {
-          set: vi.fn((key: string, value: any) => {
-            (data as any)[key] = value;
-          }),
-        },
-      })),
-    },
+    id: 'u1',
+    owner_group_id: 'g1',
+    default_autocomplete_domain: input.defaultAutocompleteDomain ?? '',
+    enable_auto_categorization: input.enableAutoCategorization ?? true,
+    subscription_tier: 'free',
+    subscription_status: 'beta',
+    subscription_ends_at: 0,
+    max_lists: 30,
+    session_retention_days: 30,
+    subscription_synced_at: 0,
+    view_folder_expanded: {},
+    view_template_category_expanded: {},
+    view_session_category_expanded: {},
   };
-});
+}
 
-// Helper to create mock account
-const createMockAccount = (userSettings?: any) => ({
-  root: {
-    userSettings,
-    $jazz: {
-      set: vi.fn((key: string, value: any) => {
-        if (key === 'userSettings') {
-          (createMockAccount as any)._lastUserSettings = value;
-        }
-      }),
-    },
-  },
-});
+interface FolderInput {
+  id?: string;
+  autocompleteDomain?: string;
+  autoCategorizeEnabled?: boolean;
+}
 
-// Helper to create mock folder
-const createMockFolder = (
-  settings: { autocompleteDomain?: string; autoCategorizeEnabled?: boolean } = {},
-) => ({
-  ...settings,
-  $jazz: {
-    set: vi.fn((key: string, value: any) => {
-      (settings as any)[key] = value;
-    }),
-  },
-});
+/** Build a complete template-folder row (all required Folder columns present). */
+function folderRow(input: FolderInput = {}): FolderRow {
+  const id = input.id ?? 'folder-1';
+  return {
+    id,
+    owner_group_id: 'g1',
+    name: `Template ${id}`,
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items: [],
+    sessions: [],
+    default_items: {},
+    show_zone_headings: false,
+    auto_categorize_enabled: input.autoCategorizeEnabled ?? false,
+    autocomplete_domain: input.autocompleteDomain ?? 'none',
+  };
+}
+
+/** Graph seeded with a settings row. Omit for a brand-new user with no row. */
+function graphWithSettings(input?: SettingsInput): Graph {
+  return makeGraph(input ? { user_settings: [settingsRow(input)] } : {});
+}
+
+/** Graph seeded with a single folder row. */
+function graphWithFolder(input: FolderInput = {}): Graph {
+  return makeGraph({ folder: [folderRow(input)] });
+}
+
+function readSettings(g: Graph): UserSettingsRow {
+  const node = g.user_settings.all()[0];
+  if (!node) throw new Error('no user_settings row');
+  return node.$data;
+}
+
+function readFolder(g: Graph, id: string): FolderRow {
+  const node = g.folder(id);
+  if (!node) throw new Error(`no folder ${id}`);
+  return node.$data;
+}
 
 describe('userSettingsService', () => {
   describe('getDefaultAutocompleteDomain', () => {
-    it('returns default "grocery" when no userSettings', () => {
-      const account = createMockAccount();
-      expect(getDefaultAutocompleteDomain(account as any)).toBe('grocery');
+    it('returns default "grocery" when no settings row', () => {
+      expect(getDefaultAutocompleteDomain(graphWithSettings())).toBe('grocery');
     });
 
-    it('returns default "grocery" when userSettings exists but no domain set', () => {
-      const account = createMockAccount({
-        enableAutoCategorization: true,
-      });
-      expect(getDefaultAutocompleteDomain(account as any)).toBe('grocery');
+    it('returns default "grocery" when settings row has no domain set', () => {
+      expect(
+        getDefaultAutocompleteDomain(graphWithSettings({ defaultAutocompleteDomain: '' })),
+      ).toBe('grocery');
     });
 
-    it('returns set domain from userSettings', () => {
-      const account = createMockAccount({
-        defaultAutocompleteDomain: 'hardware',
-      });
-      expect(getDefaultAutocompleteDomain(account as any)).toBe('hardware');
-    });
-
-    it('returns "grocery" for null account', () => {
-      expect(getDefaultAutocompleteDomain(null as any)).toBe('grocery');
-    });
-
-    it('returns "grocery" for account with null root', () => {
-      expect(getDefaultAutocompleteDomain({ root: null } as any)).toBe('grocery');
+    it('returns set domain from settings row', () => {
+      expect(
+        getDefaultAutocompleteDomain(graphWithSettings({ defaultAutocompleteDomain: 'hardware' })),
+      ).toBe('hardware');
     });
   });
 
   describe('setDefaultAutocompleteDomain', () => {
-    it('creates userSettings if not exists', () => {
-      const account = createMockAccount();
-      setDefaultAutocompleteDomain(account as any, 'hardware');
-      expect(account.root.$jazz.set).toHaveBeenCalled();
+    it('writes the domain to the settings row', async () => {
+      const g = graphWithSettings({});
+      await setDefaultAutocompleteDomain(g, 'hardware');
+      expect(readSettings(g).default_autocomplete_domain).toBe('hardware');
     });
 
-    it('throws error when account root not initialized', () => {
-      expect(() => {
-        setDefaultAutocompleteDomain({ root: null } as any, 'grocery');
-      }).toThrow('Account root not initialized');
+    it('throws when settings row not initialized', async () => {
+      await expect(setDefaultAutocompleteDomain(graphWithSettings(), 'grocery')).rejects.toThrow(
+        'user_settings row not initialized',
+      );
     });
   });
 
   describe('getEnableAutoCategorization', () => {
-    it('returns true by default when no userSettings', () => {
-      const account = createMockAccount();
-      expect(getEnableAutoCategorization(account as any)).toBe(true);
-    });
-
-    it('returns true when userSettings exists but setting not set', () => {
-      const account = createMockAccount({});
-      expect(getEnableAutoCategorization(account as any)).toBe(true);
+    it('returns true by default when no settings row', () => {
+      expect(getEnableAutoCategorization(graphWithSettings())).toBe(true);
     });
 
     it('returns false when explicitly disabled', () => {
-      const account = createMockAccount({
-        enableAutoCategorization: false,
-      });
-      expect(getEnableAutoCategorization(account as any)).toBe(false);
+      expect(
+        getEnableAutoCategorization(graphWithSettings({ enableAutoCategorization: false })),
+      ).toBe(false);
     });
 
     it('returns true when explicitly enabled', () => {
-      const account = createMockAccount({
-        enableAutoCategorization: true,
-      });
-      expect(getEnableAutoCategorization(account as any)).toBe(true);
+      expect(
+        getEnableAutoCategorization(graphWithSettings({ enableAutoCategorization: true })),
+      ).toBe(true);
     });
   });
 
   describe('setEnableAutoCategorization', () => {
-    it('sets enabled state on existing userSettings', () => {
-      const userSettings = {
-        enableAutoCategorization: true,
-        $jazz: { set: vi.fn() },
-      };
-      const account = createMockAccount(userSettings);
-
-      setEnableAutoCategorization(account as any, false);
-
-      expect(userSettings.$jazz.set).toHaveBeenCalledWith('enableAutoCategorization', false);
+    it('sets enabled state on the settings row', async () => {
+      const g = graphWithSettings({ enableAutoCategorization: true });
+      await setEnableAutoCategorization(g, false);
+      expect(readSettings(g).enable_auto_categorization).toBe(false);
     });
 
-    it('creates userSettings if not exists', () => {
-      const account = createMockAccount();
-      setEnableAutoCategorization(account as any, false);
-      expect(account.root.$jazz.set).toHaveBeenCalled();
+    it('throws when settings row not initialized', async () => {
+      await expect(setEnableAutoCategorization(graphWithSettings(), false)).rejects.toThrow(
+        'user_settings row not initialized',
+      );
     });
   });
 
   describe('toggleEnableAutoCategorization', () => {
-    it('toggles from true to false', () => {
-      const userSettings = {
-        enableAutoCategorization: true,
-        $jazz: { set: vi.fn() },
-      };
-      const account = createMockAccount(userSettings);
-
-      toggleEnableAutoCategorization(account as any);
-
-      expect(userSettings.$jazz.set).toHaveBeenCalledWith('enableAutoCategorization', false);
+    it('toggles from true to false', async () => {
+      const g = graphWithSettings({ enableAutoCategorization: true });
+      await toggleEnableAutoCategorization(g);
+      expect(readSettings(g).enable_auto_categorization).toBe(false);
     });
 
-    it('toggles from false to true', () => {
-      const userSettings = {
-        enableAutoCategorization: false,
-        $jazz: { set: vi.fn() },
-      };
-      const account = createMockAccount(userSettings);
-
-      toggleEnableAutoCategorization(account as any);
-
-      expect(userSettings.$jazz.set).toHaveBeenCalledWith('enableAutoCategorization', true);
+    it('toggles from false to true', async () => {
+      const g = graphWithSettings({ enableAutoCategorization: false });
+      await toggleEnableAutoCategorization(g);
+      expect(readSettings(g).enable_auto_categorization).toBe(true);
     });
   });
 
   describe('getTemplateAutocompleteDomain', () => {
-    it('returns "grocery" by default when no override', () => {
-      const folder = createMockFolder();
-      expect(getTemplateAutocompleteDomain(folder as any)).toBe('grocery');
+    it('returns "grocery" by default for a folder with no usable domain', () => {
+      const g = graphWithFolder({ autocompleteDomain: '' });
+      expect(getTemplateAutocompleteDomain(g, 'folder-1')).toBe('grocery');
     });
 
-    it('returns template-level override when set', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'hardware' });
-      expect(getTemplateAutocompleteDomain(folder as any)).toBe('hardware');
+    it('returns the folder domain when set', () => {
+      const g = graphWithFolder({ autocompleteDomain: 'hardware' });
+      expect(getTemplateAutocompleteDomain(g, 'folder-1')).toBe('hardware');
     });
 
-    it('returns "none" when template explicitly set to none', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'none' });
-      expect(getTemplateAutocompleteDomain(folder as any)).toBe('none');
+    it('returns "none" when folder domain is none', () => {
+      const g = graphWithFolder({ autocompleteDomain: 'none' });
+      expect(getTemplateAutocompleteDomain(g, 'folder-1')).toBe('none');
     });
 
-    it('handles null folder', () => {
-      expect(getTemplateAutocompleteDomain(null as any)).toBe('grocery');
+    it('returns "grocery" for a missing folder', () => {
+      expect(getTemplateAutocompleteDomain(makeGraph({}), 'missing')).toBe('grocery');
     });
   });
 
   describe('hasTemplateAutocompleteDomainSet', () => {
-    it('returns false when no override set', () => {
-      const folder = createMockFolder();
-      expect(hasTemplateAutocompleteDomainSet(folder as any)).toBe(false);
+    it('returns false for the "none" default', () => {
+      const g = graphWithFolder({ autocompleteDomain: 'none' });
+      expect(hasTemplateAutocompleteDomainSet(g, 'folder-1')).toBe(false);
     });
 
-    it('returns true when override set', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'hardware' });
-      expect(hasTemplateAutocompleteDomainSet(folder as any)).toBe(true);
+    it('returns true when a real domain is set', () => {
+      const g = graphWithFolder({ autocompleteDomain: 'hardware' });
+      expect(hasTemplateAutocompleteDomainSet(g, 'folder-1')).toBe(true);
     });
   });
 
   describe('setTemplateAutocompleteDomain', () => {
-    it('sets domain on folder', () => {
-      const folder = createMockFolder();
-      setTemplateAutocompleteDomain(folder as any, 'hardware');
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autocompleteDomain', 'hardware');
+    it('sets the domain on the folder', async () => {
+      const g = graphWithFolder({ autocompleteDomain: 'none' });
+      await setTemplateAutocompleteDomain(g, 'folder-1', 'hardware');
+      expect(readFolder(g, 'folder-1').autocomplete_domain).toBe('hardware');
     });
 
-    it('clears domain when set to undefined', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'hardware' });
-      setTemplateAutocompleteDomain(folder as any, undefined);
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autocompleteDomain', undefined);
+    it('resets to the "none" default when set to undefined', async () => {
+      const g = graphWithFolder({ autocompleteDomain: 'hardware' });
+      await setTemplateAutocompleteDomain(g, 'folder-1', undefined);
+      expect(readFolder(g, 'folder-1').autocomplete_domain).toBe('none');
     });
   });
 
   describe('isTemplateAutocompleteEnabled', () => {
     it('returns true for grocery domain', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'grocery' });
-      expect(isTemplateAutocompleteEnabled(folder as any)).toBe(true);
+      expect(
+        isTemplateAutocompleteEnabled(
+          graphWithFolder({ autocompleteDomain: 'grocery' }),
+          'folder-1',
+        ),
+      ).toBe(true);
     });
 
     it('returns true for hardware domain', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'hardware' });
-      expect(isTemplateAutocompleteEnabled(folder as any)).toBe(true);
+      expect(
+        isTemplateAutocompleteEnabled(
+          graphWithFolder({ autocompleteDomain: 'hardware' }),
+          'folder-1',
+        ),
+      ).toBe(true);
     });
 
     it('returns true for all domain', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'all' });
-      expect(isTemplateAutocompleteEnabled(folder as any)).toBe(true);
+      expect(
+        isTemplateAutocompleteEnabled(graphWithFolder({ autocompleteDomain: 'all' }), 'folder-1'),
+      ).toBe(true);
     });
 
     it('returns false for none domain', () => {
-      const folder = createMockFolder({ autocompleteDomain: 'none' });
-      expect(isTemplateAutocompleteEnabled(folder as any)).toBe(false);
+      expect(
+        isTemplateAutocompleteEnabled(graphWithFolder({ autocompleteDomain: 'none' }), 'folder-1'),
+      ).toBe(false);
     });
 
-    it('returns true for default (no override)', () => {
-      const folder = createMockFolder();
-      expect(isTemplateAutocompleteEnabled(folder as any)).toBe(true);
+    it('returns true for a missing folder (grocery default)', () => {
+      expect(isTemplateAutocompleteEnabled(makeGraph({}), 'missing')).toBe(true);
     });
   });
 
   describe('getTemplateAutoCategorizeEnabled', () => {
-    it('returns global setting when no template override', () => {
-      const userSettings = { enableAutoCategorization: false };
-      const account = createMockAccount(userSettings);
-      const folder = createMockFolder();
-
-      expect(getTemplateAutoCategorizeEnabled(account as any, folder as any)).toBe(false);
+    it('returns the folder value (default false)', () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: false });
+      expect(getTemplateAutoCategorizeEnabled(g, 'folder-1')).toBe(false);
     });
 
-    it('returns template override when set', () => {
-      const userSettings = { enableAutoCategorization: true };
-      const account = createMockAccount(userSettings);
-      const folder = createMockFolder({ autoCategorizeEnabled: false });
-
-      expect(getTemplateAutoCategorizeEnabled(account as any, folder as any)).toBe(false);
+    it('returns true when enabled on the folder', () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: true });
+      expect(getTemplateAutoCategorizeEnabled(g, 'folder-1')).toBe(true);
     });
 
-    it('template true overrides global false', () => {
-      const userSettings = { enableAutoCategorization: false };
-      const account = createMockAccount(userSettings);
-      const folder = createMockFolder({ autoCategorizeEnabled: true });
-
-      expect(getTemplateAutoCategorizeEnabled(account as any, folder as any)).toBe(true);
+    it('returns false for a missing folder', () => {
+      expect(getTemplateAutoCategorizeEnabled(makeGraph({}), 'missing')).toBe(false);
     });
   });
 
   describe('hasTemplateAutoCategorizeOverride', () => {
-    it('returns false when no override', () => {
-      const folder = createMockFolder();
-      expect(hasTemplateAutoCategorizeOverride(folder as any)).toBe(false);
+    it('returns false when not enabled', () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: false });
+      expect(hasTemplateAutoCategorizeOverride(g, 'folder-1')).toBe(false);
     });
 
-    it('returns true when override set to true', () => {
-      const folder = createMockFolder({ autoCategorizeEnabled: true });
-      expect(hasTemplateAutoCategorizeOverride(folder as any)).toBe(true);
-    });
-
-    it('returns true when override set to false', () => {
-      const folder = createMockFolder({ autoCategorizeEnabled: false });
-      expect(hasTemplateAutoCategorizeOverride(folder as any)).toBe(true);
+    it('returns true when enabled', () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: true });
+      expect(hasTemplateAutoCategorizeOverride(g, 'folder-1')).toBe(true);
     });
   });
 
   describe('setTemplateAutoCategorizeEnabled', () => {
-    it('sets enabled state on folder', () => {
-      const folder = createMockFolder();
-      setTemplateAutoCategorizeEnabled(folder as any, true);
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autoCategorizeEnabled', true);
+    it('sets enabled state on the folder', async () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: false });
+      await setTemplateAutoCategorizeEnabled(g, 'folder-1', true);
+      expect(readFolder(g, 'folder-1').auto_categorize_enabled).toBe(true);
     });
 
-    it('clears override when set to undefined', () => {
-      const folder = createMockFolder({ autoCategorizeEnabled: true });
-      setTemplateAutoCategorizeEnabled(folder as any, undefined);
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autoCategorizeEnabled', undefined);
+    it('resets to the false default when set to undefined', async () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: true });
+      await setTemplateAutoCategorizeEnabled(g, 'folder-1', undefined);
+      expect(readFolder(g, 'folder-1').auto_categorize_enabled).toBe(false);
     });
   });
 
   describe('toggleTemplateAutoCategorize', () => {
-    it('toggles inherited true to explicit false', () => {
-      const userSettings = { enableAutoCategorization: true };
-      const account = createMockAccount(userSettings);
-      const folder = createMockFolder();
-
-      toggleTemplateAutoCategorize(account as any, folder as any);
-
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autoCategorizeEnabled', false);
+    it('toggles enabled true to false', async () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: true });
+      await toggleTemplateAutoCategorize(g, 'folder-1');
+      expect(readFolder(g, 'folder-1').auto_categorize_enabled).toBe(false);
     });
 
-    it('toggles explicit false to true', () => {
-      const account = createMockAccount({});
-      const folder = createMockFolder({ autoCategorizeEnabled: false });
-
-      toggleTemplateAutoCategorize(account as any, folder as any);
-
-      expect(folder.$jazz.set).toHaveBeenCalledWith('autoCategorizeEnabled', true);
+    it('toggles disabled false to true', async () => {
+      const g = graphWithFolder({ autoCategorizeEnabled: false });
+      await toggleTemplateAutoCategorize(g, 'folder-1');
+      expect(readFolder(g, 'folder-1').auto_categorize_enabled).toBe(true);
     });
   });
 });
