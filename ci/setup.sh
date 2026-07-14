@@ -3,11 +3,11 @@
 # Sourced (not executed) by the ci/test and ci/e2e entry scripts.
 # $WORKTREE is the job's working directory.
 #
-# checklist's e2e runs against the public Jazz cloud peer (wss://cloud.jazz.tools)
-# and a mock OAuth server started by Playwright's global setup — so this needs NO
-# local jazz-sync service, version-lock, or per-job Jazz account minting. The work
-# here: source secrets, expose ORG_HOOKS, link the file: siblings (jbr-jazz,
-# jazz-mock), and write a backend env.
+# checklist's e2e runs against the self-hosted rowboat sync backend (started by
+# Playwright's webServer via `npm run dev`) plus a mock OAuth server from global
+# setup. The work here: source secrets, expose ORG_HOOKS, link + build the file:
+# siblings (rowboat — the @jbroll/* packages — plus the legacy jbr-jazz/jazz-mock
+# still referenced by not-yet-ported code), and write a backend env.
 
 # ── Env: secrets and service endpoints ────────────────────────────────────────
 SECRETS="$HOME/.config/checklist/secrets.env"
@@ -26,7 +26,7 @@ export ORG_HOOKS="${ORG_HOOKS:-$HOME/src/org-hooks}"
 # from ci-workspace so npm install resolves. Cross-filesystem symlinks break
 # npm's file: resolution, so on a device mismatch rsync (without node_modules).
 CI_WORKSPACE="${CI_WORKSPACE:-$HOME/ci-workspace}"
-for sibling in jbr-jazz jazz-mock; do
+for sibling in rowboat jbr-jazz jazz-mock; do
     target="$CI_WORKSPACE/$sibling"
     link="$(dirname "$WORKTREE")/$sibling"
     [ -d "$target" ] || continue
@@ -43,7 +43,20 @@ for sibling in jbr-jazz jazz-mock; do
     fi
 done
 
-# jbr-jazz packages are consumed as built dist; ensure they're built in CI.
+# rowboat packages (@jbroll/rowboat-*) are consumed as built dist — checklist file:
+# links to ../rowboat/packages/*. Ensure they're installed + built in CI.
+ROWBOAT="$(dirname "$WORKTREE")/rowboat"
+if [ -d "$ROWBOAT" ]; then
+    ( cd "$ROWBOAT" && npm install --silent && npm run build --silent ) \
+        && echo "[ci/setup] built rowboat packages" \
+        || echo "[ci/setup] WARN: rowboat build failed" >&2
+else
+    echo "[ci/setup] ERROR: rowboat sibling missing at $ROWBOAT — @jbroll/rowboat-* cannot resolve." >&2
+    echo "[ci/setup]        place a rowboat checkout in \$CI_WORKSPACE ($CI_WORKSPACE/rowboat)." >&2
+fi
+
+# jbr-jazz packages are consumed as built dist; ensure they're built in CI (legacy,
+# for not-yet-ported code still importing @jbr-jazz/*).
 JBR="$(dirname "$WORKTREE")/jbr-jazz"
 if [ -d "$JBR" ]; then
     ( cd "$JBR" && npm install --silent && npm run build --silent ) \
@@ -53,14 +66,19 @@ fi
 
 # ── backend env ──────────────────────────────────────────────────────────────
 # Keep default ports (backend 3001 / frontend 8765) so vite's hardcoded /api ->
-# 3001 proxy and Playwright's localhost:8765 webServer line up.
+# 3001 proxy and Playwright's localhost:8765 webServer line up. Remove any stale
+# db first — the jbr-jazz-shaped share_invites (target_covalue_id) collides with
+# rowboat's registerShareTables (target_group_id). CHECKLIST_TEST_AUTH=1 turns off
+# email-verification so e2e can sign in via email/password (prod keeps it on).
+rm -f "$WORKTREE/backend/data/auth.db" "$WORKTREE/backend/data/auth.db-wal" \
+      "$WORKTREE/backend/data/auth.db-shm" "$WORKTREE/backend/auth.db"
 cat > "$WORKTREE/backend/.env" <<ENVEOF
 PORT=3001
 BASE_URL=http://localhost:3001
 FRONTEND_URL=http://localhost:8765
 AUTH_DB_PATH=./data/auth.db
 NODE_ENV=test
+CHECKLIST_TEST_AUTH=1
 BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-ci-test-secret-do-not-use-in-prod}
-VITE_JAZZ_PEER=${VITE_JAZZ_PEER:-wss://cloud.jazz.tools}
 ENVEOF
-echo "[ci/setup] wrote backend/.env (backend=3001 frontend=8765)"
+echo "[ci/setup] wrote backend/.env (backend=3001 frontend=8765, test-auth on)"
