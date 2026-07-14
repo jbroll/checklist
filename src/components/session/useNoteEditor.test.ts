@@ -32,11 +32,9 @@ describe('useNoteEditor', () => {
     notes,
   });
 
-  const mockTemplate = {
-    $jazz: { id: 'template-1' },
-  } as any;
+  const mockTemplate = { id: 'template-1' } as any;
 
-  const mockMe = { id: 'user-1' } as any;
+  const mockG = {} as any;
 
   beforeEach(() => {
     mockUpdateSessionItemNotes.mockReset();
@@ -50,7 +48,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: [],
         }),
       );
@@ -64,7 +62,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: [],
         }),
       );
@@ -84,7 +82,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -112,7 +110,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: session as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -140,7 +138,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: session as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -161,7 +159,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -181,7 +179,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -201,7 +199,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -224,7 +222,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -252,7 +250,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -266,7 +264,7 @@ describe('useNoteEditor', () => {
       });
 
       expect(mockUpdateItemNotes).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'item-1',
         'new note content',
@@ -282,7 +280,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -296,7 +294,7 @@ describe('useNoteEditor', () => {
       });
 
       expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'item-1',
@@ -313,7 +311,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -327,37 +325,12 @@ describe('useNoteEditor', () => {
       });
 
       expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'item-1',
         'checked zone note',
       );
-    });
-
-    it('does nothing when me is null', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          me: null,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('available')('item-1');
-      });
-
-      act(() => {
-        result.current.handleSaveNote('note');
-      });
-
-      expect(mockUpdateItemNotes).not.toHaveBeenCalled();
-      expect(mockUpdateSessionItemNotes).not.toHaveBeenCalled();
     });
 
     it('does nothing when no item is being edited', () => {
@@ -366,7 +339,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: [],
         }),
       );
@@ -389,7 +362,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -409,7 +382,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );
@@ -429,7 +402,7 @@ describe('useNoteEditor', () => {
           template: mockTemplate,
           session: { itemStates: {} } as any,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
           activeItems: items as any,
         }),
       );

@@ -6,6 +6,7 @@
 
 import type { InstanceOfSchema } from 'jazz-tools';
 import type { FolderNode } from '../../schema';
+import type { TemplateItem } from '../../schema/tree';
 import { toISOStringOrEmpty } from '../../utils/dateUtils';
 import { getLeafItems } from '../../utils/itemTreeHelpers';
 import { findSessionById } from './helpers';
@@ -40,7 +41,9 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Folde
   }
 
   // Get non-archived leaf items (not categories), sorted by sortOrder
-  const items = getLeafItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
+  const items = getLeafItems<TemplateItem>(template.items).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   // Add data rows
   for (const item of items) {
@@ -82,7 +85,9 @@ export function exportSessionToCsv(
   }
 
   // Get all leaf items (not categories) from the template, sorted by sortOrder
-  const items = getLeafItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
+  const items = getLeafItems<TemplateItem>(template.items).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   // Add data rows
   for (const item of items) {

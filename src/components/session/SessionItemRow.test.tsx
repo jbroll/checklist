@@ -7,15 +7,13 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { ItemState, TemplateItem } from '@/schema';
+import type { ItemState, TemplateItem } from '@/schema/folder';
 import { SessionItemRow } from './SessionItemRow';
 
-// Mock the Jazz hook
-vi.mock('@/lib/jazz', () => ({
-  useAccount: () => ({
-    id: 'test-account',
-    root: { folders: [] },
-  }),
+// Mock the rowboat graph hook — SessionItemRow only threads it through to
+// templateService.renameItem, which isn't exercised by these tests.
+vi.mock('@/jazz', () => ({
+  useRowboat: () => ({}),
 }));
 
 // Mock dnd-kit
@@ -45,7 +43,7 @@ function createMockItem(
     expanded: false,
     defaultQuantity: '',
     notes,
-    createdAt: new Date(),
+    createdAt: Date.now(),
   } as TemplateItem;
 }
 

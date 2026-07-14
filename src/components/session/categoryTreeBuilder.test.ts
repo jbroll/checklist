@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TemplateItem } from '@/schema';
+import type { TemplateItem } from '@/schema/folder';
 import { PATH_SEPARATOR } from '@/utils/pathUtils';
 import { buildCategoryTree } from './categoryTreeBuilder';
 
@@ -22,7 +22,7 @@ const createItem = (
   sortOrder,
   archived: false,
   defaultQuantity: '',
-  createdAt: new Date(),
+  createdAt: Date.now(),
 });
 
 describe('buildCategoryTree', () => {

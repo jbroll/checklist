@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TemplateItem } from '@/schema';
+import type { TemplateItem } from '@/schema/folder';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { areAllItemsSelected, collectAllItemIds, getSelectionState } from './categoryTreeUtils';
 
@@ -18,7 +18,7 @@ const createMockItem = (id: string, name: string): TemplateItem =>
     archived: false,
     expanded: false,
     defaultQuantity: '',
-    createdAt: new Date(),
+    createdAt: Date.now(),
   }) as TemplateItem;
 
 const createMockCategoryNode = (

@@ -154,7 +154,7 @@ function exportTemplateItems(items: TemplateItem[]): ExportedTemplateItem[] {
 }
 
 /** Recursively convert an ItemTreeNode to an ExportedTemplateItem. */
-function convertTreeNodeToExport(node: ItemTreeNode): ExportedTemplateItem {
+function convertTreeNodeToExport(node: ItemTreeNode<DatedItem>): ExportedTemplateItem {
   const { item, children } = node;
 
   const exportedItem: ExportedTemplateItem = {

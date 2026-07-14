@@ -1,4 +1,4 @@
-import type { TemplateItem } from '@/schema';
+import type { TemplateItem } from '@/schema/folder';
 import { PATH_SEPARATOR } from '@/utils/pathUtils';
 
 export interface CategoryNode {

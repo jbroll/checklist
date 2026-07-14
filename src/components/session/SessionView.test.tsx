@@ -2,7 +2,10 @@
  * Component tests for SessionView
  *
  * Tests rendering, item interactions, zone partitioning, view modes, and edit mode.
- * Uses jazz-mock for CoValue mocking.
+ * Ported off Jazz (slice-2): the graph is a plain stub object (`mockGraph`) rather than a
+ * live rowboat graph — every service call SessionView/its hooks make is mocked, so nothing
+ * actually reads through `mockGraph` except the `useSelect`-driven category-expanded state
+ * (see `mockUserSettingsRows`), which is exercised directly via the `user_settings` stub.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -10,26 +13,26 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionView } from './SessionView';
 
-// TODO(slice-2): SessionView still reads a Jazz FolderNode/session; this whole file is
-// skip-pending until sessions land on rowboat (see docs/superpowers/d-t4-report.md). Local
-// replacement for the old jazz-mock `createMockCoMap` helper — good enough shape for a
-// skipped suite, no jazz-mock dependency required.
-function createMockCoMap<T extends object>(data: T, options: { id?: string } = {}) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
-}
+// `@/jazz` mock: `useRowboat()` returns a stable stub graph object (so tests can assert
+// service calls were made "with mockGraph"), and `useSelect(fn)` just invokes the selector —
+// reactivity isn't under test here, only that SessionView reads through it correctly. The
+// `user_settings` row list is mutable per-test via `setUserSettingsRow`.
+const { mockGraph, setUserSettingsRow } = vi.hoisted(() => {
+  let rows: Array<{ $data: Record<string, unknown> }> = [
+    { $data: { view_template_category_expanded: {} } },
+  ];
+  const mockGraph = {
+    user_settings: { all: () => rows },
+  };
+  const setUserSettingsRow = (data: Record<string, unknown>) => {
+    rows = [{ $data: data }];
+  };
+  return { mockGraph, setUserSettingsRow };
+});
 
-// Mock Jazz hooks
-const mockAccount = {
-  id: 'test-account',
-  root: {
-    viewState: {
-      templateCategoryExpanded: {},
-    },
-  },
-};
-
-vi.mock('@/lib/jazz', () => ({
-  useAccount: () => mockAccount,
+vi.mock('@/jazz', () => ({
+  useRowboat: () => mockGraph,
+  useSelect: (fn: () => unknown) => fn(),
 }));
 
 // Mock navigation history hook
@@ -72,11 +75,36 @@ vi.mock('@dnd-kit/core', () => ({
 // Mock session service
 vi.mock('@/services/sessionService', () => ({
   updateViewMode: vi.fn(),
+  createSession: vi.fn(() => Promise.resolve('new-session-id')),
+  toggleItemSelected: vi.fn(),
+  toggleItemChecked: vi.fn(),
+  batchSelectItems: vi.fn(),
+  invertItemSelection: vi.fn(),
+  updateSessionItemNotes: vi.fn(),
 }));
 
 // Mock template service
 vi.mock('@/services/templateService', () => ({
   renameItem: vi.fn(),
+  archiveItem: vi.fn(),
+  toggleItemDefault: vi.fn(),
+  batchSetItemsDefault: vi.fn(),
+  invertItemsDefault: vi.fn(),
+  createCategory: vi.fn(() => Promise.resolve('new-category-id')),
+  createItem: vi.fn(() => Promise.resolve('new-item-id')),
+  calculateInsertionPoint: vi.fn(() => ({ parentPath: undefined, sortOrder: 0 })),
+  moveItem: vi.fn(),
+  reorderItem: vi.fn(),
+}));
+
+// Mock view-state and user-settings services
+vi.mock('@/services/viewStateService', () => ({
+  toggleTemplateCategoryExpanded: vi.fn(),
+}));
+
+vi.mock('@/services/userSettingsService', () => ({
+  getTemplateAutocompleteDomain: vi.fn(() => 'grocery'),
+  getTemplateAutoCategorizeEnabled: vi.fn(() => false),
 }));
 
 // Mock dialog context
@@ -87,7 +115,9 @@ vi.mock('@/lib/dialog-context', () => ({
   }),
 }));
 
-// Helper to create mock item
+import * as sessionService from '@/services/sessionService';
+
+// Helper to create mock item (rowboat TemplateItem shape — epoch-ms `createdAt`)
 function createMockItem(id: string, name: string, type: 'item' | 'category' = 'item', path = '') {
   return {
     id,
@@ -98,28 +128,34 @@ function createMockItem(id: string, name: string, type: 'item' | 'category' = 'i
     archived: false,
     expanded: false,
     defaultQuantity: '',
-    createdAt: new Date(),
+    createdAt: Date.now(),
   };
 }
 
-// Helper to create mock template using jazz-mock
+// Helper to create a mock template (rowboat FolderRow shape)
 function createMockTemplate(id: string, items: any[] = [], sessions: any[] = []) {
-  return createMockCoMap(
-    {
-      name: 'Test Template',
-      items,
-      sessions,
-      showZoneHeadings: true,
-      autocompleteDomain: 'grocery',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      $jazz: { id },
-    },
-    { id, trackMutations: true },
-  );
+  return {
+    id,
+    owner_group_id: 'group-1',
+    name: 'Test Template',
+    type: 'template-folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    items,
+    sessions,
+    default_items: {},
+    show_zone_headings: true,
+    auto_categorize_enabled: false,
+    autocomplete_domain: 'grocery',
+  };
 }
 
-// Helper to create mock session
+// Helper to create mock session (rowboat SessionData shape)
 function createMockSession(
   id: string,
   itemStates: Record<string, any> = {},
@@ -134,8 +170,8 @@ function createMockSession(
     selectedCount: Object.values(itemStates).filter((s: any) => s.selected).length,
     checkedCount: Object.values(itemStates).filter((s: any) => s.checked).length,
     remainingCount: 0,
-    createdAt: new Date(),
-    lastActivityAt: new Date(),
+    createdAt: Date.now(),
+    lastActivityAt: Date.now(),
   };
 }
 
@@ -157,15 +193,10 @@ function createDefaultProps(overrides = {}) {
   };
 }
 
-describe.skip('SessionView', () => {
+describe('SessionView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset account state
-    if (mockAccount.root) {
-      mockAccount.root.viewState = {
-        templateCategoryExpanded: {},
-      };
-    }
+    setUserSettingsRow({ view_template_category_expanded: {} });
     // Reset navigation state
     mockNavState = { view: 'session', editing: false };
   });
@@ -196,18 +227,6 @@ describe.skip('SessionView', () => {
       render(<SessionView {...props} />);
 
       expect(screen.getByText('Test Template')).toBeInTheDocument();
-    });
-
-    it('shows loading state when account is not ready', () => {
-      const originalAccount = mockAccount.root;
-      mockAccount.root = null as any;
-
-      const props = createDefaultProps();
-      render(<SessionView {...props} />);
-
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
-
-      mockAccount.root = originalAccount;
     });
 
     it('shows error when session not found', () => {
@@ -327,9 +346,8 @@ describe.skip('SessionView', () => {
       await user.click(viewModeButton);
 
       // Verify session service was called
-      const sessionService = await import('@/services/sessionService');
       expect(sessionService.updateViewMode).toHaveBeenCalledWith(
-        mockAccount,
+        mockGraph,
         'template-1',
         'session-1',
         'flat',
@@ -540,15 +558,17 @@ describe.skip('SessionView', () => {
   });
 
   describe('category expansion state', () => {
-    it('uses category expanded state from account viewState', () => {
+    it('uses category expanded state from per-user view state', () => {
       // Set navigation state to show edit mode
       mockNavState = { view: 'session', editing: true };
 
-      mockAccount.root.viewState.templateCategoryExpanded = {
-        'template-1': {
-          'cat-1': false,
+      setUserSettingsRow({
+        view_template_category_expanded: {
+          'template-1': {
+            'cat-1': false,
+          },
         },
-      };
+      });
 
       const items = [
         createMockItem('cat-1', 'Dairy', 'category', 'dairy'),
@@ -564,11 +584,11 @@ describe.skip('SessionView', () => {
       expect(screen.getByText('Dairy')).toBeInTheDocument();
     });
 
-    it('defaults to expanded when no viewState exists', () => {
+    it('defaults to expanded when no view state exists', () => {
       // Set navigation state to show edit mode
       mockNavState = { view: 'session', editing: true };
 
-      mockAccount.root.viewState.templateCategoryExpanded = {};
+      setUserSettingsRow({ view_template_category_expanded: {} });
 
       const items = [
         createMockItem('cat-1', 'Dairy', 'category', 'dairy'),

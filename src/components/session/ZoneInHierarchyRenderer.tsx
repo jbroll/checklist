@@ -1,12 +1,11 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { SessionData, Template, TemplateItem } from '@/schema';
+import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
 import { SessionZone } from './SessionZone';
 
 interface ZoneInHierarchyRendererProps {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   session: SessionData;
   selectedItems: TemplateItem[];
   checkedItems: TemplateItem[];
@@ -44,7 +43,7 @@ export function ZoneInHierarchyRenderer({
   canDrag,
   onEditNote,
 }: ZoneInHierarchyRendererProps) {
-  const showZoneHeadings = template.showZoneHeadings ?? false;
+  const showZoneHeadings = template.show_zone_headings;
 
   // Shared prop objects for SessionZone
   const itemActions = {
@@ -98,7 +97,7 @@ export function ZoneInHierarchyRenderer({
 
     // Count items at this level
     category.items.forEach((item) => {
-      const state = session.itemStates?.[item.id];
+      const state = session.itemStates[item.id];
       if (state?.selected && !state.checked) selectedCount++;
       if (state?.checked) checkedCount++;
     });
@@ -125,11 +124,11 @@ export function ZoneInHierarchyRenderer({
 
       // Split category items by zone (just at this level, not children)
       const catSelected = category.items.filter((item) => {
-        const state = session.itemStates?.[item.id];
+        const state = session.itemStates[item.id];
         return state?.selected && !state.checked;
       });
       const catChecked = category.items.filter((item) => {
-        const state = session.itemStates?.[item.id];
+        const state = session.itemStates[item.id];
         return state?.checked;
       });
 
@@ -175,7 +174,7 @@ export function ZoneInHierarchyRenderer({
                 {catSelected.length > 0 && (
                   <SessionZone
                     items={catSelected}
-                    itemStates={session.itemStates || {}}
+                    itemStates={session.itemStates}
                     expanded={categoryExpanded[`${category.path}-selected`] ?? true}
                     onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-selected`)}
                     zoneConfig={{
@@ -196,7 +195,7 @@ export function ZoneInHierarchyRenderer({
                 {catChecked.length > 0 && (
                   <SessionZone
                     items={catChecked}
-                    itemStates={session.itemStates || {}}
+                    itemStates={session.itemStates}
                     expanded={categoryExpanded[`${category.path}-checked`] ?? true}
                     onToggleExpand={() => onToggleCategoryExpanded(`${category.path}-checked`)}
                     zoneConfig={{
@@ -233,7 +232,7 @@ export function ZoneInHierarchyRenderer({
           {uncategorizedSelectedItems.length > 0 && (
             <SessionZone
               items={uncategorizedSelectedItems}
-              itemStates={session.itemStates || {}}
+              itemStates={session.itemStates}
               expanded={categoryExpanded['uncategorized-selected'] ?? true}
               onToggleExpand={() => onToggleCategoryExpanded('uncategorized-selected')}
               zoneConfig={{
@@ -254,7 +253,7 @@ export function ZoneInHierarchyRenderer({
           {uncategorizedCheckedItems.length > 0 && (
             <SessionZone
               items={uncategorizedCheckedItems}
-              itemStates={session.itemStates || {}}
+              itemStates={session.itemStates}
               expanded={categoryExpanded['uncategorized-checked'] ?? true}
               onToggleExpand={() => onToggleCategoryExpanded('uncategorized-checked')}
               zoneConfig={{

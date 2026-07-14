@@ -1,16 +1,18 @@
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { useState } from 'react';
-import type { Account, SessionData, Template, TemplateItem } from '@/schema';
+import type { FolderRow, SessionData, schema, TemplateItem } from '@/schema/folder';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
+
+type Graph = RelationalGraph<typeof schema>;
 
 type NoteZone = 'available' | 'selected' | 'checked';
 
 interface UseNoteEditorOptions {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   session: SessionData | null;
   sessionId: string;
-  me: InstanceOfSchema<typeof Account> | null;
+  g: Graph;
   activeItems: TemplateItem[];
 }
 
@@ -22,7 +24,7 @@ export function useNoteEditor({
   template,
   session,
   sessionId,
-  me,
+  g,
   activeItems,
 }: UseNoteEditorOptions) {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
@@ -36,18 +38,12 @@ export function useNoteEditor({
   };
 
   const handleSaveNote = (note: string) => {
-    if (!me || !noteEditingItemId) return;
+    if (!noteEditingItemId) return;
 
     if (noteEditingZone === 'available') {
-      templateService.updateItemNotes(me, template.$jazz.id, noteEditingItemId, note);
+      templateService.updateItemNotes(g, template.id, noteEditingItemId, note);
     } else {
-      SessionService.updateSessionItemNotes(
-        me,
-        template.$jazz.id,
-        sessionId,
-        noteEditingItemId,
-        note,
-      );
+      SessionService.updateSessionItemNotes(g, template.id, sessionId, noteEditingItemId, note);
     }
   };
 

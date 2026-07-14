@@ -1,25 +1,27 @@
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { FolderTree, List } from 'lucide-react';
-import type { Account, SessionData, Template } from '@/schema';
+import type { FolderRow, SessionData, schema } from '@/schema/folder';
 import * as SessionService from '@/services/sessionService';
 
+type Graph = RelationalGraph<typeof schema>;
+
 interface UseViewModeParams {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   session: SessionData | null;
   sessionId: string;
-  me: InstanceOfSchema<typeof Account> | null;
+  g: Graph;
 }
 
-export function useViewMode({ template, session, sessionId, me }: UseViewModeParams) {
+export function useViewMode({ template, session, sessionId, g }: UseViewModeParams) {
   const currentViewMode = session?.viewMode || 'zone-in-hierarchy';
 
   const cycleViewMode = () => {
-    if (!session || !me) {
+    if (!session) {
       return;
     }
     const current = session.viewMode || 'zone-in-hierarchy';
     const next = current === 'flat' ? 'zone-in-hierarchy' : 'flat';
-    SessionService.updateViewMode(me, template.$jazz.id, sessionId, next);
+    SessionService.updateViewMode(g, template.id, sessionId, next);
   };
 
   const getViewModeLabel = () => {

@@ -1,15 +1,13 @@
 import { useAutoAnimate } from '@formkit/auto-animate/react';
-import type { InstanceOfSchema } from 'jazz-tools';
 import type { LucideIcon } from 'lucide-react';
 import { ListChecks, ListMinus, ListX } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { IndentedRow } from '@/components/tree/IndentedRow';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAccount } from '@/lib/jazz';
+import { useRowboat } from '@/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { FolderNode, ItemState, TemplateItem } from '@/schema';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
+import type { FolderRow, ItemState, TemplateItem } from '@/schema/folder';
 import * as templateService from '@/services/templateService';
 import type { CategoryNode } from './categoryTreeBuilder';
 import { collectAllItemIds, getSelectionState } from './categoryTreeUtils';
@@ -69,7 +67,7 @@ interface SessionZoneProps {
   expanded: boolean;
   onToggleExpand: () => void;
   category?: CategoryNode | null;
-  template?: InstanceOfSchema<typeof FolderNode>;
+  template?: FolderRow;
   children?: React.ReactNode;
   // Grouped props
   zoneConfig: SessionZoneConfig;
@@ -122,8 +120,7 @@ export function SessionZone({
     canDragItemFn,
     onEditNote,
   } = itemEditModeProps;
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  const g = useRowboat();
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -163,7 +160,7 @@ export function SessionZone({
   });
 
   const handleSaveEdit = () => {
-    if (!me || !template || !categoryItem) return;
+    if (!template || !categoryItem) return;
 
     const trimmedValue = editValue.trim();
 
@@ -176,7 +173,7 @@ export function SessionZone({
     // Only save if changed
     if (trimmedValue !== title) {
       try {
-        templateService.renameItem(me, template.$jazz.id, categoryItem.id, trimmedValue);
+        templateService.renameItem(g, template.id, categoryItem.id, trimmedValue);
       } catch (error) {
         console.error('[SessionZone] Failed to rename category:', error);
       }

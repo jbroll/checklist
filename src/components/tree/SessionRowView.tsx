@@ -8,9 +8,29 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
-import { formatSessionDate, hasMultipleSessionsOnSameDay } from '@/lib/utils';
-import type { SessionData } from '@/schema';
+import { formatSessionDate } from '@/lib/utils';
+import type { SessionData } from '@/schema/folder';
 import { IndentedRow } from './IndentedRow';
+
+/**
+ * Whether `session` shares its calendar day with another entry in `allSessions` — used to
+ * decide whether the row needs to show a time alongside the date. Reimplemented locally
+ * (rather than `hasMultipleSessionsOnSameDay` from `@/lib/utils`) because that helper's
+ * `SessionData` is the Jazz-era shape (`createdAt: Date`); the rowboat `SessionData` here
+ * carries `createdAt` as an epoch-ms number (see `shared/schema.ts`).
+ */
+function hasMultipleOnSameDay(
+  session: SessionData,
+  allSessions: readonly (SessionData | null)[],
+): boolean {
+  const startOfDay = (ms: number) => {
+    const d = new Date(ms);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const targetDay = startOfDay(session.createdAt);
+  const count = allSessions.filter((s) => s && startOfDay(s.createdAt) === targetDay).length;
+  return count > 1;
+}
 
 interface SessionRowViewProps {
   session: SessionData;
@@ -38,10 +58,11 @@ export const SessionRowView = memo(function SessionRowView({
   const [showMenu, setShowMenu] = useState(false);
   const { showConfirm } = useDialog();
 
-  const showTime = hasMultipleSessionsOnSameDay(session, allSessions);
+  const showTime = hasMultipleOnSameDay(session, allSessions);
+  const sessionDateLabel = formatSessionDate(new Date(session.createdAt), showTime);
 
   const handleToggleArchived = async () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
+    const displayName = `${templateName} - ${sessionDateLabel}`;
     if (session.archived) {
       // Unarchive
       if (onArchive) {
@@ -64,7 +85,7 @@ export const SessionRowView = memo(function SessionRowView({
   };
 
   const handleDelete = async () => {
-    const displayName = `${templateName} - ${formatSessionDate(session.createdAt, showTime)}`;
+    const displayName = `${templateName} - ${sessionDateLabel}`;
     // If not archived, archive first (soft delete)
     if (!session.archived) {
       if (onArchive) {
@@ -107,17 +128,15 @@ export const SessionRowView = memo(function SessionRowView({
 
           {/* Relative date */}
           <span className="flex-1 text-left text-base text-content-tertiary">
-            {formatSessionDate(session.createdAt, showTime)}
+            {sessionDateLabel}
           </span>
 
           {/* Session stats */}
           <div className="flex items-center gap-1 text-base">
-            <span className="text-green-600">{session.checkedCount || 0}</span>
+            <span className="text-green-600">{session.checkedCount}</span>
             <span className="text-content-primary">/</span>
             <span className="text-content-primary">
-              {(session.checkedCount || 0) +
-                (session.selectedCount || 0) +
-                (session.remainingCount || 0)}
+              {session.checkedCount + session.selectedCount + session.remainingCount}
             </span>
           </div>
         </button>

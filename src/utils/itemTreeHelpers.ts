@@ -1,5 +1,18 @@
-import type { TemplateItem } from '@/schema';
 import { getParentPath, PATH_SEPARATOR } from './pathUtils';
+
+/**
+ * The minimal shape these tree helpers need. Generic (rather than importing a concrete
+ * `TemplateItem` type) so both the Jazz-era item shape (`createdAt: Date`) and the rowboat
+ * item shape (`createdAt: number`, see `@/schema/folder`) satisfy it structurally — the
+ * export/import pipeline still passes the former, the ported session components the latter.
+ */
+export interface TreeableItem {
+  path: string;
+  sortOrder: number;
+  name: string;
+  type: 'category' | 'item';
+  archived: boolean;
+}
 
 /**
  * Filter to get only active (non-archived) items
@@ -7,10 +20,10 @@ import { getParentPath, PATH_SEPARATOR } from './pathUtils';
  * @param items - Array of template items (may contain null/undefined)
  * @returns Array of non-archived items
  */
-export function getActiveItems(
-  items: readonly (TemplateItem | null | undefined)[],
-): TemplateItem[] {
-  return items.filter((item): item is TemplateItem => item != null && !item.archived);
+export function getActiveItems<T extends TreeableItem>(
+  items: readonly (T | null | undefined)[],
+): T[] {
+  return items.filter((item): item is T => item != null && !item.archived);
 }
 
 /**
@@ -19,18 +32,18 @@ export function getActiveItems(
  * @param items - Array of template items (may contain null/undefined)
  * @returns Array of non-archived leaf items
  */
-export function getLeafItems(items: readonly (TemplateItem | null | undefined)[]): TemplateItem[] {
-  return items.filter(
-    (item): item is TemplateItem => item != null && !item.archived && item.type === 'item',
-  );
+export function getLeafItems<T extends TreeableItem>(
+  items: readonly (T | null | undefined)[],
+): T[] {
+  return items.filter((item): item is T => item != null && !item.archived && item.type === 'item');
 }
 
 /**
  * Tree structure for template items (categories and items)
  */
-export interface ItemTreeNode {
-  item: TemplateItem;
-  children: ItemTreeNode[];
+export interface ItemTreeNode<T extends TreeableItem = TreeableItem> {
+  item: T;
+  children: ItemTreeNode<T>[];
 }
 
 /**
@@ -40,9 +53,11 @@ export interface ItemTreeNode {
  * @param items - Flat list of template items (both categories and leaf items)
  * @returns Array of root-level tree nodes
  */
-export function buildItemTree(items: readonly (TemplateItem | null | undefined)[]): ItemTreeNode[] {
+export function buildItemTree<T extends TreeableItem>(
+  items: readonly (T | null | undefined)[],
+): ItemTreeNode<T>[] {
   // Helper to sort items by sortOrder and name
-  const sortItems = (a: TemplateItem, b: TemplateItem) => {
+  const sortItems = (a: T, b: T) => {
     if (a.sortOrder !== b.sortOrder) {
       return a.sortOrder - b.sortOrder;
     }
@@ -50,14 +65,14 @@ export function buildItemTree(items: readonly (TemplateItem | null | undefined)[
   };
 
   // Single-pass: filter, build map, and group by parent
-  const nodeMap = new Map<string, ItemTreeNode>();
-  const childrenByParent = new Map<string | undefined, ItemTreeNode[]>();
+  const nodeMap = new Map<string, ItemTreeNode<T>>();
+  const childrenByParent = new Map<string | undefined, ItemTreeNode<T>[]>();
 
   for (const item of items) {
     // Filter out null and archived items
     if (!item || item.archived) continue;
 
-    const node: ItemTreeNode = {
+    const node: ItemTreeNode<T> = {
       item,
       children: [],
     };
@@ -71,7 +86,7 @@ export function buildItemTree(items: readonly (TemplateItem | null | undefined)[
   }
 
   // Recursively build and sort children
-  const buildChildren = (parentPath: string | undefined): ItemTreeNode[] => {
+  const buildChildren = (parentPath: string | undefined): ItemTreeNode<T>[] => {
     const children = childrenByParent.get(parentPath) || [];
     const sorted = children.sort((a, b) => sortItems(a.item, b.item));
 
@@ -91,10 +106,10 @@ export function buildItemTree(items: readonly (TemplateItem | null | undefined)[
 /**
  * Flattens a tree back into a list, maintaining hierarchical order
  */
-export function flattenItemTree(nodes: ItemTreeNode[]): TemplateItem[] {
-  const result: TemplateItem[] = [];
+export function flattenItemTree<T extends TreeableItem>(nodes: ItemTreeNode<T>[]): T[] {
+  const result: T[] = [];
 
-  function traverse(node: ItemTreeNode) {
+  function traverse(node: ItemTreeNode<T>) {
     result.push(node.item);
     for (const child of node.children) {
       traverse(child);
@@ -111,11 +126,11 @@ export function flattenItemTree(nodes: ItemTreeNode[]): TemplateItem[] {
 /**
  * Gets all descendant items (children, grandchildren, etc.) of a category
  */
-export function getDescendantItems(
-  items: readonly (TemplateItem | null | undefined)[],
+export function getDescendantItems<T extends TreeableItem>(
+  items: readonly (T | null | undefined)[],
   categoryPath: string,
-): TemplateItem[] {
-  return items.filter((item): item is TemplateItem => {
+): T[] {
+  return items.filter((item): item is T => {
     if (!item || item.archived) return false;
     return item.path.startsWith(`${categoryPath}${PATH_SEPARATOR}`);
   });
@@ -124,11 +139,11 @@ export function getDescendantItems(
 /**
  * Gets only the direct children of a category (not grandchildren)
  */
-export function getDirectChildren(
-  items: readonly (TemplateItem | null | undefined)[],
+export function getDirectChildren<T extends TreeableItem>(
+  items: readonly (T | null | undefined)[],
   categoryPath: string | undefined,
-): TemplateItem[] {
-  return items.filter((item): item is TemplateItem => {
+): T[] {
+  return items.filter((item): item is T => {
     if (!item || item.archived) return false;
     const itemParent = getParentPath(item.path);
     return itemParent === categoryPath;

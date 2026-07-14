@@ -1,12 +1,11 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { ReorderDropZone } from '@/components/tree/ReorderDropZone';
 import { TemplateItemView } from '@/components/tree/TemplateItemView';
-import type { SessionData, Template, TemplateItem } from '@/schema';
-import type { buildItemTree } from '@/utils/itemTreeHelpers';
+import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
+import type { ItemTreeNode as UtilItemTreeNode } from '@/utils/itemTreeHelpers';
 import { getParentPath } from '@/utils/pathUtils';
 import { SessionZone } from './SessionZone';
 
-export type ItemTreeNode = ReturnType<typeof buildItemTree>[number];
+export type ItemTreeNode = UtilItemTreeNode<TemplateItem>;
 
 interface ItemNodeRendererProps {
   node: ItemTreeNode;
@@ -19,7 +18,7 @@ interface ItemNodeRendererProps {
   setSelectedItemId: (id: string | null) => void;
   setCurrentItemId: (id: string | null) => void;
   session: SessionData;
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   activeItems: TemplateItem[];
   activeItem: TemplateItem | null;
   isCategoryExpanded: (itemId: string) => boolean;
@@ -94,7 +93,7 @@ export function ItemNodeRenderer({
       <div key={item.id}>
         <SessionZone
           items={categoryItems}
-          itemStates={session.itemStates || {}}
+          itemStates={session.itemStates}
           expanded={isCategoryExpanded(item.id)}
           onToggleExpand={() => onToggleExpand(item.id)}
           template={template}
@@ -175,7 +174,7 @@ export function ItemNodeRenderer({
             ? selectedItemId === item.id // Insertion point highlight in ADDING mode
             : currentItemId === item.id // Current item highlight in NORMAL mode
         }
-        isChecked={session.itemStates?.[item.id]?.selected ?? false}
+        isChecked={session.itemStates[item.id]?.selected ?? false}
         expanded={item.type === 'category' ? isCategoryExpanded(item.id) : undefined}
         onSelect={
           showAddForm

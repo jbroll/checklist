@@ -14,7 +14,7 @@ vi.mock('@/services/sessionService', () => ({
   toggleItemChecked: vi.fn(),
   batchSelectItems: vi.fn(),
   invertItemSelection: vi.fn(),
-  createSession: vi.fn(() => 'new-session-id'),
+  createSession: vi.fn(() => Promise.resolve('new-session-id')),
   updateSessionItemNotes: vi.fn(),
 }));
 
@@ -24,8 +24,8 @@ vi.mock('@/services/templateService', () => ({
   toggleItemDefault: vi.fn(),
   batchSetItemsDefault: vi.fn(),
   invertItemsDefault: vi.fn(),
-  createCategory: vi.fn(() => 'new-category-id'),
-  createItem: vi.fn(() => 'new-item-id'),
+  createCategory: vi.fn(() => Promise.resolve('new-category-id')),
+  createItem: vi.fn(() => Promise.resolve('new-item-id')),
   calculateInsertionPoint: vi.fn(() => ({ parentPath: undefined, sortOrder: 100 })),
 }));
 
@@ -63,11 +63,11 @@ const mockGetAutoCategorize = userSettingsService.getTemplateAutoCategorizeEnabl
 
 describe('useSessionHandlers', () => {
   const mockTemplate = {
-    $jazz: { id: 'template-1' },
+    id: 'template-1',
     items: [],
   } as any;
 
-  const mockMe = { id: 'user-1' } as any;
+  const mockG = {} as any;
 
   const mockCaptureScrollPosition = vi.fn();
   const mockSetSelectedItemId = vi.fn();
@@ -77,7 +77,7 @@ describe('useSessionHandlers', () => {
     template: mockTemplate,
     session: { itemStates: {} } as any,
     sessionId: 'session-1',
-    me: mockMe,
+    g: mockG,
     activeItems: [],
     checkedItems: [],
     captureScrollPosition: mockCaptureScrollPosition,
@@ -98,17 +98,7 @@ describe('useSessionHandlers', () => {
         result.current.handleRenameItem('item-1', 'New Name');
       });
 
-      expect(mockRenameItem).toHaveBeenCalledWith(mockMe, 'template-1', 'item-1', 'New Name');
-    });
-
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() => useSessionHandlers({ ...defaultOptions, me: null }));
-
-      act(() => {
-        result.current.handleRenameItem('item-1', 'New Name');
-      });
-
-      expect(mockRenameItem).not.toHaveBeenCalled();
+      expect(mockRenameItem).toHaveBeenCalledWith(mockG, 'template-1', 'item-1', 'New Name');
     });
   });
 
@@ -120,17 +110,7 @@ describe('useSessionHandlers', () => {
         result.current.handleDeleteItem('item-1');
       });
 
-      expect(mockArchiveItem).toHaveBeenCalledWith(mockMe, 'template-1', 'item-1');
-    });
-
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() => useSessionHandlers({ ...defaultOptions, me: null }));
-
-      act(() => {
-        result.current.handleDeleteItem('item-1');
-      });
-
-      expect(mockArchiveItem).not.toHaveBeenCalled();
+      expect(mockArchiveItem).toHaveBeenCalledWith(mockG, 'template-1', 'item-1');
     });
   });
 
@@ -145,7 +125,7 @@ describe('useSessionHandlers', () => {
         result.current.handleToggleExpand('cat-1');
       });
 
-      expect(mockToggleCategoryExpanded).toHaveBeenCalledWith(mockMe, 'template-1', 'cat-1');
+      expect(mockToggleCategoryExpanded).toHaveBeenCalledWith(mockG, 'template-1', 'cat-1');
     });
 
     it('does nothing for non-category items', () => {
@@ -182,21 +162,11 @@ describe('useSessionHandlers', () => {
 
       expect(mockCaptureScrollPosition).toHaveBeenCalled();
       expect(mockToggleItemSelected).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'item-1',
       );
-    });
-
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() => useSessionHandlers({ ...defaultOptions, me: null }));
-
-      act(() => {
-        result.current.handleToggleSelected('item-1');
-      });
-
-      expect(mockToggleItemSelected).not.toHaveBeenCalled();
     });
   });
 
@@ -210,7 +180,7 @@ describe('useSessionHandlers', () => {
 
       expect(mockCaptureScrollPosition).toHaveBeenCalled();
       expect(mockToggleItemChecked).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'item-1',
@@ -228,7 +198,7 @@ describe('useSessionHandlers', () => {
 
       expect(mockCaptureScrollPosition).toHaveBeenCalled();
       expect(mockBatchSelectItems).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         ['item-1', 'item-2'],
@@ -246,7 +216,7 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockBatchSelectItems).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         ['item-1', 'item-2'],
@@ -263,7 +233,7 @@ describe('useSessionHandlers', () => {
         result.current.handleBatchToggle(['item-1', 'item-2']);
       });
 
-      expect(mockInvertItemSelection).toHaveBeenCalledWith(mockMe, 'template-1', 'session-1', [
+      expect(mockInvertItemSelection).toHaveBeenCalledWith(mockG, 'template-1', 'session-1', [
         'item-1',
         'item-2',
       ]);
@@ -279,9 +249,9 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockCaptureScrollPosition).toHaveBeenCalled();
-      expect(mockToggleItemDefault).toHaveBeenCalledWith(mockMe, 'template-1', 'item-1');
+      expect(mockToggleItemDefault).toHaveBeenCalledWith(mockG, 'template-1', 'item-1');
       expect(mockToggleItemSelected).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'item-1',
@@ -298,13 +268,13 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockBatchSetItemsDefault).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         ['item-1', 'item-2'],
         true,
       );
       expect(mockBatchSelectItems).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         ['item-1', 'item-2'],
@@ -322,13 +292,13 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockBatchSetItemsDefault).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         ['item-1', 'item-2'],
         false,
       );
       expect(mockBatchSelectItems).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         ['item-1', 'item-2'],
@@ -345,11 +315,11 @@ describe('useSessionHandlers', () => {
         result.current.handleBatchDefaultToggle(['item-1', 'item-2']);
       });
 
-      expect(mockInvertItemsDefault).toHaveBeenCalledWith(mockMe, 'template-1', [
+      expect(mockInvertItemsDefault).toHaveBeenCalledWith(mockG, 'template-1', [
         'item-1',
         'item-2',
       ]);
-      expect(mockInvertItemSelection).toHaveBeenCalledWith(mockMe, 'template-1', 'session-1', [
+      expect(mockInvertItemSelection).toHaveBeenCalledWith(mockG, 'template-1', 'session-1', [
         'item-1',
         'item-2',
       ]);
@@ -357,20 +327,20 @@ describe('useSessionHandlers', () => {
   });
 
   describe('handleClearOrNew', () => {
-    it('does nothing when no checked items', () => {
+    it('does nothing when no checked items', async () => {
       const { result } = renderHook(() =>
         useSessionHandlers({ ...defaultOptions, checkedItems: [] }),
       );
 
-      act(() => {
-        result.current.handleClearOrNew();
+      await act(async () => {
+        await result.current.handleClearOrNew();
       });
 
       expect(mockCreateSession).not.toHaveBeenCalled();
       expect(mockOnSwitchSession).not.toHaveBeenCalled();
     });
 
-    it('creates new session when items are checked', () => {
+    it('creates new session when items are checked', async () => {
       const { result } = renderHook(() =>
         useSessionHandlers({
           ...defaultOptions,
@@ -378,31 +348,15 @@ describe('useSessionHandlers', () => {
         }),
       );
 
-      act(() => {
-        result.current.handleClearOrNew();
+      await act(async () => {
+        await result.current.handleClearOrNew();
       });
 
-      expect(mockCreateSession).toHaveBeenCalledWith(mockMe, 'template-1');
+      expect(mockCreateSession).toHaveBeenCalledWith(mockG, 'template-1');
       expect(mockOnSwitchSession).toHaveBeenCalledWith('new-session-id');
     });
 
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() =>
-        useSessionHandlers({
-          ...defaultOptions,
-          me: null,
-          checkedItems: [{ id: 'item-1' }] as any,
-        }),
-      );
-
-      act(() => {
-        result.current.handleClearOrNew();
-      });
-
-      expect(mockCreateSession).not.toHaveBeenCalled();
-    });
-
-    it('does not call onSwitchSession when not provided', () => {
+    it('does not call onSwitchSession when not provided', async () => {
       const { result } = renderHook(() =>
         useSessionHandlers({
           ...defaultOptions,
@@ -411,8 +365,8 @@ describe('useSessionHandlers', () => {
         }),
       );
 
-      act(() => {
-        result.current.handleClearOrNew();
+      await act(async () => {
+        await result.current.handleClearOrNew();
       });
 
       expect(mockCreateSession).toHaveBeenCalled();
@@ -420,15 +374,15 @@ describe('useSessionHandlers', () => {
   });
 
   describe('handleAddItem', () => {
-    it('creates item without auto-categorization', () => {
+    it('creates item without auto-categorization', async () => {
       const { result } = renderHook(() => useSessionHandlers(defaultOptions));
 
-      act(() => {
-        result.current.handleAddItem({ type: 'item', name: 'New Item' });
+      await act(async () => {
+        await result.current.handleAddItem({ type: 'item', name: 'New Item' });
       });
 
       expect(mockCreateItem).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'New Item',
         undefined,
@@ -438,15 +392,15 @@ describe('useSessionHandlers', () => {
       expect(mockSetSelectedItemId).toHaveBeenCalledWith('new-item-id');
     });
 
-    it('creates category', () => {
+    it('creates category', async () => {
       const { result } = renderHook(() => useSessionHandlers(defaultOptions));
 
-      act(() => {
-        result.current.handleAddItem({ type: 'category', name: 'New Category' });
+      await act(async () => {
+        await result.current.handleAddItem({ type: 'category', name: 'New Category' });
       });
 
       expect(mockCreateCategory).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'New Category',
         undefined,
@@ -455,11 +409,11 @@ describe('useSessionHandlers', () => {
       expect(mockSetSelectedItemId).toHaveBeenCalledWith('new-category-id');
     });
 
-    it('creates item with default quantity', () => {
+    it('creates item with default quantity', async () => {
       const { result } = renderHook(() => useSessionHandlers(defaultOptions));
 
-      act(() => {
-        result.current.handleAddItem({
+      await act(async () => {
+        await result.current.handleAddItem({
           type: 'item',
           name: 'Milk',
           defaultQuantity: '1 gallon',
@@ -467,7 +421,7 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockCreateItem).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'Milk',
         undefined,
@@ -475,24 +429,14 @@ describe('useSessionHandlers', () => {
         100,
       );
     });
-
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() => useSessionHandlers({ ...defaultOptions, me: null }));
-
-      act(() => {
-        result.current.handleAddItem({ type: 'item', name: 'Test' });
-      });
-
-      expect(mockCreateItem).not.toHaveBeenCalled();
-    });
   });
 
   describe('handleAddItemWithInsertionPoint', () => {
-    it('creates item and syncs to session', () => {
+    it('creates item and syncs to session', async () => {
       const { result } = renderHook(() => useSessionHandlers(defaultOptions));
 
-      act(() => {
-        result.current.handleAddItemWithInsertionPoint(
+      await act(async () => {
+        await result.current.handleAddItemWithInsertionPoint(
           { type: 'item', name: 'New Item' },
           'selected-item-id',
         );
@@ -500,7 +444,7 @@ describe('useSessionHandlers', () => {
 
       expect(mockCreateItem).toHaveBeenCalled();
       expect(mockToggleItemSelected).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'new-item-id',
@@ -509,7 +453,7 @@ describe('useSessionHandlers', () => {
   });
 
   describe('auto-categorization', () => {
-    it('uses existing category when auto-categorize enabled', () => {
+    it('uses existing category when auto-categorize enabled', async () => {
       mockGetAutoCategorize.mockReturnValue(true);
 
       const activeItems = [{ id: 'cat-1', type: 'category', name: 'Dairy', path: 'Dairy' }];
@@ -521,8 +465,8 @@ describe('useSessionHandlers', () => {
         }),
       );
 
-      act(() => {
-        result.current.handleAddItem({
+      await act(async () => {
+        await result.current.handleAddItem({
           type: 'item',
           name: 'Milk',
           categoryInfo: { categoryName: 'Dairy' },
@@ -530,7 +474,7 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockCreateItem).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'Milk',
         'Dairy',
@@ -539,7 +483,7 @@ describe('useSessionHandlers', () => {
       );
     });
 
-    it('creates new category when auto-categorize enabled and category not found', () => {
+    it('creates new category when auto-categorize enabled and category not found', async () => {
       mockGetAutoCategorize.mockReturnValue(true);
 
       const { result } = renderHook(() =>
@@ -549,17 +493,17 @@ describe('useSessionHandlers', () => {
         }),
       );
 
-      act(() => {
-        result.current.handleAddItem({
+      await act(async () => {
+        await result.current.handleAddItem({
           type: 'item',
           name: 'Milk',
           categoryInfo: { categoryName: 'Dairy' },
         });
       });
 
-      expect(mockCreateCategory).toHaveBeenCalledWith(mockMe, 'template-1', 'Dairy', undefined);
+      expect(mockCreateCategory).toHaveBeenCalledWith(mockG, 'template-1', 'Dairy', undefined);
       expect(mockCreateItem).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'Milk',
         'Dairy',
@@ -568,7 +512,7 @@ describe('useSessionHandlers', () => {
       );
     });
 
-    it('uses subcategory name when provided', () => {
+    it('uses subcategory name when provided', async () => {
       mockGetAutoCategorize.mockReturnValue(true);
 
       const activeItems = [
@@ -582,8 +526,8 @@ describe('useSessionHandlers', () => {
         }),
       );
 
-      act(() => {
-        result.current.handleAddItem({
+      await act(async () => {
+        await result.current.handleAddItem({
           type: 'item',
           name: 'Organic Whole Milk',
           categoryInfo: { categoryName: 'Dairy', subcategoryName: 'Whole Milk' },
@@ -591,7 +535,7 @@ describe('useSessionHandlers', () => {
       });
 
       expect(mockCreateItem).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'Organic Whole Milk',
         'Whole Milk',
@@ -600,20 +544,20 @@ describe('useSessionHandlers', () => {
       );
     });
 
-    it('ignores category info when auto-categorize disabled', () => {
+    it('ignores category info when auto-categorize disabled', async () => {
       mockGetAutoCategorize.mockReturnValue(false);
 
       const { result } = renderHook(() => useSessionHandlers({ ...defaultOptions }));
 
-      act(() => {
-        result.current.handleAddItem({
+      await act(async () => {
+        await result.current.handleAddItem({
           type: 'item',
           name: 'Milk',
           categoryInfo: { categoryName: 'Dairy' },
         });
       });
 
-      expect(mockCreateItem).toHaveBeenCalledWith(mockMe, 'template-1', 'Milk', undefined, '', 100);
+      expect(mockCreateItem).toHaveBeenCalledWith(mockG, 'template-1', 'Milk', undefined, '', 100);
     });
   });
 });

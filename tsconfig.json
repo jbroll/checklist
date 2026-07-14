@@ -56,20 +56,17 @@
      * silences `tsc --noEmit` — `vite build` does not process them at all. */
     "src/TestPage.tsx",
     "src/components/auth/MergeAccountFlow.tsx",
-    "src/components/session/**",
-    "src/components/tree/TemplateItemView.tsx",
-    "src/components/tree/SessionRowView.tsx",
     "src/components/import/**",
     "src/services/import/**",
     "src/services/checklistFolderFactory.ts",
     "src/components/editor/DialogManager.tsx",
 
-    /* Explicitly out of slice-2 scope per the port task, independent of the jazz-waist
-     * breakage above (task instruction: don't try to port these). `sessionService.ts` still
-     * reads a Jazz `Account` and is only imported by the already-excluded `src/components/
-     * session/**` — sessions are a later slice, so exclude it here (it would otherwise fail to
-     * typecheck against the now-rowboat `templateService.getTemplate`). `templateService.ts`
-     * itself is now ported to rowboat and NO LONGER excluded — it typechecks against the graph. */
+    /* `testHelpers.ts` is test-environment-only scaffolding that still imports the OLD Jazz
+     * `Account`/`FolderNode` schema plus the still-excluded `checklistFolderFactory`/
+     * `services/import/**` — independent of the session-subtree port below, and out of scope
+     * on its own. `sessionService.ts`/`templateService.ts` are both ported to rowboat (headless,
+     * graph-first) and NO LONGER excluded — see `src/components/session/**` below, which is the
+     * slice-2 port of the session UI onto them. */
     "src/services/testHelpers.ts",
 
     /* `useViewStateCleanup` still reads a Jazz `Account` (`account.root.viewState`); its service,

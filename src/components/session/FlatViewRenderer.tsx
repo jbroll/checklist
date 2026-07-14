@@ -1,11 +1,10 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
-import type { SessionData, Template, TemplateItem } from '@/schema';
+import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
 import { SessionZone } from './SessionZone';
 
 interface FlatViewRendererProps {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   session: SessionData;
   selectedItems: TemplateItem[];
   checkedItems: TemplateItem[];
@@ -46,7 +45,7 @@ export function FlatViewRenderer({
   canDrag,
   onEditNote,
 }: FlatViewRendererProps) {
-  const showZoneHeadings = template.showZoneHeadings ?? false;
+  const showZoneHeadings = template.show_zone_headings;
 
   const itemActions = {
     onToggleSelected,
@@ -68,7 +67,7 @@ export function FlatViewRenderer({
     <>
       <SessionZone
         items={selectedItems}
-        itemStates={session.itemStates || {}}
+        itemStates={session.itemStates}
         expanded={zoneExpanded.selected}
         onToggleExpand={() => onToggleZoneExpanded('selected')}
         template={template}
@@ -84,7 +83,7 @@ export function FlatViewRenderer({
       />
       <SessionZone
         items={checkedItems}
-        itemStates={session.itemStates || {}}
+        itemStates={session.itemStates}
         expanded={zoneExpanded.checked}
         onToggleExpand={() => onToggleZoneExpanded('checked')}
         template={template}

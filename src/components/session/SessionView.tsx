@@ -1,12 +1,11 @@
 import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
-import type { InstanceOfSchema } from 'jazz-tools';
 import { Package } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
-import { useAccount } from '@/lib/jazz';
+import { useRowboat, useSelect } from '@/jazz';
 import { useNavigationHistory } from '@/lib/useNavigationHistory';
-import type { SessionData, Template } from '@/schema';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
+import type { FolderRow, SessionData } from '@/schema/folder';
+import * as userSettingsService from '@/services/userSettingsService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { ItemNodeRenderer } from './ItemNodeRenderer';
@@ -22,15 +21,14 @@ import { useViewMode } from './useViewMode';
 import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
 
 interface SessionViewProps {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   sessionId: string;
   onBack: () => void;
   onSwitchSession?: (newSessionId: string) => void;
 }
 
 export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  const g = useRowboat();
   const { navState, navigateTo, goBack } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
@@ -42,7 +40,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
 
   // Derive edit mode from navigation state
   const showAddForm = navState.view === 'session' && navState.editing === true;
-  const templateId = template.$jazz.id;
+  const templateId = template.id;
 
   // Toggle edit mode with browser history
   const setShowAddForm = useCallback(
@@ -64,12 +62,12 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   );
 
   // Get session early (before hooks)
-  const sessions = template.sessions || [];
-  const session = (sessions.find((s) => s?.id === sessionId) as SessionData | undefined) || null;
+  const session =
+    (template.sessions.find((s) => s.id === sessionId) as SessionData | undefined) || null;
 
   // Get active (non-archived) items - memoized for performance
   const activeItems = useMemo(
-    () => (template.items || []).filter((item) => item && !item.archived),
+    () => template.items.filter((item) => !item.archived),
     [template.items],
   );
 
@@ -84,7 +82,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    me,
+    g,
   });
 
   // Scroll preservation hook
@@ -99,7 +97,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
   const { sensors, activeItem, handleDragStart, handleDragEnd, handleDragCancel } =
     useSessionDragDrop({
       template,
-      me,
+      g,
       activeItems,
     });
 
@@ -108,7 +106,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    me,
+    g,
     activeItems,
     checkedItems,
     captureScrollPosition,
@@ -121,7 +119,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
     template,
     session,
     sessionId,
-    me,
+    g,
     activeItems,
   });
 
@@ -157,24 +155,19 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
         .map((item) => ({
           id: item.id,
           name: item.name,
-          isSelected: !!(
-            template.defaultItems?.[item.id] || session?.itemStates?.[item.id]?.selected
-          ),
+          isSelected: !!(template.default_items[item.id] || session?.itemStates[item.id]?.selected),
         })),
-    [activeItems, template.defaultItems, session?.itemStates],
+    [activeItems, template.default_items, session?.itemStates],
   );
 
-  // Early returns after all hooks
-  if (!me || !me.root) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-divider-tertiary border-t-content-primary" />
-          <p className="mt-4 text-content-secondary">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Category expanded state from per-user view state (reactive: re-renders on toggle).
+  const templateCategoryExpanded: Record<string, boolean> = useSelect(
+    () => g.user_settings.all()[0]?.$data.view_template_category_expanded[templateId] ?? {},
+  );
+
+  const isCategoryExpanded = (itemId: string): boolean => {
+    return templateCategoryExpanded[itemId] ?? true;
+  };
 
   if (!session) {
     return (
@@ -192,14 +185,6 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
       </div>
     );
   }
-
-  // Get category expanded state from viewState
-  const templateCategoryExpanded: Record<string, boolean> =
-    me?.root?.viewState?.templateCategoryExpanded?.[template.$jazz.id] || {};
-
-  const isCategoryExpanded = (itemId: string): boolean => {
-    return templateCategoryExpanded[itemId] ?? true;
-  };
 
   return (
     <DndContext
@@ -236,7 +221,10 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   showQuantityField={false}
                   clearOnSubmit={true}
                   autoFocus={true}
-                  autocompleteDomain={template.autocompleteDomain ?? 'grocery'}
+                  autocompleteDomain={userSettingsService.getTemplateAutocompleteDomain(
+                    g,
+                    templateId,
+                  )}
                   existingItems={existingItemsForSearch}
                   onSelectExisting={handlers.handleToggleDefault}
                 />
@@ -306,7 +294,7 @@ export function SessionView({ template, sessionId, onBack, onSwitchSession }: Se
                   <div ref={availableZoneRef} className="bg-blue-50 dark:bg-blue-900/20 p-4">
                     <SessionZone
                       items={activeItems}
-                      itemStates={session.itemStates || {}}
+                      itemStates={session.itemStates}
                       expanded={zoneExpanded.available}
                       onToggleExpand={() =>
                         setZoneExpanded((prev) => ({ ...prev, available: !prev.available }))

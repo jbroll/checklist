@@ -1,11 +1,9 @@
 import { useDraggable } from '@dnd-kit/core';
-import type { InstanceOfSchema } from 'jazz-tools';
 import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
-import { useAccount } from '@/lib/jazz';
+import { useRowboat } from '@/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
-import type { FolderNode, ItemState, TemplateItem } from '@/schema';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
+import type { FolderRow, ItemState, TemplateItem } from '@/schema/folder';
 import * as templateService from '@/services/templateService';
 
 interface SessionItemRowProps {
@@ -19,7 +17,7 @@ interface SessionItemRowProps {
   isSelected?: boolean; // For insertion point selection
   onSelectItem?: (itemId: string | null) => void; // For insertion point selection
   enableDrag?: boolean; // Enable drag and drop in available zone
-  template?: InstanceOfSchema<typeof FolderNode>; // Template for inline editing
+  template?: FolderRow; // Template for inline editing
   // Interaction mode props (centralized state management)
   isEditingThisItem?: boolean; // Is this specific item being edited
   canEditItem?: boolean; // Can edit this item in current mode
@@ -53,8 +51,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   onEditNote,
   showNotesIcon,
 }: SessionItemRowProps) {
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz v0.19 MaybeLoaded type requires runtime checks
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
+  const g = useRowboat();
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const justEnteredEditMode = useRef(false);
@@ -109,8 +106,6 @@ export const SessionItemRow = memo(function SessionItemRow({
     },
   });
 
-  if (!me) return null;
-
   // Only leaf items should be shown in shopping sessions
   if (item.type === 'category') return null;
 
@@ -122,7 +117,7 @@ export const SessionItemRow = memo(function SessionItemRow({
   const leftCheckboxChecked = leftCheckboxControlsChecked ? isChecked : isSelected;
 
   const handleSaveEdit = () => {
-    if (!me || !template) return;
+    if (!template) return;
 
     // Ignore blur events that happen immediately after entering edit mode
     if (justEnteredEditMode.current) {
@@ -141,7 +136,7 @@ export const SessionItemRow = memo(function SessionItemRow({
     // Only save if changed
     if (trimmedValue !== item.name) {
       try {
-        templateService.renameItem(me, template.$jazz.id, item.id, trimmedValue);
+        templateService.renameItem(g, template.id, item.id, trimmedValue);
       } catch (error) {
         console.error('[SessionItemRow] Failed to rename item:', error);
         // Could show error toast here

@@ -6,16 +6,18 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { useState } from 'react';
-import type { Account, Template, TemplateItem } from '@/schema';
+import type { FolderRow, schema, TemplateItem } from '@/schema/folder';
 import * as templateService from '@/services/templateService';
 import { getParentPath } from '@/utils/pathUtils';
 import { calculateMidpointSortOrder } from '@/utils/sortOrderHelpers';
 
+type Graph = RelationalGraph<typeof schema>;
+
 interface UseSessionDragDropOptions {
-  template: InstanceOfSchema<typeof Template>;
-  me: InstanceOfSchema<typeof Account> | null;
+  template: FolderRow;
+  g: Graph;
   activeItems: TemplateItem[];
 }
 
@@ -23,7 +25,7 @@ interface UseSessionDragDropOptions {
  * Hook to handle drag and drop functionality for reordering and moving items
  * in the session view.
  */
-export function useSessionDragDrop({ template, me, activeItems }: UseSessionDragDropOptions) {
+export function useSessionDragDrop({ template, g, activeItems }: UseSessionDragDropOptions) {
   const [activeItem, setActiveItem] = useState<TemplateItem | null>(null);
 
   // Configure sensors for drag detection
@@ -53,7 +55,7 @@ export function useSessionDragDrop({ template, me, activeItems }: UseSessionDrag
 
     setActiveItem(null);
 
-    if (!over || !active.data.current || !me) {
+    if (!over || !active.data.current) {
       return;
     }
 
@@ -108,20 +110,14 @@ export function useSessionDragDrop({ template, me, activeItems }: UseSessionDrag
       if (targetParentPath !== currentParentPath) {
         // Move and reorder in a single operation
         try {
-          templateService.moveItem(
-            me,
-            template.$jazz.id,
-            draggedItem.id,
-            targetParentPath,
-            newSortOrder,
-          );
+          templateService.moveItem(g, template.id, draggedItem.id, targetParentPath, newSortOrder);
         } catch {
           // Silently ignore errors (e.g., duplicate names)
         }
       } else {
         // Just reordering within the same parent
         try {
-          templateService.reorderItem(me, template.$jazz.id, draggedItem.id, newSortOrder);
+          templateService.reorderItem(g, template.id, draggedItem.id, newSortOrder);
         } catch {
           // Silently ignore errors
         }
@@ -155,13 +151,7 @@ export function useSessionDragDrop({ template, me, activeItems }: UseSessionDrag
       const newSortOrder = calculateMidpointSortOrder(undefined, firstItemSortOrder);
 
       try {
-        templateService.moveItem(
-          me,
-          template.$jazz.id,
-          draggedItem.id,
-          newParentPath,
-          newSortOrder,
-        );
+        templateService.moveItem(g, template.id, draggedItem.id, newParentPath, newSortOrder);
       } catch {
         // Silently ignore errors
       }

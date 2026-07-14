@@ -1,16 +1,18 @@
-import type { InstanceOfSchema } from 'jazz-tools';
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { ItemInputValue } from '@/components/ui/ItemInput';
-import type { Account, SessionData, Template, TemplateItem } from '@/schema';
+import type { FolderRow, SessionData, schema, TemplateItem } from '@/schema/folder';
 import * as SessionService from '@/services/sessionService';
 import * as templateService from '@/services/templateService';
 import * as userSettingsService from '@/services/userSettingsService';
 import * as viewStateService from '@/services/viewStateService';
 
+type Graph = RelationalGraph<typeof schema>;
+
 interface UseSessionHandlersOptions {
-  template: InstanceOfSchema<typeof Template>;
+  template: FolderRow;
   session: SessionData | null;
   sessionId: string;
-  me: InstanceOfSchema<typeof Account> | null;
+  g: Graph;
   activeItems: TemplateItem[];
   checkedItems: TemplateItem[];
   captureScrollPosition: () => void;
@@ -26,105 +28,93 @@ export function useSessionHandlers({
   template,
   session,
   sessionId,
-  me,
+  g,
   activeItems,
   checkedItems,
   captureScrollPosition,
   setSelectedItemId,
   onSwitchSession,
 }: UseSessionHandlersOptions) {
-  const items = template.items || [];
+  const templateId = template.id;
+  const items = template.items;
 
   const handleRenameItem = (itemId: string, newName: string) => {
-    if (!me) return;
-    templateService.renameItem(me, template.$jazz.id, itemId, newName);
+    templateService.renameItem(g, templateId, itemId, newName);
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (!me) return;
-    templateService.archiveItem(me, template.$jazz.id, itemId);
+    templateService.archiveItem(g, templateId, itemId);
   };
 
   const handleToggleExpand = (itemId: string) => {
-    const item = items.find((i) => i?.id === itemId);
-    if (item && item.type === 'category' && me) {
-      viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, itemId);
+    const item = items.find((i) => i.id === itemId);
+    if (item && item.type === 'category') {
+      viewStateService.toggleTemplateCategoryExpanded(g, templateId, itemId);
     }
   };
 
   const handleToggleSelected = (itemId: string) => {
-    if (!me) return;
     captureScrollPosition();
-    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
+    SessionService.toggleItemSelected(g, templateId, sessionId, itemId);
   };
 
   const handleToggleChecked = (itemId: string) => {
-    if (!me) return;
     captureScrollPosition();
-    SessionService.toggleItemChecked(me, template.$jazz.id, sessionId, itemId);
+    SessionService.toggleItemChecked(g, templateId, sessionId, itemId);
   };
 
   const handleToggleCategoryExpanded = (catKey: string) => {
-    if (!session || !me) return;
-    viewStateService.toggleTemplateCategoryExpanded(me, template.$jazz.id, catKey);
+    if (!session) return;
+    viewStateService.toggleTemplateCategoryExpanded(g, templateId, catKey);
   };
 
   const handleBatchSelectAll = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
+    SessionService.batchSelectItems(g, templateId, sessionId, itemIds, true);
   };
 
   const handleBatchDeselectAll = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
+    SessionService.batchSelectItems(g, templateId, sessionId, itemIds, false);
   };
 
   const handleBatchToggle = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
+    SessionService.invertItemSelection(g, templateId, sessionId, itemIds);
   };
 
   // Default items handlers - update both defaults AND current session
   const handleToggleDefault = (itemId: string) => {
-    if (!me) return;
     captureScrollPosition();
     // Toggle in defaultItems
-    templateService.toggleItemDefault(me, template.$jazz.id, itemId);
+    templateService.toggleItemDefault(g, templateId, itemId);
     // Also toggle in current session to keep them in sync
-    SessionService.toggleItemSelected(me, template.$jazz.id, sessionId, itemId);
+    SessionService.toggleItemSelected(g, templateId, sessionId, itemId);
   };
 
   const handleBatchDefaultSelectAll = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    templateService.batchSetItemsDefault(me, template.$jazz.id, itemIds, true);
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, true);
+    templateService.batchSetItemsDefault(g, templateId, itemIds, true);
+    SessionService.batchSelectItems(g, templateId, sessionId, itemIds, true);
   };
 
   const handleBatchDefaultDeselectAll = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    templateService.batchSetItemsDefault(me, template.$jazz.id, itemIds, false);
-    SessionService.batchSelectItems(me, template.$jazz.id, sessionId, itemIds, false);
+    templateService.batchSetItemsDefault(g, templateId, itemIds, false);
+    SessionService.batchSelectItems(g, templateId, sessionId, itemIds, false);
   };
 
   const handleBatchDefaultToggle = (itemIds: string[]) => {
-    if (!me) return;
     captureScrollPosition();
-    templateService.invertItemsDefault(me, template.$jazz.id, itemIds);
-    SessionService.invertItemSelection(me, template.$jazz.id, sessionId, itemIds);
+    templateService.invertItemsDefault(g, templateId, itemIds);
+    SessionService.invertItemSelection(g, templateId, sessionId, itemIds);
   };
 
-  const handleClearOrNew = () => {
-    if (!me) return;
-
+  const handleClearOrNew = async () => {
     // Only create a new session if items have been checked off (purchased)
     // If session is still in default state (no checked items), do nothing
     if (checkedItems.length > 0) {
-      const newSessionId = SessionService.createSession(me, template.$jazz.id);
+      const newSessionId = await SessionService.createSession(g, templateId);
       if (onSwitchSession) {
         onSwitchSession(newSessionId);
       }
@@ -140,23 +130,20 @@ export function useSessionHandlers({
   };
 
   // Core add-item logic shared by both handlers
-  const addItemCore = (
+  const addItemCore = async (
     value: ItemInputValue,
     selectedItemId: string | null,
     syncToSession: boolean,
-  ): string | undefined => {
-    if (!me) return;
-
-    const templateId = template.$jazz.id;
-
+  ): Promise<string | undefined> => {
     // For categories, use insertion point logic
     if (value.type === 'category') {
       const { parentPath, sortOrder } = templateService.calculateInsertionPoint(
-        template,
+        g,
+        templateId,
         selectedItemId,
       );
-      const newItemId = templateService.createCategory(
-        me,
+      const newItemId = await templateService.createCategory(
+        g,
         templateId,
         value.name,
         parentPath,
@@ -168,8 +155,8 @@ export function useSessionHandlers({
 
     // For items, determine parent path based on auto-categorization
     const autoCategorizeEnabled = userSettingsService.getTemplateAutoCategorizeEnabled(
-      me,
-      template,
+      g,
+      templateId,
     );
     let finalParentPath: string | undefined;
     let finalSortOrder: number | undefined;
@@ -181,17 +168,17 @@ export function useSessionHandlers({
       if (existingCategory) {
         finalParentPath = existingCategory.path;
       } else {
-        templateService.createCategory(me, templateId, categoryName, undefined);
+        await templateService.createCategory(g, templateId, categoryName, undefined);
         finalParentPath = categoryName;
       }
     } else {
-      const insertion = templateService.calculateInsertionPoint(template, selectedItemId);
+      const insertion = templateService.calculateInsertionPoint(g, templateId, selectedItemId);
       finalParentPath = insertion.parentPath;
       finalSortOrder = insertion.sortOrder;
     }
 
-    const newItemId = templateService.createItem(
-      me,
+    const newItemId = await templateService.createItem(
+      g,
       templateId,
       value.name,
       finalParentPath,
@@ -200,7 +187,7 @@ export function useSessionHandlers({
     );
 
     if (syncToSession) {
-      SessionService.toggleItemSelected(me, templateId, sessionId, newItemId);
+      await SessionService.toggleItemSelected(g, templateId, sessionId, newItemId);
     }
 
     setSelectedItemId(newItemId);

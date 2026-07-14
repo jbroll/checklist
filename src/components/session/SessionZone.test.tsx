@@ -11,23 +11,10 @@ import { Package } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { SessionZone } from './SessionZone';
 
-// TODO(slice-2): SessionZone still reads a Jazz FolderNode/session; this whole file is
-// skip-pending until sessions land on rowboat (see docs/superpowers/d-t4-report.md). Local
-// replacements for the old jazz-mock `createMockCoMap`/`createMockCoList` helpers — good
-// enough shape for a skipped suite, no jazz-mock dependency required.
-function createMockCoMap<T extends object>(data: T, options: { id?: string } = {}) {
-  return { ...data, $jazz: { id: options.id ?? 'mock', set: () => {} } };
-}
-function createMockCoList<T>(items: T[] = []) {
-  return items;
-}
-
-// Mock the Jazz hook
-vi.mock('@/lib/jazz', () => ({
-  useAccount: () => ({
-    id: 'test-account',
-    root: { folders: [] },
-  }),
+// Mock the rowboat graph hook — SessionZone only threads it through to
+// templateService.renameItem (mocked below), so an empty stub graph is enough.
+vi.mock('@/jazz', () => ({
+  useRowboat: () => ({}),
 }));
 
 // Mock dnd-kit for SessionItemRow
@@ -45,7 +32,7 @@ vi.mock('@/services/templateService', () => ({
   renameItem: vi.fn(),
 }));
 
-// Helper to create mock items
+// Helper to create mock items (rowboat TemplateItem shape — epoch-ms `createdAt`)
 function createMockItem(id: string, name: string, type: 'item' | 'category' = 'item') {
   return {
     id,
@@ -55,17 +42,14 @@ function createMockItem(id: string, name: string, type: 'item' | 'category' = 'i
     sortOrder: 0,
     archived: false,
     expanded: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    defaultQuantity: '',
+    createdAt: Date.now(),
   };
 }
 
-// Helper to create mock template for edit tests using jazz-mock
+// Helper to create mock template (rowboat FolderRow shape) for edit tests
 function createMockTemplate(id: string) {
-  return createMockCoMap(
-    { items: createMockCoList([]), sessions: createMockCoList([]) },
-    { id, trackMutations: true },
-  );
+  return { id, items: [], sessions: [] };
 }
 
 // Minimal props for SessionZone
@@ -84,7 +68,7 @@ const defaultProps = {
   },
 };
 
-describe.skip('SessionZone', () => {
+describe('SessionZone', () => {
   describe('rendering', () => {
     it('renders zone title', () => {
       render(<SessionZone {...defaultProps} />);

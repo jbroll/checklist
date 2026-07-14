@@ -1,6 +1,5 @@
-import type { InstanceOfSchema } from 'jazz-tools';
 import { useMemo } from 'react';
-import type { SessionData, Template, TemplateItem } from '@/schema';
+import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
 import { getLeafItems } from '@/utils/itemTreeHelpers';
 
 /** Sort items by sortOrder (with name as fallback) */
@@ -12,7 +11,7 @@ const sortByOrder = (a: TemplateItem, b: TemplateItem) => {
 };
 
 interface UseSessionItemsParams {
-  template: InstanceOfSchema<typeof Template> | null;
+  template: FolderRow | null;
   session: SessionData | null;
 }
 

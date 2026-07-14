@@ -19,11 +19,9 @@ import * as SessionService from '@/services/sessionService';
 const mockUpdateViewMode = SessionService.updateViewMode as ReturnType<typeof vi.fn>;
 
 describe('useViewMode', () => {
-  const mockTemplate = {
-    $jazz: { id: 'template-1' },
-  } as any;
+  const mockTemplate = { id: 'template-1' } as any;
 
-  const mockMe = { id: 'user-1' } as any;
+  const mockG = {} as any;
 
   beforeEach(() => {
     mockUpdateViewMode.mockReset();
@@ -36,7 +34,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -49,7 +47,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -62,7 +60,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'flat', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -75,7 +73,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'zone-in-hierarchy', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -90,13 +88,13 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'zone-in-hierarchy', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
       result.current.cycleViewMode();
 
-      expect(mockUpdateViewMode).toHaveBeenCalledWith(mockMe, 'template-1', 'session-1', 'flat');
+      expect(mockUpdateViewMode).toHaveBeenCalledWith(mockG, 'template-1', 'session-1', 'flat');
     });
 
     it('cycles from flat to zone-in-hierarchy', () => {
@@ -105,14 +103,14 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'flat', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
       result.current.cycleViewMode();
 
       expect(mockUpdateViewMode).toHaveBeenCalledWith(
-        mockMe,
+        mockG,
         'template-1',
         'session-1',
         'zone-in-hierarchy',
@@ -125,13 +123,13 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
       result.current.cycleViewMode();
 
-      expect(mockUpdateViewMode).toHaveBeenCalledWith(mockMe, 'template-1', 'session-1', 'flat');
+      expect(mockUpdateViewMode).toHaveBeenCalledWith(mockG, 'template-1', 'session-1', 'flat');
     });
 
     it('does nothing when session is null', () => {
@@ -140,22 +138,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: null,
           sessionId: 'session-1',
-          me: mockMe,
-        }),
-      );
-
-      result.current.cycleViewMode();
-
-      expect(mockUpdateViewMode).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when me is null', () => {
-      const { result } = renderHook(() =>
-        useViewMode({
-          template: mockTemplate,
-          session: { viewMode: 'flat', itemStates: {} },
-          sessionId: 'session-1',
-          me: null,
+          g: mockG,
         }),
       );
 
@@ -172,7 +155,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'flat', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -185,7 +168,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'zone-in-hierarchy', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -198,7 +181,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -213,7 +196,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'flat', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -226,7 +209,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { viewMode: 'zone-in-hierarchy', itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 
@@ -239,7 +222,7 @@ describe('useViewMode', () => {
           template: mockTemplate,
           session: { itemStates: {} },
           sessionId: 'session-1',
-          me: mockMe,
+          g: mockG,
         }),
       );
 

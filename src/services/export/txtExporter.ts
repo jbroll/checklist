@@ -29,7 +29,9 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
   }
 
   // Get non-archived items, sorted by sortOrder
-  const items = getActiveItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
+  const items = getActiveItems<TemplateItem>(template.items).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   // Check if any categories exist
   const hasCategories = items.some((item: TemplateItem) => item?.type === 'category');
@@ -106,7 +108,9 @@ export function exportSessionToText(
 
   // Get all items from the template
   if (template.items) {
-    const items = getActiveItems(template.items).sort((a, b) => a.sortOrder - b.sortOrder);
+    const items = getActiveItems<TemplateItem>(template.items).sort(
+      (a, b) => a.sortOrder - b.sortOrder,
+    );
 
     for (const item of items) {
       if (!item) continue;
