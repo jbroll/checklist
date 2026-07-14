@@ -1,12 +1,18 @@
 /**
- * Tests for FolderNodeView component
- * Uses jazz-mock for CoValue mocking.
+ * Tests for FolderNodeView — slice 1 (folders-only). Renders against plain `FolderRow`
+ * literals (the rowboat row shape), not a live graph — this component takes `folder` as a
+ * prop and never touches `useRowboat`/`useSelect` itself.
+ *
+ * Drops item-count/duplicate/import/export/share/autocomplete assertions — those menu items
+ * were removed from FolderNodeView along with the Jazz `FolderNode` items/sessions surface
+ * (see the component's header comment); rename/archive/delete and drag-and-drop reparenting
+ * are the only slice-1 concerns left to cover here.
  */
 
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockCoList, createMockCoMap } from '../../test/setup';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { FolderRow } from '@/schema/folder';
 import { FolderNodeView } from './FolderNodeView';
 
 // Mock dnd-kit
@@ -23,17 +29,6 @@ vi.mock('@dnd-kit/core', () => ({
   }),
 }));
 
-// Mock lazy-loaded dialogs
-vi.mock('@/components/export/ExportDialog', () => ({
-  ExportDialog: () => null,
-}));
-vi.mock('@/components/import/ImportDialog', () => ({
-  ImportDialog: () => null,
-}));
-vi.mock('@/components/sharing/ShareDialog', () => ({
-  ShareDialog: () => null,
-}));
-
 // Mock dialog context
 vi.mock('@/lib/dialog-context', () => ({
   useDialog: () => ({
@@ -42,84 +37,32 @@ vi.mock('@/lib/dialog-context', () => ({
   }),
 }));
 
-// Mock hooks
-vi.mock('@/hooks', () => ({
-  isTemplateFolder: vi.fn(),
-  isOrganizationalFolder: vi.fn(),
-  useCheckListHierarchy: () => ({
-    duplicateTemplate: vi.fn().mockReturnValue({ $jazz: { id: 'new-folder-id' } }),
-  }),
-}));
-
-// Mock view state service
-vi.mock('@/services/viewStateService', () => ({
-  getFolderExpanded: vi.fn().mockReturnValue(false),
-}));
-
-// Mock user settings service
-vi.mock('@/services/userSettingsService', () => ({
-  getTemplateAutocompleteDomain: vi.fn().mockReturnValue('none'),
-  setTemplateAutocompleteDomain: vi.fn(),
-  getTemplateAutoCategorizeEnabled: vi.fn().mockReturnValue(false),
-  toggleTemplateAutoCategorize: vi.fn(),
-}));
-
-// Mock categorization
-vi.mock('@/lib/categorization', () => ({
-  getDomainDisplayName: vi.fn((id) => id),
-  getImplementedDomains: vi.fn().mockReturnValue(['grocery']),
-}));
-
-import * as hooks from '@/hooks';
-
-// Helper to create mock folder using jazz-mock
-const createMockFolder = (
-  name: string,
-  isTemplate: boolean,
-  options: { archived?: boolean } = {},
-) =>
-  createMockCoMap(
-    {
-      name,
-      expanded: false,
-      archived: options.archived ?? false,
-      items: isTemplate ? [] : undefined,
-      sessions: isTemplate ? [] : undefined,
-      showZoneHeadings: false,
-      children: !isTemplate ? [] : undefined,
-    },
-    { id: `folder-${Math.random().toString(36).slice(2)}`, trackMutations: true },
-  );
-
-// Helper to create mock account using jazz-mock
-const createMockAccount = () =>
-  createMockCoMap(
-    {
-      root: createMockCoMap({
-        folders: createMockCoList([]),
-        viewState: createMockCoMap({ folderExpanded: {} }),
-      }),
-    },
-    { id: 'test-account' },
-  );
+function makeFolder(overrides: Partial<FolderRow> = {}): FolderRow {
+  return {
+    id: `folder-${Math.random().toString(36).slice(2)}`,
+    owner_group_id: 'group-1',
+    name: 'Test Folder',
+    type: 'folder',
+    parent_id: null,
+    sharing_mode: 'private',
+    archived: false,
+    expanded: false,
+    created_by: 'user-1',
+    created_at: 0,
+    updated_at: 0,
+    ...overrides,
+  };
+}
 
 describe('FolderNodeView', () => {
-  const mockAccount = createMockAccount();
-
-  beforeEach(() => {
-    vi.mocked(hooks.isTemplateFolder).mockReturnValue(false);
-    vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(true);
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   const defaultProps = {
-    folder: createMockFolder('Test Folder', false) as any,
+    folder: makeFolder(),
     level: 0,
     onToggleExpand: vi.fn(),
-    account: mockAccount as any,
   };
 
   describe('rendering', () => {
@@ -130,46 +73,24 @@ describe('FolderNodeView', () => {
     });
 
     it('renders folder icon for organizational folders', () => {
-      vi.mocked(hooks.isTemplateFolder).mockReturnValue(false);
-      vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(true);
+      render(<FolderNodeView {...defaultProps} folder={makeFolder({ type: 'folder' })} />);
 
-      render(<FolderNodeView {...defaultProps} />);
-
-      // Folder icon should be present (via lucide-react Folder)
       const button = screen.getByRole('button', { name: /test folder/i });
       expect(button).toBeInTheDocument();
     });
 
     it('renders template folder with list icon', () => {
-      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
-      vi.mocked(hooks.isOrganizationalFolder).mockReturnValue(false);
-
-      const templateFolder = createMockFolder('My List', true);
-      render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
+      const templateFolder = makeFolder({ name: 'My List', type: 'template-folder' });
+      render(<FolderNodeView {...defaultProps} folder={templateFolder} />);
 
       expect(screen.getByText('My List')).toBeInTheDocument();
     });
 
     it('shows archive icon when folder is archived', () => {
-      const archivedFolder = createMockFolder('Archived Folder', false, { archived: true });
-      render(<FolderNodeView {...defaultProps} folder={archivedFolder as any} />);
+      const archivedFolder = makeFolder({ name: 'Archived Folder', archived: true });
+      render(<FolderNodeView {...defaultProps} folder={archivedFolder} />);
 
       expect(screen.getByText('Archived Folder')).toBeInTheDocument();
-    });
-
-    it('shows item count badge for template folders with items', () => {
-      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
-
-      const templateFolder = createMockFolder('Shopping List', true);
-      (templateFolder as any).items = [
-        { id: '1', name: 'Milk', archived: false },
-        { id: '2', name: 'Bread', archived: false },
-        { id: '3', name: 'Eggs', archived: true }, // Archived - should not count
-      ];
-
-      render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
-
-      expect(screen.getByText('2')).toBeInTheDocument();
     });
   });
 
@@ -216,37 +137,10 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} />);
 
-      // Open dropdown menu
       const menuButton = screen.getByRole('button', { name: /more options/i });
       await user.click(menuButton);
 
       expect(screen.getByText('Rename')).toBeInTheDocument();
-    });
-
-    it('shows duplicate option for template folders', async () => {
-      const user = userEvent.setup();
-      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
-
-      const templateFolder = createMockFolder('My List', true);
-      render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
-
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: /more options/i });
-      await user.click(menuButton);
-
-      expect(screen.getByText('Duplicate')).toBeInTheDocument();
-    });
-
-    it('shows share option', async () => {
-      const user = userEvent.setup();
-
-      render(<FolderNodeView {...defaultProps} />);
-
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: /more options/i });
-      await user.click(menuButton);
-
-      expect(screen.getByText('Share')).toBeInTheDocument();
     });
 
     it('shows archive option when not archived and hideArchiveAction is false', async () => {
@@ -254,7 +148,6 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} hideArchiveAction={false} />);
 
-      // Open dropdown menu
       const menuButton = screen.getByRole('button', { name: /more options/i });
       await user.click(menuButton);
 
@@ -263,21 +156,27 @@ describe('FolderNodeView', () => {
 
     it('shows restore option when archived', async () => {
       const user = userEvent.setup();
-      const archivedFolder = createMockFolder('Archived', false, { archived: true });
+      const archivedFolder = makeFolder({ name: 'Archived', archived: true });
 
       render(
-        <FolderNodeView
-          {...defaultProps}
-          folder={archivedFolder as any}
-          hideArchiveAction={false}
-        />,
+        <FolderNodeView {...defaultProps} folder={archivedFolder} hideArchiveAction={false} />,
       );
 
-      // Open dropdown menu
       const menuButton = screen.getByRole('button', { name: /more options/i });
       await user.click(menuButton);
 
       expect(screen.getByText('Restore')).toBeInTheDocument();
+    });
+
+    it('hides archive/restore option when hideArchiveAction is true', async () => {
+      const user = userEvent.setup();
+
+      render(<FolderNodeView {...defaultProps} hideArchiveAction={true} />);
+
+      const menuButton = screen.getByRole('button', { name: /more options/i });
+      await user.click(menuButton);
+
+      expect(screen.queryByText('Archive')).not.toBeInTheDocument();
     });
 
     it('shows delete option', async () => {
@@ -285,26 +184,10 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} />);
 
-      // Open dropdown menu
       const menuButton = screen.getByRole('button', { name: /more options/i });
       await user.click(menuButton);
 
       expect(screen.getByText('Delete')).toBeInTheDocument();
-    });
-
-    it('shows import/export options for template folders', async () => {
-      const user = userEvent.setup();
-      vi.mocked(hooks.isTemplateFolder).mockReturnValue(true);
-
-      const templateFolder = createMockFolder('My List', true);
-      render(<FolderNodeView {...defaultProps} folder={templateFolder as any} />);
-
-      // Open dropdown menu
-      const menuButton = screen.getByRole('button', { name: /more options/i });
-      await user.click(menuButton);
-
-      expect(screen.getByText('Import')).toBeInTheDocument();
-      expect(screen.getByText('Export')).toBeInTheDocument();
     });
   });
 
@@ -314,14 +197,10 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} />);
 
-      // Open dropdown menu
       const menuButton = screen.getByRole('button', { name: /more options/i });
       await user.click(menuButton);
-
-      // Click rename
       await user.click(screen.getByText('Rename'));
 
-      // Input should appear
       expect(screen.getByRole('textbox')).toBeInTheDocument();
       expect(screen.getByRole('textbox')).toHaveValue('Test Folder');
     });
@@ -332,11 +211,9 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} onRename={onRename} />);
 
-      // Open dropdown menu and click rename
       await user.click(screen.getByRole('button', { name: /more options/i }));
       await user.click(screen.getByText('Rename'));
 
-      // Edit name
       const input = screen.getByRole('textbox');
       await user.clear(input);
       await user.type(input, 'New Name{Enter}');
@@ -350,11 +227,9 @@ describe('FolderNodeView', () => {
 
       render(<FolderNodeView {...defaultProps} onRename={onRename} />);
 
-      // Open dropdown menu and click rename
       await user.click(screen.getByRole('button', { name: /more options/i }));
       await user.click(screen.getByText('Rename'));
 
-      // Type something then cancel
       const input = screen.getByRole('textbox');
       await user.type(input, 'New Name{Escape}');
 

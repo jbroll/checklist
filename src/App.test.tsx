@@ -1,29 +1,26 @@
 /**
  * Tests for App routing.
- * Verifies that ?merge query param routes to MergeAccountFlow instead of AuthGate.
+ *
+ * Merge-account routing (`?merge=`) was dropped when App.tsx was ported to rowboat —
+ * MergeAccountFlow still reads a Jazz `Account` the rowboat provider no longer supplies, so
+ * its route is disabled for slice 1 (see App.tsx's header comment; merge itself is deferred
+ * to rowboat C3, tracked alongside src/lib/__tests__/account-merge.test.ts /
+ * src/components/auth/__tests__/MergeAccountFlow.test.tsx). This file now covers what's
+ * actually wired: the default route renders AuthGate, and the in-app-browser gate still
+ * blocks it when detected.
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
-// Mock MergeAccountFlow (default export)
-vi.mock('./components/auth/MergeAccountFlow', () => ({
-  default: () => <div data-testid="merge-flow" />,
-}));
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock AuthGate so we can detect when it renders
 vi.mock('./components/AuthGate', () => ({
   AuthGate: () => <div data-testid="auth-gate" />,
 }));
 
-// Mock Jazz provider
+// Mock the rowboat provider
 vi.mock('./lib/jazz', () => ({
   JazzProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-// Mock Jazz inspector to avoid JazzProvider context requirement
-vi.mock('jazz-tools/inspector', () => ({
-  JazzInspector: () => null,
 }));
 
 // Mock dialog context
@@ -42,9 +39,9 @@ vi.mock('./lib/brand', () => ({
   },
 }));
 
-// Mock in-app browser detection (not an in-app browser)
+let mockIsInAppBrowser = false;
 vi.mock('./utils/inAppBrowserDetection', () => ({
-  detectInAppBrowser: () => ({ isInAppBrowser: false }),
+  detectInAppBrowser: () => ({ isInAppBrowser: mockIsInAppBrowser }),
 }));
 
 // Mock loading screen
@@ -57,22 +54,38 @@ vi.mock('./components/sharing/InAppBrowserWarning', () => ({
   InAppBrowserWarning: () => <div data-testid="in-app-browser-warning" />,
 }));
 
+function setLocation(pathname: string, search = '') {
+  Object.defineProperty(window, 'location', {
+    value: {
+      search,
+      pathname,
+      origin: 'http://localhost',
+      href: `http://localhost${pathname}${search}`,
+    },
+    writable: true,
+  });
+}
+
 describe('App routing', () => {
-  it('renders MergeAccountFlow when ?merge is present', async () => {
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: '?merge=n1',
-        pathname: '/',
-        origin: 'http://localhost',
-        href: 'http://localhost/?merge=n1',
-      },
-      writable: true,
-    });
+  beforeEach(() => {
+    mockIsInAppBrowser = false;
+    setLocation('/');
+  });
+
+  it('renders AuthGate by default', async () => {
+    const { default: App } = await import('./App');
+    render(<App />);
+
+    expect(await screen.findByTestId('auth-gate')).toBeInTheDocument();
+  });
+
+  it('blocks with InAppBrowserWarning when an in-app browser is detected', async () => {
+    mockIsInAppBrowser = true;
 
     const { default: App } = await import('./App');
     render(<App />);
 
-    expect(await screen.findByTestId('merge-flow')).toBeInTheDocument();
+    expect(await screen.findByTestId('in-app-browser-warning')).toBeInTheDocument();
     expect(screen.queryByTestId('auth-gate')).not.toBeInTheDocument();
   });
 });

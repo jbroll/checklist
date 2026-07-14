@@ -1,19 +1,9 @@
 /// <reference types="vitest/globals" />
 import '@testing-library/jest-dom';
-import { createJazzConsoleFilter } from 'jazz-mock/vitest';
 
-// Re-export jazz-mock utilities for use in tests
-export {
-  createMockAccount,
-  createMockCoList,
-  createMockCoMap,
-  createMockJazzAPI,
-  generateId,
-  resetIdCounter,
-} from 'jazz-mock';
-
-// Re-export jazz-testing utilities
-export { JazzTestContext, setupJazzTesting } from './jazz-testing';
+// rowboat test helpers (makeGraph/renderWithRowboat/rowboatJazzMock) — see src/test/rowboat.ts.
+// Not re-exported here: tests import them directly from '@/test/rowboat' so `vi.mock('@/jazz', ...)`
+// can dynamic-`import()` them without hoisting surprises (see that module's doc comment).
 
 // Mock window.alert for components that use alert() for error messages
 global.alert = vi.fn();
@@ -58,22 +48,23 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
-// Mock console methods to reduce test noise while keeping errors visible
-const consoleFilter = createJazzConsoleFilter();
+// Suppress log/info in tests unless debugging; error/warn stay real so failures are visible.
 global.console = {
   ...console,
-  error: consoleFilter.error,
-  warn: consoleFilter.warn,
-  // Suppress log/info in tests unless debugging
   log: process.env.VITEST_DEBUG ? console.log : vi.fn(),
   info: process.env.VITEST_DEBUG ? console.info : vi.fn(),
 };
 
-// Mock better-auth client
+// Mock the rowboat better-auth client (mirrors @jbroll/rowboat-auth-betterauth-react's
+// `createBetterAuthClient` shape — see src/lib/auth-client.ts).
 vi.mock('@/lib/auth-client', () => ({
   betterAuthClient: {
     signIn: {
       social: vi.fn(),
+      email: vi.fn(),
+    },
+    signUp: {
+      email: vi.fn(),
     },
     signOut: vi.fn(),
     getSession: vi.fn(() =>
@@ -87,5 +78,7 @@ vi.mock('@/lib/auth-client', () => ({
       }),
     ),
     requestPasswordReset: vi.fn(),
+    resetPassword: vi.fn(),
+    sendVerificationEmail: vi.fn(),
   },
 }));

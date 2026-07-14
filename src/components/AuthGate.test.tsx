@@ -1,33 +1,27 @@
 /**
  * Tests for AuthGate component
  *
- * Tests authentication states, sign in/out flows, and account deletion.
- * Uses jazz-mock for CoValue mocking.
+ * Tests authentication states, sign in/out flows, and account deletion, against the rowboat
+ * `@/jazz` waist (better-auth `useAuthor`/`useSession`/`signIn`/`signOut`).
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockCoList, createMockCoMap } from '../test/setup';
 import { AuthGate } from './AuthGate';
 
-// Mock Jazz hooks
-const mockLogOut = vi.fn();
-vi.mock('jazz-tools/react', () => ({
-  useAccount: vi.fn(),
-  useIsAuthenticated: vi.fn(),
-  useLogOut: () => mockLogOut,
-}));
+// Mock the rowboat waist (@/lib/jazz.tsx re-exported through @/jazz) — AuthGate only uses the
+// auth surface (useAuthor/useSession/signIn/signOut), not the graph.
+const mockSignInSocial = vi.fn();
+const mockJazzSignOut = vi.fn();
+let mockAuthor: string | null = null;
+let mockSessionPending = false;
 
-import { useAccount, useIsAuthenticated } from 'jazz-tools/react';
-
-// Mock custom hooks
-const mockDeleteAllUserData = vi.fn();
-vi.mock('@/hooks', () => ({
-  useViewStateCleanup: vi.fn(),
-  useCheckListHierarchy: () => ({
-    deleteAllUserData: mockDeleteAllUserData,
-  }),
+vi.mock('@/jazz', () => ({
+  useAuthor: () => mockAuthor,
+  useSession: () => ({ isPending: mockSessionPending }),
+  signIn: { social: (...args: unknown[]) => mockSignInSocial(...args) },
+  signOut: () => mockJazzSignOut(),
 }));
 
 const mockShowAlert = vi.fn();
@@ -37,18 +31,6 @@ vi.mock('@/lib/dialog-context', () => ({
     showAlert: mockShowAlert,
     showConfirm: mockShowConfirm,
   }),
-}));
-
-// Mock auth client
-const mockSignInSocial = vi.fn();
-const mockSignOut = vi.fn();
-vi.mock('@/lib/auth-client', () => ({
-  betterAuthClient: {
-    signIn: {
-      social: (...args: unknown[]) => mockSignInSocial(...args),
-    },
-    signOut: () => mockSignOut(),
-  },
 }));
 
 // Mock child components
@@ -111,24 +93,18 @@ vi.mock('./editor/AppContainer', () => ({
   ),
 }));
 
-vi.mock('./ui/loading', () => ({
-  LoadingScreen: () => <div data-testid="loading-screen">Loading...</div>,
-}));
-
-// Helper to create mock account using jazz-mock
-const createMockAccount = (id = 'test-account-id') =>
-  createMockCoMap({ root: createMockCoMap({ folders: createMockCoList([]) }) }, { id });
-
 describe('AuthGate', () => {
   beforeEach(() => {
+    mockAuthor = null;
+    mockSessionPending = false;
+
     // Clear localStorage and sessionStorage
     localStorage.clear();
     sessionStorage.clear();
 
     // Reset all mocks
     vi.clearAllMocks();
-    mockLogOut.mockResolvedValue(undefined);
-    mockSignOut.mockResolvedValue(undefined);
+    mockJazzSignOut.mockResolvedValue(undefined);
     mockShowConfirm.mockResolvedValue(true);
     mockShowAlert.mockResolvedValue(undefined);
 
@@ -155,20 +131,18 @@ describe('AuthGate', () => {
   });
 
   describe('loading state', () => {
-    it('shows loading screen when account is not loaded', () => {
-      vi.mocked(useAccount).mockReturnValue(null);
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
+    it('renders nothing while the session is pending', () => {
+      mockSessionPending = true;
 
-      render(<AuthGate />);
+      const { container } = render(<AuthGate />);
 
-      expect(screen.getByTestId('loading-screen')).toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
     });
   });
 
   describe('authenticated state', () => {
     it('shows AppContainer with sign out when authenticated', () => {
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
@@ -181,8 +155,7 @@ describe('AuthGate', () => {
 
     it('clears user-signed-out flag when authenticated', () => {
       localStorage.setItem('user-signed-out', 'true');
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
@@ -192,9 +165,6 @@ describe('AuthGate', () => {
 
   describe('unauthenticated state', () => {
     it('shows AppContainer with sign in when not authenticated', () => {
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
-
       render(<AuthGate />);
 
       const container = screen.getByTestId('app-container');
@@ -205,8 +175,6 @@ describe('AuthGate', () => {
 
     it('shows unauthenticated view when user signed out and not re-authenticated', () => {
       localStorage.setItem('user-signed-out', 'true');
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -220,8 +188,6 @@ describe('AuthGate', () => {
   describe('sign in flow', () => {
     it('opens SignInDialog when Sign In button is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -230,10 +196,8 @@ describe('AuthGate', () => {
       expect(screen.getByTestId('sign-in-dialog')).toBeInTheDocument();
     });
 
-    it('calls betterAuthClient for Google sign in', async () => {
+    it('calls signIn.social for Google sign in', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -246,10 +210,8 @@ describe('AuthGate', () => {
       });
     });
 
-    it('calls betterAuthClient for Apple sign in', async () => {
+    it('calls signIn.social for Apple sign in', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -265,8 +227,6 @@ describe('AuthGate', () => {
     it('clears user-signed-out flag on sign in', async () => {
       const user = userEvent.setup();
       localStorage.setItem('user-signed-out', 'true');
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -278,26 +238,22 @@ describe('AuthGate', () => {
   });
 
   describe('sign out flow', () => {
-    it('signs out from BetterAuth and Jazz when Sign Out is clicked', async () => {
+    it('signs out via the rowboat auth client when Sign Out is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
       await user.click(screen.getByRole('button', { name: /sign out/i }));
 
-      expect(mockSignOut).toHaveBeenCalled();
-      expect(mockLogOut).toHaveBeenCalled();
+      expect(mockJazzSignOut).toHaveBeenCalled();
       expect(localStorage.getItem('user-signed-out')).toBe('true');
     });
 
     it('handles sign out errors gracefully', async () => {
       const user = userEvent.setup();
-      mockSignOut.mockRejectedValue(new Error('Sign out failed'));
-      mockLogOut.mockRejectedValue(new Error('Log out failed'));
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockJazzSignOut.mockRejectedValue(new Error('Sign out failed'));
+      mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
@@ -311,8 +267,7 @@ describe('AuthGate', () => {
   describe('delete account flow', () => {
     it('shows confirmation dialog before deleting', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
@@ -333,8 +288,7 @@ describe('AuthGate', () => {
     it('does not delete if user cancels confirmation', async () => {
       const user = userEvent.setup();
       mockShowConfirm.mockResolvedValue(false);
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
@@ -345,8 +299,7 @@ describe('AuthGate', () => {
 
     it('calls delete API and cleans up on confirmation', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
@@ -364,8 +317,9 @@ describe('AuthGate', () => {
         });
       });
 
-      expect(mockDeleteAllUserData).toHaveBeenCalled();
-      expect(mockLogOut).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockJazzSignOut).toHaveBeenCalled();
+      });
       expect(mockShowAlert).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Account Deleted',
@@ -375,8 +329,7 @@ describe('AuthGate', () => {
 
     it('shows error alert if delete API fails', async () => {
       const user = userEvent.setup();
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'user-1';
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         json: () => Promise.resolve({ error: 'Server error' }),
@@ -395,8 +348,8 @@ describe('AuthGate', () => {
         );
       });
 
-      // Should not delete Jazz data if API call fails
-      expect(mockDeleteAllUserData).not.toHaveBeenCalled();
+      // Should not sign out (nor show the "Account Deleted" alert) if the API call fails
+      expect(mockJazzSignOut).not.toHaveBeenCalled();
     });
   });
 
@@ -412,9 +365,6 @@ describe('AuthGate', () => {
         writable: true,
       });
 
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
-
       render(<AuthGate />);
 
       expect(screen.getByTestId('email-auth-dialog')).toBeInTheDocument();
@@ -422,8 +372,6 @@ describe('AuthGate', () => {
 
     it('shows EmailAuthDialog when sessionStorage has flag', () => {
       sessionStorage.setItem('show-signin-after-verify', 'true');
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
 
       render(<AuthGate />);
 
@@ -441,9 +389,6 @@ describe('AuthGate', () => {
         writable: true,
       });
 
-      vi.mocked(useAccount).mockReturnValue(createMockAccount());
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
-
       render(<AuthGate />);
 
       // Should clean up URL
@@ -456,15 +401,13 @@ describe('AuthGate', () => {
       const { rerender } = render(<AuthGate />);
 
       // First render as anonymous
-      vi.mocked(useAccount).mockReturnValue(createMockAccount('account-1'));
-      vi.mocked(useIsAuthenticated).mockReturnValue(false);
       rerender(<AuthGate />);
 
       let container = screen.getByTestId('app-container');
       expect(container).toHaveAttribute('data-authenticated', 'false');
 
       // Re-render as authenticated
-      vi.mocked(useIsAuthenticated).mockReturnValue(true);
+      mockAuthor = 'account-1';
       rerender(<AuthGate />);
 
       container = screen.getByTestId('app-container');
