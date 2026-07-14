@@ -41,12 +41,14 @@ export async function addFolder(g: Graph, input: AddFolderInput): Promise<Folder
     created_at: input.now,
     updated_at: input.now,
   };
+  // g.folder.create resolving without throwing IS the success signal. Do NOT read the row
+  // back here: on the real IndexedDB-backed graph the write propagates to the readable view
+  // asynchronously, so an immediate `g.folder(id)` returns undefined and a read-back check
+  // would throw a false "not found" (it succeeds only on the synchronous test store). The
+  // reactive `folders`/`useSelect` subscription repaints when the write lands. Return the row
+  // we wrote — it is the created FolderRow.
   await g.folder.create(row);
-  const created = g.folder(input.id);
-  if (!created) {
-    throw new Error(`addFolder: row ${input.id} not found immediately after create`);
-  }
-  return created.$data;
+  return row;
 }
 
 function requireFolder(g: Graph, id: string) {
