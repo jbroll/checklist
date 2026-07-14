@@ -147,6 +147,49 @@ function requireSettings(g: Graph): UserSettingsRow {
 }
 
 /**
+ * Build a brand-new `user_settings` singleton row with the designed defaults (free tier / beta
+ * status — the same defaults the read paths fall back to, made concrete). The write paths need a
+ * real row to update, so the app provisions one at account-init via {@link ensureUserSettings}.
+ */
+export function buildDefaultUserSettings(id: string, ownerGroupId: string): UserSettingsRow {
+  return {
+    id,
+    owner_group_id: ownerGroupId,
+    default_autocomplete_domain: 'none',
+    enable_auto_categorization: true,
+    subscription_tier: 'free',
+    subscription_status: 'beta',
+    subscription_ends_at: 0,
+    max_lists: TIER_LIMITS.free.maxLists,
+    session_retention_days: TIER_LIMITS.free.sessionRetentionDays,
+    subscription_synced_at: 0,
+    view_folder_expanded: {},
+    view_template_category_expanded: {},
+    view_session_category_expanded: {},
+  };
+}
+
+/**
+ * Provision the per-user `user_settings` singleton if it does not already exist. Idempotent: a row
+ * already present (a reload's hydrated row, or an anon row adopted on sign-in) means we do nothing —
+ * we NEVER overwrite an existing row, so a persisted subscription cache survives.
+ *
+ * The singleton is deterministic: `id` and `ownerGroupId` are the identity (for a signed-in user
+ * that is `user.id`, whose root scope group is also `user.id` — auto-provisioned at signup — so the
+ * row converges across the user's devices with no minted group). Callers MUST have already confirmed
+ * (via an authoritative read of the persisted store, past initial hydration/pull) that no row
+ * exists; the in-memory `all()` check here is a cheap second guard, not the hydration barrier.
+ */
+export async function ensureUserSettings(
+  g: Graph,
+  id: string,
+  ownerGroupId: string,
+): Promise<void> {
+  if (g.user_settings.all().length > 0) return;
+  await g.user_settings.create(buildDefaultUserSettings(id, ownerGroupId));
+}
+
+/**
  * Get current subscription tier (from the user_settings cache).
  * Note: This returns the user's actual tier, not the effective tier.
  * Use getEffectiveTier() for limit calculations during beta.

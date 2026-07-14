@@ -12,9 +12,11 @@ import type { FolderRow } from '@/schema/folder';
 import { makeGraph } from '@/test/rowboat';
 import type { UserSettingsRow } from '../../shared/schema.js';
 import {
+  buildDefaultUserSettings,
   canCreateList,
   createCheckoutSession,
   createPortalSession,
+  ensureUserSettings,
   getBetaMessage,
   getEffectiveTier,
   getListsRemaining,
@@ -616,6 +618,44 @@ describe('SubscriptionService - Backend Integration', () => {
       await redirectToPortal();
 
       expect(window.location.href).toBe('');
+    });
+  });
+
+  describe('ensureUserSettings', () => {
+    it('creates the singleton row (designed free/beta defaults) when none exists', async () => {
+      const g = makeGraph({});
+      expect(g.user_settings.all()).toHaveLength(0);
+
+      await ensureUserSettings(g, 'u1', 'g1');
+
+      const rows = g.user_settings.all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].$data.id).toBe('u1');
+      expect(rows[0].$data.owner_group_id).toBe('g1');
+      expect(rows[0].$data.subscription_tier).toBe('free');
+      expect(rows[0].$data.subscription_status).toBe('beta');
+    });
+
+    it('is idempotent — a second call does not create a second row', async () => {
+      const g = makeGraph({});
+      await ensureUserSettings(g, 'u1', 'g1');
+      await ensureUserSettings(g, 'u1', 'g1');
+      expect(g.user_settings.all()).toHaveLength(1);
+    });
+
+    it('never overwrites an existing row (persisted cache survives)', async () => {
+      const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+      await ensureUserSettings(g, 'u1', 'g1');
+      expect(g.user_settings.all()).toHaveLength(1);
+      expect(getSubscriptionTier(g)).toBe('premium');
+    });
+
+    it('buildDefaultUserSettings carries every column, including the view-state maps', () => {
+      const row = buildDefaultUserSettings('u1', 'g1');
+      expect(row.view_folder_expanded).toEqual({});
+      expect(row.view_template_category_expanded).toEqual({});
+      expect(row.view_session_category_expanded).toEqual({});
+      expect(row.max_lists).toBe(TIER_LIMITS.free.maxLists);
     });
   });
 });

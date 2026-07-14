@@ -30,6 +30,7 @@ import { useRowboat as useRawRowboat, useSelect as useRawSelect } from '@jbroll/
 import { compileSchema, type RelationalGraph } from '@jbroll/rowboat-schema';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { schema } from '@/schema/folder';
+import { ensureUserSettings } from '@/services/subscriptionService';
 
 const APP_NAME = 'checklist';
 const SYNC_INTERVAL_MS = 5000;
@@ -147,6 +148,36 @@ function RowboatBridge({
       window.clearInterval(id);
     };
   }, [db, author]);
+
+  // Provision the per-user `user_settings` singleton once this identity's store has hydrated.
+  // Write paths (subscription sync, view-state persistence) hard-error without a row, and it's not
+  // created anywhere else. The check is authoritative — it reads the persisted store DIRECTLY
+  // (`db.table`), because the in-memory graph snapshot may not have loaded yet and a premature
+  // empty-read would create a duplicate. Deterministic id+group = the identity: for a signed-in
+  // user that's `user.id`, whose root scope group is also `user.id`, so the row converges across
+  // devices with no minted group (see subscriptionService.ensureUserSettings). Anonymous users get
+  // a local, never-synced ANON_IDENTITY-scoped row.
+  const provisionedRef = useRef(false);
+  useEffect(() => {
+    if (provisionedRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const existing = await db
+          .table('user_settings')
+          .filter((r: { __deleted?: boolean }) => !r.__deleted)
+          .toArray();
+        if (cancelled || provisionedRef.current) return;
+        if (existing.length === 0) await ensureUserSettings(graph, identity, identity);
+        provisionedRef.current = true;
+      } catch (err) {
+        console.error('[jazz] user_settings provisioning failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [db, graph, identity]);
 
   // Anonymous users can't hit the auth-gated mint route — give them a local group id (adopt
   // re-scopes on sign-in). Signed-in users mint a server-side group they admin.

@@ -298,17 +298,12 @@ Category 2`;
 // ============================================================================
 
 test.describe('Subscription Limits', () => {
-  // TODO(e2e): list-limit enforcement itself IS now wired — AppContainer's handleAddFolder/
-  // handleAddTemplateClick call subscriptionService.canCreateList(g)/isAtListLimit(g) and open the
-  // Upgrade dialog on the limit (see src/components/editor/AppContainer.tsx). What's still missing
-  // is a way to get an anonymous Playwright session onto the free tier: this test drives that via
-  // `/billing/success`, which calls syncSubscriptionFromBackend(g) — but that hard-errors
-  // (`user_settings row not initialized`, subscriptionService.ts's `requireSettings`) because
-  // nothing in the app ever creates a user_settings row for a fresh anonymous session (no
-  // `g.user_settings.create(...)` call exists anywhere in src/ or backend/src/), so the page shows
-  // its error state ("Almost There"), not "Thank you for upgrading!". Re-enable once there's a
-  // row-creation path (or a test-only seeding hook) for user_settings.
-  test.skip('should show upgrade dialog when list limit is reached', async ({ page }) => {
+  // List-limit enforcement is wired (AppContainer's handleAddFolder/handleAddTemplateClick call
+  // subscriptionService.canCreateList/isAtListLimit and open the Upgrade dialog on the limit), and
+  // the `user_settings` singleton is now provisioned at account-init (jazz.tsx RowboatBridge →
+  // subscriptionService.ensureUserSettings), so /billing/success's syncSubscriptionFromBackend has
+  // a row to update — the free tier flows through and the upgrade dialog shows real tier info.
+  test('should show upgrade dialog when list limit is reached', async ({ page }) => {
     // Mock subscription API to return free tier with 3 list limit
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -347,9 +342,7 @@ test.describe('Subscription Limits', () => {
     await expect(page.getByText(/limit reached/i)).toBeVisible();
   });
 
-  // TODO(e2e): same /billing/success + missing user_settings row gap as the test above — see its
-  // comment. List-limit enforcement itself is wired.
-  test.skip('should prevent creating lists beyond limit', async ({ page }) => {
+  test('should prevent creating lists beyond limit', async ({ page }) => {
     // Mock free tier with strict limits
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -390,14 +383,11 @@ test.describe('Subscription Limits', () => {
     await expect(page.getByRole('heading', { name: /upgrade/i })).toBeVisible({ timeout: 5000 });
   });
 
-  // TODO(e2e): opens the Upgrade dialog from an "Upgrade Plan" menu item in the header's "More
-  // options" dropdown. That path IS now wired — AppContainer forwards `subscriptionInfo`
-  // (onUpgradeClick/subscriptionTier/listCount/maxLists) through TreeView into TreeViewHeader,
-  // which renders the "Upgrade Plan" DropdownMenuItem. The ONLY remaining blocker is the same
-  // /billing/success + missing user_settings row gap noted on the tests above (this test still
-  // navigates through /billing/success to set the free tier). Re-enable once the user_settings
-  // row-creation gap is closed.
-  test.skip('should show tier information in upgrade dialog', async ({ page }) => {
+  // Opens the Upgrade dialog from the "Upgrade Plan" item in the header's "More options" dropdown.
+  // AppContainer forwards subscriptionInfo (onUpgradeClick/subscriptionTier/listCount/maxLists)
+  // through TreeView into TreeViewHeader; the free tier is set via /billing/success against the
+  // account-init-provisioned user_settings row.
+  test('should show tier information in upgrade dialog', async ({ page }) => {
     // Mock free tier to ensure upgrade option is visible
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
@@ -607,7 +597,7 @@ test.describe('Data Sync Errors', () => {
 // ============================================================================
 
 test.describe('General Error Recovery', () => {
-  test.skip('should maintain UI state after errors', async ({ page }) => {
+  test('should maintain UI state after errors', async ({ page }) => {
     await page.goto('/');
     await waitForPageLoad(page);
 
