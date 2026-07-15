@@ -54,14 +54,6 @@ npm run check           # Run type-check + lint + tests
 
     Non-code changes do not run the commit checking hooks
 
-**DO NOT write verbose commit messages**. Subject line only + Co-Authored-By.
-
-**YOU MUST FOLLOW THIS Commit message format**:
-- Subject: 10-72 characters
-- Body: ONLY `Co-Authored-By: Claude <noreply@anthropic.com>` allowed
-- ASCII only (no emoji)
-- Example: `fix: improve dialog clarity and add branding`
-
 ## Project Structure
 
 ```

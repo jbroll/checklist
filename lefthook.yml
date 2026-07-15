@@ -27,10 +27,3 @@ pre-commit:
     e2e-tests:
       glob: "*.{ts,tsx,html}"
       run: npm run test:e2e
-
-# Preserve CheckList's commit-message policy (subject 10-72, ASCII-only,
-# body = Co-Authored-By only). org-hooks lefthook-common provides no commit-msg.
-commit-msg:
-  commands:
-    format:
-      run: 'bash scripts/git-hooks/check-commit-msg.sh {1}'
