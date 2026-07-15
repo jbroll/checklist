@@ -92,15 +92,19 @@ specs in `docs/superpowers/specs/`.)
 ## D8 — delete Jazz schema files — **cleanup**
 - **Where:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
   `ViewState`), plus `src/lib/types.ts` (Jazz type aliases, currently knip-ignored).
-- **Remaining pins (after D6+D7):** the Jazz `@/schema` is now only imported for TYPES by
-  `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx` (`SubscriptionTier`),
-  plus D9's dead `sessionCleanupService`. Migrate those two type-imports to the rowboat schema
-  (`@/schema/folder` `SessionData`; a rowboat `SubscriptionTier` — `subscription_tier` is an
-  `rb.text`), resolve D9, then delete `tree.ts`/`index.ts`/`lib/types.ts` and drop `lib/types.ts`
-  from `knip.json` `ignore`. That finishes removing `jazz-tools` from the frontend.
+- **Remaining pins (after D6+D7+D9):** the Jazz `@/schema` is now only imported for TYPES by
+  `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx` (`SubscriptionTier`).
+  Migrate those two type-imports to the rowboat schema (`@/schema/folder` `SessionData`; a rowboat
+  `SubscriptionTier` — `subscription_tier` is an `rb.text`), then delete
+  `tree.ts`/`index.ts`/`lib/types.ts` and drop `lib/types.ts` from `knip.json` `ignore`. That
+  finishes removing `jazz-tools` from the frontend.
 
-## D9 — dead `sessionCleanupService` (Jazz) — **LOW / cleanup**
-- **Where:** `src/services/sessionCleanupService.ts` — Jazz-based (`@jbr-jazz/hierarchy-shared`
-  `walkTree`), referenced only by its own `sessionCleanupService.test.ts`; not wired into the app.
-- **Fix:** either wire the rowboat equivalent (session-retention cleanup is a real feature — see the
-  `session_retention_days` user-setting) or delete the dead service + test. Decide intent first.
+## D9 — session-retention cleanup ported to rowboat — **RESOLVED**
+- **Was:** `src/services/sessionCleanupService.ts` was Jazz-based (`@jbr-jazz/hierarchy-shared`
+  `walkTree`), referenced only by its own test and never wired into the app — a dead feature.
+- **Fix (shipped):** rewritten against the rowboat graph — `cleanupExpiredSessions(g)` walks
+  `getAllTemplates(g)` and `archiveSession`s every non-archived session older than the tier's
+  `session_retention_days` window (-1 = unlimited no-op), throttled once/24h via localStorage. Wired
+  into `src/lib/jazz.tsx`'s account-init effect (`runCleanupIfNeeded(graph)`, authed users only,
+  non-blocking 5s after provisioning). Test rewritten against `makeGraph`
+  (`src/services/sessionCleanupService.test.ts`).

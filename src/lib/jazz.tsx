@@ -31,6 +31,7 @@ import { compileSchema, type RelationalGraph } from '@jbroll/rowboat-schema';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { schema } from '@/schema/folder';
 import { seedDefaultFolders } from '@/services/defaultData';
+import { runCleanupIfNeeded } from '@/services/sessionCleanupService';
 import { ensureUserSettings } from '@/services/subscriptionService';
 
 const APP_NAME = 'checklist';
@@ -216,6 +217,7 @@ function RowboatBridge({
           }
         }
         provisionedRef.current = true;
+        if (author) runCleanupIfNeeded(graph);
       } catch (err) {
         console.error('[jazz] account-init provisioning failed:', err);
       }
@@ -223,7 +225,7 @@ function RowboatBridge({
     return () => {
       cancelled = true;
     };
-  }, [db, graph, identity, mintGroup, sessionPending]);
+  }, [db, graph, identity, mintGroup, sessionPending, author]);
 
   const value = useMemo<PortContextValue>(
     () => ({ graph, author, mintGroup }),
