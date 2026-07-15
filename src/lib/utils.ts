@@ -1,8 +1,9 @@
 import { type ClassValue, clsx } from 'clsx';
 import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
-import type { SessionData } from '@/schema';
 import { formatTime } from '@/utils/dateUtils';
+
+type DatedSession = { createdAt: Date | string };
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,8 +42,6 @@ export function formatRelativeTime(date: Date): string {
  * - "yesterday" for yesterday
  * - "MM/DD" for dates within the last year
  * - Full date for older dates
- *
- * @param date - Date object or ISO string (Jazz may deserialize dates as strings)
  */
 export function formatSessionDate(date: Date | string, showTime = true): string {
   const sessionDate = typeof date === 'string' ? new Date(date) : date;
@@ -114,7 +113,7 @@ function getStartOfDay(date: Date | string): Date {
  */
 function countSessionsOnSameDay(
   date: Date | string,
-  sessions: readonly (SessionData | null)[],
+  sessions: readonly (DatedSession | null)[],
 ): number {
   const targetDay = getStartOfDay(date).getTime();
   return sessions.filter((s) => s && getStartOfDay(s.createdAt).getTime() === targetDay).length;
@@ -123,14 +122,10 @@ function countSessionsOnSameDay(
 /**
  * Generate a session name from its creation timestamp
  * Format: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" if multiple sessions on same day
- *
- * @param createdAt - Session creation timestamp
- * @param allSessions - All sessions to check for same-day duplicates
- * @returns Session name string
  */
 export function generateSessionName(
   createdAt: Date,
-  allSessions?: readonly (SessionData | null)[],
+  allSessions?: readonly (DatedSession | null)[],
 ): string {
   const dateStr = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -153,8 +148,8 @@ export function generateSessionName(
  * Used to determine whether to show time in session display
  */
 export function hasMultipleSessionsOnSameDay(
-  session: SessionData | null,
-  allSessions: readonly (SessionData | null)[],
+  session: DatedSession | null,
+  allSessions: readonly (DatedSession | null)[],
 ): boolean {
   if (!session || !allSessions) return false;
   return countSessionsOnSameDay(session.createdAt, allSessions) > 1;

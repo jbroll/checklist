@@ -89,15 +89,19 @@ specs in `docs/superpowers/specs/`.)
   `?merge`, entered from `ProfileDialog`. Dead Jazz removed; the `tsconfig` exclude is gone (none
   remain). Backend auto-serves the routes via `mountAuthRoutes` + `registerIdentityTables`.
 
-## D8 — delete Jazz schema files — **cleanup**
-- **Where:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
-  `ViewState`), plus `src/lib/types.ts` (Jazz type aliases, currently knip-ignored).
-- **Remaining pins (after D6+D7+D9):** the Jazz `@/schema` is now only imported for TYPES by
-  `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx` (`SubscriptionTier`).
-  Migrate those two type-imports to the rowboat schema (`@/schema/folder` `SessionData`; a rowboat
-  `SubscriptionTier` — `subscription_tier` is an `rb.text`), then delete
-  `tree.ts`/`index.ts`/`lib/types.ts` and drop `lib/types.ts` from `knip.json` `ignore`. That
-  finishes removing `jazz-tools` from the frontend.
+## D8 — delete Jazz schema files — **RESOLVED**
+- **Was:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
+  `ViewState`) and `src/lib/types.ts` (Jazz type aliases, knip-ignored) survived only two TYPE-import
+  pins: `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx`
+  (`SubscriptionTier`).
+- **Fix (shipped):** `utils.ts`'s session helpers now take a minimal local `DatedSession`
+  (`{ createdAt: Date | string }`) — they only ever read `createdAt`, and their sole runtime caller
+  (`jsonExporter`) passes Date-carrying sessions, so the rowboat epoch-ms `SessionData` would have
+  been the wrong type. `ProfileDialog` imports `SubscriptionTier` from `@jbr-jazz/billing-shared`
+  (the type the value already flows from via `subscriptionService`). Deleted `tree.ts`/`index.ts`
+  (+ their tests) and `lib/types.ts`, dropped `lib/types.ts` from `knip.json` `ignore`, and pruned the
+  stale second paragraph of the `src/jazz/index.ts` waist docblock. `jazz-tools` is now fully gone
+  from the frontend (`src/`).
 
 ## D9 — session-retention cleanup ported to rowboat — **RESOLVED**
 - **Was:** `src/services/sessionCleanupService.ts` was Jazz-based (`@jbr-jazz/hierarchy-shared`
