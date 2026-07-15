@@ -1,5 +1,5 @@
 /**
- * Main export service (rowboat port, slice-2).
+ * Main export service.
  *
  * Orchestrates all export operations (JSON, TXT, CSV). Every entry point takes the rowboat
  * relational graph `g`, resolves a template folder by id, and hands the parsed `FolderRow` to the
@@ -32,7 +32,7 @@ function isTemplateFolder(row: { type: string }): boolean {
 
 /**
  * Find a non-archived template folder row by id. Returns null if the folder is absent, archived,
- * or not a template folder (matches the old `walkTree` skip-archived behaviour).
+ * or not a template folder.
  */
 function findTemplateRow(g: Graph, templateId: string): FolderRow | null {
   const node = g.folder(templateId);

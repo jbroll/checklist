@@ -1,5 +1,5 @@
 /**
- * TXT Importer (rowboat port, slice-2)
+ * TXT Importer
  *
  * Imports template items from plain text format.
  * Supports two formats:
@@ -32,8 +32,6 @@ export interface TxtImportResult extends BaseImportResult {
  *
  * Useful for extracting the list name before creating a template.
  *
- * @param textContent - Plain text content
- * @returns Metadata extracted from comments
  */
 export function parseTextMetadata(textContent: string): ListMetadata {
   const { metadata } = parseIndentedListWithMetadata(textContent);
@@ -56,10 +54,6 @@ export function parseTextMetadata(textContent: string): ListMetadata {
  * - Leaf items become items (type='item')
  * - Paths are generated from hierarchy
  *
- * @param g - The rowboat graph
- * @param templateId - Template folder to import items into
- * @param textContent - Plain text content
- * @returns Import result with statistics
  */
 export async function importItemsFromText(
   g: Graph,

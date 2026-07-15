@@ -1,5 +1,5 @@
 /**
- * Main import service (rowboat port, slice-2)
+ * Main import service
  *
  * Orchestrates all import operations (JSON, TXT, CSV).
  *
@@ -84,11 +84,6 @@ function getValidExtensions(fileType: ImportFileType): string[] {
 /**
  * Import a full/partial JSON backup from a file.
  *
- * @param g - The rowboat graph
- * @param file - File object from input or drag-and-drop
- * @param ctx - group-minting + attribution context (see `jsonImporter.JsonImportContext`)
- * @param fileType - Expected file type (optional, auto-detected from extension)
- * @returns Import result with success/failure info
  */
 export async function importFromFile(
   g: Graph,

@@ -1,5 +1,5 @@
 /**
- * CSV Importer (rowboat port, slice-2)
+ * CSV Importer
  *
  * Imports template items from CSV format.
  */
@@ -23,10 +23,6 @@ export type CsvImportResult = BaseImportResult;
  * All imported items are created as leaf items (type='item').
  * Items with the same category are grouped together.
  *
- * @param g - The rowboat graph
- * @param templateId - Template folder to import items into
- * @param csvContent - CSV content string
- * @returns Import result with statistics
  */
 export async function importItemsFromCsv(
   g: Graph,

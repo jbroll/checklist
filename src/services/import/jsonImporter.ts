@@ -1,5 +1,5 @@
 /**
- * JSON import functionality (rowboat port, slice-2)
+ * JSON import functionality
  *
  * Imports template folders (with items + session history) from JSON format. Supports v2.0
  * (hierarchical items with IDs) format — see `../export/jsonExporter.ts`, whose output this
@@ -7,9 +7,8 @@
  * nests organizational folders), so import creates one new top-level `template-folder` row per
  * entry — no folder-tree recursion needed.
  *
- * Ported off Jazz: takes the rowboat graph `g` + a `mintGroup`/`createdBy` pair (same contract
- * as `useCheckListHierarchy.addFolder`) instead of a Jazz `Account`, and writes plain `FolderRow`s
- * via `folderOps.addFolder` instead of `FolderNode.create`/`Group.create`.
+ * Takes the rowboat graph `g` + a `mintGroup`/`createdBy` pair (same contract as
+ * `useCheckListHierarchy.addFolder`), and writes plain `FolderRow`s via `folderOps.addFolder`.
  */
 
 import type { RelationalGraph } from '@jbroll/rowboat-schema';

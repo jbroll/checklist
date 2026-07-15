@@ -16,7 +16,7 @@ import { IndentedRow } from './IndentedRow';
  * Whether `session` shares its calendar day with another entry in `allSessions` — used to
  * decide whether the row needs to show a time alongside the date. Reimplemented locally
  * (rather than `hasMultipleSessionsOnSameDay` from `@/lib/utils`) because that helper's
- * `SessionData` is the Jazz-era shape (`createdAt: Date`); the rowboat `SessionData` here
+ * `SessionData` is the Date-carrying shape (`createdAt: Date`); the rowboat `SessionData` here
  * carries `createdAt` as an epoch-ms number (see `shared/schema.ts`).
  */
 function hasMultipleOnSameDay(

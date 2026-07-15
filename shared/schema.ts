@@ -8,11 +8,10 @@
  * drift (a schema mismatch between client and server manifests is exactly the kind of bug NO
  * FALLBACKS forbids papering over).
  *
- * Slice-2 adds the template-folder payload — `items`/`sessions`/`default_items` (JSON columns)
- * plus `show_zone_headings`/`autocomplete_domain`/`auto_categorize_enabled`. In Jazz these were
- * plain-JSON arrays hanging off a `co.map`; here they are `rb.json` columns on the folder row (the
- * browser-soak realdata model). Timestamps inside items/sessions are epoch-ms NUMBERS (not Jazz
- * `Date`s) — JSON columns round-trip numbers cleanly and it matches the row's own int timestamps.
+ * The template-folder payload — `items`/`sessions`/`default_items` (JSON columns) plus
+ * `show_zone_headings`/`autocomplete_domain`/`auto_categorize_enabled` — are `rb.json` columns on
+ * the folder row (the browser-soak realdata model). Timestamps inside items/sessions are epoch-ms
+ * NUMBERS — JSON columns round-trip numbers cleanly and it matches the row's own int timestamps.
  */
 import { type RowOf, rb } from '@jbroll/rowboat-schema';
 import { z } from 'zod';
@@ -81,11 +80,11 @@ export const Folder = z.object({
 
 /**
  * UserSettings - per-user singleton row (one row whose `id` IS the user's id) holding global
- * preferences plus the subscription cache. In Jazz this was a `co.map` hanging off the account
- * root; here it's a flat rb.* table. The subscription fields are a CACHE of the backend (the
- * server is the source of truth); they exist so limit checks and tier display work offline.
+ * preferences plus the subscription cache. It's a flat rb.* table. The subscription fields are a
+ * CACHE of the backend (the server is the source of truth); they exist so limit checks and tier
+ * display work offline.
  *
- * Numbers are epoch-ms / sentinel ints, never Jazz `Date`s or nullable optionals: `-1` means
+ * Numbers are epoch-ms / sentinel ints, never nullable optionals: `-1` means
  * unlimited (max_lists / session_retention_days), `0` means "none / never" (subscription_ends_at,
  * subscription_synced_at). This keeps every column present on every row (no absent-field
  * fallbacks) while still expressing "no value".
@@ -101,7 +100,7 @@ export const UserSettings = z.object({
   max_lists: rb.int(), // cached for offline display (-1 = unlimited)
   session_retention_days: rb.int(), // cached (-1 = unlimited)
   subscription_synced_at: rb.int(), // epoch ms (0 if never)
-  // Per-user view state (expand/collapse UI preferences), ported off the Jazz `ViewState` co.map.
+  // Per-user view state (expand/collapse UI preferences).
   // Each defaults to an empty map; `{}` is the designed "nothing customized yet" state.
   view_folder_expanded: rb.json(z.record(z.string(), z.boolean())),
   view_template_category_expanded: rb.json(z.record(z.string(), z.record(z.string(), z.boolean()))),

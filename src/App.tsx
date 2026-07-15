@@ -70,11 +70,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-// slice-2: TestPage and BillingSuccessPage are ported onto rowboat (`useRowboat()`) and their
-// routes are re-enabled below (TestPage only outside PROD). MergeAccountFlow still reads a Jazz
-// `Account` and stays excluded from `tsconfig` (see `docs/superpowers/d-t4-report.md`).
-// InviteAcceptPage was ported onto rowboat's `useSharing` in the sharing slice (see
-// `docs/superpowers/d-t5-report.md`) and is re-enabled below.
+// TestPage and BillingSuccessPage use rowboat via `useRowboat()`, and their routes are enabled
+// below (TestPage only outside PROD). MergeAccountFlow stays excluded from `tsconfig` (see
+// `docs/superpowers/d-t4-report.md`). InviteAcceptPage uses rowboat's `useSharing` (see
+// `docs/superpowers/d-t5-report.md`) and is enabled below.
 
 // Lazy load InviteAcceptPage for sharing invites
 const InviteAcceptPage = lazy(() =>
@@ -104,8 +103,8 @@ const BillingCancelPage = lazy(() =>
   })),
 );
 
-// Lazy load billing success page (ported to rowboat in slice-2, reads the graph via
-// useRowboat() — see src/components/billing/BillingSuccessPage.tsx).
+// Lazy load billing success page (reads the graph via useRowboat() — see
+// src/components/billing/BillingSuccessPage.tsx).
 const BillingSuccessPage = lazy(() =>
   import('./components/billing/BillingSuccessPage').then((module) => ({
     default: module.BillingSuccessPage,

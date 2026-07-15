@@ -255,7 +255,7 @@ export const FolderNodeView = memo(function FolderNodeView({
                     <Share2 className="mr-2 h-4 w-4" />
                     Share
                   </DropdownMenuItem>
-                  {/* TODO(slice-2 follow-up): Duplicate/Autocomplete — items-tree features not
+                  {/* TODO: Duplicate/Autocomplete — items-tree features not
                       ported to rowboat yet; Import/Export now live on the tree row itself
                       (template-level) via TreeViewHeader, not this per-folder menu. */}
                   {!hideArchiveAction && (

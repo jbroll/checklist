@@ -1,14 +1,14 @@
 /**
- * Test Helpers — rowboat port (slice-2 e2e).
+ * Test Helpers.
  *
  * Exposes the rowboat relational graph plus the ported, headless g-first services to
  * `window.testExports` (and its `window.__testServices` alias) so Playwright specs can seed
  * folders / templates / items / sessions. Only active under Playwright — the `__PLAYWRIGHT__`
  * flag is injected by `e2e/fixtures/base.ts`.
  *
- * Rewritten off Jazz: `exposeServicesToWindow` now takes the bound graph `g` (from
- * `useRowboat()` in `TestPage.tsx`) instead of a Jazz `Account`. Every exposed service is a
- * plain module whose functions take `g` as their first argument (see `folderOps.ts` et al).
+ * `exposeServicesToWindow` takes the bound graph `g` (from `useRowboat()` in `TestPage.tsx`).
+ * Every exposed service is a plain module whose functions take `g` as their first argument (see
+ * `folderOps.ts` et al).
  *
  * Folder groups: the real app mints an `owner_group_id` via the backend (POST
  * `/api/folders/group`, auth-only). The `/test` page runs on the ANONYMOUS identity (no sync —

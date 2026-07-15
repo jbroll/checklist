@@ -23,18 +23,15 @@ interface AppContainerProps {
 }
 
 /**
- * AppContainer — slice 2. Renders the folder tree (or a session view) over the rowboat graph.
+ * AppContainer — renders the folder tree (or a session view) over the rowboat graph.
  *
- * Ported off the pre-port Jazz `Account`-driven version (`git show main:src/components/editor/
- * AppContainer.tsx`): template/session selection, the subscription/upgrade banner, and
- * export/import dialogs are wired the same way, just re-keyed onto the rowboat graph (`g` via
- * `useRowboat()`) and the ported services (`sessionService`, `subscriptionService`,
- * `useCheckListHierarchy`) instead of a Jazz `Account`.
+ * Template/session selection, the subscription/upgrade banner, and export/import dialogs are
+ * wired onto the rowboat graph (`g` via `useRowboat()`) and the services (`sessionService`,
+ * `subscriptionService`, `useCheckListHierarchy`).
  *
- * `currentSessionId` is intentionally LOCAL React state, not synced — the pre-port app tracked
- * it the same way via `useNavigationHistory`'s browser-history entry; this slice keeps it simple
- * (no cross-tab/browser-back session restore yet) since `useNavigationHistory` here only drives
- * the SessionView's own edit-mode toggle, not the template→session transition.
+ * `currentSessionId` is intentionally LOCAL React state, not synced — there is no
+ * cross-tab/browser-back session restore yet, since `useNavigationHistory` here only drives the
+ * SessionView's own edit-mode toggle, not the template→session transition.
  */
 export function AppContainer({
   onSignOut,

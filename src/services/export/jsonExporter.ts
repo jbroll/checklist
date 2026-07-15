@@ -1,5 +1,5 @@
 /**
- * JSON export functionality (rowboat port, slice-2).
+ * JSON export functionality.
  *
  * Exports folder structures with all template items and session history to JSON format.
  * Version 2.0: hierarchical structure and neutral terminology.
@@ -80,8 +80,7 @@ function toDatedSession(session: SessionData): DatedSession {
 
 /**
  * Collect every non-archived template folder in the graph, walking top-level folders and their
- * descendants. An archived folder is skipped along with its whole subtree (mirrors the old
- * `walkTree(... => 'skip')`).
+ * descendants. An archived folder is skipped along with its whole subtree.
  */
 function collectTemplateFolders(g: Graph): FolderRow[] {
   const childrenByParent = new Map<string | null, FolderRow[]>();

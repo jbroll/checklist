@@ -1,5 +1,5 @@
 /**
- * Import validation logic (rowboat port, slice-2)
+ * Import validation logic
  *
  * Validates imported JSON export data before writing it to the graph.
  */
@@ -18,8 +18,6 @@ const SUPPORTED_VERSIONS = ['2.0'];
 /**
  * Count items recursively
  *
- * @param items - Array of items to count
- * @returns Total count of all items and children
  */
 function countItemsRecursively(items: unknown[]): number {
   let count = 0;
@@ -36,9 +34,6 @@ function countItemsRecursively(items: unknown[]): number {
 /**
  * Validate JSON export data
  *
- * @param g - The rowboat graph (for conflict detection against existing top-level folders)
- * @param data - Parsed JSON data
- * @returns Validation result with errors, warnings, and stats
  */
 export function validateJsonData(g: Graph, data: unknown): ValidationResult {
   const errors: string[] = [];
@@ -133,9 +128,6 @@ export function validateJsonData(g: Graph, data: unknown): ValidationResult {
 /**
  * Validate a single folder
  *
- * @param folder - Folder to validate
- * @param index - Index in folders array (for error messages)
- * @returns Array of error messages
  */
 function validateFolder(folder: Partial<ExportedFolder>, index: number): string[] {
   const errors: string[] = [];
@@ -196,10 +188,6 @@ function validateFolder(folder: Partial<ExportedFolder>, index: number): string[
 /**
  * Validate a template item
  *
- * @param item - Item to validate
- * @param index - Index in items array
- * @param prefix - Error message prefix
- * @returns Array of error messages
  */
 function validateTemplateItem(item: unknown, index: number, prefix: string): string[] {
   const errors: string[] = [];
@@ -260,10 +248,6 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
 /**
  * Validate a shopping session
  *
- * @param session - Session to validate
- * @param index - Index in sessions array
- * @param prefix - Error message prefix
- * @returns Array of error messages
  */
 function validateSession(session: unknown, index: number, prefix: string): string[] {
   const errors: string[] = [];
@@ -295,8 +279,6 @@ function validateSession(session: unknown, index: number, prefix: string): strin
 /**
  * Check if a date string is valid ISO 8601 format
  *
- * @param dateString - Date string to validate
- * @returns true if valid ISO 8601 format
  */
 function isValidISODate(dateString: string): boolean {
   const date = new Date(dateString);

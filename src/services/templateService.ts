@@ -3,9 +3,9 @@
  * folders and their hierarchical item tree (categories + leaf items, path-keyed).
  *
  * A "template" IS a folder row of `type: 'template-folder'`; its items live in the folder row's
- * `items` json column and default-item flags in `default_items`. Ported off Jazz (slice-2) to
- * mirror `folderOps.ts`: every function is headless, taking the graph `g` as its first argument
- * and the folder id second — reads via `g.folder(id).$data`, writes via `g.folder.update(id, …)`.
+ * `items` json column and default-item flags in `default_items`. Like `folderOps.ts`, every
+ * function is headless, taking the graph `g` as its first argument and the folder id second —
+ * reads via `g.folder(id).$data`, writes via `g.folder.update(id, …)`.
  * No React, no IndexedDB, no server; React wiring lives in the session components.
  *
  * All timestamps are epoch-ms NUMBERS (`Date.now()`), matching the item schema's `createdAt`.

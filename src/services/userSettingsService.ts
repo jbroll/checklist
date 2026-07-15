@@ -2,13 +2,12 @@
  * UserSettings Service
  *
  * Manages global user preferences for autocomplete and auto-categorization, plus the per-folder
- * (per-template) settings. Ported off Jazz (slice-2) to mirror `subscriptionService.ts`: every
- * function is headless, taking the relational graph `g` as its first argument.
+ * (per-template) settings. Like `subscriptionService.ts`, every function is headless, taking the
+ * relational graph `g` as its first argument.
  *
  * GLOBAL settings live in the `user_settings` singleton row's `default_autocomplete_domain` /
  * `enable_auto_categorization` columns. PER-TEMPLATE settings live on the FOLDER row itself
- * (`autocomplete_domain` / `auto_categorize_enabled`). In Jazz the per-folder values were
- * overrides that fell back to the global default; here a folder's own column value IS the setting
+ * (`autocomplete_domain` / `auto_categorize_enabled`). A folder's own column value IS the setting
  * (`'none'` / `false` are the stored defaults), so there is no runtime inheritance to resolve.
  *
  * Writes go through `requireSettings` (global) or `g.folder.update` (per-template). A missing
@@ -24,7 +23,7 @@ type Graph = RelationalGraph<typeof schema>;
 
 /**
  * Default autocomplete domain used when neither the settings row nor a folder carries a usable
- * value. A designed default (matches the Jazz version), not a fallback papering over a bug.
+ * value. A designed default, not a fallback papering over a bug.
  */
 const DEFAULT_AUTOCOMPLETE_DOMAIN: AutocompleteDomain = 'grocery';
 

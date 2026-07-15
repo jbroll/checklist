@@ -1,9 +1,9 @@
 /**
- * Base importer utilities (rowboat port, slice-2).
+ * Base importer utilities.
  *
- * Shared logic for CSV and TXT importers. Ported off Jazz: takes the rowboat graph `g` and a
- * `templateId` instead of a Jazz `Account`/`FolderNode` — items are appended to the template
- * folder row's `items` json column via `g.folder.update`, matching `templateService.ts`.
+ * Shared logic for CSV and TXT importers. Takes the rowboat graph `g` and a `templateId` — items
+ * are appended to the template folder row's `items` json column via `g.folder.update`, matching
+ * `templateService.ts`.
  *
  * NO FALLBACKS: a missing template is a hard error (thrown) — callers only reach this after
  * opening the import dialog for a template that exists in the graph.

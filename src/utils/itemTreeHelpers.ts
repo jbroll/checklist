@@ -2,9 +2,9 @@ import { getParentPath, PATH_SEPARATOR } from './pathUtils';
 
 /**
  * The minimal shape these tree helpers need. Generic (rather than importing a concrete
- * `TemplateItem` type) so both the Jazz-era item shape (`createdAt: Date`) and the rowboat
+ * `TemplateItem` type) so both the Date-carrying shape (`createdAt: Date`) and the rowboat
  * item shape (`createdAt: number`, see `@/schema/folder`) satisfy it structurally — the
- * export/import pipeline still passes the former, the ported session components the latter.
+ * export/import pipeline still passes the former, the session components the latter.
  */
 export interface TreeableItem {
   path: string;
@@ -17,8 +17,6 @@ export interface TreeableItem {
 /**
  * Filter to get only active (non-archived) items
  *
- * @param items - Array of template items (may contain null/undefined)
- * @returns Array of non-archived items
  */
 export function getActiveItems<T extends TreeableItem>(
   items: readonly (T | null | undefined)[],
@@ -29,8 +27,6 @@ export function getActiveItems<T extends TreeableItem>(
 /**
  * Filter to get only leaf items (non-archived items with type === 'item')
  *
- * @param items - Array of template items (may contain null/undefined)
- * @returns Array of non-archived leaf items
  */
 export function getLeafItems<T extends TreeableItem>(
   items: readonly (T | null | undefined)[],
@@ -50,8 +46,6 @@ export interface ItemTreeNode<T extends TreeableItem = TreeableItem> {
  * Builds a hierarchical tree structure from a flat list of template items
  * Similar to buildTreeStructure but for items instead of folders
  *
- * @param items - Flat list of template items (both categories and leaf items)
- * @returns Array of root-level tree nodes
  */
 export function buildItemTree<T extends TreeableItem>(
   items: readonly (T | null | undefined)[],
