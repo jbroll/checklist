@@ -77,20 +77,27 @@ specs in `docs/superpowers/specs/`.)
   output never exposed rowboat mechanism — `parseFolderRow` strips `__order`/`__deleted`/keyed-maps
   and epoch-ms is emitted as ISO 8601.
 
-## D7 — account merge still Jazz-based — **MEDIUM**
-- **Where:** `src/components/auth/MergeAccountFlow.tsx` (the ONLY file left in `tsconfig` `exclude`)
-  and `src/lib/account-merge.ts` still read a Jazz `Account`.
-- **Symptom:** reachable via the app route but excluded from `tsc` (doesn't typecheck against the
-  rowboat provider). A rowboat design already exists —
-  `docs/superpowers/specs/2026-06-24-account-merge-design.md` — but is unimplemented.
-- **Fix:** implement the rowboat account-merge per that spec, then drop the `tsconfig` exclude.
+## D7 — account merge still Jazz-based — **RESOLVED**
+- **Was:** `MergeAccountFlow.tsx` + `lib/account-merge.ts` were Jazz (`group.addMember`/CoValue adopt,
+  the only file left in `tsconfig` `exclude`), calling backend routes that only existed in the
+  abandoned jbr-jazz backend. The 2026-06-24 spec was Jazz-specific and didn't map to rowboat.
+- **Fix (shipped):** rowboat gained a native account-merge in `@jbroll/rowboat-auth-betterauth`
+  (C3 — `start`/`prepare`/`info`/`finalize` over group `link`+`grant`, no data movement; landed
+  rowboat main; see `rowboat/docs/superpowers/specs/2026-07-15-rowboat-account-merge-c3-design.md`).
+  Checklist now consumes it: `lib/account-merge.ts` is a thin fetch client, `MergeAccountFlow.tsx` is
+  a two-login flow with the **required source-email confirmation** before finalize, routed on
+  `?merge`, entered from `ProfileDialog`. Dead Jazz removed; the `tsconfig` exclude is gone (none
+  remain). Backend auto-serves the routes via `mountAuthRoutes` + `registerIdentityTables`.
 
-## D8 — delete Jazz schema files — **cleanup, blocked on D7 (+D9)**
+## D8 — delete Jazz schema files — **cleanup**
 - **Where:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
   `ViewState`), plus `src/lib/types.ts` (Jazz type aliases, currently knip-ignored).
-- **Note:** D6 (export) is done, so these now survive only via account-merge (D7) and
-  `sessionCleanupService` (D9). Once both are ported/removed, delete these files and drop
-  `src/lib/types.ts` from `knip.json` `ignore`. This finishes removing `jazz-tools` from the frontend.
+- **Remaining pins (after D6+D7):** the Jazz `@/schema` is now only imported for TYPES by
+  `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx` (`SubscriptionTier`),
+  plus D9's dead `sessionCleanupService`. Migrate those two type-imports to the rowboat schema
+  (`@/schema/folder` `SessionData`; a rowboat `SubscriptionTier` — `subscription_tier` is an
+  `rb.text`), resolve D9, then delete `tree.ts`/`index.ts`/`lib/types.ts` and drop `lib/types.ts`
+  from `knip.json` `ignore`. That finishes removing `jazz-tools` from the frontend.
 
 ## D9 — dead `sessionCleanupService` (Jazz) — **LOW / cleanup**
 - **Where:** `src/services/sessionCleanupService.ts` — Jazz-based (`@jbr-jazz/hierarchy-shared`
