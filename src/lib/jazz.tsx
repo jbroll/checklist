@@ -18,7 +18,7 @@
  * whole subtree" pattern `RowboatConfig`'s per-identity `storeName` implies.
  */
 
-import { useAnonClaim, useAuthor } from '@jbroll/rowboat-auth-betterauth-react';
+import { useAnonClaim, useAuthor, useSession } from '@jbroll/rowboat-auth-betterauth-react';
 import {
   ANON_IDENTITY,
   buildRowboatDb,
@@ -81,10 +81,12 @@ async function serverMintGroup(parentGroupId?: string): Promise<string> {
 function RowboatBridge({
   identity,
   author,
+  sessionPending,
   children,
 }: {
   identity: string;
   author: string | null;
+  sessionPending: boolean;
   children: ReactNode;
 }) {
   // One RowboatDb per identity, kept for the life of this (keyed) subtree.
@@ -169,10 +171,33 @@ function RowboatBridge({
   //       their lists (an improvement over the Jazz `folders.length === 0` seed).
   const provisionedRef = useRef(false);
   useEffect(() => {
-    if (provisionedRef.current) return;
+    // Wait until the auth session has SETTLED before provisioning. On a reload of a signed-in
+    // user, `useAuthor()` is briefly null (session still resolving), so this bridge first mounts
+    // on the ANON identity; seeding here would write a fresh "Quick Errands" into the transient
+    // anon store, which `useAnonClaim` then adopts into the account — a duplicate list on every
+    // reload. Gating on `!sessionPending` means the anon phase never seeds; once the session
+    // settles we either seed a genuine anonymous user or, for a signed-in user, run against the
+    // authenticated store (which already has its data, so nothing is re-seeded).
+    if (provisionedRef.current || sessionPending) return;
     let cancelled = false;
     void (async () => {
       try {
+        // For a signed-in user, PULL the server's state before deciding. On a reload the local
+        // store is cold — the account's data lives on the server and arrives via an async pull —
+        // so an empty-check here would (wrongly) read "new user" and re-seed a duplicate Quick
+        // Errands on every reload. Awaiting one sync populates the local store from the server
+        // first, making the checks below reflect the account's real data. Anonymous users have no
+        // server, so their local store is already authoritative — skip the pull for them.
+        if (author) {
+          await syncWithServer({
+            db,
+            apiBase: '/api/sync',
+            author,
+            fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+          });
+        }
+        if (cancelled || provisionedRef.current) return;
+
         const existingSettings = await db
           .table('user_settings')
           .filter((r: { __deleted?: boolean }) => !r.__deleted)
@@ -198,7 +223,7 @@ function RowboatBridge({
     return () => {
       cancelled = true;
     };
-  }, [db, graph, identity, mintGroup]);
+  }, [db, graph, identity, mintGroup, sessionPending]);
 
   const value = useMemo<PortContextValue>(
     () => ({ graph, author, mintGroup }),
@@ -210,6 +235,7 @@ function RowboatBridge({
 
 export function JazzProvider({ children }: { children: ReactNode }) {
   const author = useAuthor();
+  const { isPending: sessionPending } = useSession();
   const identity = author ?? ANON_IDENTITY;
 
   // Claims the anon store into the authenticated identity's store on login. The `key` below
@@ -225,7 +251,12 @@ export function JazzProvider({ children }: { children: ReactNode }) {
   });
 
   return (
-    <RowboatBridge key={identity} identity={identity} author={author}>
+    <RowboatBridge
+      key={identity}
+      identity={identity}
+      author={author}
+      sessionPending={sessionPending}
+    >
       {children}
     </RowboatBridge>
   );
