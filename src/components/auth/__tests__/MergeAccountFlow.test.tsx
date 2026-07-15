@@ -85,4 +85,16 @@ describe('MergeAccountFlow confirm gate', () => {
     expect(await screen.findByText(/accounts already merged/i)).toBeInTheDocument();
     expect(helpers.finalizeMerge).not.toHaveBeenCalled();
   });
+
+  it('shows the entry screen (fresh start) when no saved merge state exists, even with a stale merge param in the URL', async () => {
+    window.history.replaceState({}, '', '/?merge=start');
+    helpers.loadMergeState.mockReturnValue(null);
+
+    render(<MergeAccountFlow />);
+
+    expect(await screen.findByTestId('merge-start')).toBeInTheDocument();
+    expect(helpers.mergeInfo).not.toHaveBeenCalled();
+    expect(helpers.finalizeMerge).not.toHaveBeenCalled();
+    expect(helpers.prepareMerge).not.toHaveBeenCalled();
+  });
 });

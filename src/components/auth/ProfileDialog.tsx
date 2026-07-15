@@ -28,6 +28,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { clearMergeState } from '@/lib/account-merge';
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
@@ -196,6 +197,7 @@ export function ProfileDialog({
               variant="outline"
               className="w-full justify-start gap-2"
               onClick={() => {
+                clearMergeState();
                 window.location.href = '/?merge=start';
               }}
             >

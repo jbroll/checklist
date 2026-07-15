@@ -1,16 +1,25 @@
 const MERGE_KEY = 'checklist:merge';
+const MERGE_STATE_TTL_MS = 30 * 60 * 1000;
 
 export interface MergeState {
   nonce: string;
   phase: 'awaiting-source' | 'awaiting-target';
+  createdAt?: number;
 }
 
-export function saveMergeState(s: MergeState): void {
-  localStorage.setItem(MERGE_KEY, JSON.stringify(s));
+export function saveMergeState(s: { nonce: string; phase: MergeState['phase'] }): void {
+  const state: MergeState = { ...s, createdAt: Date.now() };
+  localStorage.setItem(MERGE_KEY, JSON.stringify(state));
 }
 export function loadMergeState(): MergeState | null {
   const raw = localStorage.getItem(MERGE_KEY);
-  return raw ? (JSON.parse(raw) as MergeState) : null;
+  if (!raw) return null;
+  const state = JSON.parse(raw) as MergeState;
+  if (state.createdAt && Date.now() - state.createdAt > MERGE_STATE_TTL_MS) {
+    localStorage.removeItem(MERGE_KEY);
+    return null;
+  }
+  return state;
 }
 export function clearMergeState(): void {
   localStorage.removeItem(MERGE_KEY);
