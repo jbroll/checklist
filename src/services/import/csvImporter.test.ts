@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { makeGraph } from '@/test/rowboat';
 import { createChildPath } from '../../utils/pathUtils';
 import { importItemsFromCsv } from './csvImporter';
@@ -63,7 +64,7 @@ function graphWith(...folders: FolderRow[]): Graph {
 function itemsOf(g: Graph, id = 't1'): TemplateItem[] {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.items;
+  return parseFolderRow(node.$data).items;
 }
 
 const P = createChildPath('Produce', 'Apples'); // sanity — path separator comes from createChildPath, not '/'

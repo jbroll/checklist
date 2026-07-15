@@ -13,17 +13,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jbr-jazz/billing-backend": "file:../../jbr-jazz/packages/billing/backend",
     "@jbr-jazz/billing-shared": "file:../../jbr-jazz/packages/billing/shared",
     "@jbr-jazz/hierarchy-backend": "file:../../jbr-jazz/packages/hierarchy/backend",
     "@jbroll/rowboat-auth": "file:../../rowboat/packages/auth",
     "@jbroll/rowboat-auth-betterauth": "file:../../rowboat/packages/auth-betterauth",
     "@jbroll/rowboat-backend": "file:../../rowboat/packages/backend",
-    "@jbroll/rowboat-identity-shared": "file:../../rowboat/packages/identity-shared",
     "@jbroll/rowboat-schema": "file:../../rowboat/packages/schema",
     "@jbroll/rowboat-shared": "file:../../rowboat/packages/shared",
     "@jbroll/rowboat-sharing": "file:../../rowboat/packages/sharing",
-    "@types/ws": "^8.18.1",
     "better-auth": "1.5.6",
     "better-sqlite3": "^12.4.1",
     "cors": "^2.8.6",
@@ -34,14 +31,12 @@
     "nodemailer": "^9.0.1",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.5.0",
-    "ws": "^8.18.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@better-auth/utils": "^0.3.1",
     "@noble/ciphers": "^2.2.0",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/node": "^22.10.5",
     "@types/nodemailer": "^8.0.1",

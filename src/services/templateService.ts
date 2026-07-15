@@ -17,6 +17,7 @@ import type { FolderRow, schema, TemplateItem } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
 import { generateId } from '../lib/utils';
 import { createChildPath, getParentPath, PATH_SEPARATOR } from '../utils/pathUtils';
+import { itemsList } from './folderListHandles';
 
 type Graph = RelationalGraph<typeof schema>;
 
@@ -24,7 +25,7 @@ type Graph = RelationalGraph<typeof schema>;
 // Internal Helper Functions
 // ============================================================================
 
-function isTemplateFolder(row: FolderRow): boolean {
+function isTemplateFolder(row: { type: string }): boolean {
   return row.type === 'template-folder';
 }
 
@@ -85,20 +86,24 @@ export function templateExists(g: Graph, templateId: string): boolean {
 // Item Operations
 // ============================================================================
 
-/** Updates all descendant paths when a category's path changes. */
-function updateDescendantPaths(
+/**
+ * The per-descendant `path` rewrites when a category moves/renames from `oldParentPath` to
+ * `newParentPath`. Returns `{ id, path }` for each affected descendant so callers can apply them as
+ * field-level `setField(id, 'path', …)` writes (never a whole-`items` rewrite).
+ */
+function descendantPathChanges(
   items: TemplateItem[],
   oldParentPath: string,
   newParentPath: string,
-): TemplateItem[] {
-  return items.map((item) => {
+): Array<{ id: string; path: string }> {
+  const changes: Array<{ id: string; path: string }> = [];
+  for (const item of items) {
     if (item.path.startsWith(`${oldParentPath}${PATH_SEPARATOR}`)) {
       const relativePath = item.path.substring(oldParentPath.length + 1);
-      const newDescendantPath = `${newParentPath}${PATH_SEPARATOR}${relativePath}`;
-      return { ...item, path: newDescendantPath };
+      changes.push({ id: item.id, path: `${newParentPath}${PATH_SEPARATOR}${relativePath}` });
     }
-    return item;
-  });
+  }
+  return changes;
 }
 
 /** Internal helper to create a template item (category or item) and write it back. */
@@ -128,17 +133,14 @@ async function createTemplateItem(
     createdAt: now,
   };
 
-  const update: Partial<FolderRow> = {
-    items: [...items, newItem],
-    updated_at: now,
-  };
+  await itemsList(g, templateId).append(newItem);
 
-  // Auto-add new items to defaults if requested.
   if (options?.addToDefaults) {
-    update.default_items = { ...row.default_items, [newItem.id]: true };
+    await g.folder.update(templateId, {
+      [`default_items.${newItem.id}`]: true,
+      updated_at: now,
+    });
   }
-
-  await g.folder.update(templateId, update);
   // The IndexedDB graph propagates a write to the readable view asynchronously, so a follow-up
   // read-modify-write on this same row (e.g. adding several items back-to-back) would otherwise
   // read a STALE items array and drop the just-added item (last-write-wins). Wait for this write
@@ -220,14 +222,15 @@ export async function renameItem(
     assertNoDuplicatePath(items, newPath, itemId);
   }
 
-  let updatedItems = [...items];
-  updatedItems[itemIndex] = { ...item, name: newName, path: newPath };
+  const list = itemsList(g, templateId);
+  await list.setField(itemId, 'name', newName);
+  await list.setField(itemId, 'path', newPath);
 
   if (item.type === 'category') {
-    updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
+    for (const change of descendantPathChanges(items, oldPath, newPath)) {
+      await list.setField(change.id, 'path', change.path);
+    }
   }
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
 /** Update notes for an item or category (empty string clears the note). */
@@ -238,13 +241,9 @@ export async function updateItemNotes(
   notes: string,
 ): Promise<void> {
   const row = requireTemplate(g, templateId);
-  const items = row.items;
-  const itemIndex = requireItemIndex(items, itemId);
+  requireItemIndex(row.items, itemId);
 
-  const updatedItems = [...items];
-  updatedItems[itemIndex] = { ...items[itemIndex], notes: notes || undefined };
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
+  await itemsList(g, templateId).setField(itemId, 'notes', notes || undefined);
 }
 
 /**
@@ -258,14 +257,12 @@ export async function archiveItem(g: Graph, templateId: string, itemId: string):
 
   const categoryPrefix = item.type === 'category' ? `${item.path}${PATH_SEPARATOR}` : null;
 
-  const updatedItems = items.map((i) => {
+  const list = itemsList(g, templateId);
+  for (const i of items) {
     if (i.id === itemId || (categoryPrefix && i.path.startsWith(categoryPrefix))) {
-      return { ...i, archived: true };
+      await list.setField(i.id, 'archived', true);
     }
-    return i;
-  });
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
+  }
 }
 
 /**
@@ -294,18 +291,15 @@ export async function moveItem(
     assertNoDuplicatePath(items, newPath, itemId);
   }
 
-  let updatedItems = [...items];
-  updatedItems[itemIndex] = {
-    ...item,
-    path: newPath,
-    ...(sortOrder !== undefined && { sortOrder }),
-  };
+  const list = itemsList(g, templateId);
+  await list.setField(itemId, 'path', newPath);
+  if (sortOrder !== undefined) await list.setField(itemId, 'sortOrder', sortOrder);
 
   if (item.type === 'category') {
-    updatedItems = updateDescendantPaths(updatedItems, oldPath, newPath);
+    for (const change of descendantPathChanges(items, oldPath, newPath)) {
+      await list.setField(change.id, 'path', change.path);
+    }
   }
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
 }
 
 /** Get category expanded state (throws if the item is not a category). */
@@ -325,15 +319,10 @@ export async function setCategoryExpanded(
   expanded: boolean,
 ): Promise<void> {
   const row = requireTemplate(g, templateId);
-  const items = row.items;
-  const itemIndex = requireItemIndex(items, itemId);
-  const item = items[itemIndex];
+  const item = row.items[requireItemIndex(row.items, itemId)];
   if (item.type !== 'category') throw new Error(`Item ${itemId} is not a category`);
 
-  const updatedItems = [...items];
-  updatedItems[itemIndex] = { ...item, expanded };
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
+  await itemsList(g, templateId).setField(itemId, 'expanded', expanded);
 }
 
 /** Toggle category expanded state (convenience). */
@@ -354,13 +343,9 @@ export async function reorderItem(
   newSortOrder: number,
 ): Promise<void> {
   const row = requireTemplate(g, templateId);
-  const items = row.items;
-  const itemIndex = requireItemIndex(items, itemId);
+  requireItemIndex(row.items, itemId);
 
-  const updatedItems = [...items];
-  updatedItems[itemIndex] = { ...updatedItems[itemIndex], sortOrder: newSortOrder };
-
-  await g.folder.update(templateId, { items: updatedItems, updated_at: Date.now() });
+  await itemsList(g, templateId).setField(itemId, 'sortOrder', newSortOrder);
 }
 
 // ============================================================================
@@ -449,16 +434,11 @@ export async function setItemDefault(
   itemId: string,
   isDefault: boolean,
 ): Promise<void> {
-  const row = requireTemplate(g, templateId);
-  const defaultItems = { ...row.default_items };
-
-  if (isDefault) {
-    defaultItems[itemId] = true;
-  } else {
-    delete defaultItems[itemId];
-  }
-
-  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
+  requireTemplate(g, templateId);
+  await g.folder.update(templateId, {
+    [`default_items.${itemId}`]: isDefault,
+    updated_at: Date.now(),
+  });
 }
 
 /** Toggle an item's default state. */
@@ -479,18 +459,11 @@ export async function batchSetItemsDefault(
   itemIds: string[],
   isDefault: boolean,
 ): Promise<void> {
-  const row = requireTemplate(g, templateId);
-  const defaultItems = { ...row.default_items };
+  requireTemplate(g, templateId);
+  const changes: Record<string, unknown> = { updated_at: Date.now() };
+  for (const itemId of itemIds) changes[`default_items.${itemId}`] = isDefault;
 
-  for (const itemId of itemIds) {
-    if (isDefault) {
-      defaultItems[itemId] = true;
-    } else {
-      delete defaultItems[itemId];
-    }
-  }
-
-  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
+  await g.folder.update(templateId, changes);
 }
 
 /** Invert the default state for each of `itemIds`. */
@@ -500,15 +473,9 @@ export async function invertItemsDefault(
   itemIds: string[],
 ): Promise<void> {
   const row = requireTemplate(g, templateId);
-  const defaultItems = { ...row.default_items };
+  const changes: Record<string, unknown> = { updated_at: Date.now() };
+  for (const itemId of itemIds)
+    changes[`default_items.${itemId}`] = row.default_items[itemId] !== true;
 
-  for (const itemId of itemIds) {
-    if (defaultItems[itemId]) {
-      delete defaultItems[itemId];
-    } else {
-      defaultItems[itemId] = true;
-    }
-  }
-
-  await g.folder.update(templateId, { default_items: defaultItems, updated_at: Date.now() });
+  await g.folder.update(templateId, changes);
 }

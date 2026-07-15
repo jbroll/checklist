@@ -1,27 +1,31 @@
 /**
- * sessionService - pure functions over the rowboat relational graph implementing shopping/list
- * sessions over a template folder's items.
- *
- * A session lives in the template folder row's `sessions` json column (an array of `SessionData`).
- * Ported off Jazz (slice-2) to mirror `templateService.ts`: every function is headless, taking the
- * graph `g` as its first argument and the folder id (`templateId`) second — reads go through
- * `getTemplate(g, templateId)` (from `./templateService`), writes through `g.folder.update(id, …)`.
- * No React, no IndexedDB, no server.
- *
- * All timestamps are epoch-ms NUMBERS (`Date.now()`), matching the session/item schema.
- *
- * NO FALLBACKS: a missing template or session is a hard error (thrown), never a silent no-op.
+ * sessionService - headless pure functions over the rowboat graph for shopping/list sessions,
+ * stored in a template folder's `sessions` rb.ordered column. Writes go field-level through the
+ * `sessionsList` handle. Timestamps are epoch-ms; a missing template/session throws (NO FALLBACKS).
  */
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { generateId } from '../lib/utils';
 import type { ItemState, SessionData, schema, TemplateItem } from '../schema/folder';
+import { sessionsList } from './folderListHandles';
 import { getTemplate } from './templateService';
 
 type Graph = RelationalGraph<typeof schema>;
 
-// ============================================================================
+/** Write one session's item-state and touch its lastActivityAt, as field-level sub-path writes. */
+async function writeItemState(
+  g: Graph,
+  templateId: string,
+  sessionId: string,
+  itemId: string,
+  state: ItemState,
+  now: number,
+): Promise<void> {
+  const list = sessionsList(g, templateId);
+  await list.setField(sessionId, `itemStates.${itemId}`, state);
+  await list.setField(sessionId, 'lastActivityAt', now);
+}
+
 // Internal Helper Functions
-// ============================================================================
 
 /** Read the template folder row, throwing if it doesn't exist or isn't a template folder. */
 function requireTemplate(g: Graph, templateId: string) {
@@ -70,22 +74,14 @@ async function updateSession(
   sessionId: string,
   updates: Partial<SessionData>,
 ): Promise<void> {
-  const template = requireTemplate(g, templateId);
-  const sessions = template.sessions;
-  const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
-  if (sessionIndex === -1) {
-    throw new Error(`Session ${sessionId} not found in template ${templateId}`);
+  getSessionOrThrow(g, templateId, sessionId);
+  const list = sessionsList(g, templateId);
+  for (const [field, value] of Object.entries(updates)) {
+    await list.setField(sessionId, field, value);
   }
-
-  const updatedSessions = [...sessions];
-  updatedSessions[sessionIndex] = { ...sessions[sessionIndex], ...updates };
-
-  await g.folder.update(templateId, { sessions: updatedSessions, updated_at: Date.now() });
 }
 
-// ============================================================================
 // Session Operations
-// ============================================================================
 
 /** Create a new list session for a template (default items pre-selected). */
 export async function createSession(g: Graph, templateId: string): Promise<string> {
@@ -127,10 +123,7 @@ export async function createSession(g: Graph, templateId: string): Promise<strin
     lastActivityAt: now,
   };
 
-  await g.folder.update(templateId, {
-    sessions: [...template.sessions, newSession],
-    updated_at: now,
-  });
+  await sessionsList(g, templateId).append(newSession);
 
   return newSession.id;
 }
@@ -149,9 +142,7 @@ export function getSessions(g: Graph, templateId: string): SessionData[] {
   return template.sessions;
 }
 
-// ============================================================================
 // Item Selected State
-// ============================================================================
 
 /** Get item's "selected" state. */
 export function getItemSelected(
@@ -176,24 +167,22 @@ export async function setItemSelected(
   const itemStates = session.itemStates;
   const currentState = itemStates[itemId];
 
-  // No change needed if item doesn't exist and we're deselecting
   if (!currentState && !selected) return;
 
   const now = Date.now();
-  const newItemStates: Record<string, ItemState> = {
-    ...itemStates,
-    [itemId]: createOrUpdateItemState(currentState, selected, now),
-  };
-
-  // Check if this is the first item being selected
   const hasAnySelectedItems = Object.values(itemStates).some((state) => state.selected);
-  const isFirstSelection = selected && !hasAnySelectedItems;
 
-  await updateSession(g, templateId, sessionId, {
-    itemStates: newItemStates,
-    lastActivityAt: now,
-    ...(isFirstSelection ? { createdAt: now } : {}),
-  });
+  await writeItemState(
+    g,
+    templateId,
+    sessionId,
+    itemId,
+    createOrUpdateItemState(currentState, selected, now),
+    now,
+  );
+  if (selected && !hasAnySelectedItems) {
+    await sessionsList(g, templateId).setField(sessionId, 'createdAt', now);
+  }
 }
 
 /** Toggle item's "selected" state (convenience function). */
@@ -207,9 +196,7 @@ export async function toggleItemSelected(
   await setItemSelected(g, templateId, sessionId, itemId, !currentState);
 }
 
-// ============================================================================
 // Item Checked State
-// ============================================================================
 
 /** Get item's "checked" state. */
 export function getItemChecked(
@@ -231,24 +218,22 @@ export async function setItemChecked(
   checked: boolean,
 ): Promise<void> {
   const session = getSessionOrThrow(g, templateId, sessionId);
-  const itemStates = session.itemStates;
-  const currentState = itemStates[itemId];
+  const currentState = session.itemStates[itemId];
   if (!currentState) throw new Error(`Item state ${itemId} not found in session`);
 
   const now = Date.now();
-  const newItemStates: Record<string, ItemState> = {
-    ...itemStates,
-    [itemId]: {
+  await writeItemState(
+    g,
+    templateId,
+    sessionId,
+    itemId,
+    {
       ...currentState,
       checked,
       checkedAt: checked ? now : undefined,
     },
-  };
-
-  await updateSession(g, templateId, sessionId, {
-    itemStates: newItemStates,
-    lastActivityAt: now,
-  });
+    now,
+  );
 }
 
 /** Toggle item's "checked" state (convenience function). */
@@ -262,9 +247,7 @@ export async function toggleItemChecked(
   await setItemChecked(g, templateId, sessionId, itemId, !currentState);
 }
 
-// ============================================================================
 // Session Item Notes / Counts / View Mode
-// ============================================================================
 
 /** Update session-specific notes for an item (empty string clears the note). */
 export async function updateSessionItemNotes(
@@ -275,24 +258,23 @@ export async function updateSessionItemNotes(
   notes: string,
 ): Promise<void> {
   const session = getSessionOrThrow(g, templateId, sessionId);
-  const itemStates = session.itemStates;
-  const currentState = itemStates[itemId];
+  const currentState = session.itemStates[itemId];
+  const now = Date.now();
 
-  const newItemStates: Record<string, ItemState> = {
-    ...itemStates,
-    [itemId]: {
+  await writeItemState(
+    g,
+    templateId,
+    sessionId,
+    itemId,
+    {
       selected: currentState?.selected || false,
       checked: currentState?.checked || false,
       selectedAt: currentState?.selectedAt,
       checkedAt: currentState?.checkedAt,
       notes: notes || undefined,
     },
-  };
-
-  await updateSession(g, templateId, sessionId, {
-    itemStates: newItemStates,
-    lastActivityAt: Date.now(),
-  });
+    now,
+  );
 }
 
 /** Recompute and persist session counts (selected, checked, remaining) from leaf items. */
@@ -342,9 +324,7 @@ export async function updateViewMode(
   });
 }
 
-// ============================================================================
 // Batch Selection
-// ============================================================================
 
 /** Batch select (or deselect) a set of items. */
 export async function batchSelectItems(
@@ -355,20 +335,23 @@ export async function batchSelectItems(
   selected: boolean,
 ): Promise<void> {
   const session = getSessionOrThrow(g, templateId, sessionId);
-  const updatedStates = { ...session.itemStates };
   const now = Date.now();
+  const changes: Record<string, unknown> = {
+    [`sessions.${sessionId}.lastActivityAt`]: now,
+    updated_at: now,
+  };
 
   for (const itemId of itemIds) {
-    const currentState = updatedStates[itemId];
-    // Skip if deselecting and item has no state
+    const currentState = session.itemStates[itemId];
     if (!currentState && !selected) continue;
-    updatedStates[itemId] = createOrUpdateItemState(currentState, selected, now);
+    changes[`sessions.${sessionId}.itemStates.${itemId}`] = createOrUpdateItemState(
+      currentState,
+      selected,
+      now,
+    );
   }
 
-  await updateSession(g, templateId, sessionId, {
-    itemStates: updatedStates,
-    lastActivityAt: now,
-  });
+  await g.folder.update(templateId, changes);
 }
 
 /** Toggle selection for all items (select all if some unselected, deselect all if all selected). */
@@ -392,24 +375,25 @@ export async function invertItemSelection(
   itemIds: string[],
 ): Promise<void> {
   const session = getSessionOrThrow(g, templateId, sessionId);
-  const updatedStates = { ...session.itemStates };
   const now = Date.now();
+  const changes: Record<string, unknown> = {
+    [`sessions.${sessionId}.lastActivityAt`]: now,
+    updated_at: now,
+  };
 
   for (const itemId of itemIds) {
-    const currentState = updatedStates[itemId];
-    const currentlySelected = currentState?.selected || false;
-    updatedStates[itemId] = createOrUpdateItemState(currentState, !currentlySelected, now);
+    const currentlySelected = session.itemStates[itemId]?.selected || false;
+    changes[`sessions.${sessionId}.itemStates.${itemId}`] = createOrUpdateItemState(
+      session.itemStates[itemId],
+      !currentlySelected,
+      now,
+    );
   }
 
-  await updateSession(g, templateId, sessionId, {
-    itemStates: updatedStates,
-    lastActivityAt: now,
-  });
+  await g.folder.update(templateId, changes);
 }
 
-// ============================================================================
 // Session Lifecycle
-// ============================================================================
 
 /** Archive a session (soft delete). */
 export async function archiveSession(
@@ -441,22 +425,11 @@ export async function deleteSession(
   templateId: string,
   sessionId: string,
 ): Promise<void> {
-  const template = requireTemplate(g, templateId);
-  const sessions = template.sessions;
-  const sessionExists = sessions.some((s) => s.id === sessionId);
-  if (!sessionExists) {
-    throw new Error(`Session ${sessionId} not found in template ${templateId}`);
-  }
-
-  await g.folder.update(templateId, {
-    sessions: sessions.filter((s) => s.id !== sessionId),
-    updated_at: Date.now(),
-  });
+  getSessionOrThrow(g, templateId, sessionId);
+  await sessionsList(g, templateId).remove(sessionId);
 }
 
-// ============================================================================
 // Session Category Expansion
-// ============================================================================
 
 /** Get category expanded state in a session (defaults to true for unknown categories). */
 export function getCategoryExpanded(
@@ -477,13 +450,12 @@ export async function setCategoryExpanded(
   categoryKey: string,
   expanded: boolean,
 ): Promise<void> {
-  const session = getSessionOrThrow(g, templateId, sessionId);
-  await updateSession(g, templateId, sessionId, {
-    categoryExpanded: {
-      ...session.categoryExpanded,
-      [categoryKey]: expanded,
-    },
-  });
+  getSessionOrThrow(g, templateId, sessionId);
+  await sessionsList(g, templateId).setField(
+    sessionId,
+    `categoryExpanded.${categoryKey}`,
+    expanded,
+  );
 }
 
 /** Toggle category expanded state in a session (convenience function). */
@@ -504,16 +476,15 @@ export async function clearSessionState(
   sessionId: string,
 ): Promise<void> {
   const session = getSessionOrThrow(g, templateId, sessionId);
-  const newItemStates: Record<string, ItemState> = {};
-
+  const now = Date.now();
+  const changes: Record<string, unknown> = {
+    [`sessions.${sessionId}.lastActivityAt`]: now,
+    updated_at: now,
+  };
   for (const itemId of Object.keys(session.itemStates)) {
-    newItemStates[itemId] = { selected: false, checked: false };
+    changes[`sessions.${sessionId}.itemStates.${itemId}`] = { selected: false, checked: false };
   }
 
-  await updateSession(g, templateId, sessionId, {
-    itemStates: newItemStates,
-    lastActivityAt: Date.now(),
-  });
-
+  await g.folder.update(templateId, changes);
   await updateSessionCounts(g, templateId, sessionId);
 }

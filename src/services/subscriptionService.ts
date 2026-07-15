@@ -1,26 +1,8 @@
 /**
- * Subscription Service
- *
- * Manages subscription state between backend (source of truth) and the rowboat graph (cached for
- * offline). Provides limit checking and usage tracking for the freemium model.
- *
- * Ported off Jazz (slice-2) to mirror `folderOps.ts`/`templateService.ts`: every function is
- * headless, taking the relational graph `g` as its first argument. Subscription/preference state
- * lives in the `user_settings` singleton row (one row whose `id` is the user's id); template-folder
- * counts come from the `folder` table. No React, no Jazz account.
- *
- * Tier Limits:
- * - Free: 3 lists, 7-day session history
- * - Plus ($9.99/yr): 30 lists, 30-day session history
- * - Premium ($19.99/yr): 300 lists, 1-year session history
- * - Enterprise: Unlimited (contact sales)
- *
- * Beta Mode:
- * When subscription status is 'beta', users get Plus tier limits regardless of their actual tier.
- * This allows soft enforcement during beta testing.
- *
- * The `?? 'free'` / `?? 'beta'` defaults when NO settings row exists are the DESIGNED defaults for a
- * brand-new user (matching the Jazz version), not fallbacks papering over a bug.
+ * Subscription Service — headless functions over the rowboat graph. Subscription/preference state
+ * lives in the `user_settings` singleton row (cached from the backend source of truth for offline);
+ * list counts come from the `folder` table. Beta status grants Plus-tier limits. The `?? 'free'` /
+ * `?? 'beta'` defaults for a missing settings row are the DESIGNED new-user defaults, not fallbacks.
  */
 
 import {
@@ -34,7 +16,6 @@ import {
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import type { schema } from '@/schema/folder';
 import type { UserSettingsRow } from '../../shared/schema.js';
-import { isTemplateFolder } from '../hooks';
 
 type Graph = RelationalGraph<typeof schema>;
 
@@ -291,7 +272,7 @@ export function getSessionRetentionDays(g: Graph): number {
 export function countUserLists(g: Graph): number {
   return g.folder.all().filter((f) => {
     const row = f.$data;
-    return !row.archived && isTemplateFolder(row);
+    return !row.archived && row.type === 'template-folder';
   }).length;
 }
 

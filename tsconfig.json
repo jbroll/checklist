@@ -54,13 +54,6 @@
      * compile against the unchanged Jazz schema in `src/schema/index.ts` on their own) and
      * are no longer imported from the app's entry graph, so excluding them here only
      * silences `tsc --noEmit` — `vite build` does not process them at all. */
-    "src/components/auth/MergeAccountFlow.tsx",
-    "src/services/checklistFolderFactory.ts",
-
-    /* `useViewStateCleanup` still reads a Jazz `Account` (`account.root.viewState`); its service,
-     * `viewStateService`, is now rowboat-graph-based, so the hook no longer typechecks. Hooks are a
-     * later slice — exclude it here (and its `src/hooks/index.ts` re-export is dropped so nothing
-     * in-scope pulls it back into the program). Untouched on disk, re-wired in the component slice. */
-    "src/hooks/useViewStateCleanup.ts"
+    "src/components/auth/MergeAccountFlow.tsx"
   ]
 }

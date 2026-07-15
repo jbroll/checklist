@@ -69,9 +69,10 @@ export const Folder = z.object({
   created_by: rb.text(),
   created_at: rb.int(),
   updated_at: rb.int(),
-  // Template-folder payload (empty/absent for organizational folders).
-  items: rb.json(z.array(TemplateItemSchema)),
-  sessions: rb.json(z.array(SessionDataSchema)),
+  // Template-folder payload (empty/absent for organizational folders). `items`/`sessions` are
+  // rb.ordered (keyed map): updates are field-level dotted-path writes so concurrent edits merge (D1).
+  items: rb.ordered(TemplateItemSchema, { key: 'id' }),
+  sessions: rb.ordered(SessionDataSchema, { key: 'id' }),
   default_items: rb.json(z.record(z.string(), z.boolean())),
   show_zone_headings: rb.bool(),
   auto_categorize_enabled: rb.bool(),
@@ -109,5 +110,15 @@ export const UserSettings = z.object({
 
 export const schema = { folder: Folder, user_settings: UserSettings };
 
-export type FolderRow = RowOf<typeof Folder>;
+/**
+ * Raw storage row as `g.folder(id).$data` yields it: `rb.ordered` columns infer to the ELEMENT type
+ * and arrive as JSON strings. Read it through `parseFolderRow`, which returns `FolderRow`.
+ */
+export type RawFolderRow = RowOf<typeof Folder>;
+/** App-facing folder row: json columns parsed (`items`/`sessions` as arrays, `default_items` a record). */
+export type FolderRow = Omit<RawFolderRow, 'items' | 'sessions' | 'default_items'> & {
+  items: TemplateItem[];
+  sessions: SessionData[];
+  default_items: Record<string, boolean>;
+};
 export type UserSettingsRow = RowOf<typeof UserSettings>;

@@ -22,6 +22,7 @@ import type {
   ExportedSession,
   ExportedTemplateItem,
 } from '../export/types';
+import { itemsList, sessionsList } from '../folderListHandles';
 import * as folderOps from '../folderOps';
 import { type BaseImportResult, type ItemToImport, importItems } from './baseImporter';
 import type { ImportResult } from './types';
@@ -38,14 +39,7 @@ export interface JsonImportContext {
   parentId?: string | null;
 }
 
-/**
- * Import JSON data (a full/partial backup) into the graph.
- *
- * @param g - The rowboat graph
- * @param jsonString - JSON string to import
- * @param ctx - group-minting + attribution context
- * @returns Import result with success/failure info
- */
+/** Import JSON data (a full/partial backup) into the graph. */
 export async function importJson(
   g: Graph,
   jsonString: string,
@@ -89,11 +83,6 @@ export async function importJson(
  * - ExportedData (full export) - extracts items from all folders
  * - ExportedFolder (single folder) - extracts items directly
  * - ExportedTemplateItem[] (items array) - uses items directly
- *
- * @param g - The rowboat graph
- * @param templateId - Template folder to import items into
- * @param jsonString - JSON string containing items
- * @returns Import result with statistics
  */
 export async function importItemsFromJson(
   g: Graph,
@@ -237,11 +226,13 @@ async function importFolders(
         now,
       });
       await g.folder.update(row.id, {
-        items,
-        sessions,
         created_at: new Date(exportedFolder.createdAt).getTime(),
         updated_at: new Date(exportedFolder.updatedAt).getTime(),
       });
+      const itemHandle = itemsList(g, row.id);
+      for (const item of items) await itemHandle.append(item);
+      const sessionHandle = sessionsList(g, row.id);
+      for (const session of sessions) await sessionHandle.append(session);
 
       foldersCreated++;
       itemsAdded += items.length;

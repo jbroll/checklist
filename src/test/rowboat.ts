@@ -28,10 +28,12 @@ import {
   reactiveArrayStore,
   relational,
 } from '@jbroll/rowboat-schema';
+import { deepSet } from '@jbroll/rowboat-shared';
 import { type RenderResult, render } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { vi } from 'vitest';
 import { schema } from '@/schema/folder';
+import { toOrderedMap } from '@/services/folderListHandles';
 
 type Graph = RelationalGraph<typeof schema>;
 
@@ -46,6 +48,8 @@ const FOLDER_JSON_COLUMNS = ['items', 'sessions', 'default_items'] as const;
  * back as strings — exercising `parseFolderRow` the same way production does — instead of silently
  * matching the unported bug where json columns were read as arrays directly.
  */
+const ORDERED_COLUMNS = new Set(['items', 'sessions']);
+
 function stringifyFolderJsonColumns(
   seed?: Record<string, Row[]>,
 ): Record<string, Row[]> | undefined {
@@ -55,16 +59,81 @@ function stringifyFolderJsonColumns(
     folder: seed.folder.map((row) => {
       const stringified: Row = { ...row };
       for (const col of FOLDER_JSON_COLUMNS) {
-        if (col in row) stringified[col] = JSON.stringify(row[col]);
+        if (!(col in row)) continue;
+        const value = row[col];
+        const stored =
+          ORDERED_COLUMNS.has(col) && Array.isArray(value)
+            ? toOrderedMap(value as Array<{ id: string }>)
+            : value;
+        stringified[col] = JSON.stringify(stored);
       }
       return stringified;
     }),
   };
 }
 
+type TestStore = ReturnType<typeof reactiveArrayStore>;
+
+/**
+ * Deep-merge dotted json-column writes into the stored cell, mirroring the real client's
+ * `applyChanges`. `reactiveArrayStore` only shallow-spreads, so without this a `{ 'items.b': … }`
+ * write would land as a literal `"items.b"` column instead of merging into `items`.
+ */
+function withJsonPathMerge(store: TestStore): TestStore {
+  const jsonCols = new Set<string>(FOLDER_JSON_COLUMNS);
+  const mergeChanges = (
+    table: string,
+    id: string,
+    changes: Record<string, unknown>,
+  ): Record<string, unknown> => {
+    const row = store.all(table).find((r) => r.id === id);
+    const groups = new Map<string, Map<string, unknown>>();
+    const plain: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(changes)) {
+      const dot = key.indexOf('.');
+      const col = dot === -1 ? key : key.slice(0, dot);
+      if (dot !== -1 && jsonCols.has(col)) {
+        if (!groups.has(col)) groups.set(col, new Map());
+        groups.get(col)?.set(key.slice(dot + 1), value);
+      } else if (dot === -1 && jsonCols.has(col) && value !== null && typeof value === 'object') {
+        plain[col] = JSON.stringify(value);
+      } else {
+        plain[key] = value;
+      }
+    }
+    for (const [col, paths] of groups) {
+      const baseStr = plain[col] ?? row?.[col];
+      const blob: Record<string, unknown> =
+        typeof baseStr === 'string'
+          ? (JSON.parse(baseStr) as Record<string, unknown>)
+          : { ...((baseStr as Record<string, unknown> | undefined) ?? {}) };
+      for (const [path, value] of paths) deepSet(blob, path, value);
+      plain[col] = JSON.stringify(blob);
+    }
+    return plain;
+  };
+  return {
+    ...store,
+    update: (
+      t: string,
+      idOrItems: string | Array<{ id: string; changes: Record<string, unknown> }>,
+      changes?: Record<string, unknown>,
+    ): Promise<void> =>
+      Array.isArray(idOrItems)
+        ? store.update(
+            t,
+            idOrItems.map((it) => ({ id: it.id, changes: mergeChanges(t, it.id, it.changes) })),
+          )
+        : store.update(t, idOrItems, mergeChanges(t, idOrItems, changes ?? {})),
+  };
+}
+
 /** A fresh in-memory graph over the folder schema, optionally pre-seeded. */
 export function makeGraph(seed?: Record<string, Row[]>): Graph {
-  return relational(schema, reactiveArrayStore(stringifyFolderJsonColumns(seed)));
+  return relational(
+    schema,
+    withJsonPathMerge(reactiveArrayStore(stringifyFolderJsonColumns(seed))),
+  );
 }
 
 let activeGraph: Graph | null = null;

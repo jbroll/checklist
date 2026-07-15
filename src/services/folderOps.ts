@@ -9,7 +9,7 @@
  * NO FALLBACKS: a missing node is a hard error (thrown), never a silent no-op.
  */
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
-import type { FolderRow, schema } from '@/schema/folder';
+import type { FolderRow, RawFolderRow, schema } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
 
 type Graph = RelationalGraph<typeof schema>;
@@ -41,8 +41,6 @@ export async function addFolder(g: Graph, input: AddFolderInput): Promise<Folder
     created_by: input.createdBy,
     created_at: input.now,
     updated_at: input.now,
-    // Template-folder payload: empty for a fresh folder (organizational OR template) — items and
-    // sessions are added later via templateService/sessionService.
     items: [],
     sessions: [],
     default_items: {},
@@ -56,7 +54,7 @@ export async function addFolder(g: Graph, input: AddFolderInput): Promise<Folder
   // would throw a false "not found" (it succeeds only on the synchronous test store). The
   // reactive `folders`/`useSelect` subscription repaints when the write lands. Return the row
   // we wrote — it is the created FolderRow.
-  await g.folder.create(row);
+  await g.folder.create({ ...row, items: {}, sessions: {} } as unknown as RawFolderRow);
   return row;
 }
 

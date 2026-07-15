@@ -15,7 +15,8 @@
  * store (see that file), but tolerating an already-parsed value here too means this function
  * behaves identically regardless of which store shape it's handed.
  */
-import type { FolderRow } from './folder.js';
+import { type OrderedElement, orderedToArray } from '@jbroll/rowboat-client';
+import type { FolderRow, RawFolderRow, SessionData, TemplateItem } from './folder.js';
 
 function parseJsonColumn<T>(value: unknown, fallbackWhenNullish: T): T {
   if (typeof value === 'string') return JSON.parse(value) as T;
@@ -38,12 +39,14 @@ export function coerceBool(value: unknown): boolean {
  * Parse a raw `FolderRow`'s json columns (`items`/`sessions`/`default_items`) and coerce its
  * `rb.bool` columns to real booleans for reading.
  */
-export function parseFolderRow(row: FolderRow): FolderRow {
+export function parseFolderRow(row: RawFolderRow): FolderRow {
+  const itemMap = parseJsonColumn<Record<string, OrderedElement>>(row.items as unknown, {});
+  const sessionMap = parseJsonColumn<Record<string, OrderedElement>>(row.sessions as unknown, {});
   return {
-    ...row,
-    items: parseJsonColumn(row.items, []),
-    sessions: parseJsonColumn(row.sessions, []),
-    default_items: parseJsonColumn(row.default_items, {}),
+    ...(row as unknown as FolderRow),
+    items: orderedToArray(itemMap) as unknown as TemplateItem[],
+    sessions: orderedToArray(sessionMap) as unknown as SessionData[],
+    default_items: parseJsonColumn(row.default_items as unknown, {}),
     archived: coerceBool(row.archived),
     expanded: coerceBool(row.expanded),
     show_zone_headings: coerceBool(row.show_zone_headings),

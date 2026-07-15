@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { makeGraph } from '@/test/rowboat';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import type { ExportedData, ExportedFolder, ExportedTemplateItem } from '../export/types';
@@ -52,7 +53,7 @@ function graphWith(...folders: FolderRow[]): Graph {
 function itemsOf(g: Graph, id: string): TemplateItem[] {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.items;
+  return parseFolderRow(node.$data).items;
 }
 
 /** Default group-minting/attribution context for `importJson`. */
@@ -199,7 +200,7 @@ describe('jsonImporter', () => {
       const items = itemsOf(g, folderId);
       const newItemId = items[0].id;
       expect(newItemId).not.toBe('exported-item-1');
-      const sessions = g.folder(folderId)?.$data.sessions ?? [];
+      const sessions = parseFolderRow(g.folder(folderId)!.$data).sessions;
       expect(sessions).toHaveLength(1);
       expect(sessions[0].itemStates[newItemId]).toBeDefined();
       expect(sessions[0].itemStates[newItemId].selected).toBe(true);

@@ -227,7 +227,7 @@ export function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
 }
 
 /** Predicate helpers kept for parity with the jazz-backed hook's module exports. */
-export function isTemplateFolder(folder: FolderRow): boolean {
+export function isTemplateFolder(folder: { type: string }): boolean {
   return folder.type === 'template-folder';
 }
 

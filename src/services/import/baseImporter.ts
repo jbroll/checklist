@@ -11,6 +11,7 @@
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import { generateId } from '../../lib/utils';
 import type { schema, TemplateItem } from '../../schema/folder';
+import { itemsList } from '../folderListHandles';
 import { getTemplate } from '../templateService';
 
 type Graph = RelationalGraph<typeof schema>;
@@ -42,11 +43,6 @@ function requireTemplate(g: Graph, templateId: string) {
  * Import multiple items into a template.
  *
  * Handles duplicate detection, item creation, and error tracking.
- *
- * @param g - The rowboat graph
- * @param templateId - Template folder to import into
- * @param items - Items to import
- * @returns Import result with statistics
  */
 export async function importItems(
   g: Graph,
@@ -114,10 +110,8 @@ export async function importItems(
   }
 
   if (newItems.length > 0) {
-    await g.folder.update(templateId, {
-      items: [...template.items, ...newItems],
-      updated_at: now,
-    });
+    const list = itemsList(g, templateId);
+    for (const newItem of newItems) await list.append(newItem);
   }
 
   return result;

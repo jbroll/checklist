@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { makeGraph } from '@/test/rowboat';
 import { PATH_SEPARATOR } from '../utils/pathUtils';
 import * as templateService from './templateService';
@@ -72,14 +73,14 @@ function graphWith(...folders: FolderRow[]): Graph {
 function itemsOf(g: Graph, id = 't1'): TemplateItem[] {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.items;
+  return parseFolderRow(node.$data).items;
 }
 
 /** Read a template's default_items map, hard-erroring if the folder is missing. */
 function defaultsOf(g: Graph, id = 't1'): Record<string, boolean> {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.default_items;
+  return parseFolderRow(node.$data).default_items;
 }
 
 describe('templateService', () => {
@@ -688,7 +689,7 @@ describe('templateService', () => {
 
         await templateService.setItemDefault(g, 't1', 'item-1', false);
 
-        expect(defaultsOf(g)['item-1']).toBeUndefined();
+        expect(defaultsOf(g)['item-1']).toBe(false);
       });
 
       it('should toggle item default state', async () => {
@@ -698,7 +699,7 @@ describe('templateService', () => {
         expect(defaultsOf(g)['item-1']).toBe(true);
 
         await templateService.toggleItemDefault(g, 't1', 'item-1');
-        expect(defaultsOf(g)['item-1']).toBeUndefined();
+        expect(defaultsOf(g)['item-1']).toBe(false);
       });
 
       it('should batch set items as default', async () => {
@@ -728,7 +729,7 @@ describe('templateService', () => {
         await templateService.batchSetItemsDefault(g, 't1', ['item-1'], false);
 
         const defaults = defaultsOf(g);
-        expect(defaults['item-1']).toBeUndefined();
+        expect(defaults['item-1']).toBe(false);
         expect(defaults['item-2']).toBe(true);
       });
 
@@ -745,7 +746,7 @@ describe('templateService', () => {
         await templateService.invertItemsDefault(g, 't1', ['item-1', 'item-2', 'item-3']);
 
         const defaults = defaultsOf(g);
-        expect(defaults['item-1']).toBeUndefined();
+        expect(defaults['item-1']).toBe(false);
         expect(defaults['item-2']).toBe(true);
         expect(defaults['item-3']).toBe(true);
       });

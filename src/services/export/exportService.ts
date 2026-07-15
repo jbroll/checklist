@@ -27,7 +27,7 @@ import type { ExportedData, ExportScope } from './types';
 type Graph = RelationalGraph<typeof schema>;
 
 /** A "template" is a folder row of `type: 'template-folder'`. */
-function isTemplateFolder(row: FolderRow): boolean {
+function isTemplateFolder(row: { type: string }): boolean {
   return row.type === 'template-folder';
 }
 
@@ -81,13 +81,7 @@ function getTemplateOrThrow(g: Graph, templateId: string): FolderRow {
   return template;
 }
 
-/**
- * Export folders to JSON based on scope.
- *
- * @param g - The rowboat relational graph
- * @param scope - What to export (all folders or single template)
- * @returns Export data structure
- */
+/** Export folders to JSON based on scope. */
 export function exportToJson(g: Graph, scope: ExportScope): ExportedData {
   if (scope.type === 'all-folders') {
     return exportAllFolders(g);
@@ -105,26 +99,12 @@ export function exportToJson(g: Graph, scope: ExportScope): ExportedData {
   return exportTemplate(template);
 }
 
-/**
- * Export to a JSON string.
- *
- * @param g - The rowboat relational graph
- * @param scope - What to export
- * @param pretty - Whether to pretty-print (default: true)
- * @returns JSON string
- */
+/** Export to a JSON string. */
 export function exportToJsonString(g: Graph, scope: ExportScope, pretty = true): string {
   return toJsonString(exportToJson(g, scope), pretty);
 }
 
-/**
- * Generate a filename for an export.
- *
- * @param scope - Export scope
- * @param format - Export format
- * @param folderName - Folder name (for single-folder exports)
- * @returns Suggested filename
- */
+/** Generate a filename for an export. */
 export function generateFilename(
   scope: ExportScope,
   format: 'json' | 'txt' | 'csv',

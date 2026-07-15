@@ -74,7 +74,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@formkit/auto-animate": "^0.9.0",
     "@jbr-jazz/billing-shared": "file:../jbr-jazz/packages/billing/shared",
-    "@jbr-jazz/hierarchy-client": "file:../jbr-jazz/packages/hierarchy/client",
     "@jbr-jazz/hierarchy-shared": "file:../jbr-jazz/packages/hierarchy/shared",
     "@jbroll/rowboat-auth-betterauth-react": "file:../rowboat/packages/auth-betterauth-react",
     "@jbroll/rowboat-client": "file:../rowboat/packages/client",

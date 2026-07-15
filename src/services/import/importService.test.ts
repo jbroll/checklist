@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, TemplateItem } from '@/schema/folder';
+import { parseFolderRow } from '@/schema/folderData';
 import { makeGraph } from '@/test/rowboat';
 import * as folderOps from '../folderOps';
 import {
@@ -57,7 +58,7 @@ function graphWith(...folders: FolderRow[]): Graph {
 function itemsOf(g: Graph, id: string): TemplateItem[] {
   const node = g.folder(id);
   if (!node) throw new Error(`template ${id} not found`);
-  return node.$data.items;
+  return parseFolderRow(node.$data).items;
 }
 
 function ctx(overrides: Partial<JsonImportContext> = {}): JsonImportContext {
@@ -342,7 +343,7 @@ Item2,Cat2`;
       expect(result.stats.itemsAdded).toBe(4);
       const created = folderOps.topLevelFolders(g)[0];
       const items = itemsOf(g, created.id);
-      const defaults = g.folder(created.id)?.$data.default_items ?? {};
+      const defaults = parseFolderRow(g.folder(created.id)!.$data).default_items;
       expect(Object.keys(defaults)).toHaveLength(4);
       for (const item of items) {
         expect(defaults[item.id]).toBe(true);
@@ -362,7 +363,7 @@ Item2,Cat2`;
       // 3 items total: 1 category (Dairy) + 2 items (Butter, Milk)
       expect(items).toHaveLength(3);
 
-      const defaults = g.folder(created.id)?.$data.default_items ?? {};
+      const defaults = parseFolderRow(g.folder(created.id)!.$data).default_items;
       expect(Object.keys(defaults)).toHaveLength(2);
       for (const item of items) {
         if (item.type === 'item') {

@@ -13,8 +13,8 @@
  * `items` json column and race the async graph propagation (dropping items). NO FALLBACKS.
  */
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
-import type { FolderRow, schema } from '@/schema/folder';
-import type { TemplateItem } from '../../shared/schema.js';
+import type { FolderRow, RawFolderRow, schema, TemplateItem } from '@/schema/folder';
+import { toOrderedMap } from './folderListHandles';
 
 type Graph = RelationalGraph<typeof schema>;
 
@@ -83,7 +83,10 @@ export async function seedDefaultFolders(
   createdBy: string,
 ): Promise<void> {
   if (g.folder.all().length > 0) return;
-  await g.folder.create(
-    buildQuickErrandsFolder(crypto.randomUUID(), ownerGroupId, createdBy, Date.now()),
-  );
+  const folder = buildQuickErrandsFolder(crypto.randomUUID(), ownerGroupId, createdBy, Date.now());
+  await g.folder.create({
+    ...folder,
+    items: toOrderedMap(folder.items),
+    sessions: {},
+  } as unknown as RawFolderRow);
 }

@@ -22,6 +22,7 @@ export {
   Folder,
   type FolderRow,
   type ItemState,
+  type RawFolderRow,
   type SessionData,
   schema,
   type TemplateItem,
