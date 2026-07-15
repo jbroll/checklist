@@ -45,15 +45,6 @@
     "src/**/*.spec.tsx",
     "src/test/**/*",
     "e2e/**/*",
-    "playwright.config.ts",
-
-    /* rowboat port (slice 1, folders-only — see docs/superpowers/d-t4-report.md): these
-     * still read a Jazz `Account` via the OLD `useAccount`/`useTypedAccount`, which the
-     * rowboat provider (`src/lib/jazz.tsx`) no longer supplies. Items/sessions/billing/
-     * sharing-invites are out of slice-1 scope; the files are untouched on disk (still
-     * compile against the unchanged Jazz schema in `src/schema/index.ts` on their own) and
-     * are no longer imported from the app's entry graph, so excluding them here only
-     * silences `tsc --noEmit` — `vite build` does not process them at all. */
-    "src/components/auth/MergeAccountFlow.tsx"
+    "playwright.config.ts"
   ]
 }

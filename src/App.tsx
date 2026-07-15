@@ -71,8 +71,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 }
 
 // TestPage and BillingSuccessPage use rowboat via `useRowboat()`, and their routes are enabled
-// below (TestPage only outside PROD). MergeAccountFlow stays excluded from `tsconfig` (see
-// `docs/superpowers/d-t4-report.md`). InviteAcceptPage uses rowboat's `useSharing` (see
+// below (TestPage only outside PROD). InviteAcceptPage uses rowboat's `useSharing` (see
 // `docs/superpowers/d-t5-report.md`) and is enabled below.
 
 // Lazy load InviteAcceptPage for sharing invites
@@ -114,6 +113,10 @@ const BillingSuccessPage = lazy(() =>
 // Lazy load TestPage only in development to avoid bundling it in production. Rendered at /test
 // (blocked in PROD below); exposes the rowboat graph + services on window.testExports for E2E.
 const TestPage = lazy(() => import('./TestPage').then((module) => ({ default: module.TestPage })));
+
+// Lazy load MergeAccountFlow for account-merge deep links (?merge=<nonce>). Manages its own
+// auth screens, so it must be routed before the AuthGate fallback.
+const MergeAccountFlow = lazy(() => import('./components/auth/MergeAccountFlow'));
 
 function App() {
   // Check for in-app browser (Facebook, Instagram, etc.) which don't support
@@ -162,6 +165,7 @@ function App() {
   const isBillingCancel = pathname === '/billing/cancel';
   const isBillingSuccess = pathname === '/billing/success';
   const isTestPage = pathname === '/test';
+  const isMergePage = new URLSearchParams(window.location.search).has('merge');
 
   // Block in-app browsers (Facebook, Instagram, etc.) which don't support
   // OAuth and have unreliable local storage for offline data
@@ -203,6 +207,10 @@ function App() {
             ) : isTestPage && !import.meta.env.PROD ? (
               <Suspense fallback={<LoadingScreen />}>
                 <TestPage />
+              </Suspense>
+            ) : isMergePage ? (
+              <Suspense fallback={<LoadingScreen />}>
+                <MergeAccountFlow />
               </Suspense>
             ) : (
               <AuthGate />
