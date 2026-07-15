@@ -7,6 +7,7 @@ import {
   Sparkles,
   Sun,
   User,
+  Users,
   UserX,
   X,
   Zap,
@@ -183,6 +184,24 @@ export function ProfileDialog({
           {/* Linked Emails Section */}
           <div className="border-t border-border-default pt-3">
             <LinkedEmailsSection />
+          </div>
+
+          {/* Combine Accounts Section */}
+          <div className="border-t border-border-default pt-3 flex flex-col gap-2">
+            <p className="text-xs text-content-tertiary">
+              Combine another account's lists into this one.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => {
+                window.location.href = '/?merge=start';
+              }}
+            >
+              <Users className="h-4 w-4" />
+              Combine Another Account
+            </Button>
           </div>
 
           {/* Subscription Section */}
