@@ -4,21 +4,16 @@
  * Exports folder structures with all template items and session history to JSON format.
  * Version 2.0: hierarchical structure and neutral terminology.
  *
- * Ported off Jazz: reads the rowboat relational graph instead of an `Account`/`FolderNode`.
- * `exportAllFolders(g)` walks the folder tree (top-level folders + descendants, skipping
- * archived subtrees) and exports every template folder. Item/session timestamps live in the
- * folder row's json columns as epoch-ms NUMBERS; the shared `buildItemTree`/`generateSessionName`
- * helpers are still Jazz-typed (Date), so numbers are converted to `Date` at that boundary
- * (`toDatedItem`/`toDatedSession`) before those helpers run. Own timestamps (folder/item/session
- * createdAt) are required columns, so they convert directly — NO FALLBACKS for a missing date.
+ * Reads the rowboat relational graph. `exportAllFolders(g)` walks the folder tree (top-level
+ * folders + descendants, skipping archived subtrees) and exports every template folder. Timestamps
+ * live in the folder row's json columns as epoch-ms NUMBERS; `buildItemTree`/`generateSessionName`
+ * and the exported-format mappers consume `Date`, so numbers are converted to `Date`
+ * (`toDatedItem`/`toDatedSession`) before those run. NO FALLBACKS for a missing date.
  */
 
 import type { RelationalGraph } from '@jbroll/rowboat-schema';
 import packageJson from '../../../package.json';
 import { generateSessionName } from '../../lib/utils';
-// Date-carrying (Jazz-shaped) views used only to satisfy the still-Jazz-typed
-// `buildItemTree`/`generateSessionName` helpers (they read Date timestamps).
-import type { TemplateItem as DatedItem, SessionData as DatedSession } from '../../schema';
 import type { FolderRow, SessionData, schema, TemplateItem } from '../../schema/folder';
 import { parseFolderRow } from '../../schema/folderData';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
@@ -36,6 +31,21 @@ type Graph = RelationalGraph<typeof schema>;
 function isTemplateFolder(row: FolderRow): boolean {
   return row.type === 'template-folder';
 }
+
+/** Date-carrying views of the rowboat rows, so `buildItemTree` + the mappers can `.toISOString()`. */
+type DatedItem = Omit<TemplateItem, 'createdAt'> & { createdAt: Date };
+type DatedItemState = {
+  selected: boolean;
+  checked: boolean;
+  selectedAt?: Date;
+  checkedAt?: Date;
+  notes?: string;
+};
+type DatedSession = Omit<SessionData, 'createdAt' | 'lastActivityAt' | 'itemStates'> & {
+  createdAt: Date;
+  lastActivityAt: Date;
+  itemStates: Record<string, DatedItemState>;
+};
 
 /** Convert a rowboat template item (epoch-ms createdAt) to the Date-carrying shape. */
 function toDatedItem(item: TemplateItem): DatedItem {
@@ -102,8 +112,6 @@ function collectTemplateFolders(g: Graph): FolderRow[] {
 /**
  * Export all template folders from the graph.
  *
- * @param g - The rowboat relational graph
- * @returns Complete export data structure
  */
 export function exportAllFolders(g: Graph): ExportedData {
   return {
@@ -117,8 +125,6 @@ export function exportAllFolders(g: Graph): ExportedData {
 /**
  * Export a single template folder row.
  *
- * @param folder - The template folder row to export
- * @returns Export data containing single template
  */
 export function exportTemplate(folder: FolderRow): ExportedData {
   return {
@@ -218,9 +224,6 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
 /**
  * Convert export data to a JSON string.
  *
- * @param data - Export data structure
- * @param pretty - Whether to pretty-print the JSON (default: true)
- * @returns JSON string
  */
 export function toJsonString(data: ExportedData, pretty = true): string {
   return JSON.stringify(data, null, pretty ? 2 : 0);

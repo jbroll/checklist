@@ -64,16 +64,18 @@ specs in `docs/superpowers/specs/`.)
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
 
-## D6 — export subsystem still Jazz-typed — **MEDIUM**
-- **Where:** `src/services/export/csvExporter.ts`, `txtExporter.ts`, `helpers.ts` still
-  `import ... from 'jazz-tools'` + `@jbr-jazz/hierarchy-shared` (`toArray`/`getLeafItems`) and expose
-  Jazz-typed functions — e.g. `exportTemplateItemsToCsv(template: InstanceOfSchema<typeof FolderNode>)`
-  reading `TemplateItem` from the Jazz `schema/tree`.
-- **Symptom:** the rowboat `exportService.ts` bridges rowboat `FolderRow` data into these Jazz-typed
-  `...Impl` functions. It compiles and works, but the exporters are not ported off Jazz, and they keep
-  `jazz-tools`/`@jbr-jazz/hierarchy-shared` on the dependency graph.
-- **Fix:** re-type the exporters against rowboat `FolderRow`/`TemplateItem` (`@/schema/folder`), drop
-  the Jazz imports, and remove the `exportService` bridge. Enables deleting the Jazz schemas (D8).
+## D6 — export subsystem still Jazz-typed — **RESOLVED**
+- **Was:** `csvExporter`/`txtExporter`/`helpers` imported `jazz-tools` + `@jbr-jazz/hierarchy-shared`
+  (`toArray`) and were typed against the Jazz `FolderNode`/`TemplateItem`; `exportService` bridged
+  rowboat data in via a `toDatedFolder` epoch-ms→`Date` adapter. `jsonExporter` also imported Jazz
+  `TemplateItem`/`SessionData` types.
+- **Fix (shipped):** re-typed all exporters against rowboat `FolderRow`/`TemplateItem`
+  (`@/schema/folder`), replaced the Jazz `toArray` with a plain `.find()`, extended
+  `toISOStringOrEmpty` to accept epoch-ms `number`, dropped the `toDatedFolder` bridge, and defined
+  `jsonExporter`'s date-carrying shapes locally. `src/services/export/` no longer imports
+  `jazz-tools`/`@jbr-jazz`. The export format is unchanged (75 export tests green). Note the export
+  output never exposed rowboat mechanism — `parseFolderRow` strips `__order`/`__deleted`/keyed-maps
+  and epoch-ms is emitted as ISO 8601.
 
 ## D7 — account merge still Jazz-based — **MEDIUM**
 - **Where:** `src/components/auth/MergeAccountFlow.tsx` (the ONLY file left in `tsconfig` `exclude`)
@@ -83,12 +85,12 @@ specs in `docs/superpowers/specs/`.)
   `docs/superpowers/specs/2026-06-24-account-merge-design.md` — but is unimplemented.
 - **Fix:** implement the rowboat account-merge per that spec, then drop the `tsconfig` exclude.
 
-## D8 — delete Jazz schema files once D6/D7 land — **cleanup, blocked on D6+D7**
+## D8 — delete Jazz schema files — **cleanup, blocked on D7 (+D9)**
 - **Where:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
   `ViewState`), plus `src/lib/types.ts` (Jazz type aliases, currently knip-ignored).
-- **Note:** these survive ONLY because the export exporters (D6) and account-merge (D7) still import
-  them. Once both are ported, delete these files and remove `src/lib/types.ts` from `knip.json`
-  `ignore`. This finishes removing `jazz-tools` from the frontend.
+- **Note:** D6 (export) is done, so these now survive only via account-merge (D7) and
+  `sessionCleanupService` (D9). Once both are ported/removed, delete these files and drop
+  `src/lib/types.ts` from `knip.json` `ignore`. This finishes removing `jazz-tools` from the frontend.
 
 ## D9 — dead `sessionCleanupService` (Jazz) — **LOW / cleanup**
 - **Where:** `src/services/sessionCleanupService.ts` — Jazz-based (`@jbr-jazz/hierarchy-shared`

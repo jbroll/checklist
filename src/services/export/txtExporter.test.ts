@@ -245,7 +245,7 @@ describe('txtExporter', () => {
 
     it('should return null if template has no sessions', () => {
       const template = createMockTemplate();
-      template.sessions = undefined as any;
+      template.sessions = [];
 
       const result = exportSessionToText(template as any, 'session-1');
 

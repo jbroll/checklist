@@ -225,7 +225,7 @@ describe('csvExporter', () => {
 
     it('should return null if template has no sessions', () => {
       const template = createMockTemplate();
-      template.sessions = undefined as any;
+      template.sessions = [];
 
       const result = exportSessionToCsv(template as any, 'session-1');
 

@@ -7,9 +7,7 @@
  * 2. Indented format: Hierarchical structure with 2-space indentation
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schema';
-import type { TemplateItem } from '../../schema/tree';
+import type { FolderRow, TemplateItem } from '../../schema/folder';
 import { buildItemTree, getActiveItems, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import { findSessionById } from './helpers';
 
@@ -20,10 +18,8 @@ import { findSessionById } from './helpers';
  * - If categories exist: exports hierarchical indented format
  * - If no categories: exports flat format (one item per line)
  *
- * @param template - FolderNode to export items from
- * @returns Plain text string
  */
-export function exportTemplateItemsToText(template: InstanceOfSchema<typeof FolderNode>): string {
+export function exportTemplateItemsToText(template: FolderRow): string {
   if (!template.items || template.items.length === 0) {
     return '';
   }
@@ -51,8 +47,6 @@ export function exportTemplateItemsToText(template: InstanceOfSchema<typeof Fold
 /**
  * Export items in hierarchical indented format
  *
- * @param items - Sorted items to export
- * @returns Indented text string
  */
 function exportHierarchical(items: TemplateItem[]): string {
   // Build tree structure from flat items using shared utility
@@ -65,9 +59,6 @@ function exportHierarchical(items: TemplateItem[]): string {
 /**
  * Convert tree to indented text
  *
- * @param nodes - Tree nodes
- * @param indent - Current indentation level
- * @returns Indented text string
  */
 function treeToIndentedText(nodes: ItemTreeNode[], indent = 0): string {
   const lines: string[] = [];
@@ -93,14 +84,8 @@ function treeToIndentedText(nodes: ItemTreeNode[], indent = 0): string {
  * ✓ Item Name (purchased)
  *   Item Name (not purchased)
  *
- * @param template - FolderNode containing the session
- * @param sessionId - ID of the session to export
- * @returns Plain text string with checkmarks
  */
-export function exportSessionToText(
-  template: InstanceOfSchema<typeof FolderNode>,
-  sessionId: string,
-): string | null {
+export function exportSessionToText(template: FolderRow, sessionId: string): string | null {
   const session = findSessionById(template, sessionId);
   if (!session) return null;
 

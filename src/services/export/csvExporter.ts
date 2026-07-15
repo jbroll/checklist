@@ -4,9 +4,7 @@
  * Exports template items and sessions to CSV format.
  */
 
-import type { InstanceOfSchema } from 'jazz-tools';
-import type { FolderNode } from '../../schema';
-import type { TemplateItem } from '../../schema/tree';
+import type { FolderRow, TemplateItem } from '../../schema/folder';
 import { toISOStringOrEmpty } from '../../utils/dateUtils';
 import { getLeafItems } from '../../utils/itemTreeHelpers';
 import { findSessionById } from './helpers';
@@ -27,10 +25,8 @@ function escapeCsvField(value: string): string {
  *
  * Format: name,defaultQuantity,path
  *
- * @param template - FolderNode to export items from
- * @returns CSV string with header row
  */
-export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof FolderNode>): string {
+export function exportTemplateItemsToCsv(template: FolderRow): string {
   const lines: string[] = [];
 
   // Header row
@@ -64,14 +60,8 @@ export function exportTemplateItemsToCsv(template: InstanceOfSchema<typeof Folde
  *
  * Format: name,path,selected,checked,selectedAt,checkedAt
  *
- * @param template - FolderNode containing the session
- * @param sessionId - ID of the session to export
- * @returns CSV string with header row, or null if session not found
  */
-export function exportSessionToCsv(
-  template: InstanceOfSchema<typeof FolderNode>,
-  sessionId: string,
-): string | null {
+export function exportSessionToCsv(template: FolderRow, sessionId: string): string | null {
   const session = findSessionById(template, sessionId);
   if (!session) return null;
 

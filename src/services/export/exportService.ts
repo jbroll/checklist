@@ -1,10 +1,9 @@
 /**
  * Main export service (rowboat port, slice-2).
  *
- * Orchestrates all export operations (JSON, TXT, CSV). Ported off Jazz: every entry point takes
- * the rowboat relational graph `g` and resolves a template folder by id from it. The TXT/CSV
- * exporters still consume a folder-shaped value structurally (they read `.items`/`.sessions`),
- * so a `FolderRow` is handed straight to them.
+ * Orchestrates all export operations (JSON, TXT, CSV). Every entry point takes the rowboat
+ * relational graph `g`, resolves a template folder by id, and hands the parsed `FolderRow` to the
+ * format exporters.
  *
  * NO FALLBACKS: a missing (or archived, or non-template) folder is a thrown hard error.
  */
@@ -29,35 +28,6 @@ type Graph = RelationalGraph<typeof schema>;
 /** A "template" is a folder row of `type: 'template-folder'`. */
 function isTemplateFolder(row: { type: string }): boolean {
   return row.type === 'template-folder';
-}
-
-/**
- * The TXT/CSV exporters are still Jazz-typed and read item/session timestamps as `Date`s (e.g.
- * `csvExporter` calls `toISOStringOrEmpty(itemState.selectedAt)`). Rowboat stores those as
- * epoch-ms NUMBERS, so convert them to `Date`s before handing the folder to those Impls. Own
- * timestamps (item/session createdAt) are required columns — NO FALLBACKS for a missing date.
- */
-function toDatedFolder(row: FolderRow): FolderRow {
-  const items = row.items.map((i) => ({ ...i, createdAt: new Date(i.createdAt) }));
-  const sessions = row.sessions.map((s) => {
-    const itemStates: Record<string, unknown> = {};
-    for (const [itemId, state] of Object.entries(s.itemStates)) {
-      itemStates[itemId] = {
-        ...state,
-        ...(state.selectedAt != null ? { selectedAt: new Date(state.selectedAt) } : {}),
-        ...(state.checkedAt != null ? { checkedAt: new Date(state.checkedAt) } : {}),
-      };
-    }
-    return {
-      ...s,
-      itemStates,
-      createdAt: new Date(s.createdAt),
-      lastActivityAt: new Date(s.lastActivityAt),
-    };
-  });
-  // The Impls accept `any` (their FolderNode schema is typed `any`); this dated view is
-  // structurally what they read. Cast back to FolderRow for the local call sites' types.
-  return { ...row, items, sessions } as unknown as FolderRow;
 }
 
 /**
@@ -122,17 +92,17 @@ export function generateFilename(
 
 /** Export template items to TXT format. */
 export function exportTemplateItemsToText(g: Graph, templateId: string): string {
-  return exportTemplateItemsToTextImpl(toDatedFolder(getTemplateOrThrow(g, templateId)));
+  return exportTemplateItemsToTextImpl(getTemplateOrThrow(g, templateId));
 }
 
 /** Export template items to CSV format. */
 export function exportTemplateItemsToCsv(g: Graph, templateId: string): string {
-  return exportTemplateItemsToCsvImpl(toDatedFolder(getTemplateOrThrow(g, templateId)));
+  return exportTemplateItemsToCsvImpl(getTemplateOrThrow(g, templateId));
 }
 
 /** Export a session to TXT format. */
 export function exportSessionToText(g: Graph, templateId: string, sessionId: string): string {
-  const folder = toDatedFolder(getTemplateOrThrow(g, templateId));
+  const folder = getTemplateOrThrow(g, templateId);
   const result = exportSessionToTextImpl(folder, sessionId);
   if (result === null) {
     throw new Error(`Session not found: ${sessionId}`);
@@ -142,7 +112,7 @@ export function exportSessionToText(g: Graph, templateId: string, sessionId: str
 
 /** Export a session to CSV format. */
 export function exportSessionToCsv(g: Graph, templateId: string, sessionId: string): string {
-  const folder = toDatedFolder(getTemplateOrThrow(g, templateId));
+  const folder = getTemplateOrThrow(g, templateId);
   const result = exportSessionToCsvImpl(folder, sessionId);
   if (result === null) {
     throw new Error(`Session not found: ${sessionId}`);
