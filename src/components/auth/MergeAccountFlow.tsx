@@ -1,61 +1,56 @@
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useAccount, useIsAuthenticated } from '@/jazz';
+import { useAuthor, useSession } from '@/jazz';
 import {
-  adoptFolders,
   clearMergeState,
   finalizeMerge,
   loadMergeState,
+  mergeInfo,
   prepareMerge,
   saveMergeState,
-  shareTopLevelFoldersTo,
   startMerge,
 } from '@/lib/account-merge';
 import { betterAuthClient } from '@/lib/auth-client';
-import { ACCOUNT_RESOLVE, Account } from '@/schema';
 
 type FlowState =
   | 'entry'
   | 'processing'
   | 'awaiting-source-login'
   | 'awaiting-target-login'
+  | 'confirm'
   | 'success'
-  | 'error'
-  | 'mismatch';
+  | 'error';
 
 export default function MergeAccountFlow() {
-  // biome-ignore lint/suspicious/noExplicitAny: Jazz account passed to merge helpers
-  const me = useAccount(Account, { resolve: ACCOUNT_RESOLVE }) as any;
-  // Whether the Jazz context is backed by an authenticated (non-anonymous)
-  // account. After signOut + email sign-in, useAccount briefly yields a
-  // transient anonymous/half-authenticated identity (whose root still points at
-  // the PREVIOUS account's CoValues and throws an Authorization Error when read).
-  // The merge phases must only run once Jazz has settled on the real signed-in
-  // account, so we gate them on this flag.
-  const isAuthenticated = useIsAuthenticated();
-  // Guards the one-shot phase processing. We record which phase has been
-  // dispatched (and for which authenticated account id) so the effect can WAIT
-  // for the authenticated account to settle and then run exactly once — instead
-  // of firing on the first transient `me` and capturing the wrong identity.
+  // `useAuthor()` is `null` both while the session hasn't resolved yet AND once it's
+  // confirmed there is none (anonymous); `useSession().isPending` is what distinguishes
+  // "loading" from "confirmed anonymous/authenticated".
+  const author = useAuthor();
+  const session = useSession();
+  const isAuthenticated = author !== null;
+
+  // Guards the one-shot phase processing so the mount effect runs exactly once per
+  // phase once the session has settled, instead of firing before auth resolves.
   const dispatchedRef = useRef<string | null>(null);
   const [flowState, setFlowState] = useState<FlowState>('processing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mergeNonce, setMergeNonce] = useState<string | null>(null);
+  const [sourceEmail, setSourceEmail] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
     async function handleMergeFlow() {
-      if (!me) {
-        // Account not yet loaded — wait
+      if (session.isPending) {
+        // Session not yet resolved — wait.
         return;
       }
 
+      const urlNonce = new URLSearchParams(window.location.search).get('merge');
       const state = loadMergeState();
 
-      if (!state) {
-        // No saved merge state — show the entry screen (this is the user's own
-        // already-authenticated account; no phase processing to gate).
+      if (!urlNonce || !state) {
+        // No merge in progress — show the entry screen (already-authenticated user).
         if (dispatchedRef.current !== 'entry') {
           dispatchedRef.current = 'entry';
           setFlowState('entry');
@@ -63,50 +58,28 @@ export default function MergeAccountFlow() {
         return;
       }
 
-      // Both phases act ON the just-signed-in Jazz account. Immediately after
-      // signOut + email sign-in, useAccount briefly returns a transient
-      // anonymous/half-authenticated identity whose root still references the
-      // PREVIOUS account's CoValues (reading them throws an Authorization Error).
-      // Wait until Jazz reports an authenticated, non-anonymous account before
-      // processing, otherwise share-out/adopt run against the wrong identity and
-      // silently drop the folders.
-      //
-      // IMPORTANT: do NOT change flowState here. When not yet authenticated we
-      // may be (a) on a fresh post-reload mount (flowState defaults to
-      // 'processing') or (b) showing the 'awaiting-*-login' prompt that a click/
-      // sign-in handler just set — which we must NOT clobber, or the user can
-      // never sign in as the other account.
+      // Both phases act on the just-signed-in identity. Until the session has settled
+      // to an authenticated account, leave flowState untouched — we may be showing the
+      // 'awaiting-*-login' prompt that a sign-in handler just set, which must not be
+      // clobbered, or the user can never sign in as the other account.
       if (!isAuthenticated) return;
 
-      // Guard against acting on a STALE-but-authenticated identity that hasn't
-      // re-derived to the just-signed-in account yet. In awaiting-source the
-      // signed-in account must be the SOURCE (≠ target); if `me` is still the
-      // target, the previous account is lingering — wait for the source to settle
-      // rather than act on the wrong identity. (Leave flowState untouched.)
-      if (state.phase === 'awaiting-source' && me.$jazz?.id === state.targetJazzId) {
-        return;
-      }
-
-      // One-shot per (phase, authenticated account id): run exactly once the
-      // real signed-in account has settled.
-      const dispatchKey = `${state.phase}:${me.$jazz?.id}`;
+      // One-shot per (phase, nonce, authenticated user): run exactly once the real
+      // signed-in session has settled.
+      const dispatchKey = `${state.phase}:${state.nonce}:${author}`;
       if (dispatchedRef.current === dispatchKey) return;
       dispatchedRef.current = dispatchKey;
 
+      setMergeNonce(state.nonce);
+
       if (state.phase === 'awaiting-source') {
-        // Now signed in as source. Share folders to target, then prompt re-login.
+        // Now signed in as source. Let the server record the source, then prompt
+        // signing back in as the target to finish.
         setFlowState('processing');
         try {
-          const ids = await shareTopLevelFoldersTo(me, state.targetJazzId);
-          await prepareMerge(state.nonce, ids);
-          saveMergeState({
-            ...state,
-            adoptedFolderIds: ids,
-            sourceJazzId: me.$jazz.id,
-            phase: 'awaiting-target',
-          });
+          await prepareMerge(state.nonce);
+          saveMergeState({ nonce: state.nonce, phase: 'awaiting-target' });
           await betterAuthClient.signOut();
-          setMergeNonce(state.nonce);
           setFlowState('awaiting-target-login');
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : 'An error occurred');
@@ -116,17 +89,14 @@ export default function MergeAccountFlow() {
       }
 
       if (state.phase === 'awaiting-target') {
-        // Signed back in as target. Verify identity.
-        if (me.$jazz.id !== state.targetJazzId) {
-          setFlowState('mismatch');
-          return;
-        }
+        // Signed back in as target. Fetch the source account's email so the human
+        // can confirm before we finalize — finalize must never run without that
+        // explicit confirmation.
         setFlowState('processing');
         try {
-          await adoptFolders(me, state.adoptedFolderIds ?? [], state.sourceJazzId ?? '');
-          await finalizeMerge(state.nonce);
-          clearMergeState();
-          setFlowState('success');
+          const info = await mergeInfo(state.nonce);
+          setSourceEmail(info.sourceEmail);
+          setFlowState('confirm');
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : 'An error occurred');
           setFlowState('error');
@@ -136,16 +106,29 @@ export default function MergeAccountFlow() {
     }
 
     handleMergeFlow();
-  }, [me, isAuthenticated]);
+  }, [author, isAuthenticated, session.isPending]);
 
   async function handleStartMerge() {
     setFlowState('processing');
     try {
-      const { nonce, targetJazzId } = await startMerge();
-      saveMergeState({ nonce, targetJazzId, phase: 'awaiting-source' });
+      const { nonce } = await startMerge();
+      saveMergeState({ nonce, phase: 'awaiting-source' });
       await betterAuthClient.signOut();
       setMergeNonce(nonce);
       setFlowState('awaiting-source-login');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'An error occurred');
+      setFlowState('error');
+    }
+  }
+
+  async function handleConfirm() {
+    if (!mergeNonce) return;
+    setFlowState('processing');
+    try {
+      await finalizeMerge(mergeNonce);
+      clearMergeState();
+      setFlowState('success');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'An error occurred');
       setFlowState('error');
@@ -281,6 +264,31 @@ export default function MergeAccountFlow() {
           </div>
         )}
 
+        {flowState === 'confirm' && (
+          <div className="text-center">
+            <h1 className="text-xl font-semibold text-text-primary">Confirm merge</h1>
+            <p className="mt-2 text-text-secondary">
+              You're combining the account <strong>{sourceEmail ?? 'the other account'}</strong>{' '}
+              into this one. This cannot be undone.
+            </p>
+            <button
+              type="button"
+              data-testid="merge-confirm"
+              onClick={handleConfirm}
+              className="mt-6 w-full rounded-lg bg-accent-primary px-6 py-2 text-sm font-medium text-white hover:bg-accent-primary/90"
+            >
+              Confirm merge
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="mt-4 text-sm text-text-tertiary underline"
+            >
+              Cancel merge
+            </button>
+          </div>
+        )}
+
         {flowState === 'success' && (
           <div className="text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
@@ -292,24 +300,6 @@ export default function MergeAccountFlow() {
             >
               Go to App
             </a>
-          </div>
-        )}
-
-        {flowState === 'mismatch' && (
-          <div className="text-center">
-            <XCircle className="mx-auto h-12 w-12 text-red-500" />
-            <h1 className="mt-4 text-xl font-semibold text-text-primary">Account Mismatch</h1>
-            <p className="mt-2 text-text-secondary">
-              You are signed in as a different account than expected. Please sign in as your main
-              account to complete the merge.
-            </p>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="mt-6 w-full rounded-lg border border-border-default px-6 py-2 text-sm font-medium text-text-primary hover:bg-surface-secondary"
-            >
-              Cancel merge
-            </button>
           </div>
         )}
 
