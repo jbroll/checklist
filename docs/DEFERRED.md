@@ -63,3 +63,35 @@ specs in `docs/superpowers/specs/`.)
   and rewrite the service/UI against the current rowboat graph. The USDA bake pipeline and
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
+
+## D6 — export subsystem still Jazz-typed — **MEDIUM**
+- **Where:** `src/services/export/csvExporter.ts`, `txtExporter.ts`, `helpers.ts` still
+  `import ... from 'jazz-tools'` + `@jbr-jazz/hierarchy-shared` (`toArray`/`getLeafItems`) and expose
+  Jazz-typed functions — e.g. `exportTemplateItemsToCsv(template: InstanceOfSchema<typeof FolderNode>)`
+  reading `TemplateItem` from the Jazz `schema/tree`.
+- **Symptom:** the rowboat `exportService.ts` bridges rowboat `FolderRow` data into these Jazz-typed
+  `...Impl` functions. It compiles and works, but the exporters are not ported off Jazz, and they keep
+  `jazz-tools`/`@jbr-jazz/hierarchy-shared` on the dependency graph.
+- **Fix:** re-type the exporters against rowboat `FolderRow`/`TemplateItem` (`@/schema/folder`), drop
+  the Jazz imports, and remove the `exportService` bridge. Enables deleting the Jazz schemas (D8).
+
+## D7 — account merge still Jazz-based — **MEDIUM**
+- **Where:** `src/components/auth/MergeAccountFlow.tsx` (the ONLY file left in `tsconfig` `exclude`)
+  and `src/lib/account-merge.ts` still read a Jazz `Account`.
+- **Symptom:** reachable via the app route but excluded from `tsc` (doesn't typecheck against the
+  rowboat provider). A rowboat design already exists —
+  `docs/superpowers/specs/2026-06-24-account-merge-design.md` — but is unimplemented.
+- **Fix:** implement the rowboat account-merge per that spec, then drop the `tsconfig` exclude.
+
+## D8 — delete Jazz schema files once D6/D7 land — **cleanup, blocked on D6+D7**
+- **Where:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
+  `ViewState`), plus `src/lib/types.ts` (Jazz type aliases, currently knip-ignored).
+- **Note:** these survive ONLY because the export exporters (D6) and account-merge (D7) still import
+  them. Once both are ported, delete these files and remove `src/lib/types.ts` from `knip.json`
+  `ignore`. This finishes removing `jazz-tools` from the frontend.
+
+## D9 — dead `sessionCleanupService` (Jazz) — **LOW / cleanup**
+- **Where:** `src/services/sessionCleanupService.ts` — Jazz-based (`@jbr-jazz/hierarchy-shared`
+  `walkTree`), referenced only by its own `sessionCleanupService.test.ts`; not wired into the app.
+- **Fix:** either wire the rowboat equivalent (session-retention cleanup is a real feature — see the
+  `session_retention_days` user-setting) or delete the dead service + test. Decide intent first.
