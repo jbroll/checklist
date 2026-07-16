@@ -17,8 +17,11 @@ rc: /home/john/src/checklist/lefthook-rc.sh
 # ── Repo-local commands ──────────────────────────────────────────────────────
 pre-commit:
   commands:
-    # ts-jazz-waist is inherited from org-hooks profiles/ts.yml, which scans
-    # `src backend/src` (multi-root) — so no repo-local override is needed.
+    # jazz-tools is fully removed from the frontend (D8) and the provider/waist were
+    # renamed off "jazz", so the inherited ts-jazz-waist gate (bans jazz-tools/react
+    # imports) can never fire here. Skip it — lefthook merges local `skip:` over remote.
+    ts-jazz-waist:
+      skip: true
     # Full unit suite (frontend + backend) — fast, deterministic.
     unit-tests:
       glob: "*.{ts,tsx}"
