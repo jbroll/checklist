@@ -1,38 +1,12 @@
 # CheckList — deferred engineering backlog (rowboat port)
 
 Open, intentionally-deferred technical items from the rowboat port. Each is deferred on purpose
-with the rationale below — not forgotten. (Product/market roadmap lives in `ROADMAP.md`; design
-specs in `docs/superpowers/specs/`.)
+with the rationale below — not forgotten. (Product/market roadmap lives in `ROADMAP.md`; the current
+architecture lives in `ARCHITECTURE.md`.)
 
-## D1 — concurrency data-loss on lists: adopt `rb.ordered` — **RESOLVED**
-- **Was:** every item-check / edit rewrote the WHOLE `sessions` (or `items`) json column — a
-  clockless whole-cell write the engine resolves as whole-value LWW, so two clients checking
-  DIFFERENT items concurrently silently clobbered each other.
-- **Fix (shipped):** `items`/`sessions` are now `rb.ordered` columns (`shared/schema.ts`); every
-  write in `sessionService`/`templateService`/`folderOps`/import goes through the `orderedList`
-  field-level API (`src/services/folderListHandles.ts`), so concurrent check/edit merges with no
-  lost survivor (`src/services/__tests__/concurrentMerge.test.ts`). No data migration — existing
-  data discarded. See `docs/superpowers/specs/2026-07-15-checklist-rb-ordered-adoption-design.md`.
-- **Residual (low):** display order stays the `sortOrder` field (kept to avoid rewriting
-  import/export/categorization), so two clients reordering the SAME level concurrently can still land
-  on the same midpoint. Adopting `rb.ordered`'s `__order` fracKey for display would close this.
-
-## D2 — `user_settings` anon-adopt duplicate edge — **RESOLVED**
-- **Was:** `src/lib/jazz.tsx` `RowboatBridge` provisioning (`ensureUserSettings`) + the anon-claim
-  adopt path. On sign-in the anon `user_settings` row was adopted keeping `id = ANON_IDENTITY`; a
-  later device provisioned `id = user.id`, so a multi-device + adopt sequence could leave TWO
-  `user_settings` rows in the account — and an adopted/stale `free` default could leave a paying
-  user looking downgraded.
-- **Fix (shipped):** `adoptRows` (rowboat main) now converges identity-keyed singletons —
-  `id === scopeColumn` rows are re-keyed to `id = scopeGroupId` during adopt, so the anon
-  `user_settings` row lands on the SAME `id = user.id` row the deterministic provisioning path
-  already converges to, instead of surviving as a duplicate. See rowboat's
-  `docs/superpowers/specs/2026-07-15-adopt-singleton-convergence-design.md`. On top of that,
-  checklist's account-init effect (`src/lib/jazz.tsx`) now (a) defers entirely until the anon claim
-  settles (`!claiming`, gated the same way as `!sessionPending`) so it never races the adopt, and
-  (b) for authed users, re-asserts the subscription from the Stripe-backed
-  `/api/billing/subscription` via `syncSubscriptionFromBackend(graph)` right after provisioning —
-  so an adopted or otherwise stale `free` default can never leave a paying user downgraded.
+Resolved items (D1 `rb.ordered` adoption, D2 `user_settings` convergence, D6 export off Jazz, D7
+account-merge, D8 Jazz-schema deletion, D9 session-retention cleanup) have shipped and their durable
+behavior is folded into `ARCHITECTURE.md`.
 
 ## D3 — browser back/forward session navigation — **LOW**
 - **Where:** `src/components/editor/AppContainer.tsx` tracks the open session in React state
@@ -50,6 +24,9 @@ specs in `docs/superpowers/specs/`.)
   (`registerSyncTable: re-registering "folder" cannot introduce column "items"`). Fresh dbs (dev/CI)
   are fine. A production cutover needs an addColumn/data migration — or the accepted "delete existing
   data" path (as used for the `rb.ordered` adoption).
+- Related: an existing sync db also stores the per-column `jsonSchema` in its registry, so picking up
+  a schema change (e.g. the `rb.ordered` keyed-map conformance) may require re-registration on boot;
+  verify as part of the cutover.
 
 ## D5 — nutrition / calorie tracking feature (port from prototype) — **FEATURE, deferred**
 - **What:** per-list calorie/nutrition tracking with portion controls — a working prototype existed on
@@ -70,52 +47,3 @@ specs in `docs/superpowers/specs/`.)
   and rewrite the service/UI against the current rowboat graph. The USDA bake pipeline and
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
-
-## D6 — export subsystem still Jazz-typed — **RESOLVED**
-- **Was:** `csvExporter`/`txtExporter`/`helpers` imported `jazz-tools` + `@jbr-jazz/hierarchy-shared`
-  (`toArray`) and were typed against the Jazz `FolderNode`/`TemplateItem`; `exportService` bridged
-  rowboat data in via a `toDatedFolder` epoch-ms→`Date` adapter. `jsonExporter` also imported Jazz
-  `TemplateItem`/`SessionData` types.
-- **Fix (shipped):** re-typed all exporters against rowboat `FolderRow`/`TemplateItem`
-  (`@/schema/folder`), replaced the Jazz `toArray` with a plain `.find()`, extended
-  `toISOStringOrEmpty` to accept epoch-ms `number`, dropped the `toDatedFolder` bridge, and defined
-  `jsonExporter`'s date-carrying shapes locally. `src/services/export/` no longer imports
-  `jazz-tools`/`@jbr-jazz`. The export format is unchanged (75 export tests green). Note the export
-  output never exposed rowboat mechanism — `parseFolderRow` strips `__order`/`__deleted`/keyed-maps
-  and epoch-ms is emitted as ISO 8601.
-
-## D7 — account merge still Jazz-based — **RESOLVED**
-- **Was:** `MergeAccountFlow.tsx` + `lib/account-merge.ts` were Jazz (`group.addMember`/CoValue adopt,
-  the only file left in `tsconfig` `exclude`), calling backend routes that only existed in the
-  abandoned jbr-jazz backend. The 2026-06-24 spec was Jazz-specific and didn't map to rowboat.
-- **Fix (shipped):** rowboat gained a native account-merge in `@jbroll/rowboat-auth-betterauth`
-  (C3 — `start`/`prepare`/`info`/`finalize` over group `link`+`grant`, no data movement; landed
-  rowboat main; see `rowboat/docs/superpowers/specs/2026-07-15-rowboat-account-merge-c3-design.md`).
-  Checklist now consumes it: `lib/account-merge.ts` is a thin fetch client, `MergeAccountFlow.tsx` is
-  a two-login flow with the **required source-email confirmation** before finalize, routed on
-  `?merge`, entered from `ProfileDialog`. Dead Jazz removed; the `tsconfig` exclude is gone (none
-  remain). Backend auto-serves the routes via `mountAuthRoutes` + `registerIdentityTables`.
-
-## D8 — delete Jazz schema files — **RESOLVED**
-- **Was:** `src/schema/tree.ts` + `src/schema/index.ts` (old `co.map` `FolderNode`/`Account`/
-  `ViewState`) and `src/lib/types.ts` (Jazz type aliases, knip-ignored) survived only two TYPE-import
-  pins: `src/lib/utils.ts` (`SessionData`) and `src/components/auth/ProfileDialog.tsx`
-  (`SubscriptionTier`).
-- **Fix (shipped):** `utils.ts`'s session helpers now take a minimal local `DatedSession`
-  (`{ createdAt: Date | string }`) — they only ever read `createdAt`, and their sole runtime caller
-  (`jsonExporter`) passes Date-carrying sessions, so the rowboat epoch-ms `SessionData` would have
-  been the wrong type. `ProfileDialog` imports `SubscriptionTier` from `@jbr-jazz/billing-shared`
-  (the type the value already flows from via `subscriptionService`). Deleted `tree.ts`/`index.ts`
-  (+ their tests) and `lib/types.ts`, dropped `lib/types.ts` from `knip.json` `ignore`, and pruned the
-  stale second paragraph of the `src/jazz/index.ts` waist docblock. `jazz-tools` is now fully gone
-  from the frontend (`src/`).
-
-## D9 — session-retention cleanup ported to rowboat — **RESOLVED**
-- **Was:** `src/services/sessionCleanupService.ts` was Jazz-based (`@jbr-jazz/hierarchy-shared`
-  `walkTree`), referenced only by its own test and never wired into the app — a dead feature.
-- **Fix (shipped):** rewritten against the rowboat graph — `cleanupExpiredSessions(g)` walks
-  `getAllTemplates(g)` and `archiveSession`s every non-archived session older than the tier's
-  `session_retention_days` window (-1 = unlimited no-op), throttled once/24h via localStorage. Wired
-  into `src/lib/jazz.tsx`'s account-init effect (`runCleanupIfNeeded(graph)`, authed users only,
-  non-blocking 5s after provisioning). Test rewritten against `makeGraph`
-  (`src/services/sessionCleanupService.test.ts`).
