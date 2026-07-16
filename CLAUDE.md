@@ -4,14 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CheckList - Shared Checklists. Built with Jazz.tools and BetterAuth.
+CheckList - Shared Checklists. Built on **rowboat** (a self-hosted, sync-native relational store) and
+BetterAuth.
+
+> CheckList was originally built on Jazz.tools and has since been ported off it entirely. `jazz-tools`
+> is no longer a frontend dependency. The `src/lib/jazz.tsx` / `src/jazz/` names are retained but now
+> wrap the rowboat client, not Jazz.
 
 **Key Features**:
 - Hierarchical template organization
 - Session-based shopping tracking
-- Real-time sync across devices
-- Offline-first with automatic sync
-- Encrypted data storage and sync (Jazz.tools)
+- Real-time sync across devices, offline-first with automatic background sync
 - Multi-provider OAuth (Google + Apple)
 - Freemium subscription tiers with Stripe billing
 - White-label branding support (CheckList, kjekit)
@@ -20,8 +23,9 @@ CheckList - Shared Checklists. Built with Jazz.tools and BetterAuth.
 ## Technology Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
-- **Database**: Jazz.tools (distributed, real-time, offline-first)
-- **Authentication**: BetterAuth with Jazz plugin
+- **Data / sync**: rowboat (`@jbroll/rowboat-*`) — a relational, offline-first, sync-native store
+  (IndexedDB on the client, self-hosted SQLite backend)
+- **Authentication**: BetterAuth via rowboat's identity provider (`@jbroll/rowboat-auth-betterauth`)
   - OAuth Providers: Google + Apple
 - **Billing**: Stripe (subscriptions, customer portal)
 - **UI**: Tailwind CSS + Radix UI + Framer Motion
@@ -44,7 +48,8 @@ npm run test:e2e        # Run E2E tests (Playwright)
 npm run check           # Run type-check + lint + tests
 ```
 
-**IMPORTANT**: The app requires BOTH frontend and backend to be running for authentication and data persistence to work. Always use `npm run dev` to start both servers.
+**IMPORTANT**: The app requires BOTH frontend and backend to be running for authentication and data
+persistence (sync) to work. Always use `npm run dev` to start both servers.
 
 ## Git Commit Rules
 
@@ -58,32 +63,37 @@ npm run check           # Run type-check + lint + tests
 
 ```
 checklist/
+├── shared/
+│   └── schema.ts          # rb.* schema (Folder, UserSettings) — shared frontend + backend
 ├── src/
-│   ├── schemas/
-│   │   ├── index.ts       # Account and root schemas
-│   │   └── tree.ts        # FolderNode, TemplateItem, ShoppingSession
+│   ├── schema/
+│   │   ├── folder.ts      # rowboat FolderRow types + read/parse boundary
+│   │   ├── folderData.ts  # folder row parsing
+│   │   └── userSettingsData.ts
 │   ├── lib/
-│   │   ├── auth-client.ts # BetterAuth client with Jazz plugin
-│   │   ├── jazz.tsx       # Jazz provider setup
+│   │   ├── auth-client.ts # BetterAuth client
+│   │   ├── account-merge.ts # rowboat account-merge fetch client
+│   │   ├── jazz.tsx       # rowboat provider + sync loop + anon-claim wiring
 │   │   ├── brand.ts       # White-label branding config
 │   │   └── utils.ts       # Helper functions
+│   ├── jazz/              # narrow waist: re-exports the rowboat provider + auth hooks
 │   ├── components/
 │   │   ├── AuthGate.tsx   # Auth wrapper component
 │   │   ├── tree/          # Tree view (folders and items)
 │   │   ├── editor/        # App container and routing
 │   │   ├── session/       # Shopping session interface
+│   │   ├── sharing/ auth/ # Share dialog + invite accept; account-merge flow
 │   │   ├── billing/       # Subscription and upgrade UI
-│   │   ├── import/        # Import dialogs
-│   │   ├── export/        # Export dialogs
+│   │   ├── import/ export/
 │   │   └── ui/            # Base UI components (Radix UI)
 │   ├── services/
-│   │   ├── folderService.ts       # Folder operations
+│   │   ├── folderService.ts folderListHandles.ts   # folder ops + rb.ordered handles
+│   │   ├── templateService.ts sessionService.ts sessionCleanupService.ts
 │   │   ├── subscriptionService.ts # Billing and tier limits
-│   │   ├── import/                # Import logic
-│   │   └── export/                # Export logic
+│   │   └── import/ export/
 │   ├── App.tsx            # Root component
 │   └── main.tsx           # Entry point
-├── backend/               # BetterAuth + Stripe API server
+├── backend/               # rowboat auth + identity + sync + sharing + Stripe (one sqlite db)
 ├── public/                # Static assets
 ├── ARCHITECTURE.md        # System overview
 ├── README.md              # Getting started
@@ -91,65 +101,65 @@ checklist/
 └── CLAUDE.md              # This file
 ```
 
-## Jazz.tools Integration
+## rowboat integration
 
-Jazz is a distributed database that syncs across devices in real-time with offline support and encrypted data storage.
+Rowboat is a relational store that syncs across devices in real-time, offline-first. See
+`ARCHITECTURE.md` for the system overview.
 
-**Key Concepts**:
-- **CoValues**: Collaborative values (CoMap, CoList, etc.) that sync automatically
-- **Accounts**: User identities with cryptographic keys
-- **Real-time Sync**: Automatic via Jazz cloud or self-hosted sync server
+**Key concepts**:
+- **Relational schema**: tables authored in Zod with `rb.*` column helpers, compiled to a sync
+  manifest by `compileSchema`. Two tables: `folder` and `user_settings` (`shared/schema.ts`).
+- **RelationalGraph**: the reactive client view of the synced rows (`RelationalGraph<typeof schema>`).
+  Reads/writes flow through the service layer, never a Jazz-style CoValue tree.
+- **Scope-group RBAC**: rows are owned by a scope group (`owner_group_id`); folders are per-folder
+  groups linked under the user's root group. Authorization is scoped pull + gated push.
+- **Sync**: local-first writes hit IndexedDB and sync over `/api/sync` in the background;
+  conflict resolution is per-column / per-json-path last-write-wins (HLC).
 
-### Data Model
+### Schema syntax (rowboat `rb.*`)
 
-See `ARCHITECTURE.md` for system overview.
-
-**Schemas are defined in**:
-- `src/schemas/index.ts` - Account and root
-- `src/schemas/tree.ts` - FolderNode, TemplateItem, ShoppingSession, ItemState
-
-**Key schema types**:
-- `FolderNode` - Organizational folder or template folder (discriminated union)
-- `TemplateItem` - Hierarchical category or item node
-- `ShoppingSession` - Shopping trip state tracker
-- `ItemState` - Per-item shopping state
-- `Account` - User account with subscription info
-
-### Jazz Schema Syntax (v0.19.x)
-
-Schemas use function-based syntax with `co.map()`:
+Tables are hand-authored in Zod with `rb.*` column types (`shared/schema.ts`):
 
 ```typescript
-import { co, z } from 'jazz-tools';
+import { rb } from '@jbroll/rowboat-schema';
+import { z } from 'zod';
 
-export const MySchema = co.map({
-  name: z.string(),
-  optional: z.optional(z.string()),
-  list: co.list(OtherSchema),
-  get reference() { return AnotherSchema; },
-  createdAt: z.date(),
+export const Folder = z.object({
+  id: rb.id(),
+  owner_group_id: rb.scope(),          // RBAC scope group that owns the row
+  name: rb.text(),
+  type: rb.text(),
+  parent_id: rb.parent('folder'),      // self-FK tree
+  archived: rb.bool(),
+  created_at: rb.int(),                // epoch ms
+  items: rb.ordered(TemplateItem, { key: 'id' }),   // mergeable keyed-map list
+  sessions: rb.ordered(SessionData, { key: 'id' }),
+  default_items: rb.json(z.record(z.string(), z.boolean())),
 });
+
+export const schema = { folder: Folder, user_settings: UserSettings };
 ```
 
 **Key patterns**:
-- Use `z` (Zod) for primitives: `z.string()`, `z.boolean()`, `z.date()`
-- Use `z.optional()` for optional primitives
-- Use `co.optional()` for optional CoValue references
-- Use getters for forward references
-- Use `co.list()` for lists of CoValues
+- Primitives: `rb.text()`, `rb.int()`, `rb.bool()`, `rb.json(zodSchema)`.
+- Relations: `rb.scope()` (owner group), `rb.parent('table')` (self/other FK), `rb.ref('table')`.
+- **`rb.ordered(Element, { key })`** for lists (items/sessions): stored as a keyed map
+  `{ <id>: { …element, __order } }` with **field-level dotted-path merge**, so concurrent edits to
+  different items don't clobber each other. Never rewrite the whole list value.
 
-## BetterAuth Integration
+## BetterAuth integration
 
-BetterAuth provides authentication with Jazz integration via the `jazz-tools/better-auth/auth` plugin.
+BetterAuth is wired as rowboat's identity provider (`@jbroll/rowboat-auth-betterauth`).
 
-**Authentication Flow**:
-1. User authenticates through BetterAuth (Google/Apple OAuth)
-2. Jazz account keys are stored with BetterAuth user
-3. On login, Jazz retrieves keys and enables full offline functionality
+**Authentication flow**:
+1. User authenticates through BetterAuth (Google/Apple OAuth; email/password for e2e).
+2. `user.id` IS the account; the user's root scope group (`= user.id`) is auto-provisioned at signup.
+3. Anonymous users work offline in a local store; on sign-in `useAnonClaim` adopts that data into the
+   account's scope (see ARCHITECTURE.md → Anonymous sessions & convergence).
 
 **Files**:
-- `src/lib/auth-client.ts` - BetterAuth client with Jazz plugin
-- `src/lib/jazz.tsx` - JazzProvider wrapper component
+- `src/lib/auth-client.ts` - BetterAuth client
+- `src/lib/jazz.tsx` - the rowboat provider (`RowboatBridge`), sync loop, and account-init provisioning
 
 ## Environment Variables
 
@@ -161,81 +171,51 @@ GOOGLE_CLIENT_SECRET=...
 APPLE_CLIENT_ID=...
 APPLE_CLIENT_SECRET=...
 VITE_API_URL=http://localhost:3001
-VITE_JAZZ_PEER=wss://cloud.jazz.tools
+AUTH_DB_PATH=./data/auth.db        # backend sqlite (auth + identity + sync)
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
 ```
 
 ## Common Development Patterns
 
-### Working with Jazz CoValues
+### Working with the rowboat graph
 
-Jazz CoValues are reactive - they sync automatically when mutated:
+Reads and writes go through the service layer (`src/services/`), which operates on the reactive
+`RelationalGraph`. The graph is reactive — subscribe via the rowboat hooks; do **not** mirror graph
+data into `useState`.
 
-```typescript
-// Read data (reactive)
-const { me } = useAccount(Account);
-
-// Update data (automatic sync)
-folder.name = "New Name";
-folder.items.push(newItem);
-
-// Soft delete
-item.archived = true;
-```
-
-**Important**: Don't use `useState` with CoValues - they're already reactive.
-
-### Creating Data
-
-All creation happens client-side with automatic sync:
+- **Row writes** are field-level (`g.folder.update(id, { name: 'New Name' })`), not whole-object
+  replacements.
+- **Ordered lists** (`items`/`sessions`) are mutated through the `orderedList` handles in
+  `src/services/folderListHandles.ts` (`append` / `setField` / `move` / `remove`) — this is what makes
+  concurrent item edits merge. Never `push`/`splice` a whole list value.
+- **Soft delete**: mark `archived: true` (or tombstone via the handle), never hard-delete.
 
 ```typescript
-const newFolder = FolderNode.create({
-  name: "My Folder",
-  type: "template-folder",
-  path: "my-folder",
-  expanded: false,
-  archived: false,
-  items: [],
-  sessions: [],
-  currentSessionId: "",
-  owner: me,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-}, { owner: me });
-
-me.root.nodes.push(newFolder);
+// Soft delete — never splice a list
+// ❌  rewrite whole list
+// ✅  handle-based, field-level:
+itemsList(g, folderId).setField(itemId, 'archived', true);
 ```
 
 ## Key Implementation Notes
 
 ### Hierarchical Organization
 
-- **Templates** are organized in a folder tree
-- **Path-based hierarchy**: "grocery-stores/wegmans/weekly"
-- **Discriminated unions**: FolderNode has `type: "folder" | "template-folder"`
-- **TemplateItems** have `type: "category" | "item"` for internal hierarchy
+- **Templates** are organized in a folder tree via `parent_id` (self-FK), path strings for display.
+- **Discriminated folders**: `Folder.type: "folder" | "template-folder"`.
+- **TemplateItems** have `type: "category" | "item"` for internal hierarchy.
 
 ### Shopping Sessions
 
-- Sessions track shopping state **separately** from templates
-- Templates stay clean (no shopping state pollution)
-- ItemState maps itemId → shopping state (inCart, purchased)
-- Multiple sessions can reference the same template
+- Sessions track shopping state **separately** from templates (templates stay clean).
+- `ItemState` maps itemId → shopping state (in-cart, checked).
+- Multiple sessions can reference the same template.
 
 ### Soft Deletes
 
-Always use `archived: true` instead of hard deletion:
-
-```typescript
-// Never do this:
-folder.items.splice(index, 1);  // ❌
-
-// Always do this:
-item.archived = true;  // ✅
-item.updatedAt = new Date();
-```
+Always mark `archived: true` (via the service/handle layer) instead of removing rows or list
+elements. Ordered-list removal tombstones the element (`__deleted`), never a whole-value rewrite.
 
 ## Testing & Building
 
@@ -244,7 +224,7 @@ npm run type-check   # TypeScript validation
 npm run lint         # Code linting
 npm run test:run     # Unit tests
 npm run test:e2e     # E2E tests
-npm run test:e2e:invite  # Invite closed-loop E2E (needs gpu GreenMail; see e2e/INVITE_TESTING.md)
+npm run test:e2e:invite  # Invite closed-loop E2E (needs GreenMail; see e2e/INVITE_TESTING.md)
 npm run build        # Production build
 npm run preview      # Test production build
 ```
@@ -260,18 +240,22 @@ npm run preview      # Test production build
 - Verify redirect URIs in OAuth console
 
 **Data not syncing**:
-- Check Jazz sync server connection (browser console)
-- Check network tab for WebSocket connection
+- Confirm the backend is running (sync is served at `/api/sync`)
+- Check the network tab for `/api/sync/pull` / `/api/sync/push` calls and the browser console
+- A stale backend sync DB can reject writes on a schema change — a fresh `AUTH_DB_PATH` db re-registers
+  the current schema (see `docs/DEFERRED.md` D4)
 
 ## Important Notes for AI Assistants
 
-- **Jazz CoValues are reactive** - don't use `useState` with them
-- **Mutations are automatic** - directly modify CoValue properties, no setState
-- **Real-time sync is automatic** - no manual API calls needed
-- **Offline support is built-in** - data works without connection
-- **Schema syntax is v0.19.x** - use `co.map()` not class-based syntax
-- **Always soft delete** - use `archived: true`, never splice/remove
-- **Templates stay clean** - session state tracked separately in ShoppingSession
+- **The rowboat graph is reactive** — subscribe via the rowboat hooks; don't mirror it into `useState`.
+- **Writes are field-level** — update individual columns / list elements; don't rewrite whole rows or
+  whole ordered-list values (that reintroduces the D1 concurrency data-loss).
+- **Ordered lists go through `folderListHandles`** — `append`/`setField`/`move`/`remove`.
+- **Sync is automatic** — local-first writes sync in the background; no manual API calls needed.
+- **Always soft delete** — `archived: true` / tombstone, never splice/remove.
+- **Templates stay clean** — session state is tracked separately in `SessionData`.
+- **No `jazz-tools`** in the frontend — only `src/jazz/**` (the narrow waist) may touch the underlying
+  framework; everything else imports the provider/auth hooks from `@/jazz`.
 
 ## Documentation
 
@@ -279,6 +263,7 @@ npm run preview      # Test production build
 - **QUICKSTART.md** - Quick setup guide
 - **ARCHITECTURE.md** - System architecture overview
 - **DEPLOY.md** - Deployment instructions
+- **docs/DEFERRED.md** - Open engineering backlog
 - **docs/INDENTED_LIST_FORMAT.md** - Hierarchical text import/export format
-- **Jazz Docs**: https://jazz.tools/docs
 - **BetterAuth Docs**: https://better-auth.com/docs
+```
