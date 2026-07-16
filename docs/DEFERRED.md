@@ -17,15 +17,22 @@ specs in `docs/superpowers/specs/`.)
   import/export/categorization), so two clients reordering the SAME level concurrently can still land
   on the same midpoint. Adopting `rb.ordered`'s `__order` fracKey for display would close this.
 
-## D2 — `user_settings` anon-adopt duplicate edge — **MEDIUM**
-- **Where:** `src/lib/jazz.tsx` `RowboatBridge` provisioning (`ensureUserSettings`) + the anon-claim
-  adopt path.
-- **Symptom:** on sign-in the anon `user_settings` row is adopted keeping `id = ANON_IDENTITY`; a
-  later device provisions `id = user.id`, so a multi-device + adopt sequence could leave TWO
-  `user_settings` rows in the account. Single-device is correct (the account-init effect awaits a
-  server pull before deciding, and the deterministic `id = owner_group_id = user.id` converges).
-- **Fix:** exclude `user_settings` from adoption, or rename-on-adopt to `user.id`. Low reachability
-  today (multi-device authed + adopt), so deferred.
+## D2 — `user_settings` anon-adopt duplicate edge — **RESOLVED**
+- **Was:** `src/lib/jazz.tsx` `RowboatBridge` provisioning (`ensureUserSettings`) + the anon-claim
+  adopt path. On sign-in the anon `user_settings` row was adopted keeping `id = ANON_IDENTITY`; a
+  later device provisioned `id = user.id`, so a multi-device + adopt sequence could leave TWO
+  `user_settings` rows in the account — and an adopted/stale `free` default could leave a paying
+  user looking downgraded.
+- **Fix (shipped):** `adoptRows` (rowboat main) now converges identity-keyed singletons —
+  `id === scopeColumn` rows are re-keyed to `id = scopeGroupId` during adopt, so the anon
+  `user_settings` row lands on the SAME `id = user.id` row the deterministic provisioning path
+  already converges to, instead of surviving as a duplicate. See rowboat's
+  `docs/superpowers/specs/2026-07-15-adopt-singleton-convergence-design.md`. On top of that,
+  checklist's account-init effect (`src/lib/jazz.tsx`) now (a) defers entirely until the anon claim
+  settles (`!claiming`, gated the same way as `!sessionPending`) so it never races the adopt, and
+  (b) for authed users, re-asserts the subscription from the Stripe-backed
+  `/api/billing/subscription` via `syncSubscriptionFromBackend(graph)` right after provisioning —
+  so an adopted or otherwise stale `free` default can never leave a paying user downgraded.
 
 ## D3 — browser back/forward session navigation — **LOW**
 - **Where:** `src/components/editor/AppContainer.tsx` tracks the open session in React state

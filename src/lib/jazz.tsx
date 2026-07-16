@@ -32,7 +32,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef }
 import { schema } from '@/schema/folder';
 import { seedDefaultFolders } from '@/services/defaultData';
 import { runCleanupIfNeeded } from '@/services/sessionCleanupService';
-import { ensureUserSettings } from '@/services/subscriptionService';
+import { ensureUserSettings, syncSubscriptionFromBackend } from '@/services/subscriptionService';
 
 const APP_NAME = 'checklist';
 const SYNC_INTERVAL_MS = 5000;
@@ -83,11 +83,13 @@ function RowboatBridge({
   identity,
   author,
   sessionPending,
+  claiming,
   children,
 }: {
   identity: string;
   author: string | null;
   sessionPending: boolean;
+  claiming: boolean;
   children: ReactNode;
 }) {
   // One RowboatDb per identity, kept for the life of this (keyed) subtree.
@@ -179,7 +181,7 @@ function RowboatBridge({
     // reload. Gating on `!sessionPending` means the anon phase never seeds; once the session
     // settles we either seed a genuine anonymous user or, for a signed-in user, run against the
     // authenticated store (which already has its data, so nothing is re-seeded).
-    if (provisionedRef.current || sessionPending) return;
+    if (provisionedRef.current || sessionPending || claiming) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -217,7 +219,12 @@ function RowboatBridge({
           }
         }
         provisionedRef.current = true;
-        if (author) runCleanupIfNeeded(graph);
+        if (author) {
+          runCleanupIfNeeded(graph);
+          void syncSubscriptionFromBackend(graph).catch((err) => {
+            console.error('[jazz] subscription re-sync failed:', err);
+          });
+        }
       } catch (err) {
         console.error('[jazz] account-init provisioning failed:', err);
       }
@@ -225,7 +232,7 @@ function RowboatBridge({
     return () => {
       cancelled = true;
     };
-  }, [db, graph, identity, mintGroup, sessionPending, author]);
+  }, [db, graph, identity, mintGroup, sessionPending, author, claiming]);
 
   const value = useMemo<PortContextValue>(
     () => ({ graph, author, mintGroup }),
@@ -243,7 +250,7 @@ export function JazzProvider({ children }: { children: ReactNode }) {
   // Claims the anon store into the authenticated identity's store on login. The `key` below
   // remounts `RowboatBridge` (fresh db + graph) once `author` flips, so the claimed rows show
   // up without any extra wiring here.
-  useAnonClaim({
+  const { claiming } = useAnonClaim({
     app: APP_NAME,
     tables: manifest,
     options: dbOptions,
@@ -258,6 +265,7 @@ export function JazzProvider({ children }: { children: ReactNode }) {
       identity={identity}
       author={author}
       sessionPending={sessionPending}
+      claiming={claiming}
     >
       {children}
     </RowboatBridge>
