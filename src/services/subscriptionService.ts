@@ -118,15 +118,6 @@ function readSettings(g: Graph): UserSettingsRow | undefined {
   return g.user_settings.all()[0]?.$data;
 }
 
-/** Read the singleton settings row, hard-erroring if absent (NO FALLBACKS — for write paths). */
-function requireSettings(g: Graph): UserSettingsRow {
-  const settings = readSettings(g);
-  if (!settings) {
-    throw new Error('user_settings row not initialized');
-  }
-  return settings;
-}
-
 /**
  * Build a brand-new `user_settings` singleton row with the designed defaults (free tier / beta
  * status — the same defaults the read paths fall back to, made concrete). The write paths need a
@@ -359,8 +350,15 @@ export async function syncSubscriptionFromBackend(g: Graph): Promise<void> {
       return;
     }
 
-    // Update the user_settings cache row.
-    const settings = requireSettings(g);
+    // Update the user_settings cache row. On the anon->sign-in adopt path the row may not be visible
+    // in this graph's snapshot yet (adopt writes it via a separate connection, refreshed async), so
+    // skip rather than hard-error — a later sync re-runs this. Never clobber a real tier over a race.
+    const settings = readSettings(g);
+    if (!settings) {
+      if (import.meta.env.DEV)
+        console.warn('[subscription] user_settings not visible yet — skipping re-sync');
+      return;
+    }
     const changes: Partial<UserSettingsRow> = {
       subscription_tier: subscription.tierSlug,
       subscription_status: subscription.status,
