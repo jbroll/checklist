@@ -11,6 +11,7 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NavState } from '@/lib/useNavigationHistory';
 import { SessionView } from './SessionView';
 
 // `@/jazz` mock: `useRowboat()` returns a stable stub graph object (so tests can assert
@@ -38,16 +39,12 @@ vi.mock('@/rowboat', () => ({
 // Mock navigation history hook
 const mockNavigateTo = vi.fn();
 const mockGoBack = vi.fn();
-let mockNavState = { view: 'session' as const, editing: false };
-vi.mock('@/lib/useNavigationHistory', () => ({
-  useNavigationHistory: () => ({
-    get navState() {
-      return mockNavState;
-    },
-    navigateTo: mockNavigateTo,
-    goBack: mockGoBack,
-  }),
-}));
+let mockNavState: NavState = {
+  view: 'session',
+  templateId: 'template-1',
+  sessionId: 'session-1',
+  editing: false,
+};
 
 // Mock dnd-kit
 vi.mock('@dnd-kit/core', () => ({
@@ -189,6 +186,9 @@ function createDefaultProps(overrides = {}) {
     sessionId: 'session-1',
     onBack: vi.fn(),
     onSwitchSession: vi.fn(),
+    navState: mockNavState,
+    navigateTo: mockNavigateTo,
+    goBack: mockGoBack,
     ...overrides,
   };
 }
@@ -198,7 +198,12 @@ describe('SessionView', () => {
     vi.clearAllMocks();
     setUserSettingsRow({ view_template_category_expanded: {} });
     // Reset navigation state
-    mockNavState = { view: 'session', editing: false };
+    mockNavState = {
+      view: 'session',
+      templateId: 'template-1',
+      sessionId: 'session-1',
+      editing: false,
+    };
   });
 
   afterEach(() => {
@@ -375,7 +380,12 @@ describe('SessionView', () => {
 
     it('shows all items in edit mode', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const items = [
         createMockItem('item-1', 'Milk', 'item'),
@@ -395,7 +405,12 @@ describe('SessionView', () => {
 
     it('shows add item form in edit mode', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const props = createDefaultProps();
       render(<SessionView {...props} />);
@@ -406,7 +421,12 @@ describe('SessionView', () => {
 
     it('exits edit mode when back is triggered', async () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const props = createDefaultProps();
       render(<SessionView {...props} />);
@@ -421,7 +441,12 @@ describe('SessionView', () => {
 
     it('shows empty state in edit mode when no items', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const template = createMockTemplate('template-1', [], [createMockSession('session-1')]);
       const props = createDefaultProps({ template });
@@ -435,7 +460,12 @@ describe('SessionView', () => {
   describe('item interactions', () => {
     it('allows toggling item selection', async () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const items = [createMockItem('item-1', 'Milk', 'item')];
       const session = createMockSession('session-1');
@@ -455,7 +485,12 @@ describe('SessionView', () => {
 
     it('shows hierarchical items when categories exist', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const items = [
         createMockItem('cat-1', 'Dairy', 'category', 'dairy'),
@@ -498,7 +533,12 @@ describe('SessionView', () => {
   describe('batch operations', () => {
     it('shows batch operation buttons in edit mode', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       const items = [
         createMockItem('item-1', 'Milk', 'item'),
@@ -560,7 +600,12 @@ describe('SessionView', () => {
   describe('category expansion state', () => {
     it('uses category expanded state from per-user view state', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       setUserSettingsRow({
         view_template_category_expanded: {
@@ -586,7 +631,12 @@ describe('SessionView', () => {
 
     it('defaults to expanded when no view state exists', () => {
       // Set navigation state to show edit mode
-      mockNavState = { view: 'session', editing: true };
+      mockNavState = {
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      };
 
       setUserSettingsRow({ view_template_category_expanded: {} });
 

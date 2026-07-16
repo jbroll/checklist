@@ -2,7 +2,7 @@ import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import { Package } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
-import { useNavigationHistory } from '@/lib/useNavigationHistory';
+import type { NavState } from '@/lib/useNavigationHistory';
 import { useRowboat, useSelect } from '@/rowboat';
 import type { FolderRow, SessionData } from '@/schema/folder';
 import { parseUserSettingsRow } from '@/schema/userSettingsData';
@@ -26,6 +26,10 @@ interface SessionViewProps {
   sessionId: string;
   onBack: () => void;
   onSwitchSession?: (newSessionId: string) => void;
+  /** Shared navigation state + actions from AppContainer (one history instance for the whole app). */
+  navState: NavState;
+  navigateTo: (state: NavState) => void;
+  goBack: () => void;
 }
 
 /** Stable "nothing customized yet" default — see `templateCategoryExpanded`'s useSelect below. */
@@ -43,9 +47,16 @@ function shallowBooleanRecordEqual(
   return aKeys.every((key) => a[key] === b[key]);
 }
 
-export function SessionView({ template, sessionId, onBack, onSwitchSession }: SessionViewProps) {
+export function SessionView({
+  template,
+  sessionId,
+  onBack,
+  onSwitchSession,
+  navState,
+  navigateTo,
+  goBack,
+}: SessionViewProps) {
   const g = useRowboat();
-  const { navState, navigateTo, goBack } = useNavigationHistory();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const [zoneExpanded, setZoneExpanded] = useState({

@@ -1,9 +1,10 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { UpgradeBanner } from '@/components/billing';
 import { TreeView } from '@/components/tree';
 import { LoadingScreen } from '@/components/ui/loading';
 import { ItemLimitExceededError, useCheckListHierarchy } from '@/hooks';
 import { useDialogManager } from '@/lib/useDialogManager';
+import { useNavigationHistory } from '@/lib/useNavigationHistory';
 import { useTemplateNavigation } from '@/lib/useTemplateNavigation';
 import { usePort, useRowboat } from '@/rowboat';
 import * as sessionService from '@/services/sessionService';
@@ -29,9 +30,10 @@ interface AppContainerProps {
  * wired onto the rowboat graph (`g` via `useRowboat()`) and the services (`sessionService`,
  * `subscriptionService`, `useCheckListHierarchy`).
  *
- * `currentSessionId` is intentionally LOCAL React state, not synced — there is no
- * cross-tab/browser-back session restore yet, since `useNavigationHistory` here only drives the
- * SessionView's own edit-mode toggle, not the template→session transition.
+ * The top-level view (tree vs session) is driven by `useNavigationHistory`'s `navState`, so browser
+ * back/forward toggle TreeView↔SessionView. Opening a session pushes a history entry; switching
+ * sessions replaces it. This is nav-only: on mount the hash is reset to `main`, so a reload or a
+ * pasted `#session/…` URL lands on the tree (no deep-link/id-resolution restore).
  */
 export function AppContainer({
   onSignOut,
@@ -44,13 +46,18 @@ export function AppContainer({
   const { dialogs, openDialog, setDialogOpen } = useDialogManager();
   const { selectedTemplateId, selectedFolderId, selectTemplate, selectFolder, clearSelection } =
     useTemplateNavigation();
+  const { navState, navigateTo, goBack, replaceState } = useNavigationHistory();
+
+  // Nav-only: reset the hash to `main` on mount so a reload / pasted `#session/…` lands on the tree.
+  useEffect(() => {
+    replaceState({ view: 'main' });
+  }, [replaceState]);
 
   const { addFolder, findById, getAllTemplateFolders } = useCheckListHierarchy({
     createdBy: author ?? 'anon',
     mintGroup,
   });
 
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
   const [sessionExportData, setSessionExportData] = useState<SessionExportData | null>(null);
 
@@ -88,12 +95,15 @@ export function AppContainer({
   };
 
   const handleBackToTemplates = () => {
-    setCurrentSessionId(null);
+    goBack();
     clearSelection();
   };
 
   const handleSwitchSession = (newSessionId: string) => {
-    setCurrentSessionId(newSessionId);
+    // A session switch replaces the current history entry — it isn't a new back-stop.
+    if (navState.view === 'session') {
+      replaceState({ view: 'session', templateId: navState.templateId, sessionId: newSessionId });
+    }
   };
 
   const handleTemplateSelect = async (templateId: string) => {
@@ -110,7 +120,7 @@ export function AppContainer({
     }
 
     selectTemplate(templateId);
-    setCurrentSessionId(sessionId);
+    navigateTo({ view: 'session', templateId, sessionId });
   };
 
   const handleExportSession = (templateId: string, sessionId: string) => {
@@ -118,17 +128,21 @@ export function AppContainer({
     openDialog('showSessionExport');
   };
 
-  // If viewing a shopping session, show SessionView.
-  if (selectedTemplateId && currentSessionId) {
-    const sessionTemplate = findById(selectedTemplateId);
+  // If viewing a shopping session, show SessionView — driven by navState so browser
+  // back/forward toggle the tree↔session view.
+  if (navState.view === 'session') {
+    const sessionTemplate = findById(navState.templateId);
     if (sessionTemplate) {
       return (
         <Suspense fallback={<LoadingScreen />}>
           <SessionView
             template={sessionTemplate}
-            sessionId={currentSessionId}
+            sessionId={navState.sessionId}
             onBack={handleBackToTemplates}
             onSwitchSession={handleSwitchSession}
+            navState={navState}
+            navigateTo={navigateTo}
+            goBack={goBack}
           />
         </Suspense>
       );
@@ -153,7 +167,7 @@ export function AppContainer({
             },
             onOpenSession: (templateId, sessionId) => {
               selectTemplate(templateId);
-              setCurrentSessionId(sessionId);
+              navigateTo({ view: 'session', templateId, sessionId });
             },
             onExportSession: handleExportSession,
           }}

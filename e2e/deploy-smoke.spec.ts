@@ -7,10 +7,9 @@
  * these hit a deployed environment, not the `/test` harness page) and pass now that SessionView
  * and the Export/Import dialogs are wired into AppContainer/TreeView.
  *
- * One test stays `test.skip`: "navigation - browser back/forward works" — the tree→session
- * transition is local React state, not a browser-history entry (see its inline TODO(e2e)), so
- * browser back/forward doesn't toggle between TreeView and SessionView. That's a genuine,
- * documented gap (AppContainer.tsx's own doc comment), not a wiring gap.
+ * The "navigation - browser back/forward works" test runs now too: AppContainer drives the
+ * tree↔session view from `useNavigationHistory`'s `navState`, so opening a session pushes a
+ * browser-history entry (D3).
  *
  * Run with:
  *   npm run test:smoke:test   # Test environment
@@ -327,14 +326,10 @@ test.describe('Core Functionality', () => {
     console.log('  Export/Import UI: OK');
   });
 
-  // TODO(e2e): session view IS wired now, but the tree→session transition is deliberately LOCAL
-  // React state (`currentSessionId` in AppContainer), not a browser-history entry — see
-  // AppContainer.tsx's own doc comment: "no cross-tab/browser-back session restore yet". Clicking
-  // a template never calls `history.pushState`, so `page.goBack()`/`goForward()` here would just
-  // navigate whatever real browser-history entries preceded this page load, not toggle between
-  // TreeView and SessionView. This is a genuine, documented gap, not a wiring gap — re-enable if
-  // template→session navigation is ever given its own history entry.
-  test.skip('navigation - browser back/forward works', async ({ page }) => {
+  // D3: opening a session now pushes a browser-history entry — AppContainer drives the top-level
+  // view from `useNavigationHistory`'s `navState` — so `page.goBack()`/`goForward()` toggle
+  // TreeView↔SessionView. (Nav-only: a reload lands on the tree, not the session.)
+  test('navigation - browser back/forward works', async ({ page }) => {
     // Create a list
     await page.getByRole('button', { name: 'New list' }).click();
     const listName = `Nav Test ${Date.now()}`;

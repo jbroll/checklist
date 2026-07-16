@@ -54,6 +54,29 @@ test.describe('UI - Template Selection', () => {
     await expect(page.getByRole('heading', { name: /test list/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
   });
+
+  test('browser back/forward toggles tree ↔ session (D3)', async ({ page }) => {
+    await page.goto('/test');
+    await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
+    await expect(page.getByText(/test mode/i)).toBeVisible({ timeout: 10000 });
+
+    await page.evaluate(async () => {
+      await window.testExports!.directory.create('Nav List', true);
+    });
+    await expect(page.getByText('Nav List')).toBeVisible({ timeout: 10000 });
+
+    // Open the session (pushes a history entry)
+    await page.getByText('Nav List').click();
+    await expect(page.getByRole('heading', { name: /nav list/i })).toBeVisible({ timeout: 5000 });
+
+    // Back → tree view (a header-only "New folder" button is present on the tree, not the session)
+    await page.goBack();
+    await expect(page.getByRole('button', { name: 'New folder' })).toBeVisible({ timeout: 5000 });
+
+    // Forward → session view again
+    await page.goForward();
+    await expect(page.getByRole('heading', { name: /nav list/i })).toBeVisible({ timeout: 5000 });
+  });
 });
 
 test.describe('UI - Session View', () => {
