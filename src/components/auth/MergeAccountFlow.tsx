@@ -1,6 +1,5 @@
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useAuthor, useSession } from '@/jazz';
 import {
   clearMergeState,
   finalizeMerge,
@@ -11,6 +10,7 @@ import {
   startMerge,
 } from '@/lib/account-merge';
 import { betterAuthClient } from '@/lib/auth-client';
+import { useAuthor, useSession } from '@/rowboat';
 
 type FlowState =
   | 'entry'

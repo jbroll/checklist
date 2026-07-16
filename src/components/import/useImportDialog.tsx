@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImportFormFields } from '@/components/import/ImportFormFields';
-import { usePort, useRowboat } from '@/jazz';
+import { usePort, useRowboat } from '@/rowboat';
 import type { FolderRow } from '@/schema/folder';
 import * as folderOps from '@/services/folderOps';
 import type { CsvImportResult } from '@/services/import/csvImporter';

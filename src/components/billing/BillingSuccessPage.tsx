@@ -6,7 +6,7 @@
 
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useRowboat } from '@/jazz';
+import { useRowboat } from '@/rowboat';
 import {
   getSubscriptionTier,
   getTierDisplayName,

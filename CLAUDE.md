@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CheckList - Shared Checklists. Built on **rowboat** (a self-hosted, sync-native relational store) and
 BetterAuth.
 
-> CheckList was originally built on Jazz.tools and has since been ported off it entirely. `jazz-tools`
-> is no longer a frontend dependency. The `src/lib/jazz.tsx` / `src/jazz/` names are retained but now
-> wrap the rowboat client, not Jazz.
+> CheckList was originally built on Jazz.tools and has since been ported off it entirely — `jazz-tools`
+> is no longer a frontend dependency. The rowboat provider lives in `src/lib/rowboat.tsx`; the narrow
+> waist the app imports auth + graph hooks from is `src/rowboat/` (`@/rowboat`).
 
 **Key Features**:
 - Hierarchical template organization
@@ -73,10 +73,10 @@ checklist/
 │   ├── lib/
 │   │   ├── auth-client.ts # BetterAuth client
 │   │   ├── account-merge.ts # rowboat account-merge fetch client
-│   │   ├── jazz.tsx       # rowboat provider + sync loop + anon-claim wiring
+│   │   ├── rowboat.tsx       # rowboat provider + sync loop + anon-claim wiring
 │   │   ├── brand.ts       # White-label branding config
 │   │   └── utils.ts       # Helper functions
-│   ├── jazz/              # narrow waist: re-exports the rowboat provider + auth hooks
+│   ├── rowboat/              # narrow waist: re-exports the rowboat provider + auth hooks
 │   ├── components/
 │   │   ├── AuthGate.tsx   # Auth wrapper component
 │   │   ├── tree/          # Tree view (folders and items)
@@ -159,7 +159,7 @@ BetterAuth is wired as rowboat's identity provider (`@jbroll/rowboat-auth-better
 
 **Files**:
 - `src/lib/auth-client.ts` - BetterAuth client
-- `src/lib/jazz.tsx` - the rowboat provider (`RowboatBridge`), sync loop, and account-init provisioning
+- `src/lib/rowboat.tsx` - the rowboat provider (`RowboatBridge`), sync loop, and account-init provisioning
 
 ## Environment Variables
 
@@ -254,8 +254,8 @@ npm run preview      # Test production build
 - **Sync is automatic** — local-first writes sync in the background; no manual API calls needed.
 - **Always soft delete** — `archived: true` / tombstone, never splice/remove.
 - **Templates stay clean** — session state is tracked separately in `SessionData`.
-- **No `jazz-tools`** in the frontend — only `src/jazz/**` (the narrow waist) may touch the underlying
-  framework; everything else imports the provider/auth hooks from `@/jazz`.
+- **No `jazz-tools`** in the frontend — only `src/rowboat/**` (the narrow waist) may touch the underlying
+  framework; everything else imports the provider/auth hooks from `@/rowboat`.
 
 ## Documentation
 

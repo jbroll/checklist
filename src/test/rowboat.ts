@@ -2,12 +2,12 @@
  * rowboat test harness — in-memory graph + a `@/jazz` stand-in for component tests.
  *
  * The real `@/jazz` (`src/lib/jazz.tsx`) reads its graph from a React context that
- * `JazzProvider` populates by wiring a live IndexedDB-backed `RowboatDb` and a
+ * `RowboatProvider` populates by wiring a live IndexedDB-backed `RowboatDb` and a
  * `syncWithServer` interval — none of which exist (or should run) under jsdom. Rather than
  * fake that whole stack, component tests that need the graph do:
  *
  * ```ts
- * vi.mock('@/jazz', async () => {
+ * vi.mock('@/rowboat', async () => {
  *   const { rowboatJazzMock } = await import('@/test/rowboat');
  *   return rowboatJazzMock();
  * });
@@ -181,7 +181,7 @@ export interface RowboatJazzMockOptions {
 }
 
 /**
- * Body for `vi.mock('@/jazz', ...)`. Defaults to a fixed authenticated test author and a
+ * Body for `vi.mock('@/rowboat', ...)`. Defaults to a fixed authenticated test author and a
  * `mintGroup` stub that returns a deterministic group id — override per test via
  * `vi.mocked(usePort)`/`vi.mocked(useAuthor)` after importing, or pass `options` when the
  * default isn't suitable for a whole file.
@@ -199,6 +199,6 @@ export function rowboatJazzMock(options: RowboatJazzMockOptions = {}) {
     useSession: () => ({ isPending: false, data: author ? { user: { id: author } } : null }),
     signIn: { social: vi.fn() },
     signOut: vi.fn(),
-    JazzProvider: ({ children }: { children: ReactNode }) => children,
+    RowboatProvider: ({ children }: { children: ReactNode }) => children,
   };
 }

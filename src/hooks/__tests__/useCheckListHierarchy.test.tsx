@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeGraph, setActiveGraph } from '@/test/rowboat';
 import { useCheckListHierarchy } from '../useCheckListHierarchy';
 
-vi.mock('@/jazz', async () => {
+vi.mock('@/rowboat', async () => {
   const { rowboatJazzMock } = await import('@/test/rowboat');
   return rowboatJazzMock();
 });

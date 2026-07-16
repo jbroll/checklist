@@ -19,7 +19,7 @@ vi.mock('@/lib/account-merge', () => helpers);
 vi.mock('@/lib/auth-client', () => ({
   betterAuthClient: { signOut: vi.fn(), signIn: { social: vi.fn(), email: vi.fn() } },
 }));
-vi.mock('@/jazz', () => ({
+vi.mock('@/rowboat', () => ({
   useAuthor: () => mockAuthor,
   useSession: () => ({ isPending: mockSessionPending }),
 }));

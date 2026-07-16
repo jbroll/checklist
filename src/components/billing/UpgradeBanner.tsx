@@ -9,7 +9,7 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useRowboat } from '@/jazz';
+import { useRowboat } from '@/rowboat';
 import { storageKey } from '../../lib/brand';
 import {
   countUserLists,

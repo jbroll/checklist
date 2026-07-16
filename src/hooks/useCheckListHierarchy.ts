@@ -21,7 +21,7 @@
  * for the exact call sites.
  */
 import { useCallback, useMemo } from 'react';
-import { useRowboat, useSelect } from '@/jazz';
+import { useRowboat, useSelect } from '@/rowboat';
 import type { FolderRow } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
 import {

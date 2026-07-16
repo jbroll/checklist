@@ -1,9 +1,9 @@
 # Intentional barrels / re-export modules allowed past the org-hooks
 # ts-no-reexports gate. One path-substring per line; '#' starts a comment.
 
-# Jazz narrow-waist: re-exporting jazz-tools runtime IS its purpose (paired
+# rowboat narrow-waist: the single module app code imports the provider/auth from (paired
 # with ts-jazz-waist, which forces app code through this single module).
-src/jazz/index.ts
+src/rowboat/index.ts
 
 # Schema barrel — single public entry point for the CoValue schemas.
 src/schema/index.ts

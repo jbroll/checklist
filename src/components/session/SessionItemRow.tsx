@@ -1,8 +1,8 @@
 import { useDraggable } from '@dnd-kit/core';
 import { StickyNote } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
-import { useRowboat } from '@/jazz';
 import { useDoubleTap } from '@/lib/useDoubleTap';
+import { useRowboat } from '@/rowboat';
 import type { FolderRow, ItemState, TemplateItem } from '@/schema/folder';
 import * as templateService from '@/services/templateService';
 

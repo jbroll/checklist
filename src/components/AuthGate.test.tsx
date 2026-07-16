@@ -17,7 +17,7 @@ const mockJazzSignOut = vi.fn();
 let mockAuthor: string | null = null;
 let mockSessionPending = false;
 
-vi.mock('@/jazz', () => ({
+vi.mock('@/rowboat', () => ({
   useAuthor: () => mockAuthor,
   useSession: () => ({ isPending: mockSessionPending }),
   signIn: { social: (...args: unknown[]) => mockSignInSocial(...args) },

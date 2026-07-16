@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { UpgradeDialog } from '@/components/billing';
-import { useRowboat } from '@/jazz';
 import type { DialogName, DialogState } from '@/lib/useDialogManager';
+import { useRowboat } from '@/rowboat';
 import type { FolderRow } from '@/schema/folder';
 import * as subscriptionService from '@/services/subscriptionService';
 import * as userSettingsService from '@/services/userSettingsService';

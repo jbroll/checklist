@@ -2,7 +2,7 @@ import { useSharing } from '@jbroll/rowboat-sharing-react';
 import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { signIn, signOut, useAuthor, useSession } from '@/jazz';
+import { signIn, signOut, useAuthor, useSession } from '@/rowboat';
 
 interface InviteAcceptPageProps {
   token: string;

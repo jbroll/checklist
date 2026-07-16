@@ -19,8 +19,8 @@ vi.mock('./components/AuthGate', () => ({
 }));
 
 // Mock the rowboat provider
-vi.mock('./lib/jazz', () => ({
-  JazzProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock('./lib/rowboat', () => ({
+  RowboatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock dialog context

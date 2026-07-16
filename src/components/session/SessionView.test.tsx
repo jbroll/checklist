@@ -30,7 +30,7 @@ const { mockGraph, setUserSettingsRow } = vi.hoisted(() => {
   return { mockGraph, setUserSettingsRow };
 });
 
-vi.mock('@/jazz', () => ({
+vi.mock('@/rowboat', () => ({
   useRowboat: () => mockGraph,
   useSelect: (fn: () => unknown) => fn(),
 }));

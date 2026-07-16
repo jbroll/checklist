@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom';
 
 // rowboat test helpers (makeGraph/renderWithRowboat/rowboatJazzMock) — see src/test/rowboat.ts.
-// Not re-exported here: tests import them directly from '@/test/rowboat' so `vi.mock('@/jazz', ...)`
+// Not re-exported here: tests import them directly from '@/test/rowboat' so `vi.mock('@/rowboat', ...)`
 // can dynamic-`import()` them without hoisting surprises (see that module's doc comment).
 
 // Mock window.alert for components that use alert() for error messages

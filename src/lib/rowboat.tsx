@@ -142,7 +142,7 @@ function RowboatBridge({
         author,
         fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
       }).catch((err) => {
-        console.error('[jazz] syncWithServer failed:', err);
+        console.error('[rowboat] syncWithServer failed:', err);
       });
     };
     run();
@@ -222,11 +222,11 @@ function RowboatBridge({
         if (author) {
           runCleanupIfNeeded(graph);
           void syncSubscriptionFromBackend(graph).catch((err) => {
-            console.error('[jazz] subscription re-sync failed:', err);
+            console.error('[rowboat] subscription re-sync failed:', err);
           });
         }
       } catch (err) {
-        console.error('[jazz] account-init provisioning failed:', err);
+        console.error('[rowboat] account-init provisioning failed:', err);
       }
     })();
     return () => {
@@ -242,7 +242,7 @@ function RowboatBridge({
   return <PortContext.Provider value={value}>{children}</PortContext.Provider>;
 }
 
-export function JazzProvider({ children }: { children: ReactNode }) {
+export function RowboatProvider({ children }: { children: ReactNode }) {
   const author = useAuthor();
   const { isPending: sessionPending } = useSession();
   const identity = author ?? ANON_IDENTITY;
@@ -255,7 +255,7 @@ export function JazzProvider({ children }: { children: ReactNode }) {
     tables: manifest,
     options: dbOptions,
     onError: (err) => {
-      console.error('[jazz] useAnonClaim failed:', err);
+      console.error('[rowboat] useAnonClaim failed:', err);
     },
   });
 
@@ -272,10 +272,10 @@ export function JazzProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** The bound graph — must be used inside `<JazzProvider>`. */
+/** The bound graph — must be used inside `<RowboatProvider>`. */
 export function useRowboat(): RelationalGraph<typeof schema> {
   const ctx = useContext(PortContext);
-  if (!ctx) throw new Error('useRowboat() must be used inside <JazzProvider>');
+  if (!ctx) throw new Error('useRowboat() must be used inside <RowboatProvider>');
   return ctx.graph;
 }
 
@@ -287,6 +287,6 @@ export function useSelect<T>(selector: () => T, isEqual?: (a: T, b: T) => boolea
 /** The port-specific bits `useCheckListHierarchy` needs that the graph itself doesn't carry. */
 export function usePort(): { author: string | null; mintGroup: PortContextValue['mintGroup'] } {
   const ctx = useContext(PortContext);
-  if (!ctx) throw new Error('usePort() must be used inside <JazzProvider>');
+  if (!ctx) throw new Error('usePort() must be used inside <RowboatProvider>');
   return { author: ctx.author, mintGroup: ctx.mintGroup };
 }

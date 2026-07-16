@@ -3,7 +3,7 @@
  *
  * Replaces the old Jazz waist (`co`/`Group`/`JazzReactProvider`/`useAccount`/etc. from
  * `jazz-tools`) now that the folder hierarchy is ported to rowboat (see
- * `src/schema/folder.ts`, `src/lib/jazz.tsx`). App code that needs the graph, auth, or the
+ * `src/schema/folder.ts`, `src/lib/rowboat.tsx`). App code that needs the graph, auth, or the
  * provider imports it from here rather than reaching into `@jbroll/rowboat-*` /
  * `@jbroll/rowboat-auth-betterauth-react` directly, so a future rename/replacement touches
  * this one module, not the tree.
@@ -17,4 +17,4 @@ export {
   useSession,
 } from '@jbroll/rowboat-auth-betterauth-react';
 // The rowboat provider + sync loop + anon-claim wiring.
-export { JazzProvider, usePort, useRowboat, useSelect } from '@/lib/jazz';
+export { RowboatProvider, usePort, useRowboat, useSelect } from '@/lib/rowboat';

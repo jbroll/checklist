@@ -9,12 +9,12 @@
  * Rowboat port (slice-2): reads the bound graph via `useRowboat()` (was Jazz `useAccount`) and
  * hands it to `exposeServicesToWindow(g)`, which publishes the graph + ported services on
  * `window.testExports` for Playwright seeding. The graph is always available inside
- * `<JazzProvider>`, so — unlike the Jazz version — there is no "waiting for account" state.
+ * `<RowboatProvider>`, so — unlike the Jazz version — there is no "waiting for account" state.
  */
 
 import { Beaker } from 'lucide-react';
 import { useEffect } from 'react';
-import { useRowboat } from '@/jazz';
+import { useRowboat } from '@/rowboat';
 import { exposeServicesToWindow } from '@/services/testHelpers';
 import { AppContainer } from './components/editor/AppContainer';
 

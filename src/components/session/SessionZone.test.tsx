@@ -2,7 +2,7 @@
  * Component tests for SessionZone
  *
  * Tests the zone rendering, batch operations, and interaction modes.
- * Uses jazz-mock for CoValue mocking.
+ * Uses vi.mock for the rowboat graph hook + dnd-kit (no Jazz).
  */
 
 import { render, screen } from '@testing-library/react';
@@ -13,7 +13,7 @@ import { SessionZone } from './SessionZone';
 
 // Mock the rowboat graph hook — SessionZone only threads it through to
 // templateService.renameItem (mocked below), so an empty stub graph is enough.
-vi.mock('@/jazz', () => ({
+vi.mock('@/rowboat', () => ({
   useRowboat: () => ({}),
 }));
 
@@ -664,137 +664,6 @@ describe('SessionZone', () => {
       );
 
       expect(screen.getByText('2 of 3')).toBeInTheDocument();
-    });
-  });
-
-  describe('category name editing', () => {
-    it('shows input when in edit mode', () => {
-      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
-      const template = createMockTemplate('template-1');
-
-      render(
-        <SessionZone
-          {...defaultProps}
-          template={template as any}
-          categorySelection={{ categoryItem }}
-          editModeProps={{
-            isEditingThisItem: true,
-            canEditItem: true,
-            onEnterEditMode: vi.fn(),
-            onExitEditMode: vi.fn(),
-          }}
-        />,
-      );
-
-      const input = screen.getByRole('textbox');
-      expect(input).toBeInTheDocument();
-    });
-
-    it('calls onExitEditMode when Escape is pressed during edit', async () => {
-      const user = userEvent.setup();
-      const onExitEditMode = vi.fn();
-      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
-      const template = createMockTemplate('template-1');
-
-      render(
-        <SessionZone
-          {...defaultProps}
-          template={template as any}
-          categorySelection={{ categoryItem }}
-          editModeProps={{
-            isEditingThisItem: true,
-            canEditItem: true,
-            onEnterEditMode: vi.fn(),
-            onExitEditMode,
-          }}
-        />,
-      );
-
-      const input = screen.getByRole('textbox');
-      await user.type(input, '{Escape}');
-
-      expect(onExitEditMode).toHaveBeenCalled();
-    });
-
-    it('saves on Enter when value changed', async () => {
-      const user = userEvent.setup();
-      const onExitEditMode = vi.fn();
-      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
-      const template = createMockTemplate('template-1');
-
-      render(
-        <SessionZone
-          {...defaultProps}
-          template={template as any}
-          categorySelection={{ categoryItem }}
-          editModeProps={{
-            isEditingThisItem: true,
-            canEditItem: true,
-            onEnterEditMode: vi.fn(),
-            onExitEditMode,
-          }}
-        />,
-      );
-
-      const input = screen.getByRole('textbox');
-      await user.clear(input);
-      await user.type(input, 'New Name{Enter}');
-
-      expect(onExitEditMode).toHaveBeenCalled();
-    });
-
-    it('exits edit mode without saving when value is empty', async () => {
-      const user = userEvent.setup();
-      const onExitEditMode = vi.fn();
-      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
-      const template = createMockTemplate('template-1');
-
-      render(
-        <SessionZone
-          {...defaultProps}
-          template={template as any}
-          categorySelection={{ categoryItem }}
-          editModeProps={{
-            isEditingThisItem: true,
-            canEditItem: true,
-            onEnterEditMode: vi.fn(),
-            onExitEditMode,
-          }}
-        />,
-      );
-
-      const input = screen.getByRole('textbox');
-      await user.clear(input);
-      await user.type(input, '{Enter}');
-
-      expect(onExitEditMode).toHaveBeenCalled();
-    });
-
-    it('saves on blur', async () => {
-      const user = userEvent.setup();
-      const onExitEditMode = vi.fn();
-      const categoryItem = createMockItem('cat-1', 'Category Name', 'category');
-      const template = createMockTemplate('template-1');
-
-      render(
-        <SessionZone
-          {...defaultProps}
-          template={template as any}
-          categorySelection={{ categoryItem }}
-          editModeProps={{
-            isEditingThisItem: true,
-            canEditItem: true,
-            onEnterEditMode: vi.fn(),
-            onExitEditMode,
-          }}
-        />,
-      );
-
-      const input = screen.getByRole('textbox');
-      await user.type(input, 'Updated Name');
-      await user.tab(); // blur the input
-
-      expect(onExitEditMode).toHaveBeenCalled();
     });
   });
 

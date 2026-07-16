@@ -3,9 +3,10 @@
 A collaborative, offline-first list application built on **rowboat** (a self-hosted,
 sync-native relational store), **BetterAuth**, and **Stripe**.
 
-> **Note:** CheckList was originally built on Jazz.tools and has since been ported off it
-> entirely. `jazz-tools` is no longer a frontend dependency. The `src/lib/jazz.tsx` /
-> `src/jazz/` names are retained but now wrap the rowboat client, not Jazz.
+> **Note:** CheckList was originally built on Jazz.tools and has since been ported off it entirely —
+> `jazz-tools` is no longer a frontend dependency. The rowboat provider lives in `src/lib/rowboat.tsx`
+> and its narrow waist (the `@/rowboat` re-export the app imports auth + graph hooks from) in
+> `src/rowboat/`.
 
 ## Core Architecture
 
@@ -61,7 +62,7 @@ Rowboat is offline-first: all reads/writes hit the local store (IndexedDB in the
 in the background over `/api/sync` (push/pull). Conflict resolution is **per-column / per-json-path
 last-write-wins keyed on an HLC stamp**, so concurrent edits converge deterministically. A short
 epoch handshake reconciles a fresh client with the server generation. Cross-tab updates propagate
-via `BroadcastChannel`. `src/lib/jazz.tsx` hosts the rowboat provider (`RowboatBridge`), the sync
+via `BroadcastChannel`. `src/lib/rowboat.tsx` hosts the rowboat provider (`RowboatBridge`), the sync
 loop, and account-init provisioning.
 
 ## Backend (`backend/src/`)
@@ -158,7 +159,7 @@ src/
     ├── auth-client.ts    # BetterAuth client
     ├── account-merge.ts  # rowboat account-merge fetch client
     ├── brand.ts          # white-label branding
-    └── jazz.tsx          # rowboat provider + sync loop + anon-claim wiring
+    └── rowboat.tsx          # rowboat provider + sync loop + anon-claim wiring
 backend/src/
 ├── index.ts              # rowboat auth + identity + sync + sharing on one sqlite db
 └── billing/              # Stripe client, webhooks, /api/billing routes

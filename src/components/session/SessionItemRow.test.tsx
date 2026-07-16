@@ -12,7 +12,7 @@ import { SessionItemRow } from './SessionItemRow';
 
 // Mock the rowboat graph hook — SessionItemRow only threads it through to
 // templateService.renameItem, which isn't exercised by these tests.
-vi.mock('@/jazz', () => ({
+vi.mock('@/rowboat', () => ({
   useRowboat: () => ({}),
 }));
 

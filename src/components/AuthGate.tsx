@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { signIn, signOut, useAuthor, useSession } from '@/jazz';
 import { useDialog } from '@/lib/dialog-context';
+import { signIn, signOut, useAuthor, useSession } from '@/rowboat';
 import { EmailAuthDialog } from './auth/EmailAuthDialog';
 import { SignInDialog } from './auth/SignInDialog';
 import { AppContainer } from './editor/AppContainer';

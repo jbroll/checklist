@@ -7,7 +7,7 @@
 
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
-import { useRowboat } from '@/jazz';
+import { useRowboat } from '@/rowboat';
 import { brand } from '../../lib/brand';
 import {
   getBetaMessage,

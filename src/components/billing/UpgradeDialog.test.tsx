@@ -44,7 +44,7 @@ vi.mock('../../services/subscriptionService', () => ({
 
 // The component reads the graph via useRowboat(); subscriptionService is mocked, so the graph
 // value is unused — a stub is enough.
-vi.mock('@/jazz', () => ({ useRowboat: () => ({}) }));
+vi.mock('@/rowboat', () => ({ useRowboat: () => ({}) }));
 
 import {
   getBetaMessage,

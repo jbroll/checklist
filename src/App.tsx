@@ -13,7 +13,7 @@ import { InAppBrowserWarning } from './components/sharing/InAppBrowserWarning';
 import { LoadingScreen } from './components/ui/loading';
 import { brand } from './lib/brand';
 import { DialogProvider } from './lib/dialog-context';
-import { JazzProvider } from './lib/jazz';
+import { RowboatProvider } from './lib/rowboat';
 import { detectInAppBrowser } from './utils/inAppBrowserDetection';
 
 /**
@@ -175,7 +175,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <JazzProvider>
+      <RowboatProvider>
         <DialogProvider>
           <a
             href="#main-content"
@@ -217,7 +217,7 @@ function App() {
             )}
           </div>
         </DialogProvider>
-      </JazzProvider>
+      </RowboatProvider>
     </ErrorBoundary>
   );
 }

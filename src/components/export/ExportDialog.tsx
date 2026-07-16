@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useRowboat } from '@/jazz';
 import { useDialog } from '@/lib/dialog-context';
+import { useRowboat } from '@/rowboat';
 import type { FolderRow } from '@/schema/folder';
 import {
   exportTemplateItemsToCsv,

@@ -13,8 +13,8 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
 import { arraysEqualById, isTemplateFolder, useCheckListHierarchy } from '@/hooks';
-import { usePort, useRowboat, useSelect } from '@/jazz';
 import { usePWAInstall } from '@/lib/usePWAInstall';
+import { usePort, useRowboat, useSelect } from '@/rowboat';
 import type { FolderRow } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
 import * as sessionService from '@/services/sessionService';
