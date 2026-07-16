@@ -4,19 +4,9 @@ Open, intentionally-deferred technical items from the rowboat port. Each is defe
 with the rationale below — not forgotten. (Product/market roadmap lives in `ROADMAP.md`; the current
 architecture lives in `ARCHITECTURE.md`.)
 
-Resolved items (D1 `rb.ordered` adoption, D2 `user_settings` convergence, D6 export off Jazz, D7
-account-merge, D8 Jazz-schema deletion, D9 session-retention cleanup) have shipped and their durable
-behavior is folded into `ARCHITECTURE.md`.
-
-## D3 — browser back/forward session navigation — **LOW**
-- **Where:** `src/components/editor/AppContainer.tsx` tracks the open session in React state
-  (`currentSessionId`), not browser history. The hash+History router `src/lib/useNavigationHistory.ts`
-  exists (Jazz-era) but is no longer wired to the template→session transition.
-- **Symptom:** `page.goBack()`/`goForward()` don't toggle TreeView↔SessionView (see the skipped
-  `e2e/deploy-smoke.spec.ts` nav test).
-- **Fix:** re-wire `AppContainer` onto `useNavigationHistory` (derive the active session from
-  `navState`; `navigateTo`/`goBack`/`replaceState`). Open decision: whether a `#session/<t>/<s>` URL
-  must also **restore on reload / deep-link** (resolving against rowboat ids) or is nav-only.
+Resolved items (D1 `rb.ordered` adoption, D2 `user_settings` convergence, D3 browser back/forward
+navigation, D6 export off Jazz, D7 account-merge, D8 Jazz-schema deletion, D9 session-retention
+cleanup) have shipped and their durable behavior is folded into `ARCHITECTURE.md`.
 
 ## D4 — jbr-jazz → rowboat data migration for a real cutover — **deferred**
 - Existing deployed jbr-jazz data (jazz-shaped `auth.db`, `share_invites.target_covalue_id`, folder

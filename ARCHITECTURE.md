@@ -23,6 +23,12 @@ from the template, so templates stay clean. One template can back many sessions.
 
 Folders form a tree via a self-referencing `parent_id`, not a nested document.
 
+The top-level view (folder tree vs. an open session) is driven by a hash-based history state
+(`src/lib/useNavigationHistory.ts`, threaded through `AppContainer` and into `SessionView`), so
+browser back/forward toggle tree↔session and the in-session edit mode. It is **nav-only**: opening a
+session pushes a history entry, but a reload / pasted `#session/…` URL lands on the tree (no
+deep-link/id-resolution restore).
+
 ## Data model (rowboat relational schema)
 
 The schema is authored once in Zod with rowboat's `rb.*` column helpers and shared by frontend and
