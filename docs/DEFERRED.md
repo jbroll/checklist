@@ -8,15 +8,9 @@ Resolved items (D1 `rb.ordered` adoption, D2 `user_settings` convergence, D3 bro
 navigation, D6 export off Jazz, D7 account-merge, D8 Jazz-schema deletion, D9 session-retention
 cleanup) have shipped and their durable behavior is folded into `ARCHITECTURE.md`.
 
-## D4 — jbr-jazz → rowboat data migration for a real cutover — **deferred**
-- Existing deployed jbr-jazz data (jazz-shaped `auth.db`, `share_invites.target_covalue_id`, folder
-  CoValues) has no migration to the rowboat schema; a stale slice-1 db also crashes on boot
-  (`registerSyncTable: re-registering "folder" cannot introduce column "items"`). Fresh dbs (dev/CI)
-  are fine. A production cutover needs an addColumn/data migration — or the accepted "delete existing
-  data" path (as used for the `rb.ordered` adoption).
-- Related: an existing sync db also stores the per-column `jsonSchema` in its registry, so picking up
-  a schema change (e.g. the `rb.ordered` keyed-map conformance) may require re-registration on boot;
-  verify as part of the cutover.
+**Decided against — D4 (jbr-jazz → rowboat data migration for a cutover):** there is no production
+data to migrate, so the fresh-start / "delete existing data" path stands (the same path used for the
+`rb.ordered` adoption). No migration will be built.
 
 ## D5 — nutrition / calorie tracking feature (port from prototype) — **FEATURE, deferred**
 - **What:** per-list calorie/nutrition tracking with portion controls — a working prototype existed on
