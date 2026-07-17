@@ -12,6 +12,16 @@ cleanup) have shipped and their durable behavior is folded into `ARCHITECTURE.md
 data to migrate, so the fresh-start / "delete existing data" path stands (the same path used for the
 `rb.ordered` adoption). No migration will be built.
 
+> **Note (2026-07-17) — rowboat now has a live schema-migration mechanism, but CheckList doesn't use it
+> yet.** rowboat landed a full live-migration stack (a `migrating` state + off-thread migration worker
+> + `POST /v1/databases/:id/schema` + the `rowboat migrate` CLI + `movedFrom` column-move DX). That is
+> the **StaaS / control-plane** deployment path. CheckList runs rowboat as an **embedded library**: the
+> backend registers a single compiled schema at boot (`registerSyncTable`), so an *ongoing* schema
+> change here still means a fresh `AUTH_DB_PATH` DB (see the Troubleshooting note in CLAUDE.md), NOT a
+> live migration. Adopting rowboat's migration path (or its `movedFrom` DX for column renames) is a
+> future option if CheckList ever needs to evolve a schema without discarding data — a separate
+> decision from the closed Jazz-cutover one above.
+
 ## D5 — nutrition / calorie tracking feature (port from prototype) — **FEATURE, deferred**
 - **What:** per-list calorie/nutrition tracking with portion controls — a working prototype existed on
   the (now-deleted) `claude/add-calorie-counter` branch (last commit `67eff69`, 2026-05). It forked

@@ -243,7 +243,12 @@ npm run preview      # Test production build
 - Confirm the backend is running (sync is served at `/api/sync`)
 - Check the network tab for `/api/sync/pull` / `/api/sync/push` calls and the browser console
 - A stale backend sync DB can reject writes on a schema change — a fresh `AUTH_DB_PATH` db re-registers
-  the current schema (see `docs/DEFERRED.md` D4)
+  the current schema (see `docs/DEFERRED.md` D4). This fresh-start-on-schema-change is CheckList's
+  library-mode reality: the backend registers one compiled schema at boot. rowboat now ships a live
+  schema-migration mechanism (`migrating` state + `POST /v1/databases/:id/schema` + the `rowboat
+  migrate` CLI + `movedFrom` column-move DX), but that is its **StaaS / control-plane** path, which
+  CheckList's embedded backend does not use — so schema changes here still mean a fresh backend DB
+  until/unless CheckList adopts that path (D4 note).
 
 ## Important Notes for AI Assistants
 
