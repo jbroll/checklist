@@ -22,11 +22,12 @@ pre-commit:
     # imports) can never fire here. Skip it — lefthook merges local `skip:` over remote.
     ts-jazz-waist:
       skip: true
-    # Full unit suite (frontend + backend) — fast, deterministic.
+    # Unit suite (frontend + backend) with flake tolerance: retries absorb a
+    # one-off flake, outcomes recorded to a local firehose, chronic flakes trip.
     unit-tests:
       glob: "*.{ts,tsx}"
-      run: npm run test:run
-    # Playwright e2e drives the real app; its webServer auto-starts npm run dev.
+      run: '"${ORG_HOOKS}/scripts/flake-run.sh" unit'
+    # Playwright e2e drives the real app; flake-run.sh adds retries + the local gate.
     e2e-tests:
       glob: "*.{ts,tsx,html}"
-      run: npm run test:e2e
+      run: '"${ORG_HOOKS}/scripts/flake-run.sh" e2e'

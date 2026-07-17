@@ -13,5 +13,4 @@ npm install
 ( cd backend && npm install )
 npm run lint
 npm run type-check
-npm run test:run
-( cd backend && npm test )
+"${ORG_HOOKS:-$HOME/src/org-hooks}/scripts/flake-run.sh" unit

@@ -69,7 +69,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   // Reporter to use - list for simple output, no auto-serve
-  reporter: 'list',
+  reporter: [['list'], ['json', { outputFile: 'test-results/results.json' }]],
 
   // Shared settings for all the projects below
   use: {
