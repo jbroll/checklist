@@ -129,8 +129,8 @@ the per-`database_id` file. Three ways to resolve it:
   surface (§C). Benefits: no cross-DB/cross-thread query; per-database isolation preserved (tenant A's
   group graph never touches B's); the shared `identity.db` leaves the data-plane authz path entirely
   (no cross-tenant chokepoint); group state travels with the data through the existing per-file backup
-  / hydrate / **live-migration**. Combined with decision 2, this removes `identity.db` entirely — the
-  data plane needs no shared identity store at all.
+  / hydrate / **live-migration**. The data plane needs no shared identity store at all; `identity.db`
+  stays, but only for the console/operator auth (decision 2), never consulted by the sync worker.
 - **B-opt-2: group memberships as JWT claims.** The JWT carries the user's effective groups; the
   worker enforces from the token. Stateless, but couples authz into the auth issuer (CheckList would
   own group state), and revoking a share lags until token refresh. Rejected as primary — authz should
@@ -194,17 +194,14 @@ groups nested under that root.
 1. **RBAC topology → B-opt-1.** Authz/group membership moves into per-database reserved tables
    (`__groups`/`__group_members`/`__group_inheritance`) keyed by the JWT `sub`; account credentials
    stay external (CheckList).
-2. **`identity.db` → removed (recommended).** Subscribers and their management keys already live in
-   **`control-plane.db`** (`createSubscriber` → `{subscriberId, managementKey}`); `identity.db` only
-   holds the **better-auth human login** that `linkSubscriberForUser` maps to a subscriber — a console
-   *session bridge*, nothing more. After B-opt-1 it has no data-plane role, so drop it: the console
-   authenticates via the **management key** (Bearer), like the `rowboat` CLI already does. Net:
-   **rowboat stores zero human identities** — end users via external JWT (`sub`), operators via
-   management keys — symmetric and minimal (no better-auth/OAuth/sessions/console-account-merge on the
-   platform). Trade-off: API-key/CLI-driven console instead of an OAuth dashboard login (the norm for
-   developer infra: Stripe/AWS/Neon); `linkSubscriberForUser`/`auth_user_id` becomes vestigial. A
-   human OAuth console login can be re-added later as an optional feature. Platform-ops decision,
-   orthogonal to CheckList.
+2. **`identity.db` → kept, as the rowboat console/website auth.** rowboat.rkroll.com is a real product
+   with a dashboard: operators need **human login + sessions (OAuth)** to manage their subscribers and
+   databases. `identity.db` provides that better-auth login; `linkSubscriberForUser` maps a session →
+   the operator's subscriber in `control-plane.db`. **Management keys (control-plane.db) coexist** for
+   CLI/CI/automation (`rowboat --management-key`). The important boundary — the B-opt-1 win — is that
+   `identity.db` is **out of the data-plane authz path**: it authenticates rowboat *operators* for the
+   console, while *end-user* identity is external (CheckList's JWT) and end-user group membership is
+   per-database. So rowboat stores **no end-user identities**, only its own operators'.
 3. **Tenancy → a `database_id` is one app instance; multi-user database; lazy per-user root groups**
    auto-created on first verified author. (See Multi-tenancy shape.)
 4. **Sharing → extend the existing `@jbroll/rowboat-sharing`**, mounted on the router, JWT-gated,
@@ -222,10 +219,10 @@ groups nested under that root.
 - Migration of CheckList's client `mintGroup`/`seedDefaultFolders` from `POST /api/folders/group` to
   the rowboat group endpoint; first-sync root-group auto-provision hook location (phase B).
 - `rowboat-sharing` changes to target per-database `__group*` tables + email transport wiring (phase C).
-- **Server assembly (per decision 2):** drop the `auth-betterauth` composition + `identity.db`, and
-  make the console management-key-authed. Note `startServer` currently **hard-requires**
-  `authSecret`/`authBaseUrl` at boot (`assembly.ts`), so removal touches `configFromEnv`/assembly and
-  the console-auth gate — a rowboat-platform change bundled with phase A or done standalone first.
+- **Server assembly:** unchanged for auth — `identity.db` + `auth-betterauth` + the console stay
+  (decision 2). The data-plane change is only wiring the new JWT verifier into the router's
+  `resolveAuthor` (phase A) and `createRbacAuth` into the worker (phase B); the console/operator auth
+  is untouched.
 
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
