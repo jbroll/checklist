@@ -203,7 +203,7 @@ function RowboatBridge({
 
         const existingSettings = await db
           .table('user_settings')
-          .filter((r: { __deleted?: boolean }) => !r.__deleted)
+          .filter((r) => !r.__deleted)
           .toArray();
         if (cancelled || provisionedRef.current) return;
         const isNewUser = existingSettings.length === 0;
@@ -211,7 +211,7 @@ function RowboatBridge({
           await ensureUserSettings(graph, identity, identity);
           const existingFolders = await db
             .table('folder')
-            .filter((r: { __deleted?: boolean }) => !r.__deleted)
+            .filter((r) => !r.__deleted)
             .toArray();
           if (cancelled) return;
           if (existingFolders.length === 0) {
