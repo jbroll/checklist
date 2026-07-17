@@ -98,6 +98,16 @@ minting and the service verifying. This is proxy-free and keeps the app's brande
    `Authorization: Bearer <jwt>` — **no proxy.** The client refreshes the JWT from CheckList's
    BetterAuth (its session cookie stays same-origin to CheckList).
 
+**JWT claims (decided): minimal.** `sub`, `iss`, `aud` (= the `database_id`/tenant), `exp`, `iat`;
+`kid` in the header. Authorization is **not** in the token — rowboat looks up group membership
+server-side from the per-database `__group_members` at request time. Rationale: authz stays **fresh**
+(revoking a share bites on the next request), tokens stay small, and auth (CheckList) / authz
+(rowboat) stay cleanly separated — the issuer never needs to know rowboat's group model (it couldn't
+populate group claims authoritatively anyway, since groups are per-database rowboat state). The
+per-request lookup is a local CTE in the file the worker already holds open. Matches the
+Firebase/Supabase default (JWT = identity, rules = authz). Embedding group/role claims is rejected
+(staleness + token bloat + circular dependency on rowboat's group state).
+
 **Security properties:** identity is a signed, short-TTL, audience-scoped token; rowboat never holds a
 CheckList signing secret; revocation is JWKS-key removal + short TTL; tenants are isolated by
 `iss`/`aud` binding to a `database_id`.
@@ -119,7 +129,8 @@ the per-`database_id` file. Three ways to resolve it:
   surface (§C). Benefits: no cross-DB/cross-thread query; per-database isolation preserved (tenant A's
   group graph never touches B's); the shared `identity.db` leaves the data-plane authz path entirely
   (no cross-tenant chokepoint); group state travels with the data through the existing per-file backup
-  / hydrate / **live-migration**. `identity.db` keeps only its console-plane role.
+  / hydrate / **live-migration**. Combined with decision 2, this removes `identity.db` entirely — the
+  data plane needs no shared identity store at all.
 - **B-opt-2: group memberships as JWT claims.** The JWT carries the user's effective groups; the
   worker enforces from the token. Stateless, but couples authz into the auth issuer (CheckList would
   own group state), and revoking a share lags until token refresh. Rejected as primary — authz should
@@ -133,7 +144,8 @@ CheckList's `createScopeGroup` mint from its backend to a rowboat data-plane/gro
 
 ### C. Sharing / group management (fills G3, proxy-free)
 
-Compose `@jbroll/rowboat-sharing` (or an equivalent) into the hosted server, mounted on the **router**,
+**Decided: extend the existing `@jbroll/rowboat-sharing`** (not a new surface), composing it into the
+hosted server, mounted on the **router**,
 **scoped by `database_id` and gated by the same tenant JWT**: create/validate/accept/revoke invites,
 list/remove collaborators, reader/writer/admin roles keyed on `owner_group_id`, plus **group create /
 link** (replacing CheckList's `POST /api/folders/group`). Invites resolve an email → `user.id` on
@@ -141,10 +153,22 @@ acceptance; the accepted membership is a group row (per B-opt-1), so the shared 
 invitee's next sync. Needs an **email transport** wired into the hosted server (today none is passed).
 Because the browser calls these with its tenant JWT, **no proxy** is required for sharing either.
 
-### Multi-tenancy shape
-CheckList = **one subscriber, one database, many scope groups** (root group per user, per-folder groups
-nested; folders shared across users within the one database). This *requires* intra-database RBAC
-(B) — a database-per-user shape cannot express cross-user folder sharing and is rejected.
+### Multi-tenancy shape (decided)
+**A `database_id` = one app instance / use case.** subscriber = operator (CheckList), database = the
+app instance's shared dataset (one per brand/env — CheckList prod, kjekit, test), authors = end users
+(external identity via JWT), scope groups = intra-database authz. CheckList = **one subscriber, one
+(multi-user) database, many scope groups** — per-user root group + per-folder groups nested, folders
+shared across users *within* the one database. This requires intra-database RBAC (B); a
+database-per-user shape is rejected (it cannot express cross-user folder sharing without a
+cross-database mechanism rowboat lacks).
+
+**Root-group provisioning (decided):** per-user root groups are **lazily auto-created by rowboat on a
+user's first verified author** (the first valid JWT `sub` seen for the database) — the hosted
+equivalent of the old `ensureUserRootGroup` signup hook, keyed on first-authenticated-sync rather than
+signup. **Not** created at DB-creation (end users are unknown then). DB-creation only records the
+database→subscriber (owner) association at the control plane. Guarantees a user's first write has a
+scope to land in, with no client-side race. The client still seeds default folders as per-folder
+groups nested under that root.
 
 ### What CheckList keeps / drops
 - **Keeps:** BetterAuth (branded OAuth) + JWT plugin; billing; client-side account-merge data adoption
@@ -166,20 +190,42 @@ nested; folders shared across users within the one database). This *requires* in
 - **Residual:** JWT TTL vs. revocation latency tradeoff; JWKS-fetch availability (cache last-good);
   clock skew (`exp`/`nbf` leeway).
 
-## Open decisions (resolve before any plan)
-1. **RBAC topology:** confirm **B-opt-1** — authz/group membership moves into per-database reserved
-   tables (`__groups`/`__group_members`/`__group_inheritance`) keyed by the JWT `sub`; `identity.db`
-   becomes console-plane only; account credentials stay external (CheckList). Highest-impact call.
-2. **Sharing home:** compose the existing `rowboat-sharing` into the hosted server vs. a new
-   router-native group/sharing surface (given B-opt-1 changes where group rows live).
-3. **JWT claims:** minimal (`sub/iss/aud/exp`) with authz fully server-side (preferred), vs. any
-   group/role claims.
-4. **Provisioning first-sync:** does rowboat auto-create a user's root group on first verified author,
-   or does CheckList seed it via a group endpoint?
-5. **Token/JWKS lifecycle UX:** exact console surface for register/rotate/revoke issuer + refetch
-   interval + `aud` convention.
-6. **Sequencing:** A (auth) is independently shippable and unblocks a single-user proof; B and C are
-   required for the shared-checklist product. Recommended order: **A → B → C**, each its own spec+plan.
+## Decisions (resolved 2026-07-17)
+1. **RBAC topology → B-opt-1.** Authz/group membership moves into per-database reserved tables
+   (`__groups`/`__group_members`/`__group_inheritance`) keyed by the JWT `sub`; account credentials
+   stay external (CheckList).
+2. **`identity.db` → removed (recommended).** Subscribers and their management keys already live in
+   **`control-plane.db`** (`createSubscriber` → `{subscriberId, managementKey}`); `identity.db` only
+   holds the **better-auth human login** that `linkSubscriberForUser` maps to a subscriber — a console
+   *session bridge*, nothing more. After B-opt-1 it has no data-plane role, so drop it: the console
+   authenticates via the **management key** (Bearer), like the `rowboat` CLI already does. Net:
+   **rowboat stores zero human identities** — end users via external JWT (`sub`), operators via
+   management keys — symmetric and minimal (no better-auth/OAuth/sessions/console-account-merge on the
+   platform). Trade-off: API-key/CLI-driven console instead of an OAuth dashboard login (the norm for
+   developer infra: Stripe/AWS/Neon); `linkSubscriberForUser`/`auth_user_id` becomes vestigial. A
+   human OAuth console login can be re-added later as an optional feature. Platform-ops decision,
+   orthogonal to CheckList.
+3. **Tenancy → a `database_id` is one app instance; multi-user database; lazy per-user root groups**
+   auto-created on first verified author. (See Multi-tenancy shape.)
+4. **Sharing → extend the existing `@jbroll/rowboat-sharing`**, mounted on the router, JWT-gated,
+   operating on the per-database `__group*` tables.
+5. **JWT claims → minimal** (`sub/iss/aud/exp/iat`, `kid` header); authz fully server-side.
+6. **Token/JWKS lifecycle UX** — console register/rotate/revoke issuer + JWKS refetch interval +
+   `aud` convention: approach accepted; exact surface is an implementation detail for phase A.
+7. **Sequencing → A (auth) → B (RBAC) → C (sharing)**, each its own spec+plan. A alone ships a
+   single-user proof; B and C are required for the shared-checklist product.
+
+## Remaining implementation-level details (per-phase, not blocking)
+- Exact console UX + management-API shape for issuer/JWKS register/rotate/revoke, and the JWKS
+  refetch interval + clock-skew leeway (phase A).
+- JWT verifier library choice (e.g. `jose`) and where the `resolveAuthor` seam plugs it in (phase A).
+- Migration of CheckList's client `mintGroup`/`seedDefaultFolders` from `POST /api/folders/group` to
+  the rowboat group endpoint; first-sync root-group auto-provision hook location (phase B).
+- `rowboat-sharing` changes to target per-database `__group*` tables + email transport wiring (phase C).
+- **Server assembly (per decision 2):** drop the `auth-betterauth` composition + `identity.db`, and
+  make the console management-key-authed. Note `startServer` currently **hard-requires**
+  `authSecret`/`authBaseUrl` at boot (`assembly.ts`), so removal touches `configFromEnv`/assembly and
+  the console-auth gate — a rowboat-platform change bundled with phase A or done standalone first.
 
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
