@@ -89,6 +89,12 @@ The folder's `owner_group_id` is a per-folder scope group, minted server-side vi
 `POST /api/folders/group` (`createScopeGroup`) and linked as a child of the user's root group so
 `effectiveRole` grants the owner admin.
 
+> **Direction — hosted rowboat (StaaS).** The embedded backend above is being superseded by running
+> CheckList against a hosted `@jbroll/rowboat-server` (sync/storage/RBAC/sharing move to rowboat;
+> CheckList keeps branded auth + billing + JWT issuance). The auth bridge (JWKS) and per-database
+> RBAC now exist on rowboat's side (phases A & B landed); sharing + the CheckList client repoint are
+> phase C. See [`docs/HOSTED_ROWBOAT.md`](docs/HOSTED_ROWBOAT.md).
+
 ## Authentication & identity
 
 - **BetterAuth** (`src/lib/auth-client.ts`) — OAuth (Google + Apple) plus an email/password path

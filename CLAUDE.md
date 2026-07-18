@@ -269,6 +269,8 @@ npm run preview      # Test production build
 - **ARCHITECTURE.md** - System architecture overview
 - **DEPLOY.md** - Deployment instructions
 - **docs/DEFERRED.md** - Open engineering backlog
+- **docs/HOSTED_ROWBOAT.md** - Hosted-rowboat (StaaS) architecture + phase status (A/B landed, C todo)
 - **docs/INDENTED_LIST_FORMAT.md** - Hierarchical text import/export format
+- **docs/archive/** - Landed implementation plans + execution logs
 - **BetterAuth Docs**: https://better-auth.com/docs
 ```

@@ -1,10 +1,32 @@
-# Deploying CheckList on hosted rowboat (rowboat.rkroll.com) — architecture design
+# Deploying CheckList on hosted rowboat (rowboat.rkroll.com) — architecture & status
 
-**Date:** 2026-07-17
-**Status:** design / decision doc (no implementation plan yet — sequencing decided after review)
+**Date:** 2026-07-17 (updated 2026-07-18)
 **Scope:** the rowboat capabilities required to run CheckList against a hosted `@jbroll/rowboat-server`
 instead of the embedded-library backend, without a per-request proxy, while CheckList keeps its own
 branded auth.
+
+## Implementation status
+
+The design below (§A/§B/§C, decisions resolved 2026-07-17) is being delivered as three phases on the
+**rowboat** repo, each gated so existing behavior is unchanged until turned on.
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **A — JWKS auth bridge** (§A) | BetterAuth JWT plugin + `resolveAuthor` JWKS verifier behind `ROWBOAT_AUTH_MODE` (default `synthetic`) | ✅ **Landed** on rowboat `main` |
+| **B — scope-group RBAC in the worker** (§B) | `__group*` per-database tables, writer group-write channel, per-db `authFactory` + lazy root-group provisioning, folder-group mint endpoint, gated by `ServerConfig.rbac` (default off) | ✅ **Landed** on rowboat `main` (`4a87dc4`) |
+| **C — sharing / group management** (§C) | extend `@jbroll/rowboat-sharing` (invites/collaborators/roles), + the mint `parentGroup` admin check, + the CheckList client repoint (`serverMintGroup` → the rowboat mint endpoint) | ⬜ **Not started** |
+
+Rowboat-side proof for A and B ships as integration tests; the CheckList **client repoint** (pointing
+sync + group-mint at the hosted server) is deliberately deferred to the phase-C cutover. Detailed
+implementation plans + subagent execution logs are archived under
+[`docs/archive/`](archive/) (`…-phase-a-jwks-bridge.md`, `…-phase-b-rbac.md`, and the `*-EXECUTION-LOG.md`
+files).
+
+> **Known phase-C item (from the phase-B review):** the group-mint endpoint does not yet check admin on a
+> caller-supplied `parentGroup`. Confirmed **integrity-only, not a confidentiality break** (upward-only
+> inheritance means a user can surface *their own* rows into another's view but cannot read anyone
+> else's data). Tighten in §C: require actor admin/link rights on `parentGroup` when it differs from the
+> actor's root group.
 
 ## Goal & driving requirements
 
