@@ -14,19 +14,38 @@ The design below (§A/§B/§C, decisions resolved 2026-07-17) is being delivered
 |-------|-------|--------|
 | **A — JWKS auth bridge** (§A) | BetterAuth JWT plugin + `resolveAuthor` JWKS verifier behind `ROWBOAT_AUTH_MODE` (default `synthetic`) | ✅ **Landed** on rowboat `main` |
 | **B — scope-group RBAC in the worker** (§B) | `__group*` per-database tables, writer group-write channel, per-db `authFactory` + lazy root-group provisioning, folder-group mint endpoint, gated by `ServerConfig.rbac` (default off) | ✅ **Landed** on rowboat `main` (`4a87dc4`) |
-| **C — sharing / group management** (§C) | extend `@jbroll/rowboat-sharing` (invites/collaborators/roles), + the mint `parentGroup` admin check, + the CheckList client repoint (`serverMintGroup` → the rowboat mint endpoint) | ⬜ **Not started** |
+| **C — sharing / group management** (§C) | RBAC-pure **agent-mediated** sharing: `grant`/`revoke` writer ops + JWT-gated group-management endpoints; `@jbroll/rowboat-sharing` made pluggable (`GroupBackend` local/remote) with an optional agent dance; `__group*`-parameterized; mint `parentGroup` admin check fixed | ✅ **Landed** on rowboat `main` (`c4fb622`) |
 
-Rowboat-side proof for A and B ships as integration tests; the CheckList **client repoint** (pointing
-sync + group-mint at the hosted server) is deliberately deferred to the phase-C cutover. Detailed
-implementation plans + subagent execution logs are archived under
-[`docs/archive/`](archive/) (`…-phase-a-jwks-bridge.md`, `…-phase-b-rbac.md`, and the `*-EXECUTION-LOG.md`
-files).
+Rowboat-side proof for A/B/C ships as integration tests; the CheckList **client repoint** (pointing
+sync + `/api/shares/*` + group-mint at the hosted server, cross-origin cookies/CORS, the
+`shareUrl`/`?token` vs `/invite/:token` reconciliation) is deliberately deferred to the **cutover**.
+Detailed implementation plans + subagent execution logs are archived under
+[`docs/archive/`](archive/) (`…-phase-a-jwks-bridge.md`, `…-phase-b-rbac.md`, `…-phase-c-sharing.md`, and
+the `*-EXECUTION-LOG.md` files).
 
-> **Known phase-C item (from the phase-B review):** the group-mint endpoint does not yet check admin on a
-> caller-supplied `parentGroup`. Confirmed **integrity-only, not a confidentiality break** (upward-only
-> inheritance means a user can surface *their own* rows into another's view but cannot read anyone
-> else's data). Tighten in §C: require actor admin/link rights on `parentGroup` when it differs from the
-> actor's root group.
+### Phase C — the agent-mediated grant dance (resolved design)
+
+Sharing is identity/email-bound, so it **stays in the subscriber backend** (CheckList) — `@jbroll/rowboat-sharing`
+remains a library it imports, holding the `share_invites` table, `principalOwnsEmail`, tokens, and SMTP.
+Rowboat stays **identity-free** and exposes RBAC-pure group primitives. The offline-inviter problem
+(the invitee accepts later, when the inviter isn't around to authorize the grant) is solved by an **agent
+principal** — modeled on jbr-jazz's server agent, but adapted to rowboat's server-side RBAC (rowboat has
+no client signatures, so the agent exists to give the subscriber backend a *legitimate, RBAC-checked admin
+principal to authenticate as*, not to supply an offline signing key):
+
+1. **Invite-create** installs the agent as admin on the target group: `grant(actor: inviter, group, agent, admin)` — authorized by the inviter's own admin.
+2. **Accept** grants the invitee *as the agent*: `grant(actor: agent, group, accepter, role)` — authorized because the agent is now admin.
+
+Every grant is checked against the actor's real admin membership (`requireAdmin`) — **no management-key
+bypass**. The prior phase-B mint `parentGroup` gap is closed (mint now requires actor-admin on a non-root parent).
+
+**Cutover follow-ups** (for the deferred CheckList repoint): the CheckList backend wires `mountShareRoutes`
+with `remoteGroupBackend` + an **agent JWT** (BetterAuth issues a token whose `sub` = the agent, via the
+phase-A JWKS bridge); **agent-credential rotation/scoping** (the agent is a standing admin on every shared
+group — compromise = admin on all shared groups; consider removing the agent membership when a group has no
+pending invites); the `remote-403→AuthzError` path is already handled, but wrap the agent-install grant in a
+try/catch (a rare TOCTOU/remote-network throw currently 500s instead of a clean 403) and neutralize the
+`inviter_no_longer_admin` string for agent mode; add a `vitest.shared.js` source-alias for `@jbroll/rowboat-sharing`.
 
 ## Goal & driving requirements
 
