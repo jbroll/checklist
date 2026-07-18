@@ -16,9 +16,12 @@ The design below (§A/§B/§C, decisions resolved 2026-07-17) is being delivered
 | **B — scope-group RBAC in the worker** (§B) | `__group*` per-database tables, writer group-write channel, per-db `authFactory` + lazy root-group provisioning, folder-group mint endpoint, gated by `ServerConfig.rbac` (default off) | ✅ **Landed** on rowboat `main` (`4a87dc4`) |
 | **C — sharing / group management** (§C) | RBAC-pure **agent-mediated** sharing: `grant`/`revoke` writer ops + JWT-gated group-management endpoints; `@jbroll/rowboat-sharing` made pluggable (`GroupBackend` local/remote) with an optional agent dance; `__group*`-parameterized; mint `parentGroup` admin check fixed | ✅ **Landed** on rowboat `main` (`c4fb622`) |
 
-Rowboat-side proof for A/B/C ships as integration tests; the CheckList **client repoint** (pointing
-sync + `/api/shares/*` + group-mint at the hosted server, cross-origin cookies/CORS, the
-`shareUrl`/`?token` vs `/invite/:token` reconciliation) is deliberately deferred to the **cutover**.
+Rowboat-side proof for A/B/C ships as integration tests; the CheckList **client repoint** is the
+**cutover**, now designed as five sequenced sub-projects (deploy → provision → auth bridge → data-plane
+→ sharing) in
+[`docs/2026-07-18-checklist-hosted-rowboat-cutover-design.md`](2026-07-18-checklist-hosted-rowboat-cutover-design.md)
+(big-bang hard switch; fresh-start with user self-export; rowboat.rkroll.com deployed + a local hosted
+rowboat for dev).
 Detailed implementation plans + subagent execution logs are archived under
 [`docs/archive/`](archive/) (`…-phase-a-jwks-bridge.md`, `…-phase-b-rbac.md`, `…-phase-c-sharing.md`, and
 the `*-EXECUTION-LOG.md` files).
