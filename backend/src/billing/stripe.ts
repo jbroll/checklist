@@ -4,7 +4,7 @@ import type {
   SubscriptionStatus,
   TierConfig,
   UserSubscription as BaseUserSubscription,
-} from '@jbr-jazz/billing-shared';
+} from '../../../shared/billing.js';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Warning: STRIPE_SECRET_KEY not set. Billing features will be disabled.');
@@ -22,11 +22,11 @@ export function isStripeEnabled(): boolean {
 // They are synced from STRIPE_PRICE_PLUS and STRIPE_PRICE_PREMIUM env vars on startup
 // See: backend/src/db.ts syncStripePriceIds()
 
-// Re-export base types from billing-shared
+// Re-export base types from shared/billing
 export type TierSlug = BaseTier;
 export type { SubscriptionStatus };
 
-// Use jbr-jazz TierConfig for tier structure (uses maxItems, retentionDays)
+// Use the shared TierConfig for tier structure (uses maxItems, retentionDays)
 export type SubscriptionTier = TierConfig;
 
 // CheckList uses the same UserSubscription structure as billing-shared
