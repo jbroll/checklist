@@ -22,7 +22,6 @@ import { expect, test } from '@playwright/test';
 const THRESHOLDS = {
   pageLoad: 5000, // 5 seconds max for initial page load
   apiResponse: 2000, // 2 seconds max for API responses
-  jazzConnect: 5000, // 5 seconds max for Jazz WebSocket
 };
 
 // Get base URL for API calls
@@ -47,7 +46,7 @@ test.describe('Infrastructure Health', () => {
     expect(health.status).toBe('ok');
     expect(health.timestamp).toBeTruthy();
 
-    // @jbr-jazz/hierarchy-backend's health endpoint returns { status, timestamp }.
+    // The self-hosted backend's health endpoint returns { status, timestamp }.
     console.log(`  Backend health: OK (${responseTime}ms)`);
   });
 

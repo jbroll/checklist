@@ -226,7 +226,7 @@ export function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
   return true;
 }
 
-/** Predicate helpers kept for parity with the jazz-backed hook's module exports. */
+/** Predicate helpers kept for parity with the old Jazz-backed hook's module exports. */
 export function isTemplateFolder(folder: { type: string }): boolean {
   return folder.type === 'template-folder';
 }
@@ -236,7 +236,7 @@ export function isOrganizationalFolder(folder: FolderRow): boolean {
 }
 
 /**
- * Local minimal replacements for the jazz-backed hook's error classes (there's no
+ * Local minimal replacements for the old Jazz-backed hook's error classes (there's no
  * `@jbroll/rowboat-*` equivalent). Neither is thrown by this slice's hook today —
  * `moveNode`/`g.folder.move` already hard-errors (a plain `Error`) on a cycle, and there is
  * no item-limit/billing check in slice 1 (see `canCreate`, which is a permissive `() => true`

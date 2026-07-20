@@ -3,8 +3,8 @@
 A collaborative, offline-first list application built on **rowboat** (a self-hosted,
 sync-native relational store), **BetterAuth**, and **Stripe**.
 
-> **Note:** CheckList was originally built on Jazz.tools and has since been ported off it entirely —
-> `jazz-tools` is no longer a frontend dependency. The rowboat provider lives in `src/lib/rowboat.tsx`
+> **Note:** CheckList was originally built on Jazz.tools and has been ported off it entirely —
+> `jazz-tools` is not a dependency at all. The rowboat provider lives in `src/lib/rowboat.tsx`
 > and its narrow waist (the `@/rowboat` re-export the app imports auth + graph hooks from) in
 > `src/rowboat/`.
 
@@ -73,8 +73,9 @@ loop, and account-init provisioning.
 
 ## Backend (`backend/src/`)
 
-A single self-hosted Express server on one better-sqlite3 database, replacing the former hosted
-Jazz/jbr-jazz sync service. `backend/src/index.ts` wires the rowboat packages onto that db:
+A single self-hosted Express server on one better-sqlite3 database, serving sync over
+`/api/sync` via the rowboat packages, in place of the former hosted Jazz/jbr-jazz sync service.
+`backend/src/index.ts` wires the rowboat packages onto that db:
 
 - `@jbroll/rowboat-auth` — RBAC scope groups (`createRbacAuth`, `createScopeGroup`,
   `registerAuthTables`); `group_members` / `groups` / `group_inheritance` with `effectiveRole`

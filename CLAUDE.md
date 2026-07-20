@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CheckList - Shared Checklists. Built on **rowboat** (a self-hosted, sync-native relational store) and
 BetterAuth.
 
-> CheckList was originally built on Jazz.tools and has since been ported off it entirely — `jazz-tools`
-> is no longer a frontend dependency. The rowboat provider lives in `src/lib/rowboat.tsx`; the narrow
-> waist the app imports auth + graph hooks from is `src/rowboat/` (`@/rowboat`).
+> CheckList was originally built on Jazz.tools and has been ported off it entirely — there is no
+> `jazz-tools` or `@jbr-jazz/*` dependency anywhere in the tree. The rowboat provider lives in
+> `src/lib/rowboat.tsx`; the narrow waist the app imports auth + graph hooks from is `src/rowboat/`
+> (`@/rowboat`). Subscription tier policy is CheckList's own, in `shared/billing.ts`.
 
 **Key Features**:
 - Hierarchical template organization
@@ -259,7 +260,8 @@ npm run preview      # Test production build
 - **Sync is automatic** — local-first writes sync in the background; no manual API calls needed.
 - **Always soft delete** — `archived: true` / tombstone, never splice/remove.
 - **Templates stay clean** — session state is tracked separately in `SessionData`.
-- **No `jazz-tools`** in the frontend — only `src/rowboat/**` (the narrow waist) may touch the underlying
+- **No `jazz-tools`** anywhere — the dependency is gone, not merely unused. Only `src/rowboat/**`
+  (the narrow waist) may touch the underlying
   framework; everything else imports the provider/auth hooks from `@/rowboat`.
 
 ## Documentation

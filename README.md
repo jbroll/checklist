@@ -1,12 +1,12 @@
 # [CheckList](https://checklist.rkroll.com)
 
-Shared Checklists - built with Jazz.tools and BetterAuth.
+Shared Checklists - built with rowboat and BetterAuth.
 
 ## Features
 
 - Real-time sync across all devices
 - Offline-first (works without internet)
-- Encrypted data storage and sync (Jazz.tools)
+- Local-first data sync, self-hosted (rowboat)
 - Multi-provider OAuth (Google + Apple)
 - Hierarchical template organization
 - Session-based shopping tracking
@@ -67,11 +67,10 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 **Sessions** are created when you "use" a template - they track what's in your cart and what you've purchased without modifying the template.
 
-**Jazz.tools** provides:
+**rowboat** provides:
 - Real-time sync
 - Offline support
-- Encrypted data storage
-- Conflict resolution
+- Conflict resolution (per-column, HLC-ordered last-write-wins)
 
 **BetterAuth** provides:
 - OAuth authentication
@@ -113,7 +112,7 @@ See `ARCHITECTURE.md` for system overview and code locations.
 
 **Architecture & Development**:
 - `ARCHITECTURE.md` - System architecture and code organization
-- `CLAUDE.md` - Development guide and Jazz patterns
+- `CLAUDE.md` - Development guide and rowboat patterns
 - `docs/DESIGN_SYSTEM.md` - UI/UX design patterns
 - `docs/INDENTED_LIST_FORMAT.md` - Hierarchical text import/export format
 
@@ -150,7 +149,7 @@ The app deploys in two parts:
 ## Tech Stack
 
 - React 18 + TypeScript + Vite
-- Jazz.tools (distributed database)
+- rowboat (self-hosted sync engine)
 - BetterAuth (authentication)
 - Stripe (billing)
 - Tailwind CSS + Radix UI
@@ -163,6 +162,5 @@ The app deploys in two parts:
 
 ## Resources
 
-- Jazz.tools: https://jazz.tools/
 - BetterAuth: https://better-auth.com/
 - Stripe: https://stripe.com/

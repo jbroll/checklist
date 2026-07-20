@@ -24,7 +24,10 @@
   --color-interactive-active: 229 229 229; /* neutral-200 */
 }
 
-/* Tokens consumed by shared @jbr-jazz/hierarchy-client components */
+/* `--jh-*` tokens: no consumer imports them today — kept from the retired
+   @jbr-jazz/hierarchy-client component set now that CheckList's hierarchy UI is
+   local (src/hooks/useCheckListHierarchy.ts, src/components/session/ZoneInHierarchyRenderer.tsx).
+   Candidate for deletion if nothing picks them back up. */
 :root {
   --jh-primary: #16a34a;
   --jh-primary-hover: #15803d;

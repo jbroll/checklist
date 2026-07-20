@@ -41,3 +41,46 @@ data to migrate, so the fresh-start / "delete existing data" path stands (the sa
   and rewrite the service/UI against the current rowboat graph. The USDA bake pipeline and
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
+
+## Resolved: jbr-jazz dependency removal (2026-07-20)
+
+CheckList had two undeclared-in-any-tracker dependencies on `~/src/jbr-jazz`:
+`@jbr-jazz/billing-shared` (subscription types/limits) and `@jbr-jazz/hierarchy-backend`
+(`ApiErrors`, `RateLimiter`). Both are removed.
+
+- Tier policy now lives in `shared/billing.ts` — **per product, by design.** A limit table shared
+  across products makes one product's pricing change a breaking change for another.
+- `assertTier` throws on an unrecognized slug. The previous shared helper silently downgraded to
+  free-tier limits, which would clamp a paying customer with no signal.
+- `getSubscriptionInfo` had inlined a copy of the effective-tier rule that omitted the
+  past_due/cancelled arm, disagreeing with `getMaxLists` on the same user. Fixed.
+- `jazz-tools` was a phantom dependency — declared in both manifests, imported nowhere.
+
+This clears CheckList's half of rowboat roadmap Phase 4 ("retire jbr-jazz"); `wicketmap` remains.
+
+**Deferred/tracked findings from this pass (not fixed here):**
+
+- **`backend/scripts/rotate.ts` `cmdApple` has a pre-existing TDZ bug**, unrelated to de-jazzing.
+  It calls the module-level `header()` function (~line 714) inside `cmdApple`, but that same
+  function later declares a block-scoped `const header = { alg: 'ES256', ... }` (~line 765). The
+  `const` shadows the outer `header` for the *entire* function body, so the earlier call sits in
+  the temporal dead zone and throws `ReferenceError: Cannot access 'header' before
+  initialization`. `npx tsx backend/scripts/rotate.ts apple` is currently broken.
+- **`backend/scripts/` is excluded from type-checking.** `backend/tsconfig.json` only
+  `include`s `src/**/*` (+ `../shared/**/*`), so `rotate.ts` — and everything else under
+  `scripts/` — is never run through `tsc`. That's how the `cmdApple` bug above passed CI
+  unnoticed; the same gap will hide the next one. Worth closing (add `scripts/**/*` to
+  `include`, or give `scripts/` its own `tsconfig.json`), but out of scope for the de-jazzing
+  branch.
+- **The committed Capacitor bundles under `android/` and `ios/` still reference Jazz** —
+  `vendor-jazz-*.js` chunks and jazz-referencing source maps are present in
+  `android/app/src/main/assets/public/`. These are stale build output, not source; they
+  regenerate from the current (jazz-free) frontend via `npm run cap:sync`. No action needed
+  beyond a routine `cap:sync` before the next mobile release.
+- **`knip.json`'s `better-auth` entry in `ignoreDependencies` has no home for its rationale** —
+  `knip.json` is plain JSON and can't carry a comment. Recorded here: no source file imports
+  `better-auth` directly, but the file:-linked `@jbroll/rowboat-auth-betterauth-react` package's
+  built `dist` imports `better-auth/react`, which Node resolves from *this app's* `node_modules`
+  (not the linked package's own). Removing the root `better-auth` dependency breaks the
+  production build even though knip (correctly, from a static-import-graph view) sees it as
+  unused.
