@@ -17,9 +17,6 @@ npm run rotate test
 npm run rotate -- better-auth --dry-run
 npm run rotate better-auth
 
-# Rotate Jazz agent
-npm run rotate -- jazz-agent --new-id co_xxx --new-secret "sealerSecret_.../signerSecret_..."
-
 # Generate new Apple client secret
 npm run rotate -- apple --key ~/AuthKey.p8
 ```
@@ -29,8 +26,6 @@ npm run rotate -- apple --key ~/AuthKey.p8
 | Secret | Purpose | Data Impact | Rotation Complexity |
 |--------|---------|-------------|---------------------|
 | `BETTER_AUTH_SECRET` | Encrypts Jazz credentials | **HIGH** - requires re-encryption | High |
-| `JAZZ_AGENT_SECRET` | Manages shared folders | Medium - sharing may break | Medium |
-| `VITE_JAZZ_API_KEY` | Jazz cloud authentication | None - user data unaffected | Low |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | None - only affects new logins | Low |
 | `APPLE_CLIENT_SECRET` | Apple OAuth | None - only affects new logins | Low |
 | `STRIPE_SECRET_KEY` | Stripe API | None - subscriptions unaffected | Low |
@@ -108,91 +103,6 @@ sqlite3 /path/to/auth.db "UPDATE user SET encryptedCredentials = NULL, accountID
 
 ---
 
-## JAZZ_AGENT_SECRET Rotation
-
-The Jazz agent manages folder group memberships for the sharing feature.
-
-### Impact
-
-| What | Effect |
-|------|--------|
-| Existing sessions | ✓ Unaffected |
-| Local Jazz data | ✓ Unaffected |
-| Accepted shares | ✓ Unaffected - recipients have direct access |
-| Pending share invites | ⚠ Must migrate groups first |
-| New share invites | ✓ Work after rotation |
-
-The agent secret is only used server-side to manage group memberships. User data and sessions are completely independent.
-
-### When is migration needed?
-
-The agent is **only** needed to process share invite acceptances. Once a share is accepted, the recipient has direct access to the folder and the agent is no longer needed.
-
-| Share Status | Agent Needed? | Migration Required? |
-|--------------|---------------|---------------------|
-| Pending (not accepted, not expired) | Yes | Yes |
-| Accepted | No | No |
-| Expired | No | No |
-
-**In practice**, rotation is often trivial:
-- If there are no pending invites, rotation requires no migration
-- The rotation script automatically detects pending invites and only migrates those groups
-
-### Safe Rotation Procedure
-
-The rotation script has three commands for a safe, verified rotation:
-
-```bash
-cd backend
-
-# Step 1: Create new agent at https://dashboard.jazz.tools
-#         Copy the new JAZZ_AGENT_ACCOUNT_ID and JAZZ_AGENT_SECRET
-
-# Step 2: Dry-run migration (preview without changes)
-npx tsx scripts/rotate-agent.ts migrate --dry-run \
-  --new-id co_new_agent_id \
-  --new-secret "sealerSecret_.../signerSecret_..."
-
-# Step 3: Run actual migration (old agent adds new agent to groups with pending invites)
-npx tsx scripts/rotate-agent.ts migrate \
-  --new-id co_new_agent_id \
-  --new-secret "sealerSecret_.../signerSecret_..."
-
-# Step 4: Update secrets.env with new credentials
-#   JAZZ_AGENT_ACCOUNT_ID=co_new_agent_id
-#   JAZZ_AGENT_SECRET=sealerSecret_.../signerSecret_...
-
-# Step 5: Redeploy
-./deploy-full.sh prod
-
-# Step 6: Verify new agent can access folders with pending invites
-npx tsx scripts/rotate-agent.ts verify
-
-# Step 7: (Optional) Remove old agent from groups for security
-npx tsx scripts/rotate-agent.ts cleanup \
-  --old-id co_old_agent_id \
-  --old-secret "sealerSecret_.../signerSecret_..."
-```
-
-### Rollback
-
-If verification fails after updating secrets:
-
-1. Revert `secrets.env` to old credentials
-2. Redeploy
-3. Investigate why migration failed
-4. Re-run migration
-
-Since the old agent was never removed (until cleanup), rollback is safe.
-
-### Secret Format
-
-The secret is two parts separated by `/`:
-- `sealerSecret_...` - For encrypting data
-- `signerSecret_...` - For signing/authentication
-
----
-
 ## APPLE_CLIENT_SECRET Rotation
 
 The Apple client secret is a JWT that expires every 6 months (max). Current expiration: **2026-06-30**
@@ -261,36 +171,6 @@ Same as Apple - OAuth secrets are only used during login handshake.
 5. Redeploy: `./deploy-full.sh prod`
 
 No database changes required.
-
----
-
-## VITE_JAZZ_API_KEY Rotation
-
-The Jazz API key authenticates with Jazz cloud sync servers.
-
-### Impact
-
-| What | Effect |
-|------|--------|
-| Existing sessions | ✓ **Unaffected** - users have their own Jazz credentials |
-| Local Jazz data | ✓ **Unaffected** - encrypted with user keys |
-| Sync during rotation | ⚠ Brief interruption during deploy |
-| After rotation | ✓ All users sync normally |
-
-The API key is for the *application* to connect to Jazz cloud. Each user has their own Jazz credentials stored in `encryptedCredentials`, which are unaffected.
-
-### Rotation Steps
-
-1. Go to [Jazz Dashboard](https://dashboard.jazz.tools)
-2. Generate a new API key
-3. Update `.env` and `.env.production`:
-   ```bash
-   sed -i "s/VITE_JAZZ_API_KEY=.*/VITE_JAZZ_API_KEY=new_key_here/" .env
-   sed -i "s/VITE_JAZZ_API_KEY=.*/VITE_JAZZ_API_KEY=new_key_here/" .env.production
-   ```
-4. Rebuild and redeploy: `./deploy-full.sh prod`
-
-The old key can be revoked immediately after deployment.
 
 ---
 

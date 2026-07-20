@@ -57,7 +57,6 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 APPLE_CLIENT_ID=your_apple_client_id
 APPLE_CLIENT_SECRET=your_apple_client_secret
 VITE_API_URL=http://localhost:3001
-VITE_JAZZ_PEER=wss://cloud.jazz.tools
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 ```

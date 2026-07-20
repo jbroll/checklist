@@ -20,17 +20,9 @@
       ]
     },
     "backend": {
-      "entry": ["src/migrate.ts", "src/migrate-auth.ts", "scripts/**/*.ts"],
+      "entry": ["src/migrate-auth.ts", "scripts/**/*.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"],
-      "ignoreDependencies": [
-        "cors",
-        "helmet",
-        "nodemailer",
-        "zod",
-        "tailwind-merge",
-        "@jbr-jazz/billing-shared",
-        "@jbr-jazz/hierarchy-backend"
-      ]
+      "ignoreDependencies": ["cors", "helmet", "nodemailer", "zod", "tailwind-merge"]
     }
   }
 }

@@ -12,7 +12,6 @@
  *   test              Test rotation procedures (dry-run validation)
  *   backup            Create backup of database and secrets files
  *   better-auth       Rotate BETTER_AUTH_SECRET
- *   jazz-agent        Rotate JAZZ_AGENT_SECRET
  *   apple             Generate new APPLE_CLIENT_SECRET
  *   help              Show this help message
  *
@@ -21,7 +20,6 @@
  *   npx tsx scripts/rotate.ts test
  *   npx tsx scripts/rotate.ts backup
  *   npx tsx scripts/rotate.ts better-auth --dry-run
- *   npx tsx scripts/rotate.ts jazz-agent --new-id co_xxx --new-secret "sealerSecret_.../signerSecret_..."
  *   npx tsx scripts/rotate.ts apple --key ~/AuthKey.p8 --key-id XXX --team-id YYY
  */
 
@@ -215,7 +213,6 @@ ${colors.bold}COMMANDS${colors.reset}
   ${colors.cyan}test${colors.reset}              Test rotation procedures (validates without changes)
   ${colors.cyan}backup${colors.reset}            Create backup of database and secrets files
   ${colors.cyan}better-auth${colors.reset}       Rotate BETTER_AUTH_SECRET (re-encrypts user credentials)
-  ${colors.cyan}jazz-agent${colors.reset}        Rotate JAZZ_AGENT_SECRET (migrates shared folder access)
   ${colors.cyan}apple${colors.reset}             Generate new APPLE_CLIENT_SECRET (JWT)
   ${colors.cyan}help${colors.reset}              Show this help message
 
@@ -232,9 +229,6 @@ ${colors.bold}EXAMPLES${colors.reset}
   ${colors.dim}# Rotate BetterAuth secret (dry-run first, auto-backs up)${colors.reset}
   npx tsx scripts/rotate.ts better-auth --dry-run
   npx tsx scripts/rotate.ts better-auth
-
-  ${colors.dim}# Rotate Jazz agent${colors.reset}
-  npx tsx scripts/rotate.ts jazz-agent --new-id co_xxx --new-secret "sealerSecret_.../signerSecret_..."
 
   ${colors.dim}# Generate new Apple client secret${colors.reset}
   npx tsx scripts/rotate.ts apple --key ~/AuthKey.p8 --key-id 67VV567DZ8 --team-id 6QN29TYW92
@@ -713,73 +707,6 @@ async function cmdBetterAuth(args: Record<string, string | boolean>) {
 }
 
 // =============================================================================
-// COMMAND: jazz-agent
-// =============================================================================
-
-async function cmdJazzAgent(_args: Record<string, string | boolean>) {
-  header('JAZZ_AGENT_SECRET Rotation');
-  log('');
-  log('The Jazz agent rotation has a dedicated script with migrate, verify, and cleanup commands.');
-  log('');
-  log(`${colors.bold}Safe Rotation Procedure:${colors.reset}`);
-  log('');
-  log('  1. Create new agent at https://dashboard.jazz.tools');
-  log('');
-  log('  2. Dry-run migration (preview):');
-  log('     npx tsx scripts/rotate-agent.ts migrate --dry-run \\');
-  log('       --new-id co_xxx --new-secret "sealerSecret_.../signerSecret_..."');
-  log('');
-  log('  3. Run actual migration:');
-  log('     npx tsx scripts/rotate-agent.ts migrate \\');
-  log('       --new-id co_xxx --new-secret "sealerSecret_.../signerSecret_..."');
-  log('');
-  log('  4. Update backend/secrets.env with new credentials');
-  log('');
-  log('  5. Redeploy: ./deploy-full.sh prod');
-  log('');
-  log('  6. Verify new agent works:');
-  log('     npx tsx scripts/rotate-agent.ts verify');
-  log('');
-  log('  7. (Optional) Remove old agent from groups:');
-  log('     npx tsx scripts/rotate-agent.ts cleanup \\');
-  log('       --old-id co_xxx --old-secret "sealerSecret_.../signerSecret_..."');
-  log('');
-  log(`${colors.bold}Current Status:${colors.reset}`);
-  log('');
-
-  const agentId = getSecretFromFile('JAZZ_AGENT_ACCOUNT_ID');
-  const agentSecret = getSecretFromFile('JAZZ_AGENT_SECRET');
-
-  if (agentId && agentSecret) {
-    success(`Agent configured: ${agentId.slice(0, 20)}...`);
-  } else {
-    error('Agent credentials not found in secrets.env');
-  }
-
-  // Check for shared folders
-  if (!existsSync(AUTH_DB)) {
-    info('No auth.db found (no shared folders)');
-    return;
-  }
-
-  const db = new Database(AUTH_DB);
-  const tableExists = db.prepare(`
-    SELECT name FROM sqlite_master WHERE type='table' AND name='share_invites'
-  `).get();
-
-  if (!tableExists) {
-    db.close();
-    info('No share_invites table (no shared folders)');
-    return;
-  }
-
-  const count = db.prepare('SELECT COUNT(DISTINCT folder_covalue_id) as count FROM share_invites').get() as { count: number };
-  db.close();
-
-  info(`Shared folders: ${count.count}`);
-}
-
-// =============================================================================
 // COMMAND: apple
 // =============================================================================
 
@@ -897,9 +824,6 @@ async function main() {
       break;
     case 'better-auth':
       await cmdBetterAuth(args);
-      break;
-    case 'jazz-agent':
-      await cmdJazzAgent(args);
       break;
     case 'apple':
       cmdApple(args);

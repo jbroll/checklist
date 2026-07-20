@@ -6,15 +6,12 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp -r src/migrations dist/",
     "start": "node dist/migrate-auth.js && node dist/index.js",
-    "migrate": "node dist/migrate.js",
     "migrate-auth": "node dist/migrate-auth.js",
     "rotate": "tsx scripts/rotate.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jbr-jazz/billing-shared": "file:../../jbr-jazz/packages/billing/shared",
-    "@jbr-jazz/hierarchy-backend": "file:../../jbr-jazz/packages/hierarchy/backend",
     "@jbroll/rowboat-auth": "file:../../rowboat/packages/auth",
     "@jbroll/rowboat-auth-betterauth": "file:../../rowboat/packages/auth-betterauth",
     "@jbroll/rowboat-backend": "file:../../rowboat/packages/backend",
@@ -27,7 +24,6 @@
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
-    "jazz-tools": "0.20.18",
     "nodemailer": "^9.0.1",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.5.0",

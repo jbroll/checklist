@@ -35,5 +35,4 @@ export const getMockEnv = () => ({
   BASE_URL: process.env.BASE_URL || 'http://localhost:5173',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || 'test-secret-key',
-  VITE_JAZZ_PEER: process.env.VITE_JAZZ_PEER,
 });
