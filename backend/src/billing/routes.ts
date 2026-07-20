@@ -13,7 +13,8 @@ import {
   recordUsage,
   getUsageHistory,
 } from './subscription.js';
-import { ApiErrors, RateLimiter } from '@jbr-jazz/hierarchy-backend';
+import { ApiErrors } from '../lib/api-error.js';
+import { RateLimiter } from '../lib/rate-limiter.js';
 
 // Rate limiter for billing endpoints (10 requests per hour per user)
 // Exported for testing purposes

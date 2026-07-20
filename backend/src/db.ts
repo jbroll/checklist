@@ -8,7 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /**
  * Initialize checklist-specific billing tables (subscription_tier,
  * user_subscription, usage_snapshot) and sync Stripe price IDs.
- * Sharing + verified-email tables are owned by @jbr-jazz/hierarchy-backend's initDb.
+ * Sharing + verified-email tables are owned by @jbroll/rowboat-auth-betterauth and
+ * @jbroll/rowboat-sharing.
  */
 export function initBillingDb(db: Database.Database): Database.Database {
   const subscriptionsSql = readFileSync(join(__dirname, 'migrations/subscriptions.sql'), 'utf-8');
