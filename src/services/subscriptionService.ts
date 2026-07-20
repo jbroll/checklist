@@ -5,6 +5,8 @@
  * `?? 'beta'` defaults for a missing settings row are the DESIGNED new-user defaults, not fallbacks.
  */
 
+import type { RelationalGraph } from '@jbroll/rowboat-schema';
+import type { schema } from '@/schema/folder';
 import {
   DEFAULT_TIER_LIMITS,
   getEffectiveTier as getEffectiveTierFromBilling,
@@ -12,9 +14,7 @@ import {
   isPaidTier,
   type SubscriptionStatus,
   type SubscriptionTier,
-} from '@jbr-jazz/billing-shared';
-import type { RelationalGraph } from '@jbroll/rowboat-schema';
-import type { schema } from '@/schema/folder';
+} from '../../shared/billing.js';
 import type { UserSettingsRow } from '../../shared/schema.js';
 
 type Graph = RelationalGraph<typeof schema>;
@@ -97,8 +97,8 @@ export const TIERS: Record<SubscriptionTier, TierConfig> = {
   },
 };
 
-// Enforcement limits come from billing-shared (single source of truth for the
-// numbers); TIERS above keeps only CheckList's display strings and pricing.
+// Enforcement limits come from shared/billing.ts (CheckList's own tier policy); TIERS above keeps
+// only CheckList's display strings and pricing.
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = Object.fromEntries(
   Object.entries(DEFAULT_TIER_LIMITS).map(([key, raw]) => [
     key,
@@ -210,7 +210,7 @@ export function getSubscriptionInfo(g: Graph): SubscriptionInfo {
   const settings = readSettings(g);
   const tier = (settings?.subscription_tier as SubscriptionTier | undefined) ?? 'free';
   const status = (settings?.subscription_status as SubscriptionStatus | undefined) ?? 'beta';
-  const effectiveTier = status === 'beta' ? 'plus' : tier;
+  const effectiveTier = getEffectiveTierFromBilling(tier, status);
 
   return {
     tier,

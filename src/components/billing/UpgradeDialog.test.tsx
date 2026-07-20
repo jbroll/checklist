@@ -1,6 +1,5 @@
 /**
  * Tests for UpgradeDialog component
- * Uses jazz-mock for CoValue mocking.
  */
 
 import { render, screen } from '@testing-library/react';

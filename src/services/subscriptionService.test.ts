@@ -404,6 +404,33 @@ describe('SubscriptionService', () => {
   });
 });
 
+describe('getSubscriptionInfo effective-tier consistency', () => {
+  it('reports free limits for a past_due paid user, matching getMaxLists', () => {
+    const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'past_due' });
+
+    expect(getSubscriptionInfo(g).limits.maxLists).toBe(TIER_LIMITS.free.maxLists);
+    expect(getMaxLists(g)).toBe(TIER_LIMITS.free.maxLists);
+  });
+
+  it('reports free limits for a cancelled paid user', () => {
+    const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'cancelled' });
+
+    expect(getSubscriptionInfo(g).limits.maxLists).toBe(TIER_LIMITS.free.maxLists);
+  });
+
+  it('still grants Plus limits during beta', () => {
+    const g = makeAccount({ subscriptionTier: 'free', subscriptionStatus: 'beta' });
+
+    expect(getSubscriptionInfo(g).limits.maxLists).toBe(TIER_LIMITS.plus.maxLists);
+  });
+
+  it('passes an active premium tier through', () => {
+    const g = makeAccount({ subscriptionTier: 'premium', subscriptionStatus: 'active' });
+
+    expect(getSubscriptionInfo(g).limits.maxLists).toBe(TIER_LIMITS.premium.maxLists);
+  });
+});
+
 describe('SubscriptionService - Backend Integration', () => {
   const mockFetch = vi.fn();
   const originalFetch = global.fetch;

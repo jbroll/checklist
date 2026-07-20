@@ -1,4 +1,3 @@
-import type { SubscriptionTier } from '@jbr-jazz/billing-shared';
 import {
   ChevronDown,
   CreditCard,
@@ -33,6 +32,7 @@ import { clearMergeState } from '@/lib/account-merge';
 import { getDomainDisplayName, getImplementedDomains } from '@/lib/categorization';
 import type { AutocompleteDomain } from '@/lib/categorization/types';
 import { useTheme } from '@/lib/useTheme';
+import type { SubscriptionTier } from '../../../shared/billing.js';
 import { LinkedEmailsSection } from './LinkedEmailsSection';
 
 interface ProfileDialogProps {

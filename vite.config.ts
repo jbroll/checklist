@@ -84,7 +84,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           // Vendor chunks - separate large libraries
-          'vendor-jazz': ['jazz-tools'],
           'vendor-react': ['react', 'react-dom', 'react/jsx-runtime'],
           'vendor-radix': [
             '@radix-ui/react-dialog',
@@ -209,12 +208,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
-    // Force a SINGLE jazz-tools / better-auth instance in the bundle. The
-    // @jbr-jazz/* packages are file:-linked and resolve these from jbr-jazz's
-    // own node_modules via symlink realpath; without dedupe the app and the
-    // jbr-jazz dist could load separate jazz-tools instances, breaking Jazz's
-    // CoValue runtime/schema identity.
-    dedupe: ['jazz-tools', 'better-auth', 'react', 'react-dom'],
+    // Force a SINGLE better-auth instance in the bundle. better-auth arrives transitively via the
+    // file:-linked @jbroll/rowboat-auth-betterauth packages, which resolve their own copies; without
+    // dedupe the bundle can load more than one, breaking session state.
+    dedupe: ['better-auth', 'react', 'react-dom'],
   },
   server: {
     port: 8765,
