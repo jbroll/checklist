@@ -6,8 +6,7 @@
 # checklist's e2e runs against the self-hosted rowboat sync backend (started by
 # Playwright's webServer via `npm run dev`) plus a mock OAuth server from global
 # setup. The work here: source secrets, expose ORG_HOOKS, link + build the file:
-# siblings (rowboat — the @jbroll/* packages — plus the legacy jbr-jazz/jazz-mock
-# still referenced by not-yet-ported code), and write a backend env.
+# sibling (rowboat — the @jbroll/* packages), and write a backend env.
 
 # ── Env: secrets and service endpoints ────────────────────────────────────────
 SECRETS="$HOME/.config/checklist/secrets.env"
@@ -21,9 +20,9 @@ SERVICES="$HOME/.config/checklist/services.env"
 export ORG_HOOKS="${ORG_HOOKS:-$HOME/src/org-hooks}"
 
 # ── Sibling file: dependencies ────────────────────────────────────────────────
-# checklist depends on rowboat (@jbroll/*), @jbr-jazz/* and jazz-mock via
-# file:../*. CI worktrees land in ~/ci-worktrees/checklist-<id>/ where these
-# siblings don't exist; provide them from ci-workspace so npm install resolves.
+# checklist depends on rowboat (@jbroll/*) via file:../*. CI worktrees land in
+# ~/ci-worktrees/checklist-<id>/ where this sibling doesn't exist; provide it
+# from ci-workspace so npm install resolves.
 # Same fs → symlink. Cross fs → rsync (a cross-fs symlink of the sibling dir
 # breaks npm's file: resolution). The job runs in a mount namespace where
 # ci-workspace (/home) and ci-worktrees (/data) are SEPARATE devices, so in
@@ -49,11 +48,6 @@ link_sibling() {
     fi
 }
 
-# jbr-jazz/jazz-mock are legacy siblings still imported by not-yet-ported code;
-# they get a fresh node_modules from their own build step below.
-link_sibling jbr-jazz
-link_sibling jazz-mock
-
 # rowboat is consumed as PRE-BUILT dist (no per-worktree build — ci-workspace/
 # rowboat is kept current+built out of band, rebuilt on rowboat land). Its dist
 # imports zod/better-auth/cross-@jbroll by bare specifier, and vite resolves
@@ -72,15 +66,6 @@ if [ -f "$ROWBOAT/packages/schema/dist/index.d.ts" ] && [ -f "$ROWBOAT/packages/
     echo "[ci/setup] rowboat dist present ($ROWBOAT)"
 else
     echo "[ci/setup] ERROR: rowboat dist missing at $ROWBOAT — build \$CI_WORKSPACE/rowboat (git reset --hard origin/main && npm ci && npm run build)." >&2
-fi
-
-# jbr-jazz packages are consumed as built dist; ensure they're built in CI (legacy,
-# for not-yet-ported code still importing @jbr-jazz/*).
-JBR="$(dirname "$WORKTREE")/jbr-jazz"
-if [ -d "$JBR" ]; then
-    ( cd "$JBR" && npm install --silent && npm run build --silent ) \
-        && echo "[ci/setup] built jbr-jazz packages" \
-        || echo "[ci/setup] WARN: jbr-jazz build failed" >&2
 fi
 
 # ── backend env ──────────────────────────────────────────────────────────────

@@ -552,9 +552,16 @@ test.describe('Data Sync Errors', () => {
   test('should handle IndexedDB errors gracefully', async ({ page }) => {
     await page.goto('/');
 
-    // Delete IndexedDB to simulate storage error
-    await page.evaluate(() => {
-      window.indexedDB.deleteDatabase('jazz-tools');
+    // Delete the app's IndexedDB stores to simulate storage loss. Names are
+    // `checklist::<identity>` (storeName(APP_NAME, identity)), so enumerate rather
+    // than hardcode.
+    await page.evaluate(async () => {
+      const dbs = await window.indexedDB.databases();
+      for (const { name } of dbs) {
+        if (name?.startsWith('checklist::')) {
+          window.indexedDB.deleteDatabase(name);
+        }
+      }
     });
 
     await page.reload();
