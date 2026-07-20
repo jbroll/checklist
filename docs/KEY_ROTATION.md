@@ -25,7 +25,7 @@ npm run rotate -- apple --key ~/AuthKey.p8
 
 | Secret | Purpose | Data Impact | Rotation Complexity |
 |--------|---------|-------------|---------------------|
-| `BETTER_AUTH_SECRET` | Encrypts Jazz credentials | **HIGH** - requires re-encryption | High |
+| `BETTER_AUTH_SECRET` | Encrypts legacy `encryptedCredentials`/`accountID` columns (dead weight left over from the pre-rowboat/Jazz era; no current code path reads them) | **LOW for live data** (list/item data lives in rowboat's server-side SQLite, unencrypted, and is untouched by this secret) — **but requires re-encryption of the legacy columns**, or any still-populated rows become permanently undecryptable garbage | Low-Medium |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | None - only affects new logins | Low |
 | `APPLE_CLIENT_SECRET` | Apple OAuth | None - only affects new logins | Low |
 | `STRIPE_SECRET_KEY` | Stripe API | None - subscriptions unaffected | Low |
@@ -34,34 +34,51 @@ npm run rotate -- apple --key ~/AuthKey.p8
 
 ## Understanding Data Impact
 
+CheckList runs on **rowboat** (a local-first sync engine — SQLite server + IndexedDB client), not
+Jazz.tools. List/item data lives as ordinary rows in the backend's SQLite database, in **plaintext**
+— there is no client-side or server-side encryption of list content, and no key derived from
+`BETTER_AUTH_SECRET` (or any other secret) gates access to it. Access control is enforced by rowboat's
+authorization layer at sync time (scoped pull / gated push), not by encryption. Rotating any secret in
+this document — including `BETTER_AUTH_SECRET` — **has no effect on list/item data**.
+
+`BETTER_AUTH_SECRET` does still encrypt one thing: the `user.encryptedCredentials` /
+`user.accountID` columns, a legacy pair kept in the `user` table from when this app stored Jazz
+account keys there (see `backend/src/migrate-auth.ts`). No current code path writes or reads these
+columns for anything user-facing — they are inert — but rows created before the rowboat port may
+still carry real encrypted values, and `npm run rotate test` can find and decrypt them. Rotating
+`BETTER_AUTH_SECRET` **without** running the `better-auth` re-encryption step will leave any such
+legacy rows permanently undecryptable. That is harmless in practice (nothing reads them), but the
+rotation tooling still treats it as a re-encryption step, so follow the procedure below rather than
+hand-editing the secret.
+
 ```
-User's Jazz Data (lists, items, sessions)
+user.encryptedCredentials / user.accountID (legacy, unused columns in auth.db)
     ↓ encrypted with
-User's Jazz Keys (accountID + accountSecret)  ← stored per-user, never leaves device
-    ↓ stored encrypted in
-user.encryptedCredentials (in auth.db)
-    ↓ encrypted with
-BETTER_AUTH_SECRET  ← the ONLY secret that affects stored credentials
+BETTER_AUTH_SECRET  ← the ONLY secret that affects any stored value, and only this dead column pair
 ```
 
-**Key insight:** OAuth secrets (Google, Apple) are only used during the login handshake. They never touch stored data or existing sessions.
+**Key insight:** OAuth secrets (Google, Apple) are only used during the login handshake. They never touch stored data or existing sessions. List/item data is not encrypted by anything and is unaffected by any secret rotation.
 
 ---
 
 ## BETTER_AUTH_SECRET Rotation
 
-The `BETTER_AUTH_SECRET` encrypts the `encryptedCredentials` column in the `user` table, containing Jazz cryptographic keys for each user.
+`BETTER_AUTH_SECRET` is better-auth's own signing/session secret, so rotating it invalidates existing
+session tokens regardless of anything else. It also happens to encrypt the legacy
+`encryptedCredentials`/`accountID` columns described above — dead columns no code currently reads,
+but which may still hold real values for accounts created before the rowboat port.
 
 ### Impact
 
 | What | Effect |
 |------|--------|
-| Existing sessions | ✗ **Broken** without re-encryption |
-| Local Jazz data | ✓ Safe (encrypted with user's own keys) |
-| Users currently logged in | ✗ Must re-authenticate if not re-encrypted |
+| Existing sessions | ✗ **Broken** (better-auth signs sessions with this secret) |
+| List/item data (rowboat) | ✓ Unaffected — not encrypted by this or any secret |
+| Legacy `encryptedCredentials`/`accountID` (if populated) | ✗ Undecryptable unless re-encrypted first |
+| Users currently logged in | ✗ Must re-authenticate |
 | New logins | ✓ Work with new secret |
 
-**This is the only secret where rotation affects user data access.**
+**This is the only secret where rotation affects sessions and the legacy credential columns.**
 
 ### Rotation Steps
 
@@ -93,8 +110,10 @@ npm run rotate better-auth
 
 If the old secret is compromised and you must rotate immediately:
 - Users will need to re-authenticate
-- Their Jazz data is NOT lost (encrypted with their own keys, not the server secret)
-- Only the link between BetterAuth user and Jazz account is lost
+- Their list/item data is NOT at risk — it is unencrypted rowboat-managed data, not gated by this
+  secret in any way
+- Any still-populated legacy `encryptedCredentials`/`accountID` values become permanently
+  undecryptable (this only matters if something someday reads them again; nothing does today)
 
 ```bash
 # Force rotation - clears all encrypted credentials (users must re-auth)
@@ -112,7 +131,7 @@ The Apple client secret is a JWT that expires every 6 months (max). Current expi
 | What | Effect |
 |------|--------|
 | Existing sessions | ✓ **Unaffected** - sessions don't use OAuth secret |
-| Local Jazz data | ✓ **Unaffected** - encrypted with user keys, not OAuth secret |
+| List/item data (rowboat) | ✓ **Unaffected** - not encrypted by any secret |
 | Users currently logged in | ✓ **Unaffected** - no re-auth needed |
 | New Apple logins | ✗ Fail until new secret deployed |
 
@@ -156,7 +175,7 @@ The Apple private key (.p8 file) should be stored securely and NOT committed to 
 | What | Effect |
 |------|--------|
 | Existing sessions | ✓ **Unaffected** |
-| Local Jazz data | ✓ **Unaffected** |
+| List/item data (rowboat) | ✓ **Unaffected** |
 | Users currently logged in | ✓ **Unaffected** |
 | New Google logins | ✗ Fail until new secret deployed |
 
@@ -181,7 +200,7 @@ No database changes required.
 | What | Effect |
 |------|--------|
 | Existing sessions | ✓ **Unaffected** |
-| Local Jazz data | ✓ **Unaffected** |
+| List/item data (rowboat) | ✓ **Unaffected** |
 | Existing subscriptions | ✓ **Unaffected** - stored in Stripe, not locally |
 | Billing operations | ⚠ Fail during rotation window |
 
@@ -207,7 +226,7 @@ Stripe's key rolling gives 24-hour overlap for safe transition.
 | What | Effect |
 |------|--------|
 | Existing sessions | ✓ **Unaffected** |
-| Local Jazz data | ✓ **Unaffected** |
+| List/item data (rowboat) | ✓ **Unaffected** |
 | Subscription sync | ⚠ Webhooks rejected during rotation |
 | Missed webhooks | Can be replayed from Stripe Dashboard |
 
@@ -234,7 +253,7 @@ Stripe's key rolling gives 24-hour overlap for safe transition.
 | What | Effect |
 |------|--------|
 | Existing sessions | ✓ **Unaffected** |
-| Local Jazz data | ✓ **Unaffected** |
+| List/item data (rowboat) | ✓ **Unaffected** |
 | Email sending | ✗ Fails until new password deployed |
 | Share invites | ⚠ Invites created but emails not sent |
 
@@ -297,7 +316,7 @@ After rotating any secret:
 
 1. **Immediately rotate** the compromised secret using procedures above
 2. If `BETTER_AUTH_SECRET` is compromised:
-   - User Jazz data is safe (encrypted with user keys, not server secret)
+   - List/item data is unaffected — it is unencrypted rowboat-managed data, never gated by this secret
    - Force re-authentication: `sqlite3 auth.db "UPDATE user SET encryptedCredentials = NULL;"`
 3. If `STRIPE_SECRET_KEY` is compromised:
    - Roll the key in Stripe Dashboard immediately

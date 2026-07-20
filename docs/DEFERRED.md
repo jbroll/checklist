@@ -66,12 +66,30 @@ This clears CheckList's half of rowboat roadmap Phase 4 ("retire jbr-jazz"); `wi
   `const` shadows the outer `header` for the *entire* function body, so the earlier call sits in
   the temporal dead zone and throws `ReferenceError: Cannot access 'header' before
   initialization`. `npx tsx backend/scripts/rotate.ts apple` is currently broken.
-- **`backend/scripts/` is excluded from type-checking.** `backend/tsconfig.json` only
-  `include`s `src/**/*` (+ `../shared/**/*`), so `rotate.ts` — and everything else under
-  `scripts/` — is never run through `tsc`. That's how the `cmdApple` bug above passed CI
-  unnoticed; the same gap will hide the next one. Worth closing (add `scripts/**/*` to
-  `include`, or give `scripts/` its own `tsconfig.json`), but out of scope for the de-jazzing
-  branch.
+- **`backend/scripts/` is excluded from type-checking, and so is the root `e2e/` suite.**
+  `backend/tsconfig.json` only `include`s `src/**/*` (+ `../shared/**/*`), so `rotate.ts` — and
+  everything else under `scripts/` — is never run through `tsc`. That's how the `cmdApple` bug
+  above passed CI unnoticed; the same gap will hide the next one. Separately, the root
+  `tsconfig.json` excludes `e2e/**/*`, so the Playwright suite is also unchecked (e.g. the
+  untyped `page` parameter at `e2e/error-handling.spec.ts:28`). Worth closing (add
+  `scripts/**/*` to the backend `include`, and stop excluding `e2e/**/*` at the root, or give
+  each its own `tsconfig.json`), but out of scope for the de-jazzing branch.
+- **Stale Jazz documentation was left behind by the de-jazzing pass** — several docs still
+  describe Jazz.tools as the current storage/sync layer and need a product decision on how to
+  fix them (mechanical edit vs. a fuller rewrite), not just a find-replace:
+  - **Highest priority — `website/privacy.md:7,15` and its built `website/privacy.html:66,70`.**
+    This is a **published, live legal document**, compiled by `website/build-legal.js` on every
+    `npm run build`. It currently states "Your list data is stored using Jazz.tools. Jazz account
+    keys are stored server-side", "backed up via Jazz.tools", and — most seriously — "Your data
+    is encrypted before it reaches the sync service—they cannot read your lists." Under rowboat
+    this is false: the server stores list/item rows in plaintext SQLite and can read them (see
+    the KEY_ROTATION.md fix in this same commit for the verified detail). This is a factual
+    misstatement about data confidentiality in a live privacy policy — it needs a product/legal
+    decision about the replacement wording, not a mechanical edit, and was deliberately **not**
+    edited as part of this fix pass.
+  - Also stale: `docs/ROADMAP.md:18,100,105,108,110`, `docs/HOSTED_ROWBOAT.md:35,100-105`,
+    `DEPLOY.md:198-200`, `e2e/INVITE_TESTING.md`, `docs/MARKET_COMPARISON.md`,
+    `docs/GooglePlayStore.md`, `full-description.md`, `short-description.md`.
 - **The committed Capacitor bundles under `android/` and `ios/` still reference Jazz** —
   `vendor-jazz-*.js` chunks and jazz-referencing source maps are present in
   `android/app/src/main/assets/public/`. These are stale build output, not source; they

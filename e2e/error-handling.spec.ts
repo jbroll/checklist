@@ -551,18 +551,30 @@ test.describe('Data Sync Errors', () => {
 
   test('should handle IndexedDB errors gracefully', async ({ page }) => {
     await page.goto('/');
+    await waitForPageLoad(page);
 
     // Delete the app's IndexedDB stores to simulate storage loss. Names are
     // `checklist::<identity>` (storeName(APP_NAME, identity)), so enumerate rather
-    // than hardcode.
-    await page.evaluate(async () => {
-      const dbs = await window.indexedDB.databases();
-      for (const { name } of dbs) {
-        if (name?.startsWith('checklist::')) {
-          window.indexedDB.deleteDatabase(name);
-        }
-      }
+    // than hardcode. Fails loudly if there is nothing to delete — a silent no-op
+    // here is how this test was vacuous before.
+    const deleted = await page.evaluate(async () => {
+      const names = (await window.indexedDB.databases())
+        .map((d) => d.name)
+        .filter((n): n is string => !!n && n.startsWith('checklist::'));
+      await Promise.all(
+        names.map(
+          (name) =>
+            new Promise<void>((resolve) => {
+              const req = window.indexedDB.deleteDatabase(name);
+              req.onsuccess = () => resolve();
+              req.onerror = () => resolve();
+              req.onblocked = () => resolve();
+            }),
+        ),
+      );
+      return names;
     });
+    expect(deleted.length).toBeGreaterThan(0);
 
     await page.reload();
     await waitForPageLoad(page);

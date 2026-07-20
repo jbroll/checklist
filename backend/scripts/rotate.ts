@@ -327,26 +327,6 @@ async function cmdList() {
     notes: betterAuth ? `${betterAuth.length} chars` : 'Not configured',
   });
 
-  // JAZZ_AGENT_SECRET
-  const jazzAgent = getSecretFromFile('JAZZ_AGENT_SECRET');
-  const jazzAgentValid = !!jazzAgent && jazzAgent.includes('/') &&
-    jazzAgent.startsWith('sealerSecret_');
-  secrets.push({
-    name: 'JAZZ_AGENT_SECRET',
-    configured: !!jazzAgent,
-    valid: jazzAgentValid,
-    notes: jazzAgentValid ? 'Valid format' : 'Invalid or missing',
-  });
-
-  // JAZZ_AGENT_ACCOUNT_ID
-  const jazzAgentId = getSecretFromFile('JAZZ_AGENT_ACCOUNT_ID');
-  secrets.push({
-    name: 'JAZZ_AGENT_ACCOUNT_ID',
-    configured: !!jazzAgentId,
-    valid: !!jazzAgentId && jazzAgentId.startsWith('co_'),
-    notes: jazzAgentId ? jazzAgentId.slice(0, 20) + '...' : 'Not configured',
-  });
-
   // APPLE_CLIENT_SECRET
   const apple = getSecretFromFile('APPLE_CLIENT_SECRET');
   let appleExpires: Date | undefined;
@@ -540,18 +520,6 @@ async function cmdTest() {
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
     const exp = new Date(payload.exp * 1000);
     assert(exp > new Date(), `Expired on ${exp.toISOString()}`);
-  });
-
-  // Test JAZZ_AGENT_SECRET
-  header('JAZZ_AGENT_SECRET');
-
-  const jazzSecret = getSecretFromFile('JAZZ_AGENT_SECRET');
-  await test('Valid format', () => {
-    assert(!!jazzSecret, 'Not configured');
-    assert(jazzSecret!.includes('/'), 'Missing separator');
-    const [sealer, signer] = jazzSecret!.split('/');
-    assert(sealer.startsWith('sealerSecret_'), 'Invalid sealer');
-    assert(signer.startsWith('signerSecret_'), 'Invalid signer');
   });
 
   // Summary
