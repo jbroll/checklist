@@ -4,9 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"frontend,backend\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "concurrently -n \"frontend,backend,rowboat\" -c \"cyan,magenta,green\" \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:rowboat\"",
     "dev:frontend": "vite",
     "dev:backend": "cd backend && npm run dev",
+    "dev:rowboat": "bash scripts/dev-rowboat.sh",
     "build": "tsc --noEmit && npm run build:website && vite build --mode production",
     "build:website": "node website/build-legal.js",
     "build:backend": "cd backend && npm run build",

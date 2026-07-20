@@ -26,6 +26,19 @@ Detailed implementation plans + subagent execution logs are archived under
 [`docs/archive/`](archive/) (`…-phase-a-jwks-bridge.md`, `…-phase-b-rbac.md`, `…-phase-c-sharing.md`, and
 the `*-EXECUTION-LOG.md` files).
 
+### Sub-project A — deploy + local-dev harness (landed)
+
+**Local dev.** `npm run dev` now runs a third process, `dev:rowboat` (`scripts/dev-rowboat.sh`),
+which runs a local `@jbroll/rowboat-server` from the sibling `../rowboat` source via `tsx` on
+**http://localhost:3020**, with `ROWBOAT_AUTH_MODE=jwt` + `ROWBOAT_RBAC=on` (prod parity). Scratch
+state lives in the gitignored `.rowboat-dev/`; delete it to reset. Requires the sibling rowboat
+checkout to be built. Until sub-projects C/D repoint the client, this local server is standing
+scaffolding — nothing points at it yet.
+
+**Prod deploy.** rowboat.rkroll.com is deployed from `../rowboat/packages/server` via
+`deploy-full.sh` + `deploy.conf`; the operator runbook is
+`../rowboat/packages/server/DEPLOY_RUNBOOK.md`.
+
 ### Phase C — the agent-mediated grant dance (resolved design)
 
 Sharing is identity/email-bound, so it **stays in the subscriber backend** (CheckList) — `@jbroll/rowboat-sharing`

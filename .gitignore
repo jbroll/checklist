@@ -72,3 +72,6 @@ lefthook-local.yml
 
 # Playwright persisted auth sessions (real test-account sessions)
 e2e/.auth/
+
+# Local hosted-rowboat dev harness scratch state (scripts/dev-rowboat.sh)
+.rowboat-dev/
