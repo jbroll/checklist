@@ -78,3 +78,5 @@ e2e/.auth/
 
 # Hosted-rowboat tenant state (holds the once-shown management key) — visible, but never committed
 rowboat-tenant.*.json
+
+.env.tenant.local

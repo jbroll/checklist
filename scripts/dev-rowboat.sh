@@ -24,5 +24,43 @@ export AUTH_BASE_URL="${AUTH_BASE_URL:-http://localhost:${ROUTER_PORT}/api/auth}
 export ROWBOAT_AUTH_MODE="${ROWBOAT_AUTH_MODE:-jwt}"
 export ROWBOAT_RBAC="${ROWBOAT_RBAC:-on}"
 
+env_file="$here/.env.tenant.local"
+rm -f "$env_file"
+
 echo "dev-rowboat: local rowboat-server on :${ROUTER_PORT} (root=${ROWBOAT_ROOT}, auth=${ROWBOAT_AUTH_MODE}, rbac=${ROWBOAT_RBAC})"
-exec npx tsx "$server_main"
+npx tsx "$server_main" &
+server_pid=$!
+trap 'kill "$server_pid" 2>/dev/null || true' EXIT INT TERM
+
+# No health route on the router — any HTTP response (a 404 included) proves it is accepting.
+waited=0
+until curl -s -o /dev/null "http://localhost:${ROUTER_PORT}/"; do
+  if ! kill -0 "$server_pid" 2>/dev/null; then
+    echo "dev-rowboat: server exited before becoming reachable" >&2
+    exit 1
+  fi
+  if [ "$waited" -ge 60 ]; then
+    echo "dev-rowboat: not reachable on :${ROUTER_PORT} after 60s" >&2
+    exit 1
+  fi
+  sleep 1
+  waited=$((waited + 1))
+done
+
+# Idempotent: a re-run is a schema no-op + issuer re-assert; a wiped .rowboat-dev/ re-bootstraps.
+echo "dev-rowboat: provisioning the local tenant"
+(cd "$here" && npm run --silent provision:local)
+
+database_id="$(node -e "process.stdout.write(require('$here/rowboat-tenant.local.json').databaseId)")"
+if [ -z "$database_id" ]; then
+  echo "dev-rowboat: provision:local produced no databaseId" >&2
+  exit 1
+fi
+
+cat > "$env_file" <<EOF
+VITE_ROWBOAT_SYNC_BASE=http://localhost:${ROUTER_PORT}/db/${database_id}/api/sync
+ROWBOAT_DATABASE_ID=${database_id}
+EOF
+echo "dev-rowboat: tenant ready (databaseId=${database_id}) -> .env.tenant.local"
+
+wait "$server_pid"
