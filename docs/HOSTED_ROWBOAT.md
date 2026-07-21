@@ -295,6 +295,17 @@ Outputs land in a gitignored `rowboat-tenant.<env>.json` (holds the once-shown `
 into the app's env. The issuer contract: `audience = databaseId`, `jwksUrl`/`issuer` = CheckList's
 `/api/auth` — C makes BetterAuth's JWTs conform.
 
+**Deferred follow-ups (from B's final review — non-blocking; harmless until C/D point at the tenant):**
+- **Orphaned-subscriber reconciliation.** Two paths mint a *new* subscriber and orphan the old one:
+  (a) a partial fresh-bootstrap where `createSubscriber` succeeds but `createDatabase`/`setAuthIssuer`
+  then throws — the once-shown `managementKey` is never persisted (the next run bootstraps fresh);
+  (b) a re-run where only the database was lost (stale/404) or the key rotated (401). Cheapest
+  mitigation: persist `{subscriberId, managementKey}` to the state file immediately after
+  `createSubscriber`, before creating the database. Empty orphaned subscribers are harmless here.
+- **Runbook caveat.** `DEPLOY_RUNBOOK.md`'s "re-running is safe (reconcile, not re-create)" is true for
+  the normal case but a prod re-run after DB loss or key rotation bootstraps a *fresh* tenant — add a
+  one-line operator caution when the reconciliation work lands.
+
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
 - A data-plane proxy (only if A proves unworkable).
