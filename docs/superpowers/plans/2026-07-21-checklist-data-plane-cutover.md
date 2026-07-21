@@ -31,7 +31,7 @@
 | `src/lib/__tests__/syncToken.test.ts` | new |
 | `src/lib/rowboat.tsx` | sync + mint repointed at hosted rowboat |
 | `backend/src/index.ts` | + `jwt` config; − embedded sync/RBAC/mint |
-| `backend/src/__tests__/host.test.ts` | replaced — JWT issuance instead of sync |
+| `backend/src/__tests__/host.test.ts` | + JWT issuance cases (Task 4); − mint/sync cases (Task 6) |
 | `e2e/folders-authed.spec.ts` | asserts sync hits the rowboat origin with a Bearer |
 
 ---
@@ -549,81 +549,35 @@ git commit -m "feat(sync): cached BetterAuth JWT for the hosted data plane"
 
 ---
 
-### Task 4: Backend — issue JWTs, delete the embedded data plane
+### Task 4: Backend — issue data-plane JWTs
 
 **Files:**
 - Modify: `backend/src/index.ts`
-- Modify: `backend/package.json` (drop `@jbroll/rowboat-backend`)
-- Replace: `backend/src/__tests__/host.test.ts`
+- Modify: `backend/src/__tests__/host.test.ts` (add cases; do **not** remove the existing ones)
 
-**Model:** `sonnet` — coordinated deletions across one file plus a rewritten test.
+**Model:** `sonnet` — one config change plus its test, with a claims contract that must match rowboat exactly.
 
 **Interfaces:**
 - Consumes: `ROWBOAT_DATABASE_ID` from the environment (written by Task 2 in dev).
-- Produces: `ServerConfig` gains `rowboatDatabaseId: string`. `GET /api/auth/token` returns `{ token }` with `sub = user.id`, `iss = <baseUrl>/api/auth`, `aud = rowboatDatabaseId`. `GET /api/auth/jwks` serves the public keys. `POST /api/folders/group` and `/api/sync/*` **no longer exist**. `RowboatServer.db` is now `Database.Database`.
+- Produces: `ServerConfig` gains `rowboatDatabaseId: string`. `GET /api/auth/token` returns `{ token }` with `sub = user.id`, `iss = <baseUrl>/api/auth`, `aud = rowboatDatabaseId`. `GET /api/auth/jwks` serves the public keys.
 
-**Context:** `CreateIdentityOptions extends BuildAuthOptions` (`auth-betterauth/src/index.ts:33`), which already carries `jwt?: { issuer, audience, expirationTime? }` (`auth-instance.ts:84`) — so enabling the plugin is config only, no new dependency. `registerAuthTables`, `registerShareTables`, `mountShareRoutes` and `mountAccountRoutes` **stay** (see Global Constraints); their group graph goes empty, which makes sharing and merge fail closed until E.
+**Context:** `CreateIdentityOptions extends BuildAuthOptions` (`auth-betterauth/src/index.ts:33`), which already carries `jwt?: { issuer, audience, expirationTime? }` (`auth-instance.ts:84`) — so enabling the plugin is config only, no new dependency.
 
-- [ ] **Step 1: Replace the host test with one that proves JWT issuance**
+**This task is purely additive.** The embedded sync/RBAC/mint stays wired and the client still uses it, so the app keeps working and the pre-commit e2e gate stays green. Deleting the embedded plane happens in Task 6, *after* Task 5 repoints the client — the reverse order would leave a commit whose e2e cannot pass, and the hooks may not be bypassed.
 
-The existing `backend/src/__tests__/host.test.ts` tests only the embedded mint and sync, which this task deletes. Replace the file's entire contents with:
+Verifying the minted claims here, before the client depends on them, is the planned mitigation for the spec's `aud`-mismatch risk: a wrong `iss` or `aud` otherwise surfaces only as a blanket 401 on every sync.
+
+- [ ] **Step 1: Add JWT-issuance cases to the host test**
+
+Keep everything already in `backend/src/__tests__/host.test.ts` — the mint and sync cases still pass and Task 6 removes them. Add `DATABASE_ID` and `rowboatDatabaseId` to the test config, add a `claimsOf` helper, and append a new `describe` block:
 
 ```ts
-// Supertest-verifies what the thin backend still owns after the data-plane cutover: real
-// better-auth sign-up/sign-in, and the `jwt` plugin issuing a data-plane token whose claims match
-// the issuer rowboat has registered for this tenant. Sync, RBAC and the folder-group mint moved to
-// hosted rowboat and are no longer served here.
-import type { Express } from 'express';
-import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
-import { createServer, type RowboatServer, type ServerConfig } from '../index.js';
-
-const AUTH_SECRET = 'test-secret-test-secret-test-secret';
 const DATABASE_ID = 'db_test_tenant';
+```
 
-function testConfig(): ServerConfig {
-  return {
-    port: 0,
-    dbPath: ':memory:',
-    frontendUrl: 'http://localhost:5173',
-    baseUrl: 'http://localhost:5173',
-    authSecret: AUTH_SECRET,
-    appName: 'CheckList Test',
-    trustedOrigins: ['http://localhost:5173'],
-    providers: [],
-    rowboatDatabaseId: DATABASE_ID,
-    emailAuth: {
-      enabled: true,
-      requireEmailVerification: false,
-      minPasswordLength: 8,
-      maxPasswordLength: 128,
-    },
-  };
-}
+Add `rowboatDatabaseId: DATABASE_ID,` to the object `testConfig()` returns, next to `providers: [],`. Then add this helper beside `folderRow`, and the `describe` block after the existing one:
 
-let server: RowboatServer | undefined;
-
-afterEach(() => {
-  server?.db.close();
-  server = undefined;
-});
-
-async function signUpAndSignIn(
-  app: Express,
-  email: string,
-  password: string,
-): Promise<{ agent: ReturnType<typeof request.agent>; userId: string }> {
-  const agent = request.agent(app);
-  const signUpRes = await agent
-    .post('/api/auth/sign-up/email')
-    .send({ name: email, email, password });
-  expect(signUpRes.status).toBe(200);
-
-  const signInRes = await agent.post('/api/auth/sign-in/email').send({ email, password });
-  expect(signInRes.status).toBe(200);
-  return { agent, userId: (signInRes.body as { user: { id: string } }).user.id };
-}
-
+```ts
 function claimsOf(token: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()) as Record<
     string,
@@ -631,12 +585,13 @@ function claimsOf(token: string): Record<string, unknown> {
   >;
 }
 
-describe('thin backend: data-plane JWT issuance', () => {
+// The data-plane credential: rowboat's resolveAuthor verifies these against CheckList's JWKS, so
+// iss/aud must match exactly what `npm run provision:*` registered for this database. A mismatch
+// surfaces only as a blanket 401 on every sync, which is why it is asserted here.
+describe('data-plane JWT issuance', () => {
   it('mints a token whose sub/iss/aud match the registered issuer', async () => {
     server = await createServer(testConfig());
-    const { app } = server;
-
-    const u = await signUpAndSignIn(app, 'u@x.com', 'correct-horse-battery');
+    const u = await signUpAndSignIn(server.app, 'jwt@x.com', 'correct-horse-battery');
 
     const tokenRes = await u.agent.get('/api/auth/token');
     expect(tokenRes.status).toBe(200);
@@ -667,14 +622,6 @@ describe('thin backend: data-plane JWT issuance', () => {
     const res = await request(server.app).get('/api/auth/token');
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
-
-  it('no longer serves the embedded data plane', async () => {
-    server = await createServer(testConfig());
-    const { app } = server;
-
-    expect((await request(app).post('/api/folders/group').send({})).status).toBe(404);
-    expect((await request(app).post('/api/sync/pull').send({})).status).toBe(404);
-  });
 });
 ```
 
@@ -686,39 +633,18 @@ cd backend && npx vitest run src/__tests__/host.test.ts
 ```
 Expected: FAIL — `rowboatDatabaseId` is not a `ServerConfig` property, and `/api/auth/token` 404s.
 
-- [ ] **Step 3: Trim the imports in `backend/src/index.ts`**
+- [ ] **Step 3: Add the config field**
 
-Delete line 1 (`import crypto from 'node:crypto';` — only the mint route used it). Replace line 8 with:
-
-```ts
-import { registerAuthTables } from '@jbroll/rowboat-auth';
-```
-
-Delete the whole `@jbroll/rowboat-backend` import block (lines 16-21) and the two schema lines (23-24):
-
-```ts
-import { compileSchema } from '@jbroll/rowboat-schema';
-import { schema as folderSchema } from '../../shared/schema.js';
-```
-
-- [ ] **Step 4: Add the config field and the JWT plugin**
-
-In `ServerConfig`, add after `providers: OAuthProviderConfig[];`:
+In `backend/src/index.ts`, add to `ServerConfig` after `providers: OAuthProviderConfig[];`:
 
 ```ts
   /** The provisioned rowboat `databaseId` — the audience every data-plane JWT is bound to. */
   rowboatDatabaseId: string;
 ```
 
-In `RowboatServer`, change `db: SyncDb;` to `db: Database.Database;`.
+- [ ] **Step 4: Enable the JWT plugin**
 
-In `createServer`, change the first line from `const db = new Database(config.dbPath) as SyncDb;` to:
-
-```ts
-  const db = new Database(config.dbPath);
-```
-
-In the `createIdentity({…})` call, add after `baseUrl: `${config.baseUrl}/api/auth`,`:
+In the `createIdentity({…})` call, add immediately after the `baseUrl:` line:
 
 ```ts
     // Short-lived per-user tokens for the hosted-rowboat data plane. iss/aud must match what
@@ -730,30 +656,7 @@ In the `createIdentity({…})` call, add after `baseUrl: `${config.baseUrl}/api/
     },
 ```
 
-- [ ] **Step 5: Delete the embedded data plane**
-
-Remove the sync registry block (formerly lines 109-111):
-
-```ts
-  initSyncRegistry(db);
-  const { manifest } = compileSchema(folderSchema);
-  for (const table of manifest) registerSyncTable(db, table);
-```
-
-Remove the `mountSyncRoutes` call (formerly 146-149):
-
-```ts
-  mountSyncRoutes(app, db, {
-    auth: createRbacAuth(db),
-    resolveAuthor: provider.resolveAuthor,
-  });
-```
-
-Remove the entire `POST /api/folders/group` route, from its leading comment through its closing `});` (formerly 153-172).
-
-Update the `createServer` doc comment above it to say the backend serves auth, sharing and account routes, and that sync/RBAC/mint moved to hosted rowboat.
-
-- [ ] **Step 6: Require the database id from the environment**
+- [ ] **Step 5: Require the database id from the environment**
 
 In `configFromEnv`, add before the `return`:
 
@@ -769,43 +672,31 @@ In `configFromEnv`, add before the `return`:
 
 and add `rowboatDatabaseId,` to the returned object, next to `providers,`.
 
-- [ ] **Step 7: Drop the dead dependency**
-
-In `backend/package.json`, remove the `"@jbroll/rowboat-backend": …` line from `dependencies`, then:
-
-```bash
-cd backend && npm install
-```
-Expected: lockfile updates, no errors.
-
-- [ ] **Step 8: Run the test to verify it passes**
+- [ ] **Step 6: Run the backend suite to verify it passes**
 
 Run:
 ```bash
 cd backend && npx vitest run
 ```
-Expected: PASS, 4 tests in `host.test.ts`, plus any other backend suites unchanged.
+Expected: PASS — the three new JWT cases plus the existing mint/sync case, which still works because the embedded plane is untouched.
 
-- [ ] **Step 9: Type-check both projects**
+- [ ] **Step 7: Type-check**
 
 Run:
 ```bash
 cd /home/john/src/checklist && npm run type-check
 ```
-Expected: clean. If `SyncDb` is still referenced anywhere, remove that usage.
+Expected: clean.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/index.ts backend/package.json backend/package-lock.json backend/src/__tests__/host.test.ts
-git commit -m "feat(backend)!: issue data-plane JWTs, delete the embedded sync/RBAC plane
+git add backend/src/index.ts backend/src/__tests__/host.test.ts
+git commit -m "feat(backend): issue data-plane JWTs via the BetterAuth jwt plugin
 
-BetterAuth's jwt plugin now mints per-user tokens bound to the provisioned
-databaseId. mountSyncRoutes, registerSyncTable, createRbacAuth and the
-POST /api/folders/group mint are gone — hosted rowboat serves them.
-
-Sharing and account-merge group ops read a now-empty local group graph and
-fail closed until sub-project E cuts them over."
+Per-user tokens bound to the provisioned databaseId as audience, with the
+public JWKS rowboat verifies against. Purely additive — the embedded sync
+plane still serves the client until it is repointed."
 ```
 
 ---
@@ -958,7 +849,144 @@ the data plane is cross-origin and authenticates the token alone."
 
 ---
 
-### Task 6: E2E proof, deploy config, and docs
+### Task 6: Backend — delete the embedded data plane
+
+**Files:**
+- Modify: `backend/src/index.ts`
+- Modify: `backend/package.json` (drop `@jbroll/rowboat-backend`)
+- Modify: `backend/src/__tests__/host.test.ts` (remove the mint/sync coverage)
+
+**Model:** `sonnet` — coordinated deletions across one file plus test surgery.
+
+**Interfaces:**
+- Consumes: nothing new.
+- Produces: `POST /api/folders/group` and `/api/sync/*` no longer exist. `RowboatServer.db` is now `Database.Database` instead of `SyncDb`.
+
+**Context:** This runs **after** Task 5 has repointed the client, so nothing calls these routes any more and the pre-commit e2e gate stays green. Running it before Task 5 would produce a commit whose e2e cannot pass, and the hooks may not be bypassed.
+
+`registerAuthTables`, `registerShareTables`, `mountShareRoutes` and `mountAccountRoutes` **stay** (see Global Constraints). Their group graph goes empty, which makes sharing and account-merge fail closed until sub-project E. Do not remove them and do not try to fix them.
+
+- [ ] **Step 1: Remove the obsolete test coverage**
+
+In `backend/src/__tests__/host.test.ts`, delete the entire original `describe('rowboat host: folder-group mint -> scoped push -> scoped pull', …)` block and the `folderRow` helper it uses, plus the now-unused `hexPack` import. Keep `signUpAndSignIn`, `testConfig`, `claimsOf`, and the `describe('data-plane JWT issuance', …)` block from Task 4.
+
+Add one case to the surviving `describe` proving the routes are gone:
+
+```ts
+  it('no longer serves the embedded data plane', async () => {
+    server = await createServer(testConfig());
+    const { app } = server;
+
+    expect((await request(app).post('/api/folders/group').send({})).status).toBe(404);
+    expect((await request(app).post('/api/sync/pull').send({})).status).toBe(404);
+  });
+```
+
+Update the file's header comment: the backend now owns auth, billing, sharing and account routes; sync, RBAC and the folder-group mint moved to hosted rowboat.
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run:
+```bash
+cd backend && npx vitest run src/__tests__/host.test.ts
+```
+Expected: FAIL on the new case — both routes still return non-404 because the embedded plane is still mounted.
+
+- [ ] **Step 3: Trim the imports in `backend/src/index.ts`**
+
+Delete `import crypto from 'node:crypto';` (line 1 — only the mint route used it). Replace the `@jbroll/rowboat-auth` import with:
+
+```ts
+import { registerAuthTables } from '@jbroll/rowboat-auth';
+```
+
+Delete the whole `@jbroll/rowboat-backend` import block and these two lines:
+
+```ts
+import { compileSchema } from '@jbroll/rowboat-schema';
+import { schema as folderSchema } from '../../shared/schema.js';
+```
+
+- [ ] **Step 4: Drop the `SyncDb` type**
+
+In `RowboatServer`, change `db: SyncDb;` to `db: Database.Database;`. In `createServer`, change `const db = new Database(config.dbPath) as SyncDb;` to:
+
+```ts
+  const db = new Database(config.dbPath);
+```
+
+- [ ] **Step 5: Delete the embedded data plane**
+
+Remove the sync registry block:
+
+```ts
+  initSyncRegistry(db);
+  const { manifest } = compileSchema(folderSchema);
+  for (const table of manifest) registerSyncTable(db, table);
+```
+
+Remove the `mountSyncRoutes` call:
+
+```ts
+  mountSyncRoutes(app, db, {
+    auth: createRbacAuth(db),
+    resolveAuthor: provider.resolveAuthor,
+  });
+```
+
+Remove the entire `POST /api/folders/group` route, from its leading comment through its closing `});`.
+
+Update the `createServer` doc comment to say the backend serves auth, sharing and account routes, and that sync/RBAC/mint moved to hosted rowboat.
+
+- [ ] **Step 6: Drop the dead dependency**
+
+In `backend/package.json`, remove the `"@jbroll/rowboat-backend": …` line from `dependencies`, then:
+
+```bash
+cd backend && npm install
+```
+Expected: lockfile updates, no errors.
+
+- [ ] **Step 7: Run the backend suite to verify it passes**
+
+Run:
+```bash
+cd backend && npx vitest run
+```
+Expected: PASS, including the new "no longer serves the embedded data plane" case.
+
+- [ ] **Step 8: Type-check**
+
+Run:
+```bash
+cd /home/john/src/checklist && npm run type-check
+```
+Expected: clean. If `SyncDb` is still referenced anywhere, remove that usage.
+
+- [ ] **Step 9: Confirm the app still works end to end**
+
+```bash
+npm run dev
+```
+Open `http://localhost:8765`, sign in, create a folder, reload. Expected: the folder persists via `localhost:3020`, and the Network tab shows **no** requests to `localhost:3001/api/sync`. Stop with Ctrl-C.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add backend/src/index.ts backend/package.json backend/package-lock.json backend/src/__tests__/host.test.ts
+git commit -m "refactor(backend)!: delete the embedded sync/RBAC data plane
+
+mountSyncRoutes, registerSyncTable, createRbacAuth and the
+POST /api/folders/group mint are gone — hosted rowboat serves them and the
+client now talks to it directly.
+
+Sharing and account-merge group ops read a now-empty local group graph and
+fail closed until sub-project E cuts them over."
+```
+
+---
+
+### Task 7: E2E proof, deploy config, and docs
 
 **Files:**
 - Modify: `e2e/folders-authed.spec.ts`
@@ -970,7 +998,7 @@ the data plane is cross-origin and authenticates the token alone."
 **Model:** `sonnet` — a test assertion plus config and prose spread across files.
 
 **Interfaces:**
-- Consumes: everything from Tasks 1-5.
+- Consumes: everything from Tasks 1-6.
 - Produces: no code interfaces. `.env.example` documents `VITE_ROWBOAT_SYNC_BASE` and `ROWBOAT_DATABASE_ID`.
 
 **Context:** `e2e/folders-authed.spec.ts` already proves a server round-trip (create → reload → still visible). This task adds the assertion that the round-trip went to the *rowboat* origin under a Bearer, which is what makes it a cutover test rather than a persistence test. The `invite` and `merge` Playwright projects self-exclude without email infra (`playwright.config.ts:32`), so the default gate stays green despite the deliberate sharing gap.
@@ -1074,4 +1102,4 @@ Expected: type-check, lint, unit tests and E2E all pass. Report the actual outpu
 ```bash
 git log --oneline main..cutover-cd
 ```
-Expected: the five or six commits from this plan, on `cutover-cd`, with `main` untouched. Leave it that way — sub-project E lands next.
+Expected: the six commits from this plan, on `cutover-cd`, with `main` untouched. Leave it that way — sub-project E lands next.
