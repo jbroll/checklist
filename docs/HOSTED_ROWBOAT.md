@@ -281,6 +281,20 @@ groups nested under that root.
   `resolveAuthor` (phase A) and `createRbacAuth` into the worker (phase B); the console/operator auth
   is untouched.
 
+### Sub-project B — tenant provisioning (landed)
+
+Provisioning is shrink-wrapped in `@jbroll/rowboat-cli` (`provision-tenant` verb: create subscriber →
+create database with `compileSchema(shared/schema)` → register the JWT issuer). CheckList consumes it:
+
+- `npm run provision:local` — provisions the local `dev:rowboat` (:3020). Run once; **re-run after a
+  `.rowboat-dev/` reset** — the tool detects the wiped tenant and re-bootstraps automatically.
+- `npm run provision:prod` — provisions rowboat.rkroll.com (operator step; see the deploy runbook).
+
+Outputs land in a gitignored `rowboat-tenant.<env>.json` (holds the once-shown `managementKey` +
+`databaseId` + issuer). The printed `databaseId` / `issuer` / `audience` are what sub-project C wires
+into the app's env. The issuer contract: `audience = databaseId`, `jwksUrl`/`issuer` = CheckList's
+`/api/auth` — C makes BetterAuth's JWTs conform.
+
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
 - A data-plane proxy (only if A proves unworkable).

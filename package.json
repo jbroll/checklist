@@ -8,6 +8,8 @@
     "dev:frontend": "vite",
     "dev:backend": "cd backend && npm run dev",
     "dev:rowboat": "bash scripts/dev-rowboat.sh",
+    "provision:local": "tsx ../rowboat/packages/rowboat-cli/src/cli.ts provision-tenant --schema shared/schema.ts --name checklist-local --jwks-url http://localhost:3001/api/auth/jwks --issuer http://localhost:3001/api/auth --state rowboat-tenant.local.json --control-plane-url http://localhost:3020",
+    "provision:prod": "tsx ../rowboat/packages/rowboat-cli/src/cli.ts provision-tenant --schema shared/schema.ts --name checklist --jwks-url https://checklist-app.rkroll.com/api/auth/jwks --issuer https://checklist-app.rkroll.com/api/auth --state rowboat-tenant.prod.json --control-plane-url https://rowboat.rkroll.com",
     "build": "tsc --noEmit && npm run build:website && vite build --mode production",
     "build:website": "node website/build-legal.js",
     "build:backend": "cd backend && npm run build",

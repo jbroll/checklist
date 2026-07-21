@@ -75,3 +75,6 @@ e2e/.auth/
 
 # Local hosted-rowboat dev harness scratch state (scripts/dev-rowboat.sh)
 .rowboat-dev/
+
+# Hosted-rowboat tenant state (holds the once-shown management key) — visible, but never committed
+rowboat-tenant.*.json
