@@ -306,6 +306,47 @@ into the app's env. The issuer contract: `audience = databaseId`, `jwksUrl`/`iss
   the normal case but a prod re-run after DB loss or key rotation bootstraps a *fresh* tenant — add a
   one-line operator caution when the reconciliation work lands.
 
+### Sub-projects C+D — data-plane cutover (landed)
+
+The browser now syncs and mints scope groups **directly against hosted rowboat**, cross-origin and
+cookie-free, carrying a short-lived BetterAuth JWT as `Authorization: Bearer`. CheckList's backend
+serves no data plane at all: `mountSyncRoutes`, `registerSyncTable`, `createRbacAuth` and the local
+`POST /api/folders/group` mint are deleted, and `@jbroll/rowboat-backend` is off its dependency list.
+
+Two env vars carry the tenant, both produced by `npm run provision:local` / `provision:prod` into
+`rowboat-tenant.<env>.json`:
+
+| Var | Consumer | Value |
+|---|---|---|
+| `VITE_ROWBOAT_SYNC_BASE` | frontend (build-time) | `<rowboatUrl>/db/<databaseId>/api/sync` — `syncWithServer` appends `/sync` and `/pull`; the mint is `/groups` |
+| `ROWBOAT_DATABASE_ID` | backend (runtime) | `<databaseId>`, which is the JWT `audience` |
+
+In dev nothing is set by hand: `dev:rowboat` boots the local server, provisions the tenant, and writes
+both into `.env.tenant.local`; `dev:frontend` and `dev:backend` run behind `scripts/with-tenant-env.sh`,
+which blocks until that file exists and then sources it. For prod, `VITE_ROWBOAT_SYNC_BASE` is exported
+in `deploy.conf` (baked into the bundle by `APACHE_BUILD_CMD`) and `ROWBOAT_DATABASE_ID` goes in the
+gitignored `backend/secrets.env`.
+
+Two things that are easy to get wrong and produce one blanket symptom each:
+
+- **The registered issuer is the FRONTEND origin, not the backend's.** better-auth mints `iss` from
+  its baseUrl (`= FRONTEND_URL`), because the browser reaches `/api/auth` through vite's proxy in dev
+  and Apache's in prod. Registering `http://localhost:3001/api/auth` instead 401s *every* sync with no
+  other symptom. The `jwksUrl` is the opposite case — rowboat fetches it server-side, so it stays on
+  the backend's own `:3001` and must not depend on vite being up.
+- **The data-plane CORS allow-list must include `Content-Encoding`.** The client gzips every push body
+  and declares it, so a preflight allowing only `Authorization, Content-Type` blocks every push while
+  leaving `/pull` (unencoded) working — a half-synced app rather than an obviously broken one.
+
+**Deliberately broken until sub-project E** (do not "fix" these — E cuts them over):
+- **Sharing** — `mountShareRoutes` still resolves groups against the local graph, which is now empty.
+- **Account-merge** — the group-link step has no local groups to link.
+- **Account deletion** — the group-cleanup step likewise.
+
+`registerAuthTables`, `registerShareTables`, `mountShareRoutes` and `mountAccountRoutes` stay wired for
+exactly that reason; E replaces the local group backend with `remoteGroupBackend` + the agent JWT and
+only then drops them.
+
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
 - A data-plane proxy (only if A proves unworkable).

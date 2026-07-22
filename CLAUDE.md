@@ -25,7 +25,7 @@ BetterAuth.
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Data / sync**: rowboat (`@jbroll/rowboat-*`) — a relational, offline-first, sync-native store
-  (IndexedDB on the client, self-hosted SQLite backend)
+  (IndexedDB on the client, a self-hosted `@jbroll/rowboat-server` tenant serving the data plane)
 - **Authentication**: BetterAuth via rowboat's identity provider (`@jbroll/rowboat-auth-betterauth`)
   - OAuth Providers: Google + Apple
 - **Billing**: Stripe (subscriptions, customer portal)
@@ -114,8 +114,9 @@ Rowboat is a relational store that syncs across devices in real-time, offline-fi
   Reads/writes flow through the service layer, never a Jazz-style CoValue tree.
 - **Scope-group RBAC**: rows are owned by a scope group (`owner_group_id`); folders are per-folder
   groups linked under the user's root group. Authorization is scoped pull + gated push.
-- **Sync**: local-first writes hit IndexedDB and sync over `/api/sync` in the background;
-  conflict resolution is per-column / per-json-path last-write-wins (HLC).
+- **Sync**: local-first writes hit IndexedDB and sync in the background to **hosted rowboat**
+  (`VITE_ROWBOAT_SYNC_BASE`, cross-origin, `Authorization: Bearer`); conflict resolution is
+  per-column / per-json-path last-write-wins (HLC).
 
 ### Schema syntax (rowboat `rb.*`)
 
@@ -241,15 +242,19 @@ npm run preview      # Test production build
 - Verify redirect URIs in OAuth console
 
 **Data not syncing**:
-- Confirm the backend is running (sync is served at `/api/sync`)
-- Check the network tab for `/api/sync/pull` / `/api/sync/push` calls and the browser console
-- A stale backend sync DB can reject writes on a schema change — a fresh `AUTH_DB_PATH` db re-registers
-  the current schema (see `docs/DEFERRED.md` D4). This fresh-start-on-schema-change is CheckList's
-  library-mode reality: the backend registers one compiled schema at boot. rowboat now ships a live
-  schema-migration mechanism (`migrating` state + `POST /v1/databases/:id/schema` + the `rowboat
-  migrate` CLI + `movedFrom` column-move DX), but that is its **StaaS / control-plane** path, which
-  CheckList's embedded backend does not use — so schema changes here still mean a fresh backend DB
-  until/unless CheckList adopts that path (D4 note).
+- Sync no longer touches CheckList's backend — it goes to **hosted rowboat**. Confirm `dev:rowboat`
+  is up on :3020 and that `.env.tenant.local` exists (`npm run dev` runs and provisions both).
+- Check the network tab for `POST <VITE_ROWBOAT_SYNC_BASE>/{sync,pull}`. Nothing should hit
+  `localhost:3001/api/sync` — that data plane is deleted.
+- **Every request 401s** → issuer mismatch: the JWT's `iss` comes from `FRONTEND_URL` (the origin the
+  browser reaches `/api/auth` on), and it must equal what `provision:*` registered. See
+  `docs/HOSTED_ROWBOAT.md` → sub-projects C+D.
+- **Pull works, push is blocked** → a CORS preflight rejecting `Content-Encoding` (the client gzips
+  push bodies); same doc section.
+- A schema change means re-provisioning the tenant: wipe `.rowboat-dev/`, `rowboat-tenant.local.json`
+  and `.env.tenant.local`, then let `npm run dev` re-bootstrap. (rowboat's live schema-migration path —
+  `migrating` state + `POST /v1/databases/:id/schema` + the `rowboat migrate` CLI — is available now
+  that CheckList is on StaaS, but is not wired here yet; see `docs/DEFERRED.md` D4.)
 
 ## Important Notes for AI Assistants
 

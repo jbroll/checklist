@@ -102,7 +102,10 @@ CheckList's backend keeps `@jbroll/rowboat-sharing` but wires it with `remoteGro
 BetterAuth). Reconcile the `shareUrl` / `?token` vs `/invite/:token` mismatch (the research finding:
 `shareUrlBase` unset → bare `?token=`; client route is `/invite/:token`). Wrap the agent-install grant
 (the Phase-C review minor) and neutralize the `inviter_no_longer_admin` string for agent mode. Drop
-the local group-management. **Depends on:** D (a working RBAC data plane + provisioned groups).
+the local group-management — **including `registerAuthTables` and the local group tables, which D
+left wired**: sharing, account-merge and account-deletion all read that (now empty) group graph and
+fail closed between D and E, so removing it is E's job, not D's. **Depends on:** D (a working RBAC
+data plane + provisioned groups).
 **Open:** agent-credential issuance + rotation/scoping; `shareUrlBase` = CheckList's `/invite`; email
 content (folder name vs the raw group id the server sees).
 
