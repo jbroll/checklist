@@ -1,11 +1,10 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import type { Server } from 'node:http';
 import dotenv from 'dotenv';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import Database from 'better-sqlite3';
 import nodemailer from 'nodemailer';
-import { createRbacAuth, createScopeGroup, registerAuthTables } from '@jbroll/rowboat-auth';
+import { registerAuthTables } from '@jbroll/rowboat-auth';
 import {
   createIdentity,
   mountAccountRoutes,
@@ -13,15 +12,7 @@ import {
   type OAuthProviderConfig,
   type SendEmail,
 } from '@jbroll/rowboat-auth-betterauth';
-import {
-  initSyncRegistry,
-  mountSyncRoutes,
-  registerSyncTable,
-  type SyncDb,
-} from '@jbroll/rowboat-backend';
 import { mountShareRoutes, registerShareTables } from '@jbroll/rowboat-sharing';
-import { compileSchema } from '@jbroll/rowboat-schema';
-import { schema as folderSchema } from '../../shared/schema.js';
 
 // Root .env first (shared config), then backend .env — mirrors the pre-port load order.
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
@@ -94,23 +85,20 @@ function corsMiddleware(trustedOrigins: string[]) {
 
 export interface RowboatServer {
   app: Express;
-  db: SyncDb;
+  db: Database.Database;
   start(): Server;
 }
 
 // Stands up the express app on ONE better-sqlite3 db: auth (RBAC groups) + identity (better-auth
-// via rowboat-auth-betterauth) + sharing (invite/accept) + sync (the `folder` table) + the
-// folder-scope-group mint route. Replaces createHierarchyServer (Jazz cloud + agent) — no Jazz,
-// no billing/Stripe wiring (out of slice-1; see docs/superpowers/d-t3-report.md).
+// via rowboat-auth-betterauth) + sharing (invite/accept) + account routes. Sync, RBAC enforcement
+// and the folder-scope-group mint live in hosted rowboat now — the browser carries a data-plane
+// JWT straight there (see src/lib/rowboat.tsx). Replaces createHierarchyServer (Jazz cloud +
+// agent) — no Jazz, no billing/Stripe wiring (out of slice-1; see docs/superpowers/d-t3-report.md).
 export async function createServer(config: ServerConfig): Promise<RowboatServer> {
-  const db = new Database(config.dbPath) as SyncDb;
+  const db = new Database(config.dbPath);
 
   registerAuthTables(db);
   registerShareTables(db);
-
-  initSyncRegistry(db);
-  const { manifest } = compileSchema(folderSchema);
-  for (const table of manifest) registerSyncTable(db, table);
 
   const sendEmail = buildSendEmail(config.smtp);
   const identity = createIdentity({
@@ -152,33 +140,8 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
   app.use(express.json());
 
   const provider = identity.provider;
-  mountSyncRoutes(app, db, {
-    auth: createRbacAuth(db),
-    resolveAuthor: provider.resolveAuthor,
-  });
   mountShareRoutes(app, db, { provider, sendEmail });
   mountAccountRoutes(app, { provider, db });
-
-  // Folder-scope-group mint route: a signed-in user mints a new scope group (optionally nested
-  // under a parentGroup they admin — createScopeGroup itself enforces that authority check).
-  app.post('/api/folders/group', async (req: Request, res: Response) => {
-    const session = await provider.requireAuth(req, res);
-    if (!session) return; // requireAuth already wrote the 401
-
-    const body = req.body as { parentGroup?: unknown };
-    if (body.parentGroup !== undefined && typeof body.parentGroup !== 'string') {
-      res.status(400).json({ error: 'parentGroup must be a string when provided' });
-      return;
-    }
-
-    const groupId = crypto.randomUUID();
-    createScopeGroup(db, {
-      actor: session.user.id,
-      group: groupId,
-      parentGroup: body.parentGroup ?? session.user.id,
-    });
-    res.json({ groupId });
-  });
 
   return {
     app,
