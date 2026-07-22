@@ -42,6 +42,53 @@ data to migrate, so the fresh-start / "delete existing data" path stands (the sa
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
 
+## D10 — newly-granted scope is never backfilled (accepting an invite shows nothing) — **NEXT UP, blocks sub-project E**
+
+- **What:** accepting a share invite grants the recipient access, but the shared folder never appears
+  on their device. Pull is a single incremental cursor (`rowboat/packages/backend/src/pull.ts:45`:
+  `WHERE t.__server_updated_at > lastPulledAt`, with the scope filter evaluated at request time), so a
+  client whose cursor has already advanced past a row's `__server_updated_at` will never receive that
+  row — even once its scope widens to include it. Widening access delivers nothing; the rows are
+  simply below the cursor.
+- **Not a cutover regression.** The embedded data plane used this same `pull.ts`, so invite-accept has
+  been silently broken since the port. `InviteAcceptPage.tsx:92` still asserts the opposite ("The
+  shared folder shows up once the client's next periodic sync pulls it"). It went unnoticed because the
+  only test that would catch it is the GreenMail `invite` project, which self-excludes from the default
+  gate (`playwright.config.ts:32`). rowboat documents the same cursor property for the *revocation*
+  direction (`packages/integration/src/sharing-agent-e2e.test.ts:257-262`) and sidesteps it there by
+  using a brand-new client; it bites symmetrically on *grant*.
+- **Rejected — rewind the cursor to 0 on accept.** Correct but O(dataset): re-downloads every row in
+  scope on every accept, for a bounded event.
+- **Rejected — bump `__server_updated_at` on the granted group's rows.** Fixes every device with no
+  client change, but forces a re-download of that group to every member who already has those rows.
+- **Rejected — per-group cursors.** No server writes, but groups inherit
+  (`rowboat/packages/auth/src/rbac.ts:48` — `readScope` returns the *expanded* readable-group set), so
+  the scope set grows and repeat downloads pile up as groups accumulate.
+- **Chosen design — one global cursor plus a per-client "caught-up groups" set.** `readScope` already
+  computes the authorized group list on every pull, so return it. When a group appears in that list
+  that this client has never caught up on, the client issues **one** scoped pull (`lastPulledAt: 0`
+  restricted to that group) and marks it caught up; the global cursor serves it from then on. The
+  server-side group filter must be **intersected** with `readScope` so a caller-supplied list can only
+  narrow, never widen. `pullChanges` already accepts `scopes?: Record<string, ReadScope>`
+  ("caller-resolved scopes override auth when provided"), so the read primitive exists — what is
+  missing is the route parameter and the client-side set. Effectively per-group cursors collapsed to a
+  boolean, which is why it does not amplify: no N cursors are maintained.
+  - A fresh client already pulls everything at cursor 0 — it marks all currently-scoped groups
+    caught up at that point, so nothing is fetched twice.
+  - A group the client mints itself is marked caught up at mint time, so it never "discovers" a group
+    and backfills rows it just wrote.
+  - Steady-state wire cost: the client sends a digest of its caught-up set and the server returns the
+    full list only on mismatch — ~32 bytes per pull, the list only when scope actually changed.
+- **Cost:** steady state unchanged; accepting an invite fetches exactly the shared group once per
+  device; nothing else moves.
+- **Where it lands:** rowboat (data plane — pull route + client), via the `wt/2` worktree and
+  `scripts/land.sh`. Nothing in CheckList changes.
+- **What it unblocks:** sub-project E's remaining tasks (`docs/superpowers/plans/2026-07-22-checklist-sharing-cutover.md`
+  Tasks 3–4). E's backend and rowboat-side work has landed and works — A's invite creates a proper
+  `/invite/<token>` link, the agent is installed and correctly hidden from the collaborator list, and
+  B's accept succeeds — but the closed-loop E2E asserts that B then *sees* the folder, which is exactly
+  what this item fixes.
+
 ## Resolved: jbr-jazz dependency removal (2026-07-20)
 
 CheckList had two undeclared-in-any-tracker dependencies on `~/src/jbr-jazz`:
