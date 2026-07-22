@@ -5,6 +5,10 @@ import '@testing-library/jest-dom';
 // Not re-exported here: tests import them directly from '@/test/rowboat' so `vi.mock('@/rowboat', ...)`
 // can dynamic-`import()` them without hoisting surprises (see that module's doc comment).
 
+// src/lib/rowboat.tsx hard-fails at import if the provisioned tenant's sync base is absent; tests
+// never sync, so any well-formed value satisfies it.
+vi.stubEnv('VITE_ROWBOAT_SYNC_BASE', 'http://localhost:3020/db/db_test/api/sync');
+
 // Mock window.alert for components that use alert() for error messages
 global.alert = vi.fn();
 

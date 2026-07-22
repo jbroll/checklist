@@ -29,6 +29,7 @@ import {
 import { useRowboat as useRawRowboat, useSelect as useRawSelect } from '@jbroll/rowboat-react';
 import { compileSchema, type RelationalGraph } from '@jbroll/rowboat-schema';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
+import { getSyncToken } from '@/lib/syncToken';
 import { schema } from '@/schema/folder';
 import { seedDefaultFolders } from '@/services/defaultData';
 import { runCleanupIfNeeded } from '@/services/sessionCleanupService';
@@ -36,6 +37,13 @@ import { ensureUserSettings, syncSubscriptionFromBackend } from '@/services/subs
 
 const APP_NAME = 'checklist';
 const SYNC_INTERVAL_MS = 5000;
+
+// `<rowboatUrl>/db/<databaseId>/api/sync` — written by provision:* (see scripts/dev-rowboat.sh in
+// dev, the deploy env in prod). syncWithServer appends /sync and /pull; the group mint is /groups.
+const SYNC_BASE = import.meta.env.VITE_ROWBOAT_SYNC_BASE;
+if (!SYNC_BASE) {
+  throw new Error('VITE_ROWBOAT_SYNC_BASE is required — run `npm run provision:local` for dev');
+}
 
 const manifest = compileSchema(schema).manifest;
 
@@ -46,8 +54,8 @@ interface PortContextValue {
   /** better-auth user id, or `null` when anonymous / not yet resolved. */
   author: string | null;
   /**
-   * Mints a fresh owner_group_id for a new folder — see `backend/src/index.ts`'s
-   * `POST /api/folders/group` route. Injected here (rather than hardcoded into
+   * Mints a fresh owner_group_id for a new folder — hosted rowboat's `POST <SYNC_BASE>/groups`.
+   * Injected here (rather than hardcoded into
    * `useCheckListHierarchy`) because minting talks to the server, which is an app-layer
    * concern, not something the headless hierarchy hook should know about.
    */
@@ -56,21 +64,23 @@ interface PortContextValue {
 
 const PortContext = createContext<PortContextValue | null>(null);
 
-// Authenticated mint: the server creates a scope group the caller admins. Anonymous users have
-// no session (the route 401s) and never sync, so an anon folder gets a purely-local group id —
-// its rows live in the anon store and are re-scoped to the user's group by adopt on sign-in (C2).
+// Authenticated mint: hosted rowboat creates a scope group the caller admins, nested under their
+// root group. Anonymous users have no token and never sync, so an anon folder gets a purely-local
+// group id — its rows are re-scoped to the user's group by adopt on sign-in (C2).
 async function serverMintGroup(parentGroupId?: string): Promise<string> {
-  const res = await fetch('/api/folders/group', {
+  const res = await fetch(`${SYNC_BASE}/groups`, {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${await getSyncToken()}`,
+    },
     body: JSON.stringify({ parentGroup: parentGroupId }),
   });
-  // NO FALLBACKS: a non-ok response (401 when signed out, 5xx) must surface, not
+  // NO FALLBACKS: a non-ok response (401 on an expired token, 403, 5xx) must surface, not
   // silently yield `undefined` and let a folder be created with no scope group.
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`mintGroup: POST /api/folders/group failed (${res.status}) ${body}`);
+    throw new Error(`mintGroup: POST ${SYNC_BASE}/groups failed (${res.status}) ${body}`);
   }
   const { groupId } = (await res.json()) as { groupId?: unknown };
   if (typeof groupId !== 'string' || groupId.length === 0) {
@@ -135,19 +145,21 @@ function RowboatBridge({
   useEffect(() => {
     if (!author) return;
     let cancelled = false;
-    const run = () => {
-      void syncWithServer({
-        db,
-        apiBase: '/api/sync',
-        author,
-        fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
-      }).catch((err) => {
+    const run = async () => {
+      try {
+        await syncWithServer({
+          db,
+          apiBase: SYNC_BASE,
+          author,
+          headers: { authorization: `Bearer ${await getSyncToken()}` },
+        });
+      } catch (err) {
         console.error('[rowboat] syncWithServer failed:', err);
-      });
+      }
     };
-    run();
+    void run();
     const id = window.setInterval(() => {
-      if (!cancelled) run();
+      if (!cancelled) void run();
     }, SYNC_INTERVAL_MS);
     return () => {
       cancelled = true;
@@ -194,9 +206,9 @@ function RowboatBridge({
         if (author) {
           await syncWithServer({
             db,
-            apiBase: '/api/sync',
+            apiBase: SYNC_BASE,
             author,
-            fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+            headers: { authorization: `Bearer ${await getSyncToken()}` },
           });
         }
         if (cancelled || provisionedRef.current) return;
