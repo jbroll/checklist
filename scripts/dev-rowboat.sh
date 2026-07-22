@@ -64,6 +64,7 @@ fi
 cat > "$env_file" <<EOF
 VITE_ROWBOAT_SYNC_BASE=http://localhost:${ROUTER_PORT}/db/${database_id}/api/sync
 ROWBOAT_DATABASE_ID=${database_id}
+ROWBOAT_URL=http://localhost:${ROUTER_PORT}
 EOF
 echo "dev-rowboat: tenant ready (databaseId=${database_id}) -> .env.tenant.local"
 

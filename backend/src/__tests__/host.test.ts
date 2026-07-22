@@ -20,6 +20,8 @@ function testConfig(): ServerConfig {
     trustedOrigins: ['http://localhost:5173'],
     providers: [],
     rowboatDatabaseId: DATABASE_ID,
+    rowboatUrl: 'http://rowboat.test',
+    rowboatAgentId: 'agent:test',
     emailAuth: {
       enabled: true,
       requireEmailVerification: false,
@@ -106,5 +108,32 @@ describe('data-plane JWT issuance', () => {
 
     expect((await request(app).post('/api/folders/group').send({})).status).toBe(404);
     expect((await request(app).post('/api/sync/pull').send({})).status).toBe(404);
+  });
+});
+
+// The sharing group backend authenticates to rowboat as the ACTING USER, so the backend must be
+// able to mint a token for an arbitrary subject. That capability is only safe because better-auth's
+// signJWT is server-only: an HTTP route reaching it would let anyone impersonate anyone on the data
+// plane. Both halves are asserted here.
+describe('actor-token minting for the sharing group backend', () => {
+  it('mints a token for an arbitrary subject with the registered iss/aud', async () => {
+    server = await createServer(testConfig());
+
+    const token = await server.signJWT('agent:test');
+
+    const claims = claimsOf(token);
+    expect(claims.sub).toBe('agent:test');
+    expect(claims.iss).toBe('http://localhost:5173/api/auth');
+    expect(claims.aud).toBe(DATABASE_ID);
+  });
+
+  it('exposes no HTTP route that mints for a caller-supplied subject', async () => {
+    server = await createServer(testConfig());
+    const u = await signUpAndSignIn(server.app, 'impersonator@x.com', 'correct-horse-battery');
+
+    for (const path of ['/api/auth/sign-jwt', '/api/auth/signJWT', '/api/auth/jwt/sign']) {
+      const res = await u.agent.post(path).send({ payload: { sub: 'victim' } });
+      expect(res.status).toBe(404);
+    }
   });
 });

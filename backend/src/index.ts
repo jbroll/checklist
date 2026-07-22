@@ -7,12 +7,13 @@ import nodemailer from 'nodemailer';
 import { registerAuthTables } from '@jbroll/rowboat-auth';
 import {
   createIdentity,
+  type Identity,
   mountAccountRoutes,
   type EmailAuthConfig,
   type OAuthProviderConfig,
   type SendEmail,
 } from '@jbroll/rowboat-auth-betterauth';
-import { mountShareRoutes, registerShareTables } from '@jbroll/rowboat-sharing';
+import { mountShareRoutes, registerShareTables, remoteGroupBackend } from '@jbroll/rowboat-sharing';
 
 // Root .env first (shared config), then backend .env — mirrors the pre-port load order.
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
@@ -38,6 +39,10 @@ export interface ServerConfig {
   providers: OAuthProviderConfig[];
   /** The provisioned rowboat `databaseId` — the audience every data-plane JWT is bound to. */
   rowboatDatabaseId: string;
+  /** Origin of the hosted rowboat that serves this tenant's data plane and group API. */
+  rowboatUrl: string;
+  /** The standing principal that performs invite grants when the inviter is offline. */
+  rowboatAgentId: string;
   emailAuth: EmailAuthConfig;
   smtp?: SmtpConfig;
 }
@@ -86,6 +91,7 @@ function corsMiddleware(trustedOrigins: string[]) {
 export interface RowboatServer {
   app: Express;
   db: Database.Database;
+  signJWT: Identity['signJWT'];
   start(): Server;
 }
 
@@ -140,12 +146,27 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
   app.use(express.json());
 
   const provider = identity.provider;
-  mountShareRoutes(app, db, { provider, sendEmail });
+  // Sharing's group reads/writes go to hosted rowboat, authenticated AS THE ACTING USER — so
+  // rowboat's own requireAdmin decides every grant, exactly as it does for the browser. The agent
+  // is just another actor: invite-create installs it as admin (authorized by the inviter's real
+  // admin), and accept grants as the agent because the inviter may be long gone by then.
+  const groupBackend = remoteGroupBackend({
+    baseUrl: `${config.rowboatUrl}/db/${config.rowboatDatabaseId}/api/sync`,
+    token: (actor) => identity.signJWT(actor),
+  });
+  mountShareRoutes(app, db, {
+    provider,
+    sendEmail,
+    groupBackend,
+    agent: config.rowboatAgentId,
+    shareUrl: (token) => `${config.frontendUrl}/invite/${token}`,
+  });
   mountAccountRoutes(app, { provider, db });
 
   return {
     app,
     db,
+    signJWT: identity.signJWT,
     start: () =>
       app.listen(config.port, () => {
         console.log(`[server] listening on :${config.port}`);
@@ -197,6 +218,13 @@ function configFromEnv(): ServerConfig {
     throw new Error('ROWBOAT_DATABASE_ID is required (see rowboat-tenant.<env>.json)');
   }
 
+  const rowboatUrl = process.env.ROWBOAT_URL;
+  if (!rowboatUrl) {
+    throw new Error(
+      'ROWBOAT_URL is required (the hosted rowboat origin, e.g. http://localhost:3020)',
+    );
+  }
+
   return {
     port: Number(process.env.PORT) || 3001,
     dbPath,
@@ -214,6 +242,9 @@ function configFromEnv(): ServerConfig {
     ],
     providers,
     rowboatDatabaseId,
+    rowboatUrl,
+    // A colon cannot occur in a better-auth user id, so this can never collide with a real account.
+    rowboatAgentId: process.env.ROWBOAT_AGENT_ID || 'agent:checklist',
     smtp: process.env.SMTP_HOST
       ? {
           host: process.env.SMTP_HOST,
