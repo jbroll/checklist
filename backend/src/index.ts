@@ -45,6 +45,8 @@ export interface ServerConfig {
   appName: string;
   trustedOrigins: string[];
   providers: OAuthProviderConfig[];
+  /** The provisioned rowboat `databaseId` — the audience every data-plane JWT is bound to. */
+  rowboatDatabaseId: string;
   emailAuth: EmailAuthConfig;
   smtp?: SmtpConfig;
 }
@@ -115,6 +117,13 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
     db,
     authSecret: config.authSecret,
     baseUrl: `${config.baseUrl}/api/auth`,
+    // Short-lived per-user tokens for the hosted-rowboat data plane. iss/aud must match what
+    // `npm run provision:*` registered for this database, or every sync 401s with no other symptom.
+    jwt: {
+      issuer: `${config.baseUrl}/api/auth`,
+      audience: config.rowboatDatabaseId,
+      expirationTime: '15m',
+    },
     providers: config.providers,
     emailAuth: config.emailAuth,
     sendEmail,
@@ -217,6 +226,14 @@ function configFromEnv(): ServerConfig {
       : []),
   ];
 
+  // No default: an unset id would mint tokens with an audience rowboat rejects, surfacing only as
+  // a blanket 401 on every sync. Fail at boot instead. Lives here, not in createServer, so tests
+  // that build their own ServerConfig stay independent of the process environment.
+  const rowboatDatabaseId = process.env.ROWBOAT_DATABASE_ID;
+  if (!rowboatDatabaseId) {
+    throw new Error('ROWBOAT_DATABASE_ID is required (see rowboat-tenant.<env>.json)');
+  }
+
   return {
     port: Number(process.env.PORT) || 3001,
     dbPath,
@@ -233,6 +250,7 @@ function configFromEnv(): ServerConfig {
       ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
     ],
     providers,
+    rowboatDatabaseId,
     smtp: process.env.SMTP_HOST
       ? {
           host: process.env.SMTP_HOST,

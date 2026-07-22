@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createServer, type RowboatServer, type ServerConfig } from '../index.js';
 
 const AUTH_SECRET = 'test-secret-test-secret-test-secret';
+const DATABASE_ID = 'db_test_tenant';
 
 function testConfig(): ServerConfig {
   return {
@@ -20,6 +21,7 @@ function testConfig(): ServerConfig {
     appName: 'CheckList Test',
     trustedOrigins: ['http://localhost:5173'],
     providers: [],
+    rowboatDatabaseId: DATABASE_ID,
     emailAuth: {
       enabled: true,
       requireEmailVerification: false,
@@ -73,6 +75,13 @@ function folderRow(id: string, groupId: string, author: string) {
     __hlc: hexPack(1000, 0),
     __op: 'create',
   };
+}
+
+function claimsOf(token: string): Record<string, unknown> {
+  return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()) as Record<
+    string,
+    unknown
+  >;
 }
 
 describe('rowboat host: folder-group mint -> scoped push -> scoped pull', () => {
@@ -130,5 +139,44 @@ describe('rowboat host: folder-group mint -> scoped push -> scoped pull', () => 
       .send({ tables: ['folder'], lastPulledAt: 0, instanceId: 'inst-v', serverEpoch });
     expect(pullV.status).toBe(200);
     expect(pullV.body.changes.folder.upserted).toEqual([]);
+  });
+});
+
+// The data-plane credential: rowboat's resolveAuthor verifies these against CheckList's JWKS, so
+// iss/aud must match exactly what `npm run provision:*` registered for this database. A mismatch
+// surfaces only as a blanket 401 on every sync, which is why it is asserted here.
+describe('data-plane JWT issuance', () => {
+  it('mints a token whose sub/iss/aud match the registered issuer', async () => {
+    server = await createServer(testConfig());
+    const u = await signUpAndSignIn(server.app, 'jwt@x.com', 'correct-horse-battery');
+
+    const tokenRes = await u.agent.get('/api/auth/token');
+    expect(tokenRes.status).toBe(200);
+    const { token } = tokenRes.body as { token: string };
+    expect(typeof token).toBe('string');
+
+    const claims = claimsOf(token);
+    expect(claims.sub).toBe(u.userId);
+    expect(claims.iss).toBe('http://localhost:5173/api/auth');
+    expect(claims.aud).toBe(DATABASE_ID);
+    expect(typeof claims.exp).toBe('number');
+  });
+
+  it('serves a public JWKS rowboat can verify against', async () => {
+    server = await createServer(testConfig());
+
+    const res = await request(server.app).get('/api/auth/jwks');
+    expect(res.status).toBe(200);
+    const { keys } = res.body as { keys: { kty: string; d?: string }[] };
+    expect(keys.length).toBeGreaterThan(0);
+    // Public half only — a private component here would mean leaking the signing key.
+    expect(keys.every((k) => k.d === undefined)).toBe(true);
+  });
+
+  it('refuses to mint for an unauthenticated caller', async () => {
+    server = await createServer(testConfig());
+
+    const res = await request(server.app).get('/api/auth/token');
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
