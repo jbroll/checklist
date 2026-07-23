@@ -20,8 +20,9 @@ issuance + sharing-orchestration on a thin backend of its own.
    fallback path is maintained.
 2. **Fresh start; users preserve their own data.** No migration is built and no server-side export is
    run. Existing users **self-export** their lists via the app's existing export feature before the
-   switch and re-import after; the hosted database starts empty. (Extends `DEFERRED.md` D4 — "no
-   production data to migrate" — with a user-driven safety net rather than a migration tool.)
+   switch and re-import after; the hosted database starts empty. (Extends the "no production data to
+   migrate" decision — see `BACKLOG.md` → Standing notes — with a user-driven safety net rather than
+   a migration tool.)
    Anon-claim/adopt still works for a user's local-until-login data.
 3. **Deploy rowboat.rkroll.com; local dev runs a local hosted rowboat.** Standing up the assembled
    hosted server is in scope. `npm run dev` spins up a **local** instance of the same

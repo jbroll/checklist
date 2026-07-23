@@ -254,7 +254,7 @@ npm run preview      # Test production build
 - A schema change means re-provisioning the tenant: wipe `.rowboat-dev/`, `rowboat-tenant.local.json`
   and `.env.tenant.local`, then let `npm run dev` re-bootstrap. (rowboat's live schema-migration path —
   `migrating` state + `POST /v1/databases/:id/schema` + the `rowboat migrate` CLI — is available now
-  that CheckList is on StaaS, but is not wired here yet; see `docs/DEFERRED.md` D4.)
+  that CheckList is on StaaS, but is not wired here yet; see `docs/BACKLOG.md` → Standing notes.)
 
 ## Important Notes for AI Assistants
 
@@ -274,7 +274,7 @@ npm run preview      # Test production build
 - **QUICKSTART.md** - Quick setup guide
 - **ARCHITECTURE.md** - System architecture overview
 - **DEPLOY.md** - Deployment instructions
-- **docs/DEFERRED.md** - Open engineering backlog
+- **docs/BACKLOG.md** - Single project backlog (outstanding features + engineering)
 - **docs/HOSTED_ROWBOAT.md** - Hosted-rowboat (StaaS) architecture + phase status (A/B landed, C todo)
 - **docs/INDENTED_LIST_FORMAT.md** - Hierarchical text import/export format
 - **docs/archive/** - Landed implementation plans + execution logs

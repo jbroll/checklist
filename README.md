@@ -120,7 +120,8 @@ See `ARCHITECTURE.md` for system overview and code locations.
 - `DEPLOY.md` - Deployment instructions
 
 **Product**:
-- `docs/ROADMAP.md` - Product roadmap and feature priorities
+- `docs/BACKLOG.md` - Single project backlog (outstanding features + engineering)
+- `docs/ROADMAP.md` - Product positioning and market analysis
 - `docs/MARKET_COMPARISON.md` - Competitive analysis
 - `docs/GooglePlayStore.md` - App store submission checklist
 

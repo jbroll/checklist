@@ -42,41 +42,8 @@ Development priorities and product positioning.
 
 ## Outstanding Work
 
-### High Priority (Competitive Parity)
-
-| Feature | Effort | Notes |
-|---------|--------|-------|
-| **Custom session names** | 2-3h | Optional name instead of date |
-| **Keyboard shortcuts** | 2-3h | Enter, Escape, arrow navigation |
-
-### Medium Priority (Nice to Have)
-
-| Feature | Effort | Notes |
-|---------|--------|-------|
-| Expose timestamps in UI | 2-3h | Show "completed in X min" stats |
-| Quick inline notes | 2-3h | Edit notes without modal |
-| Session comparison | 4-6h | Compare items across sessions |
-| Over-limit banner | 2-3h | Banner for downgraded users exceeding free tier |
-
-### Future Consideration
-
-| Feature | Effort | Notes |
-|---------|--------|-------|
-| Public demo mode | Large | Anonymous template sharing (plan in docs/) |
-| Labels/tags | 6-8h | May be unnecessary given hierarchy |
-| Recurring sessions | 8-12h | Auto-create on schedule |
-| Undo/redo | 6-8h | Action history |
-| Item photos | 6-8h | Attach images to items |
-| TreeView refactoring | 4-6h | Split 610-line component |
-
-### Explicitly Not Planned
-
-- Barcode scanning
-- Voice assistant integrations
-- Price tracking
-- Recipe import/meal planning
-- Kanban/calendar views
-- Gamification (streaks, points)
+Feature and engineering backlog — including what's explicitly *not* planned — lives in the single
+project backlog: [BACKLOG.md](./BACKLOG.md).
 
 ---
 

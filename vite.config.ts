@@ -200,7 +200,7 @@ export default defineConfig({
     // Force a SINGLE better-auth instance in the bundle. The file:-linked
     // @jbroll/rowboat-auth-betterauth(-react) packages do NOT carry their own copy of
     // better-auth — their built dist imports `better-auth/react`, which Node resolves from
-    // *this app's* node_modules, i.e. the root `better-auth` dependency (see docs/DEFERRED.md).
+    // *this app's* node_modules, i.e. the root `better-auth` dependency (see docs/BACKLOG.md).
     // That's why the root dependency must stay; without dedupe, the bundle can still end up
     // loading more than one instance, breaking session state.
     dedupe: ['better-auth', 'react', 'react-dom'],

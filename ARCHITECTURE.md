@@ -180,4 +180,4 @@ backend/src/
 
 ## Development workflow
 
-See `CLAUDE.md` for coding standards. Open engineering items live in `docs/DEFERRED.md`.
+See `CLAUDE.md` for coding standards. Outstanding features and engineering items live in `docs/BACKLOG.md`.
