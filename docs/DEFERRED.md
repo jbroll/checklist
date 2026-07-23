@@ -5,10 +5,10 @@ with the rationale below — not forgotten. (Product/market roadmap lives in `RO
 architecture lives in `ARCHITECTURE.md`.)
 
 Resolved items (D1 `rb.ordered` adoption, D2 `user_settings` convergence, D3 browser back/forward
-navigation, D6 export off Jazz, D7 account-merge, D8 Jazz-schema deletion, D9 session-retention
-cleanup) have shipped and their durable behavior is folded into `ARCHITECTURE.md`.
+navigation, D6 export off the legacy stack, D7 account-merge, D8 legacy-schema deletion, D9
+session-retention cleanup) have shipped and their durable behavior is folded into `ARCHITECTURE.md`.
 
-**Decided against — D4 (jbr-jazz → rowboat data migration for a cutover):** there is no production
+**Decided against — D4 (legacy → rowboat data migration for a cutover):** there is no production
 data to migrate, so the fresh-start / "delete existing data" path stands (the same path used for the
 `rb.ordered` adoption). No migration will be built.
 
@@ -20,12 +20,12 @@ data to migrate, so the fresh-start / "delete existing data" path stands (the sa
 > change here still means a fresh `AUTH_DB_PATH` DB (see the Troubleshooting note in CLAUDE.md), NOT a
 > live migration. Adopting rowboat's migration path (or its `movedFrom` DX for column renames) is a
 > future option if CheckList ever needs to evolve a schema without discarding data — a separate
-> decision from the closed Jazz-cutover one above.
+> decision from the closed legacy-cutover one above.
 
 ## D5 — nutrition / calorie tracking feature (port from prototype) — **FEATURE, deferred**
 - **What:** per-list calorie/nutrition tracking with portion controls — a working prototype existed on
   the (now-deleted) `claude/add-calorie-counter` branch (last commit `67eff69`, 2026-05). It forked
-  ~2026-04-02 off the **Jazz-era** `src/schemas/tree.ts`/`index.ts`, so the code predates the rowboat
+  ~2026-04-02 off the **pre-rowboat** `src/schemas/tree.ts`/`index.ts`, so the code predates the rowboat
   schema and is not directly reusable; this entry preserves the design.
 - **Data pipeline (schema-agnostic, reusable as-is):** `scripts/bake-nutrition.ts` enriches each
   `grocery.json` entry carrying a `usdaFdcId` from USDA FoodData Central, baking `caloriesPer100g`,
@@ -96,25 +96,9 @@ Design preserved below.
   B's accept succeeds — but the closed-loop E2E asserts that B then *sees* the folder, which is exactly
   what this item fixes.
 
-## Resolved: jbr-jazz dependency removal (2026-07-20)
+## Deferred / tracked findings (not yet fixed)
 
-CheckList had two undeclared-in-any-tracker dependencies on `~/src/jbr-jazz`:
-`@jbr-jazz/billing-shared` (subscription types/limits) and `@jbr-jazz/hierarchy-backend`
-(`ApiErrors`, `RateLimiter`). Both are removed.
-
-- Tier policy now lives in `shared/billing.ts` — **per product, by design.** A limit table shared
-  across products makes one product's pricing change a breaking change for another.
-- `assertTier` throws on an unrecognized slug. The previous shared helper silently downgraded to
-  free-tier limits, which would clamp a paying customer with no signal.
-- `getSubscriptionInfo` had inlined a copy of the effective-tier rule that omitted the
-  past_due/cancelled arm, disagreeing with `getMaxLists` on the same user. Fixed.
-- `jazz-tools` was a phantom dependency — declared in both manifests, imported nowhere.
-
-This clears CheckList's half of rowboat roadmap Phase 4 ("retire jbr-jazz"); `wicketmap` remains.
-
-**Deferred/tracked findings from this pass (not fixed here):**
-
-- **`backend/scripts/rotate.ts` `cmdApple` has a pre-existing TDZ bug**, unrelated to de-jazzing.
+- **`backend/scripts/rotate.ts` `cmdApple` has a pre-existing TDZ bug**, unrelated to the port.
   It calls the module-level `header()` function (~line 714) inside `cmdApple`, but that same
   function later declares a block-scoped `const header = { alg: 'ES256', ... }` (~line 765). The
   `const` shadows the outer `header` for the *entire* function body, so the earlier call sits in
@@ -127,27 +111,11 @@ This clears CheckList's half of rowboat roadmap Phase 4 ("retire jbr-jazz"); `wi
   `tsconfig.json` excludes `e2e/**/*`, so the Playwright suite is also unchecked (e.g. the
   untyped `page` parameter at `e2e/error-handling.spec.ts:28`). Worth closing (add
   `scripts/**/*` to the backend `include`, and stop excluding `e2e/**/*` at the root, or give
-  each its own `tsconfig.json`), but out of scope for the de-jazzing branch.
-- **Stale Jazz documentation was left behind by the de-jazzing pass** — several docs still
-  describe Jazz.tools as the current storage/sync layer and need a product decision on how to
-  fix them (mechanical edit vs. a fuller rewrite), not just a find-replace:
-  - **Highest priority — `website/privacy.md:7,15` and its built `website/privacy.html:66,70`.**
-    This is a **published, live legal document**, compiled by `website/build-legal.js` on every
-    `npm run build`. It currently states "Your list data is stored using Jazz.tools. Jazz account
-    keys are stored server-side", "backed up via Jazz.tools", and — most seriously — "Your data
-    is encrypted before it reaches the sync service—they cannot read your lists." Under rowboat
-    this is false: the server stores list/item rows in plaintext SQLite and can read them (see
-    the KEY_ROTATION.md fix in this same commit for the verified detail). This is a factual
-    misstatement about data confidentiality in a live privacy policy — it needs a product/legal
-    decision about the replacement wording, not a mechanical edit, and was deliberately **not**
-    edited as part of this fix pass.
-  - Also stale: `docs/ROADMAP.md:18,100,105,108,110`, `docs/HOSTED_ROWBOAT.md:35,100-105`,
-    `DEPLOY.md:198-200`, `e2e/INVITE_TESTING.md`, `docs/MARKET_COMPARISON.md`,
-    `docs/GooglePlayStore.md`, `full-description.md`, `short-description.md`.
-- **The committed Capacitor bundles under `android/` and `ios/` still reference Jazz** —
-  `vendor-jazz-*.js` chunks and jazz-referencing source maps are present in
-  `android/app/src/main/assets/public/`. These are stale build output, not source; they
-  regenerate from the current (jazz-free) frontend via `npm run cap:sync`. No action needed
+  each its own `tsconfig.json`), but out of scope here.
+- **The committed Capacitor bundles under `android/` and `ios/` are stale build output** —
+  vendored chunks and source maps from an earlier frontend build are present in
+  `android/app/src/main/assets/public/`. These are build output, not source; they
+  regenerate from the current frontend via `npm run cap:sync`. No action needed
   beyond a routine `cap:sync` before the next mobile release.
 - **`knip.json`'s `better-auth` entry in `ignoreDependencies` has no home for its rationale** —
   `knip.json` is plain JSON and can't carry a comment. Recorded here: no source file imports

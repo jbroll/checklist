@@ -40,8 +40,8 @@ interface FolderNodeViewProps {
  * Rename/archive/delete/Share and drag-and-drop reparenting are wired to the rowboat graph via
  * `TreeView`'s `useCheckListHierarchy` handlers and `ShareDialog` (keyed by
  * `folder.owner_group_id`). Still dropped vs. the pre-port version: item count, Duplicate, and
- * the autocomplete-domain submenu — those are items-tree features with their own follow-up
- * (see `docs/superpowers/d-t2-report.md`); per-folder Import/Export are not here either —
+ * the autocomplete-domain submenu — those are items-tree features with their own follow-up;
+ * per-folder Import/Export are not here either —
  * export/import now live on `TreeViewHeader` (template-scoped, not per-row).
  */
 export const FolderNodeView = memo(function FolderNodeView({

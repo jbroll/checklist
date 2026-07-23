@@ -45,7 +45,7 @@ Sharing is identity/email-bound, so it **stays in the subscriber backend** (Chec
 remains a library it imports, holding the `share_invites` table, `principalOwnsEmail`, tokens, and SMTP.
 Rowboat stays **identity-free** and exposes RBAC-pure group primitives. The offline-inviter problem
 (the invitee accepts later, when the inviter isn't around to authorize the grant) is solved by an **agent
-principal** — modeled on jbr-jazz's server agent, but adapted to rowboat's server-side RBAC (rowboat has
+principal** — modeled on a server-agent pattern, but adapted to rowboat's server-side RBAC (rowboat has
 no client signatures, so the agent exists to give the subscriber backend a *legitimate, RBAC-checked admin
 principal to authenticate as*, not to supply an offline signing key):
 
@@ -110,12 +110,6 @@ Two investigations (2026-07-17) established the surface:
 
 ## Prior art — how this is normally solved
 
-- **Jazz (what CheckList was built on):** the sync server is **untrusted**. Edits are Ed25519-signed,
-  data is encrypted so only group members can read; local-first auth has the client **self-sign a JWT
-  the server verifies without a server-side session store**. The app's cloud API key is *public*
-  (identifies the app for billing/limits), not the security boundary — the cryptography is.
-  ([auth](https://jazz.tools/docs/react/key-features/authentication/overview),
-  [encryption](https://jazz.tools/docs/react/reference/encryption))
 - **Firebase / Supabase:** a **public client key** identifies the project (safe in the browser); the
   **security boundary is a per-user JWT** evaluated against row rules. Apps with their own auth
   register a **third-party asymmetric JWT issuer**; the hosted DB verifies via a **JWKS URL** and

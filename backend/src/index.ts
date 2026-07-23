@@ -97,7 +97,7 @@ export interface RowboatServer {
 // via rowboat-auth-betterauth) + sharing (invite/accept) + account routes. Sync, RBAC enforcement
 // and the folder-scope-group mint live in hosted rowboat now — the browser carries a data-plane
 // JWT straight there (see src/lib/rowboat.tsx). Replaces the former createHierarchyServer (cloud +
-// agent) — no legacy sync layer, no billing/Stripe wiring (out of slice-1; see docs/superpowers/d-t3-report.md).
+// agent) — no legacy sync layer, no billing/Stripe wiring (out of slice-1).
 export async function createServer(config: ServerConfig): Promise<RowboatServer> {
   const db = new Database(config.dbPath);
 

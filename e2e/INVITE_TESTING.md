@@ -52,23 +52,6 @@ npm run test:e2e:invite:tunnel
 GreenMail needs no real credentials — any username/password works and the
 per-recipient mailbox is auto-created on first access.
 
-## Fixed: invite accept (stale Jazz API in agent.ts)
-
-The accept flow was returning **500** ("Failed to grant access") because
-checklist's custom `backend/src/agent.ts` used **Jazz v0.18 APIs** that no longer
-exist in v0.19, diverging from the canonical `@jbr-jazz/hierarchy-backend`:
-
-| Stale (v0.18) | Correct (v0.19) |
-|---|---|
-| `(target as any)._owner` / `'_owner' in target` | `target.$jazz.owner` |
-| `'id' in account` / `'loadingState' in account` | `'$jazz' in account` (`isLoadedAccount`) |
-| `ownerGroup.waitForSync()` | `ownerGroup.$jazz.waitForSync()` |
-
-The agent grant itself always worked — the worker could load the folder fine; the
-code just read the wrong property and threw "Target not found" before reaching the
-grant. Fixed in `addToGroup`, `getGroupMembers`, `validateSenderAccess`, and
-`removeFromGroup`. The closed-loop accept test now passes end-to-end.
-
 ## Related fix
 
 While building this suite, a real bug was found and fixed in

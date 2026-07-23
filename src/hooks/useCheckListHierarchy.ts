@@ -10,7 +10,7 @@
  * `mintGroup` configured is a hard error (NO FALLBACKS — there is no silent local-only
  * group).
  *
- * NOTE (follow-up, tracked in docs/superpowers/d-t2-report.md): this hook currently
+ * NOTE (follow-up): this hook currently
  * exposes only the hierarchy surface (add/rename/archive/delete/move/dedupe/read) needed
  * by TreeView/AppContainer's tree operations. Items/sessions-dependent members
  * (`duplicateTemplate`, `getAllTemplateFolders`, `deleteAllUserData`, `emptyTrash`,

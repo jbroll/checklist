@@ -71,8 +71,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 }
 
 // TestPage and BillingSuccessPage use rowboat via `useRowboat()`, and their routes are enabled
-// below (TestPage only outside PROD). InviteAcceptPage uses rowboat's `useSharing` (see
-// `docs/superpowers/d-t5-report.md`) and is enabled below.
+// below (TestPage only outside PROD). InviteAcceptPage uses rowboat's `useSharing` and is
+// enabled below.
 
 // Lazy load InviteAcceptPage for sharing invites
 const InviteAcceptPage = lazy(() =>

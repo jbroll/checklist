@@ -55,7 +55,7 @@ The system uses a **preprocessing layer** (custom) feeding into **fast-fuzzy** (
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              USER OVERRIDE CHECK (Custom + Jazz)                 │
+│            USER OVERRIDE CHECK (Custom + synced)                 │
 │                                                                  │
 │  Check if user has previously categorized "ground beef"          │
 │  If found → return cached category, skip search                  │
@@ -108,7 +108,7 @@ The system uses a **preprocessing layer** (custom) feeding into **fast-fuzzy** (
 | Token Classifier (skip-lists) | **Build** | ~100 lines |
 | Fuzzy Search Engine | **Buy** (fast-fuzzy) | 0 lines |
 | Result Assembler | **Build** | ~50 lines |
-| User Override Store | **Build** (Jazz schema) | ~50 lines |
+| User Override Store | **Build** (rowboat schema) | ~50 lines |
 | Dictionary Data | **Generate** | JSON files |
 | **Total Custom Code** | | **~350 lines** |
 
@@ -253,25 +253,24 @@ interface UnitEntry {
 | Modifiers | ~150 terms | organic, fresh, frozen, boneless |
 | Brands | ~300 terms | kirkland, great-value, store-brand |
 
-### 4. User Override Store (Jazz Schema)
+### 4. User Override Store (rowboat schema)
 
 ```typescript
-// In src/schemas/categorization.ts
-import { co, z } from 'jazz-tools';
+// A user_override table authored in Zod with rb.* column helpers
+// (see shared/schema.ts), or an rb.ordered list on user_settings.
+import { rb } from '@jbroll/rowboat-schema';
+import { z } from 'zod';
 
-export const UserOverride = co.map({
-  input: z.string(),             // Normalized input text
-  categoryId: z.string(),
-  subcategoryId: z.optional(z.string()),
-  domainId: z.string(),
-  createdAt: z.date(),
-  usageCount: z.number(),
+export const UserOverride = z.object({
+  id: rb.id(),
+  owner_group_id: rb.scope(),      // RBAC scope group that owns the row
+  input: rb.text(),                // normalized input text
+  category_id: rb.text(),
+  subcategory_id: rb.text(),
+  domain_id: rb.text(),
+  created_at: rb.int(),            // epoch ms
+  usage_count: rb.int(),
 });
-
-export const UserOverrideList = co.list(UserOverride);
-
-// Add to GroceriesAccount root
-// categoryOverrides: UserOverrideList
 ```
 
 ---
@@ -702,7 +701,7 @@ src/
 │       └── skip-lists.json
 │
 └── schemas/
-    └── categorization.ts         # Jazz schema for user overrides
+    └── categorization.ts         # rowboat schema for user overrides
 ```
 
 ---
@@ -1040,11 +1039,11 @@ produce, meat, seafood, dairy, deli, bakery, frozen, canned, pasta, breakfast, s
 
 **Goal:** Remember user corrections
 
-- [ ] Add `UserOverride` and `UserOverrideList` Jazz schemas
+- [ ] Add the `UserOverride` rowboat table/schema
 - [ ] Add `categoryOverrides` to account root
 - [ ] Implement `saveOverride()` when user changes category
 - [ ] Check overrides before dictionary lookup in `categorize()`
-- [ ] Sync overrides across devices via Jazz
+- [ ] Sync overrides across devices via rowboat
 
 **Status:** Deferred. Current implementation works well without user overrides.
 
