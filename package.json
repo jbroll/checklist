@@ -43,7 +43,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
     "format": "biome format . --write",
-    "type-check": "tsc --noEmit && tsc --noEmit -p backend/tsconfig.json",
+    "type-check": "tsc --noEmit && tsc --noEmit -p backend/tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
     "knip": "knip --no-progress --include files,dependencies,unlisted,binaries",
     "check": "npm run type-check && npm run lint && npm run test:run",
     "test:ci": "npm run lint && npm run type-check && npm run test:run && npm run test:e2e",

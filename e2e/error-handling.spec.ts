@@ -16,7 +16,7 @@
  * also needs the header's "Upgrade" menu item, which AppContainer never wires up.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 // ============================================================================
 // Helpers
@@ -25,7 +25,7 @@ import { expect, test } from '@playwright/test';
 /**
  * Wait for page to fully load
  */
-async function waitForPageLoad(page) {
+async function waitForPageLoad(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
     timeout: 10000,
   });
@@ -34,7 +34,7 @@ async function waitForPageLoad(page) {
 /**
  * Open import dialog
  */
-async function openImportDialog(page) {
+async function openImportDialog(page: Page) {
   await page.locator('header').getByLabel('More options').click();
   await page.getByRole('menuitem', { name: /import/i }).click();
   await expect(page.getByRole('dialog')).toBeVisible();

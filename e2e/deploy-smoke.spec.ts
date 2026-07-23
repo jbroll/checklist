@@ -76,7 +76,7 @@ test.describe('Infrastructure Health', () => {
     console.log(`  Billing endpoint: ${response.status()} (${data.tiers.length} tiers)`);
   });
 
-  test('static assets - CSS and JS load correctly', async ({ page, baseURL }) => {
+  test('static assets - CSS and JS load correctly', async ({ page }) => {
     const errors: string[] = [];
     const loadedAssets: string[] = [];
 

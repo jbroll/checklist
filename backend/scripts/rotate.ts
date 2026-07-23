@@ -730,7 +730,7 @@ function cmdApple(args: Record<string, string | boolean>) {
   const requestedExpiration = expiresDays * 24 * 60 * 60;
   const expiration = Math.min(requestedExpiration, maxExpiration);
 
-  const header = { alg: 'ES256', kid: keyId, typ: 'JWT' };
+  const jwtHeader = { alg: 'ES256', kid: keyId, typ: 'JWT' };
   const payload = {
     iss: teamId,
     iat: now,
@@ -747,7 +747,7 @@ function cmdApple(args: Record<string, string | boolean>) {
       .replace(/\//g, '_');
   }
 
-  const headerB64 = base64url(JSON.stringify(header));
+  const headerB64 = base64url(JSON.stringify(jwtHeader));
   const payloadB64 = base64url(JSON.stringify(payload));
   const signingInput = `${headerB64}.${payloadB64}`;
 
