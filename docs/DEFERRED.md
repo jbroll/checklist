@@ -42,7 +42,14 @@ data to migrate, so the fresh-start / "delete existing data" path stands (the sa
   `grocery.json` enrichment carry over unchanged. Product decision required first (is nutrition in
   scope for CheckList?).
 
-## D10 — newly-granted scope is never backfilled (accepting an invite shows nothing) — **NEXT UP, blocks sub-project E**
+## D10 — newly-granted scope is never backfilled (accepting an invite shows nothing) — **RESOLVED (2026-07-22)**
+
+**Resolved in rowboat** by the chosen design below (one global cursor + a per-client "caught-up
+groups" set): `dfcc8bf` (client backfills newly-authorized scope groups) + `08c4eb6` (integration
+test: a share accepted after the recipient's cursor advanced still delivers). CheckList's
+sub-project E closed-loop e2e (`e2e/sharing-closed-loop.spec.ts`) now runs green in the default gate.
+Design preserved below.
+
 
 - **What:** accepting a share invite grants the recipient access, but the shared folder never appears
   on their device. Pull is a single incremental cursor (`rowboat/packages/backend/src/pull.ts:45`:

@@ -347,6 +347,30 @@ Two things that are easy to get wrong and produce one blanket symptom each:
 exactly that reason; E replaces the local group backend with `remoteGroupBackend` + the agent JWT and
 only then drops them.
 
+### Sub-project E — sharing cutover (landed)
+
+`mountShareRoutes` still runs in CheckList's backend — invites are identity-, email- and
+token-bound, which rowboat deliberately knows nothing about — but its `GroupBackend` is now
+`remoteGroupBackend` against `<rowboatUrl>/db/<databaseId>/api/sync`. Each call authenticates as the
+**acting user**, via a JWT minted with better-auth's server-only `signJWT`, so rowboat's own
+`requireAdmin` decides every grant. Granting everything as the agent would have made the caller
+always-admin and rowboat's checks vacuous.
+
+The agent (`ROWBOAT_AGENT_ID`, default `agent:checklist`) is installed as admin at invite-create,
+authorized by the inviter's real admin, and performs the accept-time grant when the inviter is long
+gone. It is **a standing admin on every shared group, and that is accepted**: whoever holds
+CheckList's signing key is already able to mint any user's data-plane token, so the agent adds
+little marginal exposure. It has no better-auth user row, never syncs, and is filtered out of the
+collaborator list and protected from removal — an owner "removing" it would silently break every
+pending invite on that group.
+
+Invite links are built from the subscriber's own frontend origin (`shareUrl` on `ShareRouteOpts`),
+never rowboat's.
+
+**Still broken until sub-project F:** account-merge's group link and account-deletion's group
+cleanup, both of which still drive the empty local group tables. `registerAuthTables` and those
+tables stay wired for them, so `cutover-cd` cannot merge to `main` yet.
+
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
 - A data-plane proxy (only if A proves unworkable).

@@ -96,7 +96,7 @@ on first verified author, landed in Phase B). Turn the client's RBAC assumptions
 C. **Open:** the `owner_group_id` seeding path under hosted RBAC; adopt's `scopeGroupId` (= the user's
 root group, auto-provisioned server-side); removing the now-dead backend sync wiring cleanly.
 
-### E — Sharing cutover (Phase C's deferred client half)
+### E — Sharing cutover (Phase C's deferred client half) — LANDED
 CheckList's backend keeps `@jbroll/rowboat-sharing` but wires it with `remoteGroupBackend`
 (→ hosted group API) + the **agent JWT** (a token whose `sub` = the agent, minted by CheckList's
 BetterAuth). Reconcile the `shareUrl` / `?token` vs `/invite/:token` mismatch (the research finding:
@@ -108,6 +108,10 @@ fail closed between D and E, so removing it is E's job, not D's. **Depends on:**
 data plane + provisioned groups).
 **Open:** agent-credential issuance + rotation/scoping; `shareUrlBase` = CheckList's `/invite`; email
 content (folder name vs the raw group id the server sees).
+
+**Landed 2026-07-22.** Dropping the local group management moved to sub-project F, which also owns
+account-merge and account-deletion; agent-credential rotation was resolved as *not needed* (the
+agent is a standing admin by design — see `docs/HOSTED_ROWBOAT.md`).
 
 ## End-state thin CheckList backend
 Keeps: BetterAuth (+ `jwt`/JWKS plugin, OAuth, sessions, verified-email), Stripe billing + webhooks,
