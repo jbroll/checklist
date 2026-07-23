@@ -2,8 +2,9 @@
  * Invite Helper — drives the authenticated Share dialog UI for invite E2E.
  *
  * Selectors follow src/components/sharing/ShareDialog.tsx (SharePanel child):
- * - recipient: `input[type="email"]` scoped to the dialog (placeholder
- *   "colleague@example.com or +1234567890") — no id attribute.
+ * - recipient: placeholder "colleague@example.com", scoped to the dialog — the input is
+ *   type="text" (it also accepts phone numbers), so an input[type="email"] selector finds
+ *   nothing and hangs until the test times out.
  * - permission: `getByLabel('Permission')` — id is a React useId() value.
  * - expiration: `getByLabel('Expires')` — aria-label on the select.
  * - delivery: "Email invite" / "Copy link" buttons (unchanged).
@@ -50,7 +51,7 @@ export async function generateInvite(
   recipientEmail: string,
   permission: 'reader' | 'writer' | 'admin',
 ): Promise<string> {
-  await page.getByRole('dialog').locator('input[type="email"]').fill(recipientEmail);
+  await page.getByRole('dialog').getByPlaceholder('colleague@example.com').fill(recipientEmail);
   await page.getByLabel('Permission').selectOption(permission);
   await page.getByRole('button', { name: 'Email invite' }).click();
   await expect(page.getByText(/invite emailed to/i)).toBeVisible({ timeout: 20000 });
