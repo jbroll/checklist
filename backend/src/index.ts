@@ -4,11 +4,9 @@ import dotenv from 'dotenv';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import Database from 'better-sqlite3';
 import nodemailer from 'nodemailer';
-import { registerAuthTables } from '@jbroll/rowboat-auth';
 import {
   createIdentity,
   type Identity,
-  mountAccountRoutes,
   type EmailAuthConfig,
   type OAuthProviderConfig,
   type SendEmail,
@@ -103,7 +101,8 @@ export interface RowboatServer {
 export async function createServer(config: ServerConfig): Promise<RowboatServer> {
   const db = new Database(config.dbPath);
 
-  registerAuthTables(db);
+  // No registerAuthTables: the RBAC group tables live in hosted rowboat now. share_invites and
+  // account_merge (identity state) stay local, created by registerShareTables / registerIdentityTables.
   registerShareTables(db);
 
   const sendEmail = buildSendEmail(config.smtp);
@@ -118,6 +117,9 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
       audience: config.rowboatDatabaseId,
       expirationTime: '15m',
     },
+    // Root groups are provisioned lazily by hosted rowboat on a user's first verified sync — this
+    // backend has no group tables, so the local user.create.after provisioning hook must not run.
+    provisionRootGroup: false,
     providers: config.providers,
     emailAuth: config.emailAuth,
     sendEmail,
@@ -140,20 +142,23 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
   app.set('trust proxy', true);
   app.use(corsMiddleware(config.trustedOrigins));
 
-  // better-auth reads the raw request body — must mount before express.json().
-  identity.mountAuthRoutes(app);
-
-  app.use(express.json());
-
-  const provider = identity.provider;
-  // Sharing's group reads/writes go to hosted rowboat, authenticated AS THE ACTING USER — so
-  // rowboat's own requireAdmin decides every grant, exactly as it does for the browser. The agent
-  // is just another actor: invite-create installs it as admin (authorized by the inviter's real
-  // admin), and accept grants as the agent because the inviter may be long gone by then.
+  // One backend for BOTH sharing and account-merge: group reads/writes go to hosted rowboat,
+  // authenticated AS THE ACTING USER — so rowboat's own requireAdmin decides every grant/link,
+  // exactly as it does for the browser. The agent is just another actor: invite-create installs it
+  // as admin (authorized by the inviter's real admin), and accept grants as the agent because the
+  // inviter may be long gone by then.
   const groupBackend = remoteGroupBackend({
     baseUrl: `${config.rowboatUrl}/db/${config.rowboatDatabaseId}/api/sync`,
     token: (actor) => identity.signJWT(actor),
   });
+
+  // better-auth reads the raw request body — must mount before express.json(). mountAuthRoutes also
+  // mounts the account delete + merge routes; merge's group link/grant ride this same groupBackend.
+  identity.mountAuthRoutes(app, { groupBackend });
+
+  app.use(express.json());
+
+  const provider = identity.provider;
   mountShareRoutes(app, db, {
     provider,
     sendEmail,
@@ -161,7 +166,6 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
     agent: config.rowboatAgentId,
     shareUrl: (token) => `${config.frontendUrl}/invite/${token}`,
   });
-  mountAccountRoutes(app, { provider, db });
 
   return {
     app,

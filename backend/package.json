@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jbroll/rowboat-auth": "file:../../rowboat/packages/auth",
     "@jbroll/rowboat-auth-betterauth": "file:../../rowboat/packages/auth-betterauth",
     "@jbroll/rowboat-sharing": "file:../../rowboat/packages/sharing",
     "better-auth": "1.5.6",
