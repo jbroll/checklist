@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CheckList - Shared Checklists. Built on **rowboat** (a self-hosted, sync-native relational store) and
 BetterAuth.
 
-> CheckList was originally built on Jazz.tools and has been ported off it entirely — there is no
-> `jazz-tools` or `@jbr-jazz/*` dependency anywhere in the tree. The rowboat provider lives in
+> CheckList's data/sync layer is **rowboat** — a self-hosted, relational, offline-first sync store.
+> The rowboat provider lives in
 > `src/lib/rowboat.tsx`; the narrow waist the app imports auth + graph hooks from is `src/rowboat/`
 > (`@/rowboat`). Subscription tier policy is CheckList's own, in `shared/billing.ts`.
 
@@ -111,7 +111,7 @@ Rowboat is a relational store that syncs across devices in real-time, offline-fi
 - **Relational schema**: tables authored in Zod with `rb.*` column helpers, compiled to a sync
   manifest by `compileSchema`. Two tables: `folder` and `user_settings` (`shared/schema.ts`).
 - **RelationalGraph**: the reactive client view of the synced rows (`RelationalGraph<typeof schema>`).
-  Reads/writes flow through the service layer, never a Jazz-style CoValue tree.
+  Reads/writes flow through the service layer, never a nested-document tree.
 - **Scope-group RBAC**: rows are owned by a scope group (`owner_group_id`); folders are per-folder
   groups linked under the user's root group. Authorization is scoped pull + gated push.
 - **Sync**: local-first writes hit IndexedDB and sync in the background to **hosted rowboat**
@@ -265,9 +265,8 @@ npm run preview      # Test production build
 - **Sync is automatic** — local-first writes sync in the background; no manual API calls needed.
 - **Always soft delete** — `archived: true` / tombstone, never splice/remove.
 - **Templates stay clean** — session state is tracked separately in `SessionData`.
-- **No `jazz-tools`** anywhere — the dependency is gone, not merely unused. Only `src/rowboat/**`
-  (the narrow waist) may touch the underlying
-  framework; everything else imports the provider/auth hooks from `@/rowboat`.
+- **Only `src/rowboat/**`** (the narrow waist) may touch the underlying sync framework directly;
+  everything else imports the provider/auth hooks from `@/rowboat`.
 
 ## Documentation
 

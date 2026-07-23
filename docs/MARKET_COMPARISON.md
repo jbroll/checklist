@@ -366,24 +366,20 @@ Simple notes and checklists with Google integration.
 
 ## CheckList Differentiators
 
-### 1. Encrypted Data Sync
+### 1. Self-Hosted, Offline-First Sync
 
-**What CheckList offers**: Data is encrypted using Jazz.tools' cryptographic layer. All data is signed with your account's keypair and encrypted with group read keys before leaving your device.
+**What CheckList offers**: Sync runs on our own self-hosted rowboat infrastructure, not a third-party analytics-driven cloud. Data travels over HTTPS/TLS and access is gated by per-scope-group RBAC (you only sync groups you're a member of).
 
-**Important caveat**: This is NOT zero-knowledge end-to-end encryption. Jazz uses a group-based encryption model where:
-- Data is encrypted at rest on servers
-- Encryption keys are managed through Jazz's group system
-- The server operator (or Jazz Cloud) holds the key material needed to add members to groups
-- Account keys are stored with BetterAuth (in SQLite, potentially unencrypted)
+**Important caveat**: This is NOT end-to-end / zero-knowledge encryption. List data is stored **in plaintext** in the server's SQLite database — the operator can technically read it. Encryption is transport-only (TLS in transit); there is no client-side cryptographic layer.
 
-**Honest positioning**: "Encrypted sync" rather than "end-to-end encrypted." Better than plaintext storage (most competitors), but not Signal-level zero-knowledge.
+**Honest positioning**: "Self-hosted sync with TLS + RBAC," **not** "end-to-end encrypted." On par with most competitors on at-rest confidentiality (server can read data), but the data lives on infrastructure we operate rather than a third-party's.
 
 **Why it still matters**:
-- Data isn't sitting in plaintext on servers
-- Requires explicit access grants through Jazz groups
-- Better than most competitors who store everything readable
+- Data isn't handed to a third-party sync/analytics vendor
+- Access requires explicit RBAC grants (scope-group membership)
+- Offline-first: full functionality without connectivity
 
-**Competitors**: Most store data in plaintext. Only "Privacy Friendly Shopping List" offers stronger privacy (but with no sync at all).
+**Competitors**: Most also store data in plaintext on vendor clouds. Only "Privacy Friendly Shopping List" offers stronger privacy (but with no sync at all).
 
 ---
 
@@ -397,7 +393,7 @@ Simple notes and checklists with Google integration.
 - Your data is always available
 - Conflict resolution is automatic
 
-**Competitors**: Most apps cache data but may require connectivity for certain operations. Jazz's CRDT-based sync is genuinely robust.
+**Competitors**: Most apps cache data but may require connectivity for certain operations. rowboat's offline-first sync is genuinely robust.
 
 ---
 
@@ -625,5 +621,5 @@ The gap to close is **friction reduction** (search, smart input), not feature pa
 - [ClickUp - Best Todoist Alternatives](https://clickup.com/blog/best-todoist-alternatives/)
 
 ### Technology
-- [Jazz.tools Documentation](https://jazz.tools/docs)
-- [Jazz Authentication - Better Auth](https://jazz.tools/docs/svelte/key-features/authentication/better-auth)
+- rowboat — self-hosted relational sync/storage (`@jbroll/rowboat-*`)
+- [Better Auth Documentation](https://better-auth.com/docs)

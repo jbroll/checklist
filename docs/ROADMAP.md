@@ -15,7 +15,7 @@ Development priorities and product positioning.
 | **Template-session separation** | **Unique** | None have this |
 | **Nested categories within templates** | **Unique** | None |
 | **Hierarchical folder organization** | Rare | AnyList (premium only) |
-| **Encrypted sync (Jazz.tools)** | Rare | Most store plaintext |
+| **Self-hosted sync (rowboat)** | Rare | Most use third-party clouds |
 | **True offline-first** | Rare | Most are cache-only |
 | **No ads, no tracking** | Rare | Most are ad-supported |
 | **Multi-domain autocomplete** | Rare | Most grocery-only |
@@ -97,17 +97,18 @@ Development priorities and product positioning.
 ## Technical Notes
 
 ### Architecture Strengths
-- Jazz.tools CRDT sync (automatic conflict resolution)
+- rowboat sync — relational, offline-first, automatic HLC conflict resolution
 - Offline-first with full CRUD without network
 - Type-safe schemas with Zod validation
 - 1550 automated tests (unit + E2E)
 - Service layer abstraction
-- Shared backend packages (@jbr-jazz)
+- Self-hosted sync/storage on rowboat (`@jbroll/rowboat-*`)
 
 ### Known Limitations
-- Jazz account keys stored server-side (convenient but not perfect E2E)
+- List data is stored server-side in plaintext (no end-to-end encryption);
+  protected by TLS in transit and scope-group RBAC, not client-side crypto
 - Mobile experience good but not native app quality
-- Single sync server (Jazz Cloud) - no self-hosting option yet
+- Single hosted sync server (no multi-region failover yet)
 
 ---
 

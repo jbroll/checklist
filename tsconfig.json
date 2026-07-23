@@ -18,10 +18,10 @@
 
     /* Strict Type Checking */
     "strict": true,
-    /* Note: exactOptionalPropertyTypes and noUncheckedIndexedAccess are disabled due to
-     * Jazz.tools v0.18.x incompatibility. Jazz's CoList and CoMap type inference adds
-     * `| null` to elements when these flags are enabled, causing widespread type errors.
-     * This is a known limitation of Jazz with strict TS. All other strict checks remain enabled. */
+    /* Note: exactOptionalPropertyTypes and noUncheckedIndexedAccess are disabled — a former
+     * dependency's collection type inference added `| null` to elements under these flags,
+     * causing widespread type errors. That dependency is gone; re-enabling them under rowboat
+     * is untested. All other strict checks remain enabled. */
     // "exactOptionalPropertyTypes": true,
     // "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,

@@ -3,7 +3,7 @@
 Real, closed-loop end-to-end tests for the folder-sharing invite flow, modeled on
 wickedmap's canvasser-invite suite. Unlike the mocked `e2e/sharing-ui.spec.ts`
 (which stubs every `/api/shares/*` call), this suite uses **two real authenticated
-accounts + the real backend + real Jazz**.
+accounts + the real backend + real rowboat sync**.
 
 ## What it covers
 
@@ -16,7 +16,7 @@ accounts + the real backend + real Jazz**.
 | unauthenticated visitor sees invite details + sign-in prompt | Signed-out accept page → Google/Apple sign-in | ✅ |
 | wrong account (test3) sees the email-mismatch state | Logged-in email ≠ invite recipient → "Wrong Account" | ✅ |
 | revoked invite shows an error to the recipient | Organizer revokes → recipient gets `not_found` error | ✅ |
-| recipient accepts and gains folder access | Accept → Jazz grant → folder appears in recipient tree | ✅ |
+| recipient accepts and gains folder access | Accept → RBAC grant → folder appears in recipient tree | ✅ |
 
 Invites are **copy-link only** — checklist does not email invites. GreenMail is
 used solely to verify the test accounts' signup emails so they can log in.

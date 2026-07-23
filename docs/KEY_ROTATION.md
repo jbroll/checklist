@@ -25,7 +25,7 @@ npm run rotate -- apple --key ~/AuthKey.p8
 
 | Secret | Purpose | Data Impact | Rotation Complexity |
 |--------|---------|-------------|---------------------|
-| `BETTER_AUTH_SECRET` | Encrypts legacy `encryptedCredentials`/`accountID` columns (dead weight left over from the pre-rowboat/Jazz era; no current code path reads them) | **LOW for live data** (list/item data lives in rowboat's server-side SQLite, unencrypted, and is untouched by this secret) — **but requires re-encryption of the legacy columns**, or any still-populated rows become permanently undecryptable garbage | Low-Medium |
+| `BETTER_AUTH_SECRET` | Encrypts legacy `encryptedCredentials`/`accountID` columns (dead weight left over from the pre-rowboat era; no current code path reads them) | **LOW for live data** (list/item data lives in rowboat's server-side SQLite, unencrypted, and is untouched by this secret) — **but requires re-encryption of the legacy columns**, or any still-populated rows become permanently undecryptable garbage | Low-Medium |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | None - only affects new logins | Low |
 | `APPLE_CLIENT_SECRET` | Apple OAuth | None - only affects new logins | Low |
 | `STRIPE_SECRET_KEY` | Stripe API | None - subscriptions unaffected | Low |
@@ -34,16 +34,16 @@ npm run rotate -- apple --key ~/AuthKey.p8
 
 ## Understanding Data Impact
 
-CheckList runs on **rowboat** (a local-first sync engine — SQLite server + IndexedDB client), not
-Jazz.tools. List/item data lives as ordinary rows in the backend's SQLite database, in **plaintext**
+CheckList runs on **rowboat** (a local-first sync engine — SQLite server + IndexedDB client).
+List/item data lives as ordinary rows in the backend's SQLite database, in **plaintext**
 — there is no client-side or server-side encryption of list content, and no key derived from
 `BETTER_AUTH_SECRET` (or any other secret) gates access to it. Access control is enforced by rowboat's
 authorization layer at sync time (scoped pull / gated push), not by encryption. Rotating any secret in
 this document — including `BETTER_AUTH_SECRET` — **has no effect on list/item data**.
 
 `BETTER_AUTH_SECRET` does still encrypt one thing: the `user.encryptedCredentials` /
-`user.accountID` columns, a legacy pair kept in the `user` table from when this app stored Jazz
-account keys there (see `backend/src/migrate-auth.ts`). No current code path writes or reads these
+`user.accountID` columns, a legacy pair kept in the `user` table from an earlier auth setup that
+stored account keys there (see `backend/src/migrate-auth.ts`). No current code path writes or reads these
 columns for anything user-facing — they are inert — but rows created before the rowboat port may
 still carry real encrypted values, and `npm run rotate test` can find and decrypt them. Rotating
 `BETTER_AUTH_SECRET` **without** running the `better-auth` re-encryption step will leave any such

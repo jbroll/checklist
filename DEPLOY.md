@@ -195,9 +195,9 @@ For multi-domain OAuth:
 
 The backend uses SQLite for authentication and billing data. When schema changes occur, run the migration script before updating the backend.
 
-### Migration v2: jbr-jazz Schema Alignment
+### Migration v2: Schema Alignment
 
-This migration updates column names to align with jbr-jazz conventions:
+This migration updates column names to the current schema conventions:
 
 | Table | Old Column | New Column |
 |-------|-----------|------------|

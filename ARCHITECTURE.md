@@ -3,8 +3,8 @@
 A collaborative, offline-first list application built on **rowboat** (a self-hosted,
 sync-native relational store), **BetterAuth**, and **Stripe**.
 
-> **Note:** CheckList was originally built on Jazz.tools and has been ported off it entirely —
-> `jazz-tools` is not a dependency at all. The rowboat provider lives in `src/lib/rowboat.tsx`
+> **Note:** CheckList's data/sync layer is **rowboat** — a relational, offline-first sync store.
+> The rowboat provider lives in `src/lib/rowboat.tsx`
 > and its narrow waist (the `@/rowboat` re-export the app imports auth + graph hooks from) in
 > `src/rowboat/`.
 
@@ -74,7 +74,7 @@ loop, and account-init provisioning.
 ## Backend (`backend/src/`)
 
 A single self-hosted Express server on one better-sqlite3 database, serving sync over
-`/api/sync` via the rowboat packages, in place of the former hosted Jazz/jbr-jazz sync service.
+`/api/sync` via the rowboat packages.
 `backend/src/index.ts` wires the rowboat packages onto that db:
 
 - `@jbroll/rowboat-auth` — RBAC scope groups (`createRbacAuth`, `createScopeGroup`,
@@ -146,7 +146,7 @@ runtime domain (CheckList default; kjekit).
 ## Import / export
 
 Full folder backup/restore (JSON) and per-list/session TXT·CSV, re-typed against the rowboat
-`FolderRow` shape (no Jazz types). See `src/services/import/` and `src/services/export/`, and
+`FolderRow` shape (plain typed rows). See `src/services/import/` and `src/services/export/`, and
 `docs/INDENTED_LIST_FORMAT.md` for the hierarchical text format.
 
 ## File structure reference

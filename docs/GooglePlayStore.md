@@ -151,7 +151,7 @@ Current content in `full-description.md` is ready:
 - [ ] Include required disclosures:
   - Data collected (email for auth)
   - Data usage (authentication, sync)
-  - Third parties (Jazz.tools sync, OAuth providers)
+  - Third parties (OAuth providers; sync runs on our own self-hosted rowboat)
   - Data retention
   - User rights (deletion)
   - Contact information
@@ -164,9 +164,9 @@ Complete in Play Console. Based on current app:
 |----------|--------|
 | Data collected | Email address (for authentication) |
 | Data shared | No (not shared with third parties) |
-| Data encrypted | Yes (Jazz.tools encryption) |
+| Data encrypted in transit | Yes (HTTPS/TLS) — note: NOT end-to-end; stored server-side in plaintext |
 | Data deletion | Yes (account deletion available) |
-| Security practices | HTTPS, encrypted sync |
+| Security practices | HTTPS/TLS for all traffic |
 
 ### Declarations
 - [ ] App does not target children

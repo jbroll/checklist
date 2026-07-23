@@ -103,7 +103,7 @@ stripe trigger checkout.session.completed
     │ syncSubscriptionFromBackend()
     ▼
  ┌─────────────────┐                           ┌─────────────────┐
- │   Jazz Cache    │◄── GET /api/billing ──────│    Backend      │
+ │  Client Cache   │◄── GET /api/billing ──────│    Backend      │
  │ (UserSettings)  │    /subscription          │   (SQLite DB)   │
  └─────────────────┘                           └─────────────────┘
                                                        ▲

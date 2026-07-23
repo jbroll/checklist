@@ -24,7 +24,7 @@ const baseURL = isSmokeTest
 const hasEmailInfra = Boolean(process.env.IMAP_HOST && process.env.IMAP_USERNAME);
 
 // The rowboat backend (backend/src/index.ts) defaults AUTH_DB_PATH to
-// ./auth.db, which on a checkout that has ever run the pre-port jbr-jazz
+// ./auth.db, which on a checkout that has ever run the old pre-port
 // backend is THAT db (missing rowboat's share_invites.target_group_id
 // column etc) — booting the e2e backend against it hard-errors on the first
 // sharing query. Every e2e run therefore gets its own fresh sqlite file in a
