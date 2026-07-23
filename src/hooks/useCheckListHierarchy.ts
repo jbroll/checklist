@@ -3,8 +3,7 @@
  *
  * Thin React wrapper around `src/services/folderOps.ts` (the headless, unit-tested
  * operations) — this file only adds the reactive subscription (`useRowboat`/`useSelect`)
- * and id generation. Replaces the Jazz-backed `@jbr-jazz/hierarchy-client` `useHierarchy`
- * wrapper of the same name.
+ * and id generation.
  *
  * Group minting (owner_group_id for a new folder) is NOT this hook's job — it is injected
  * via `mintGroup` so this file never talks to a server. Calling `addFolder` without a
@@ -13,11 +12,11 @@
  *
  * NOTE (follow-up, tracked in docs/superpowers/d-t2-report.md): this hook currently
  * exposes only the hierarchy surface (add/rename/archive/delete/move/dedupe/read) needed
- * by TreeView/AppContainer's tree operations. Items/sessions-dependent members of the old
- * jazz-backed result (`duplicateTemplate`, `getAllTemplateFolders`, `deleteAllUserData`,
- * `emptyTrash`, jazz's `ItemLimitExceededError`/`CircularReferenceError`) are NOT ported
+ * by TreeView/AppContainer's tree operations. Items/sessions-dependent members
+ * (`duplicateTemplate`, `getAllTemplateFolders`, `deleteAllUserData`, `emptyTrash`,
+ * `ItemLimitExceededError`/`CircularReferenceError`) are NOT ported
  * here — that data isn't in the rowboat `Folder` table yet (items/sessions land in a later
- * slice). Callers of those members still reference the jazz hook's shape; see the report
+ * slice). Callers of those members still reference the earlier hook's shape; see the report
  * for the exact call sites.
  */
 import { useCallback, useMemo } from 'react';
@@ -226,7 +225,7 @@ export function arraysEqualById(a: FolderRow[], b: FolderRow[]): boolean {
   return true;
 }
 
-/** Predicate helpers kept for parity with the old Jazz-backed hook's module exports. */
+/** Predicate helpers kept for parity with the earlier hook's module exports. */
 export function isTemplateFolder(folder: { type: string }): boolean {
   return folder.type === 'template-folder';
 }
@@ -236,7 +235,7 @@ export function isOrganizationalFolder(folder: FolderRow): boolean {
 }
 
 /**
- * Local minimal replacements for the old Jazz-backed hook's error classes (there's no
+ * Local minimal replacements for the earlier hook's error classes (there's no
  * `@jbroll/rowboat-*` equivalent). Neither is thrown by this slice's hook today —
  * `moveNode`/`g.folder.move` already hard-errors (a plain `Error`) on a cycle, and there is
  * no item-limit/billing check in slice 1 (see `canCreate`, which is a permissive `() => true`

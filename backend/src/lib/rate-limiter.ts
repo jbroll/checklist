@@ -1,6 +1,6 @@
 /**
  * Simple in-memory rate limiter with automatic cleanup. Resets on server restart.
- * Vendored from @jbr-jazz/hierarchy-backend during the de-jazzing.
+ * Vendored from a previous shared backend package during the rowboat port.
  */
 export class RateLimiter {
   private limits: Map<string, { count: number; resetAt: number }>;

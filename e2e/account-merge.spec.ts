@@ -1,6 +1,6 @@
 /**
  * Real closed-loop account-merge E2E (two real authenticated accounts + real
- * backend + real Jazz). Account B (target/main) absorbs Account A (source)
+ * backend + real sync). Account B (target/main) absorbs Account A (source)
  * through the "Combine another account" flow in settings.
  *
  * Scope: FULL two-login closed-loop merge.
@@ -11,10 +11,10 @@
  *   - Assert B's tree shows BOTH folders.
  *   - Finally, sign in with A's credentials in a fresh context and assert it now
  *     lands on B's (merged) data — proving the source login repoints at the
- *     target Jazz account.
+ *     target account.
  *
  * Account merge is DESTRUCTIVE: finalize permanently repoints A's login at B's
- * Jazz account, so the same pair can only be merged once. We therefore provision
+ * account, so the same pair can only be merged once. We therefore provision
  * FRESH, unique accounts on every run (sign up -> verify via GreenMail IMAP),
  * exactly like the invite suite provisions accounts — never reusing the shared
  * test1/test2 accounts, which a prior merge would have fused.
@@ -152,7 +152,7 @@ test.describe('Account merge closed loop', () => {
       await waitForHomeReady(page);
 
       // Both B's original folder AND A's adopted folder must appear in B's tree.
-      // Reload-retry absorbs Jazz adoption sync lag.
+      // Reload-retry absorbs adoption sync lag.
       await assertFolderVisibleWithReload(page, FOLDER_B);
       await assertFolderVisibleWithReload(page, FOLDER_A);
     } finally {
@@ -161,7 +161,7 @@ test.describe('Account merge closed loop', () => {
   });
 
   /**
-   * A fresh login with A's (source) credentials now opens B's (target) Jazz
+   * A fresh login with A's (source) credentials now opens B's (target)
    * account. finalizeMerge repointed A's BetterAuth user at B's accountID +
    * encryptedCredentials, so signing in as A must land on the merged data —
    * both FOLDER_A and FOLDER_B visible.
@@ -172,7 +172,7 @@ test.describe('Account merge closed loop', () => {
     try {
       await loginTestUser(page, A_EMAIL, PASSWORD);
       await waitForHomeReady(page);
-      // A's login now resolves to B's Jazz account, which owns both folders.
+      // A's login now resolves to B's account, which owns both folders.
       await assertFolderVisibleWithReload(page, FOLDER_B);
       await assertFolderVisibleWithReload(page, FOLDER_A);
     } finally {

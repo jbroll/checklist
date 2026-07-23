@@ -2,7 +2,7 @@
  * Unit tests for exportService (rowboat port, slice-2).
  *
  * Every entry point takes the rowboat graph `g` and resolves a template folder by id from it.
- * Tests seed an in-memory `makeGraph()` graph — no Jazz.
+ * Tests seed an in-memory `makeGraph()` graph — no sync.
  */
 
 import { describe, expect, it } from 'vitest';

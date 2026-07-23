@@ -3,7 +3,7 @@
  *
  * View state lives in the `user_settings` singleton row's three json maps
  * (`view_folder_expanded`, `view_template_category_expanded`, `view_session_category_expanded`).
- * Tests run against an in-memory `makeGraph()` graph — no Jazz, no React. Reads use designed
+ * Tests run against an in-memory `makeGraph()` graph — no sync, no React. Reads use designed
  * defaults (folders default collapsed, categories default expanded); writes require the singleton
  * row and assert on the written column value.
  */

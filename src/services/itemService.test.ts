@@ -2,7 +2,7 @@
  * Unit tests for templateService item operations (rowboat port, slice-2).
  *
  * Covers create/rename/archive/move/reorder/expand/notes over a template folder's `items` json
- * column. Runs against an in-memory `makeGraph()` graph — no Jazz, no React.
+ * column. Runs against an in-memory `makeGraph()` graph — no sync, no React.
  */
 
 import { describe, expect, it } from 'vitest';

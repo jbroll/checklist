@@ -2,7 +2,7 @@
  * Component tests for SessionView
  *
  * Tests rendering, item interactions, zone partitioning, view modes, and edit mode.
- * Ported off Jazz (slice-2): the graph is a plain stub object (`mockGraph`) rather than a
+ * Ported to rowboat (slice-2): the graph is a plain stub object (`mockGraph`) rather than a
  * live rowboat graph — every service call SessionView/its hooks make is mocked, so nothing
  * actually reads through `mockGraph` except the `useSelect`-driven category-expanded state
  * (see `mockUserSettingsRows`), which is exercised directly via the `user_settings` stub.
@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NavState } from '@/lib/useNavigationHistory';
 import { SessionView } from './SessionView';
 
-// `@/jazz` mock: `useRowboat()` returns a stable stub graph object (so tests can assert
+// `@/rowboat` mock: `useRowboat()` returns a stable stub graph object (so tests can assert
 // service calls were made "with mockGraph"), and `useSelect(fn)` just invokes the selector —
 // reactivity isn't under test here, only that SessionView reads through it correctly. The
 // `user_settings` row list is mutable per-test via `setUserSettingsRow`.

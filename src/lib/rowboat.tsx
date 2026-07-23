@@ -1,7 +1,7 @@
 /**
  * The rowboat provider + sync loop + anon-claim wiring for CheckList (slice 1, folders-only).
  *
- * Replaces the old Jazz `JazzReactProvider`/`AuthProvider` pair. `@jbroll/rowboat-react`'s
+ * Provides the app's data + auth context. `@jbroll/rowboat-react`'s
  * `createRowboat(schema)` factory (used by an earlier version of `src/schema/folder.ts`)
  * deliberately keeps its `RowboatDb` instance private — it's an app-scoped singleton the
  * factory builds and never exposes (see that package's `factory.ts`: "App-scoped singletons
@@ -183,7 +183,7 @@ function RowboatBridge({
   //       users get a local, never-synced ANON_IDENTITY-scoped row.
   //   (2) For a GENUINELY NEW user (no pre-existing settings row), the default "Quick Errands"
   //       list — gating on settings-absence means we don't re-seed after the user deletes all
-  //       their lists (an improvement over the Jazz `folders.length === 0` seed).
+  //       their lists (an improvement over a plain `folders.length === 0` seed).
   const provisionedRef = useRef(false);
   useEffect(() => {
     // Wait until the auth session has SETTLED before provisioning. On a reload of a signed-in

@@ -2,7 +2,7 @@
  * SubscriptionService Unit Tests (rowboat port, slice-2)
  *
  * Subscription/preference state lives in the `user_settings` singleton row; template-folder counts
- * come from the `folder` table. Tests run against an in-memory `makeGraph()` graph — no Jazz, no
+ * come from the `folder` table. Tests run against an in-memory `makeGraph()` graph — no sync, no
  * React. A brand-new user has NO settings row, which is the DESIGNED default state (→ free/beta).
  */
 
@@ -41,7 +41,7 @@ import {
 
 type Graph = ReturnType<typeof makeGraph>;
 
-/** Fields a test may set on the user_settings singleton (camelCase mirrors the old Jazz shape). */
+/** Fields a test may set on the user_settings singleton (camelCase mirrors the old settings shape). */
 interface SettingsInput {
   subscriptionTier?: UserSettingsRow['subscription_tier'];
   subscriptionStatus?: UserSettingsRow['subscription_status'];

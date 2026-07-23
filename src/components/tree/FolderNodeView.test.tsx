@@ -4,7 +4,7 @@
  * prop and never touches `useRowboat`/`useSelect` itself.
  *
  * Drops item-count/duplicate/import/export/share/autocomplete assertions — those menu items
- * were removed from FolderNodeView along with the Jazz `FolderNode` items/sessions surface
+ * were removed from FolderNodeView along with the former `FolderNode` items/sessions surface
  * (see the component's header comment); rename/archive/delete and drag-and-drop reparenting
  * are the only slice-1 concerns left to cover here.
  */

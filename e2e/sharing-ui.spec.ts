@@ -203,7 +203,7 @@ test.describe('Share Dialog UI', () => {
         contentType: 'application/json',
         // useSharing surfaces the response's `error` field as the thrown Error.message,
         // which ShareDialog renders as the form error — put the human sentence there
-        // (rowboat's error contract, not Jazz's `{error, message}` split).
+        // (rowboat's error contract, not the former `{error, message}` split).
         body: JSON.stringify({
           error: 'You do not have permission to share this folder',
         }),
@@ -232,7 +232,7 @@ test.describe('Share Dialog UI', () => {
     const permissionSelect = page.getByLabel('Permission');
     await expect(permissionSelect).toBeVisible();
 
-    // Verify options exist (using Jazz native role names)
+    // Verify options exist (using the native role names)
     await expect(permissionSelect.locator('option[value="reader"]')).toHaveText('Reader');
     await expect(permissionSelect.locator('option[value="writer"]')).toHaveText('Writer');
     await expect(permissionSelect.locator('option[value="admin"]')).toHaveText('Admin');
@@ -277,7 +277,7 @@ test.describe('Invite Accept Page UI', () => {
   //    Email-mismatch is surfaced only at ACCEPT time (a 403), never from validate.
   // So these tests authenticate via the CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock
   // validate in rowboat's shape. They assert rowboat's (coarser, more private) behavior, not the
-  // Jazz per-error-code screens the originals encoded.
+  // per-error-code screens the originals encoded.
 
   const PASSWORD = 'Checklist-Invite-Test-2026!';
 
@@ -344,7 +344,7 @@ test.describe('Invite Accept Page UI', () => {
 
   test('shows a generic error for an invalid, revoked, or expired invite', async ({ page }) => {
     // rowboat's validate returns `{ valid: false }` for ANY unusable token, so there is one
-    // generic message — the Jazz per-code copy ("invalid or revoked" / "has expired") is gone.
+    // generic message — the former per-code copy ("invalid or revoked" / "has expired") is gone.
     await authenticate(page, 'invite-invalid');
     await mockValidate(page, { valid: false });
 

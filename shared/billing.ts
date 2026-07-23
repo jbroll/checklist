@@ -3,7 +3,7 @@
  *
  * These numbers are CheckList's product policy and deliberately live here rather than in a shared
  * package: a limit table shared across products makes one product's pricing change a breaking
- * change for another. Vendored from @jbr-jazz/billing-shared during the de-jazzing.
+ * change for another. Vendored from a previous shared billing package during the rowboat port.
  *
  * `-1` is the designed unlimited sentinel. An unrecognized tier slug is a BUG and throws — a
  * silent downgrade to free limits would clamp a paying customer and surface only as a complaint.

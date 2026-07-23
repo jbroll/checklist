@@ -168,20 +168,9 @@ export default defineConfig({
         // CRITICAL: Exclude /api/* routes from navigation fallback to prevent service worker
         // from intercepting OAuth callbacks and auth endpoints
         navigateFallbackDenylist: [/^\/api\//],
-        // Jazz.tools handles data sync, so we use a simple runtime caching strategy
+        // rowboat handles data sync over its own (uncached) POST endpoints, so the only
+        // runtime caching we need is for static image assets.
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/cloud\.jazz\.tools\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'jazz-sync-cache',
-              networkTimeoutSeconds: 10,
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
-              },
-            },
-          },
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
             handler: 'CacheFirst',
@@ -220,23 +209,14 @@ export default defineConfig({
     port: 8765,
     proxy: {
       '/api': {
-        // Use 127.0.0.1 (not 'localhost'): createHierarchyServer binds IPv4-only
-        // (127.0.0.1), and 'localhost' can resolve to ::1 (IPv6) first → ECONNREFUSED.
+        // Use 127.0.0.1 (not 'localhost'): the backend binds IPv4-only (127.0.0.1), and
+        // 'localhost' can resolve to ::1 (IPv6) first → ECONNREFUSED.
         target: 'http://127.0.0.1:3001',
-        // changeOrigin MUST be false: the package's per-origin BetterAuth derives the
+        // changeOrigin MUST be false: the backend's per-origin BetterAuth derives the
         // auth baseURL from the Host header and rejects untrusted origins with 421.
         // Rewriting Host to 127.0.0.1:3001 (changeOrigin:true) is not a trusted origin;
         // keeping the real Host (localhost:8765) matches trustedOrigins so login works.
         changeOrigin: false,
-        // Ensure custom headers are forwarded (critical for Jazz BetterAuth plugin)
-        configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            // Forward the x-jazz-auth header required by Jazz BetterAuth plugin
-            if (req.headers['x-jazz-auth']) {
-              proxyReq.setHeader('x-jazz-auth', req.headers['x-jazz-auth']);
-            }
-          });
-        },
       },
     },
   },

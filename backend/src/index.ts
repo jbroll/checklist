@@ -46,7 +46,7 @@ export interface ServerConfig {
 }
 
 // Builds a nodemailer-backed SendEmail port when SMTP is configured; undefined otherwise. Mirrors
-// the pre-port behaviour (jbr-jazz hierarchy-backend's lib/email.ts): email capability — including
+// the pre-port behaviour (the former hierarchy-backend's lib/email.ts): email capability — including
 // better-auth's own email-verification send — is gated on SMTP being present, not faked with a
 // console.log stand-in that would silently pretend mail was sent.
 function buildSendEmail(smtp: SmtpConfig | undefined): SendEmail | undefined {
@@ -96,8 +96,8 @@ export interface RowboatServer {
 // Stands up the express app on ONE better-sqlite3 db: auth (RBAC groups) + identity (better-auth
 // via rowboat-auth-betterauth) + sharing (invite/accept) + account routes. Sync, RBAC enforcement
 // and the folder-scope-group mint live in hosted rowboat now — the browser carries a data-plane
-// JWT straight there (see src/lib/rowboat.tsx). Replaces createHierarchyServer (Jazz cloud +
-// agent) — no Jazz, no billing/Stripe wiring (out of slice-1; see docs/superpowers/d-t3-report.md).
+// JWT straight there (see src/lib/rowboat.tsx). Replaces the former createHierarchyServer (cloud +
+// agent) — no legacy sync layer, no billing/Stripe wiring (out of slice-1; see docs/superpowers/d-t3-report.md).
 export async function createServer(config: ServerConfig): Promise<RowboatServer> {
   const db = new Database(config.dbPath);
 

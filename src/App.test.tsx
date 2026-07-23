@@ -2,7 +2,7 @@
  * Tests for App routing.
  *
  * Merge-account routing (`?merge=`) was dropped when App.tsx was ported to rowboat —
- * MergeAccountFlow still reads a Jazz `Account` the rowboat provider no longer supplies, so
+ * MergeAccountFlow still reads an `Account` the rowboat provider no longer supplies, so
  * its route is disabled for slice 1 (see App.tsx's header comment; merge itself is deferred
  * to rowboat C3, tracked alongside src/lib/__tests__/account-merge.test.ts /
  * src/components/auth/__tests__/MergeAccountFlow.test.tsx). This file now covers what's

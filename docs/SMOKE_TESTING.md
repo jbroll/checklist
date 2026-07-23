@@ -2,7 +2,7 @@
 
 ## Overview
 
-Playwright-based smoke tests that run against deployed test/prod environments without authentication, using local-only mode (anonymous Jazz accounts).
+Playwright-based smoke tests that run against deployed test/prod environments without authentication, using local-only mode (anonymous local sessions).
 
 ## URLs
 
@@ -35,7 +35,7 @@ make smoke-prod
 
 ## What Gets Tested
 
-Tests run without authentication using anonymous Jazz accounts:
+Tests run without authentication using anonymous local sessions:
 
 1. **Page Load** - Homepage loads, core UI visible
 2. **Create Folder** - Can create a new folder
@@ -50,7 +50,7 @@ Tests run without authentication using anonymous Jazz accounts:
 - `SMOKE_TEST=true` env var disables local dev server and mock OAuth
 - `BASE_URL` env var points to the target environment
 - Tests use fresh browser context (no cookies/storage from previous runs)
-- Anonymous Jazz accounts are created per test run
+- Anonymous local sessions are created per test run
 - No backend auth required - uses local-only mode
 
 ## Implementation Details

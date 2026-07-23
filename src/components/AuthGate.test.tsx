@@ -2,7 +2,7 @@
  * Tests for AuthGate component
  *
  * Tests authentication states, sign in/out flows, and account deletion, against the rowboat
- * `@/jazz` waist (better-auth `useAuthor`/`useSession`/`signIn`/`signOut`).
+ * `@/rowboat` waist (better-auth `useAuthor`/`useSession`/`signIn`/`signOut`).
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -10,7 +10,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGate } from './AuthGate';
 
-// Mock the rowboat waist (@/lib/jazz.tsx re-exported through @/jazz) — AuthGate only uses the
+// Mock the rowboat waist (@/lib/rowboat.tsx re-exported through @/rowboat) — AuthGate only uses the
 // auth surface (useAuthor/useSession/signIn/signOut), not the graph.
 const mockSignInSocial = vi.fn();
 const mockJazzSignOut = vi.fn();

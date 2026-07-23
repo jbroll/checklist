@@ -2,7 +2,7 @@
  * Component tests for SessionZone
  *
  * Tests the zone rendering, batch operations, and interaction modes.
- * Uses vi.mock for the rowboat graph hook + dnd-kit (no Jazz).
+ * Uses vi.mock for the rowboat graph hook + dnd-kit (no live graph).
  */
 
 import { render, screen } from '@testing-library/react';

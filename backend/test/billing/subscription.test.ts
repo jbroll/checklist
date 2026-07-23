@@ -55,7 +55,7 @@ function initTestDb() {
     )
   `);
 
-  // Create subscription tier table (aligned with jbr-jazz schema)
+  // Create subscription tier table (aligned with the billing schema)
   db.exec(`
     CREATE TABLE subscription_tier (
       slug TEXT PRIMARY KEY,

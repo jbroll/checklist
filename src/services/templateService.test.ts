@@ -2,7 +2,7 @@
  * Unit tests for templateService (rowboat port, slice-2).
  *
  * A template is a folder row of `type: 'template-folder'`; its items live in the row's `items`
- * json column. Tests run against an in-memory `makeGraph()` graph — no Jazz, no React.
+ * json column. Tests run against an in-memory `makeGraph()` graph — no sync, no React.
  */
 
 import { describe, expect, it } from 'vitest';

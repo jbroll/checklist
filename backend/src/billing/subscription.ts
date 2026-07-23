@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { stripe, isStripeEnabled, type TierSlug, type SubscriptionTier, type UserSubscription } from './stripe.js';
 
 // Default tier limits for when database isn't available
-// Uses jbr-jazz generic naming: maxItems, retentionDays
+// Uses generic naming: maxItems, retentionDays
 const DEFAULT_TIERS: Record<TierSlug, { maxItems: number; retentionDays: number }> = {
   free: { maxItems: 3, retentionDays: 7 },
   plus: { maxItems: 30, retentionDays: 30 },

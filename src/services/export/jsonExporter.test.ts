@@ -3,7 +3,7 @@
  *
  * A template is a folder row of `type: 'template-folder'`; its items/sessions live in the row's
  * `items`/`sessions` json columns, with epoch-ms NUMBER timestamps. Tests seed an in-memory
- * `makeGraph()` graph — no Jazz — and assert on the exported ISO-string shape.
+ * `makeGraph()` graph — no sync — and assert on the exported ISO-string shape.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ import type { ExportedData } from './types';
 
 type Graph = ReturnType<typeof makeGraph>;
 
-/** Epoch-ms for the ISO string the old Jazz mocks used. */
+/** Epoch-ms for the ISO string the old mocks used. */
 const NOV_1 = new Date('2024-11-01T00:00:00.000Z').getTime();
 const NOV_1_ISO = '2024-11-01T00:00:00.000Z';
 

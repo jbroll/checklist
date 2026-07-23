@@ -2,7 +2,7 @@
  * Session lifecycle tests (rowboat port, slice-2).
  *
  * Archive, unarchive, delete, category expansion, and notes — over an in-memory `makeGraph()`
- * graph (no Jazz, no React). All timestamps are epoch-ms NUMBERS.
+ * graph (no sync, no React). All timestamps are epoch-ms NUMBERS.
  */
 
 import { describe, expect, it } from 'vitest';

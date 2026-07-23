@@ -29,7 +29,7 @@ describe('ensureAuthTables', () => {
     }
   });
 
-  it('adds the Jazz plugin columns to the user table', () => {
+  it('adds the legacy auth-plugin columns to the user table', () => {
     ensureAuthTables(db);
     expect(columns('user')).toEqual(expect.arrayContaining(['accountID', 'encryptedCredentials']));
   });

@@ -6,10 +6,9 @@
  *
  * Access: http://localhost:5173/test
  *
- * Rowboat port (slice-2): reads the bound graph via `useRowboat()` (was Jazz `useAccount`) and
- * hands it to `exposeServicesToWindow(g)`, which publishes the graph + ported services on
- * `window.testExports` for Playwright seeding. The graph is always available inside
- * `<RowboatProvider>`, so — unlike the Jazz version — there is no "waiting for account" state.
+ * Reads the bound graph via `useRowboat()` and hands it to `exposeServicesToWindow(g)`, which
+ * publishes the graph + services on `window.testExports` for Playwright seeding. The graph is
+ * always available inside `<RowboatProvider>`, so there is no "waiting for account" state.
  */
 
 import { Beaker } from 'lucide-react';

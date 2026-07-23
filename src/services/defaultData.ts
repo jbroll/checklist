@@ -1,11 +1,10 @@
 /**
  * Default data seeded for a brand-new user.
  *
- * The Jazz app seeded a starter "Quick Errands" template list in its account `withMigration` hook
- * (schema/index.ts "Step 6"). The rowboat port has no account migration, so the equivalent seed
- * runs once at account-init (jazz.tsx RowboatBridge), alongside `ensureUserSettings` — gated on the
- * user being genuinely new (no pre-existing `user_settings` row), which also means it does NOT
- * re-seed after a user deletes all their lists (an improvement over the Jazz `folders.length === 0`
+ * A starter "Quick Errands" template list is seeded for a genuinely new user. The seed
+ * runs once at account-init (rowboat.tsx RowboatBridge), alongside `ensureUserSettings` — gated on
+ * the user being genuinely new (no pre-existing `user_settings` row), which also means it does NOT
+ * re-seed after a user deletes all their lists (an improvement over a plain `folders.length === 0`
  * check).
  *
  * The folder is created with all six items + their default-selected flags in ONE write, rather
@@ -18,7 +17,7 @@ import { toOrderedMap } from './folderListHandles';
 
 type Graph = RelationalGraph<typeof schema>;
 
-/** The six starter errands, matching the Jazz seed (schema/index.ts Step 6). */
+/** The six starter errands. */
 const QUICK_ERRANDS_ITEMS = [
   'Bank',
   'Dry cleaning',
@@ -30,7 +29,7 @@ const QUICK_ERRANDS_ITEMS = [
 
 /**
  * Build the "Quick Errands" template folder row with all six items pre-selected (every item id in
- * `default_items`), mirroring the Jazz seed. Top-level items carry `path === name`.
+ * `default_items`). Top-level items carry `path === name`.
  */
 export function buildQuickErrandsFolder(
   id: string,

@@ -1,7 +1,7 @@
 /**
  * Folder - rowboat rb.* table for the CheckList folder/template hierarchy.
  *
- * Replaces the Jazz `FolderNode` CoValue (see `./tree.ts`, kept for now — other code
+ * The canonical folder/template hierarchy row (see `./tree.ts`, kept for now — other code
  * still imports it). This table only carries the *hierarchy* row shape; items/sessions
  * for template folders are ported in a later slice.
  *
@@ -14,9 +14,9 @@
  * version of this file) — the provider needs direct access to the underlying `RowboatDb` to
  * drive `syncWithServer` on an interval, and `@jbroll/rowboat-react`'s `createRowboat()`
  * factory deliberately keeps its db instance private (an app-scoped singleton, see that
- * package's `factory.ts`). So the graph is built and bound in `src/lib/jazz.tsx` instead,
+ * package's `factory.ts`). So the graph is built and bound in `src/lib/rowboat.tsx` instead,
  * using the lower-level `useRowboat(schema, db)` hook, which the app reaches through the
- * `@/jazz` waist. See `src/lib/jazz.tsx`'s header comment.
+ * `@/rowboat` waist. See `src/lib/rowboat.tsx`'s header comment.
  */
 export {
   Folder,

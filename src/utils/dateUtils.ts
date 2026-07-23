@@ -6,7 +6,7 @@
 
 /**
  * Safely convert a Date or date string to ISO string
- * Handles both Date objects and ISO date strings from Jazz deserialization
+ * Handles both Date objects and ISO date strings from row deserialization
  *
  */
 export function toISOString(date: Date | string | undefined): string | undefined {

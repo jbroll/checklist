@@ -1,10 +1,8 @@
 /**
  * rowboat runtime narrow-waist.
  *
- * Replaces the old Jazz waist (`co`/`Group`/`JazzReactProvider`/`useAccount`/etc. from
- * `jazz-tools`) now that the folder hierarchy is ported to rowboat (see
- * `src/schema/folder.ts`, `src/lib/rowboat.tsx`) — `jazz-tools` is no longer a dependency
- * anywhere in the tree. App code that needs the graph, auth, or the
+ * The folder hierarchy lives in rowboat (see
+ * `src/schema/folder.ts`, `src/lib/rowboat.tsx`). App code that needs the graph, auth, or the
  * provider imports it from here rather than reaching into `@jbroll/rowboat-*` /
  * `@jbroll/rowboat-auth-betterauth-react` directly, so a future rename/replacement touches
  * this one module, not the tree.

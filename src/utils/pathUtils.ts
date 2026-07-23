@@ -1,6 +1,6 @@
 /**
  * Path manipulation utilities for folder and item hierarchy
- * These functions work with path strings only - no UI, no Jazz objects
+ * These functions work with path strings only - no UI, no graph objects
  */
 
 /**
@@ -17,9 +17,8 @@ export interface PathUpdateResult {
 }
 
 /**
- * Extracts the parent path from a full path
- * @example getParentPath("stores\x01wegmans") => "stores"
- * @example getParentPath("stores") => undefined
+ * Extracts the parent path from a full path.
+ * "stores\x01wegmans" -> "stores"; "stores" -> undefined.
  */
 export function getParentPath(fullPath: string): string | undefined {
   const lastSlashIndex = fullPath.lastIndexOf(PATH_SEPARATOR);
@@ -27,9 +26,8 @@ export function getParentPath(fullPath: string): string | undefined {
 }
 
 /**
- * Extracts the name from a full path
- * @example getNameFromPath("stores\x01wegmans") => "wegmans"
- * @example getNameFromPath("stores") => "stores"
+ * Extracts the name from a full path.
+ * "stores\x01wegmans" -> "wegmans"; "stores" -> "stores".
  */
 export function getNameFromPath(fullPath: string): string {
   const lastSlashIndex = fullPath.lastIndexOf(PATH_SEPARATOR);
@@ -37,28 +35,24 @@ export function getNameFromPath(fullPath: string): string {
 }
 
 /**
- * Creates a child path by combining parent and child names
- * @example createChildPath("produce", "fruits") => "produce\x01fruits"
- * @example createChildPath(undefined, "produce") => "produce"
+ * Creates a child path by combining parent and child names.
+ * ("produce", "fruits") -> "produce\x01fruits"; (undefined, "produce") -> "produce".
  */
 export function createChildPath(parentPath: string | undefined, childName: string): string {
   return parentPath ? `${parentPath}${PATH_SEPARATOR}${childName}` : childName;
 }
 
 /**
- * Gets the depth level of a path (0-indexed)
- * @example getPathDepth("produce") => 0
- * @example getPathDepth("produce\x01fruits") => 1
- * @example getPathDepth("produce\x01fruits\x01apples") => 2
+ * Gets the depth level of a path (0-indexed).
+ * "produce" -> 0; "produce\x01fruits" -> 1; "produce\x01fruits\x01apples" -> 2.
  */
 export function getPathDepth(path: string): number {
   return path.split(PATH_SEPARATOR).length - 1;
 }
 
 /**
- * Checks if one path is a descendant of another
- * @example isDescendantPath("produce\x01fruits\x01apples", "produce") => true
- * @example isDescendantPath("produce", "produce\x01fruits") => false
+ * Checks if one path is a descendant of another.
+ * ("produce\x01fruits\x01apples", "produce") -> true; ("produce", "produce\x01fruits") -> false.
  */
 export function isDescendantPath(descendantPath: string, ancestorPath: string): boolean {
   return descendantPath.startsWith(`${ancestorPath}${PATH_SEPARATOR}`);

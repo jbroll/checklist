@@ -9,7 +9,7 @@
  * are un-skipped.
  *
  * One test stays `test.skip`: "should show default Quick Errands list for new users" — that was
- * Jazz account-migration seeding with no rowboat equivalent; new anonymous sessions start with an
+ * account-migration seeding with no rowboat equivalent; new anonymous sessions start with an
  * empty tree.
  */
 
@@ -17,8 +17,8 @@ import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
   test('should show default Quick Errands list for new users', async ({ page }) => {
-    // A brand-new user is seeded the default "Quick Errands" list at account-init (jazz.tsx
-    // RowboatBridge → defaultData.seedDefaultFolders), the rowboat equivalent of the Jazz account
+    // A brand-new user is seeded the default "Quick Errands" list at account-init (rowboat.tsx
+    // RowboatBridge → defaultData.seedDefaultFolders), the rowboat equivalent of the former account
     // migration's Step 6. Seeded only when there's no pre-existing user_settings row.
     await page.goto('/');
 

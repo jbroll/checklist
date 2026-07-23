@@ -1,7 +1,7 @@
 /**
  * Unit tests for import validators (rowboat port, slice-2).
  *
- * `validateJsonData(g, data)` takes the rowboat graph `g` instead of a Jazz account;
+ * `validateJsonData(g, data)` takes the rowboat graph `g` instead of an account object;
  * conflict-detection reads `folderOps.childrenOf(g, null)` (top-level folders).
  */
 

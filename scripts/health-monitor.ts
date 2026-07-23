@@ -53,21 +53,27 @@ interface MonitorResult {
 }
 
 // Environment configurations
-const ENVIRONMENTS: Record<string, { appUrl: string; backendUrl: string; apiPrefix: string }> = {
+const ENVIRONMENTS: Record<
+  string,
+  { appUrl: string; backendUrl: string; apiPrefix: string; rowboatUrl: string }
+> = {
   prod: {
     appUrl: 'https://checklist-app.rkroll.com',
     backendUrl: 'https://checklist-app.rkroll.com',
     apiPrefix: '/api',
+    rowboatUrl: 'https://rowboat.rkroll.com',
   },
   test: {
     appUrl: 'https://checklist-test.rkroll.com',
     backendUrl: 'https://checklist-test.rkroll.com',
     apiPrefix: '/api',
+    rowboatUrl: 'https://rowboat.rkroll.com',
   },
   local: {
     appUrl: 'http://localhost:8765',
     backendUrl: 'http://localhost:3001',
     apiPrefix: '/api', // Backend routes still use /api/ prefix
+    rowboatUrl: 'http://localhost:3020',
   },
 };
 
@@ -298,10 +304,11 @@ async function runHealthChecks(env: string): Promise<MonitorResult> {
       expectedStatus: [200],
     }),
 
-    // 5. Jazz sync server - HTTP endpoint returns 404 (WebSocket only)
-    // We check that it responds at all (not timeout/connection refused)
-    checkEndpoint('Jazz Sync', 'https://cloud.jazz.tools', {
-      expectedStatus: [404], // 404 is expected - server only handles WebSocket
+    // 5. Hosted rowboat data plane - confirm the sync server is reachable at all
+    // (DNS + TLS + responding). We accept any non-5xx: the bare origin isn't a routed
+    // endpoint, so its exact status is not a contract we want to assert here.
+    checkEndpoint('Rowboat Sync', config.rowboatUrl, {
+      expectedStatus: [200, 401, 403, 404],
       timeout: 3000,
     }),
   ];

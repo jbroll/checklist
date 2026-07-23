@@ -2,7 +2,7 @@
  * Core session service tests (rowboat port, slice-2).
  *
  * Sessions live in a template-folder row's `sessions` json column; tests run against an
- * in-memory `makeGraph()` graph — no Jazz, no React. All timestamps are epoch-ms NUMBERS.
+ * in-memory `makeGraph()` graph — no sync, no React. All timestamps are epoch-ms NUMBERS.
  */
 
 import { describe, expect, it } from 'vitest';

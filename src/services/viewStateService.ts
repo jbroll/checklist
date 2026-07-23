@@ -1,11 +1,11 @@
 /**
  * ViewState Service
  *
- * Manages per-user UI state (expand/collapse preferences). Ported off Jazz (slice-2) to mirror
+ * Manages per-user UI state (expand/collapse preferences). Mirrors
  * `subscriptionService.ts`: every function is headless, taking the relational graph `g` as its
  * first argument. The state lives in the `user_settings` singleton row (one row whose `id` is the
  * user's id) in three json maps — `view_folder_expanded`, `view_template_category_expanded`,
- * `view_session_category_expanded`. No React, no Jazz account.
+ * `view_session_category_expanded`. No React, no account object.
  *
  * Reads use optional-chaining designed defaults (folders default collapsed, categories default
  * expanded). Writes go through `requireSettings`, which hard-errors if the singleton row is

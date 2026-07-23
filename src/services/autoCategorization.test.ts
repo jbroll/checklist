@@ -235,7 +235,7 @@ describe('Auto-categorization flow', () => {
 });
 
 describe('templateService.createItem and createCategory', () => {
-  // These tests would require mocking Jazz, but we can at least verify
+  // These tests would require mocking the rowboat graph, but we can at least verify
   // that the path generation is correct
 
   it('createChildPath with parentPath should include separator', () => {

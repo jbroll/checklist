@@ -114,14 +114,14 @@ export async function loginTestUser(page: Page, email: string, password: string)
     .last()
     .click();
   // EmailAuthDialog reloads the page on success; the authenticated app shell +
-  // Jazz account take a moment to settle. isSignedIn() polls for that state.
+  // account take a moment to settle. isSignedIn() polls for that state.
 }
 
 /**
  * True when the authenticated app shell is mounted: the "CheckList" header
  * heading is present AND the "Sign In" button is absent (it only renders when
  * unauthenticated). Polls with reload-retry to absorb the post-login reload and
- * the known Jazz cold-load race.
+ * the known cold-load race.
  */
 export async function isSignedIn(page: Page): Promise<boolean> {
   for (let attempt = 0; attempt < 4; attempt++) {

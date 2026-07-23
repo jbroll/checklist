@@ -300,7 +300,7 @@ Category 2`;
 test.describe('Subscription Limits', () => {
   // List-limit enforcement is wired (AppContainer's handleAddFolder/handleAddTemplateClick call
   // subscriptionService.canCreateList/isAtListLimit and open the Upgrade dialog on the limit), and
-  // the `user_settings` singleton is now provisioned at account-init (jazz.tsx RowboatBridge →
+  // the `user_settings` singleton is now provisioned at account-init (rowboat.tsx RowboatBridge →
   // subscriptionService.ensureUserSettings), so /billing/success's syncSubscriptionFromBackend has
   // a row to update — the free tier flows through and the upgrade dialog shows real tier info.
   test('should show upgrade dialog when list limit is reached', async ({ page }) => {
@@ -502,12 +502,12 @@ test.describe('Authentication Errors', () => {
 // ============================================================================
 
 test.describe('Data Sync Errors', () => {
-  test('should handle Jazz sync connection issues', async ({ page }) => {
-    // Monitor console for Jazz sync errors
+  test('should handle rowboat sync connection issues', async ({ page }) => {
+    // Monitor console for rowboat sync errors
     const consoleLogs: string[] = [];
     page.on('console', (msg) => {
       const text = msg.text();
-      if (text.includes('[Jazz]') || text.includes('sync') || text.includes('WebSocket')) {
+      if (text.includes('[rowboat]') || text.includes('sync')) {
         consoleLogs.push(text);
       }
     });

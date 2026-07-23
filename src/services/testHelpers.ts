@@ -12,7 +12,7 @@
  *
  * Folder groups: the real app mints an `owner_group_id` via the backend (POST
  * `/api/folders/group`, auth-only). The `/test` page runs on the ANONYMOUS identity (no sync —
- * see `src/lib/jazz.tsx`), so seeded folders get a synthesized local group id. That is correct
+ * see `src/lib/rowboat.tsx`), so seeded folders get a synthesized local group id. That is correct
  * for local-only UI assertions (the anonymous identity never pushes to a server), NOT a
  * fallback papering over a real mint failure.
  */

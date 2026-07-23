@@ -85,8 +85,8 @@ export async function assertFolderVisible(page: Page, folderName: string): Promi
 }
 
 /**
- * Assert a folder appears in the tree, reloading between polls to absorb Jazz
- * cold-load / adoption sync lag (a freshly adopted CoValue can take a few seconds
+ * Assert a folder appears in the tree, reloading between polls to absorb
+ * cold-load / adoption sync lag (a freshly adopted row can take a few seconds
  * to materialize and the cached tree won't repaint without a reload).
  */
 export async function assertFolderVisibleWithReload(

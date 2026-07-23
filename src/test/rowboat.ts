@@ -1,7 +1,7 @@
 /**
- * rowboat test harness — in-memory graph + a `@/jazz` stand-in for component tests.
+ * rowboat test harness — in-memory graph + a `@/rowboat` stand-in for component tests.
  *
- * The real `@/jazz` (`src/lib/jazz.tsx`) reads its graph from a React context that
+ * The real `@/rowboat` (`src/lib/rowboat.tsx`) reads its graph from a React context that
  * `RowboatProvider` populates by wiring a live IndexedDB-backed `RowboatDb` and a
  * `syncWithServer` interval — none of which exist (or should run) under jsdom. Rather than
  * fake that whole stack, component tests that need the graph do:
@@ -139,7 +139,7 @@ export function makeGraph(seed?: Record<string, Row[]>): Graph {
 let activeGraph: Graph | null = null;
 
 /**
- * Read by the `@/jazz` mock's `useRowboat()`. Hard-errors if no test graph is active — a
+ * Read by the `@/rowboat` mock's `useRowboat()`. Hard-errors if no test graph is active — a
  * component reaching for the graph without `renderWithRowboat`/`setActiveGraph` first is a
  * test bug, not something to paper over with an empty graph (NO FALLBACKS).
  */
@@ -161,7 +161,7 @@ export interface RenderWithRowboatOptions {
 }
 
 /**
- * Render `ui` against a fresh in-memory graph. The test file must have mocked `@/jazz` with
+ * Render `ui` against a fresh in-memory graph. The test file must have mocked `@/rowboat` with
  * `rowboatJazzMock()` (see module doc) so the component's `useRowboat`/`useSelect` calls
  * resolve against this graph.
  */

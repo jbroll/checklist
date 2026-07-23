@@ -2,7 +2,7 @@
  * Batch selection tests (rowboat port, slice-2).
  *
  * Batch select, toggle-all, and invert-selection — over an in-memory `makeGraph()` graph
- * (no Jazz, no React). All timestamps are epoch-ms NUMBERS.
+ * (no sync, no React). All timestamps are epoch-ms NUMBERS.
  */
 
 import { describe, expect, it } from 'vitest';

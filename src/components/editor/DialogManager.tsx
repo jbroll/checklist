@@ -58,9 +58,9 @@ interface DialogManagerProps {
 /**
  * DialogManager - Centralizes all dialog rendering for AppContainer.
  *
- * Rowboat port: dialogs read the graph (`g`) themselves via `useRowboat()`/`useSelect()` (see
- * `ExportDialog`/`SessionExportDialog`/`ImportDialog`/`UpgradeDialog`) rather than being handed a
- * Jazz `Account`, so this component no longer takes (or threads through) an `account` prop.
+ * Dialogs read the graph (`g`) themselves via `useRowboat()`/`useSelect()` (see
+ * `ExportDialog`/`SessionExportDialog`/`ImportDialog`/`UpgradeDialog`) rather than being handed an
+ * account, so this component no longer takes (or threads through) an `account` prop.
  */
 export function DialogManager({
   dialogs,

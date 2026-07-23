@@ -4,7 +4,7 @@
  * GLOBAL settings live in the `user_settings` singleton row (`default_autocomplete_domain` /
  * `enable_auto_categorization`); PER-TEMPLATE settings live on the FOLDER row itself
  * (`autocomplete_domain` / `auto_categorize_enabled`). Tests run against an in-memory
- * `makeGraph()` graph — no Jazz, no React. The Jazz per-folder → global "inheritance" is gone: a
+ * `makeGraph()` graph — no sync, no React. The former per-folder → global "inheritance" is gone: a
  * folder's own column value IS the setting.
  */
 

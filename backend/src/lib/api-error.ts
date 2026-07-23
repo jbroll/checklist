@@ -1,6 +1,6 @@
 /**
  * Standardized API error responses for Express routes.
- * Vendored from @jbr-jazz/hierarchy-backend during the de-jazzing.
+ * Vendored from a previous shared backend package during the rowboat port.
  *
  * Generic over the response type so it stays compatible across @types/express versions.
  */

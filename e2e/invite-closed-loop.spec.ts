@@ -1,6 +1,6 @@
 /**
  * Real closed-loop invite E2E (two real authenticated accounts + real backend +
- * real Jazz). Organizer (test1, default storageState) generates real invites;
+ * real sync). Organizer (test1, default storageState) generates real invites;
  * the recipient (test2) and a third party (test3) exercise the accept page.
  *
  * Requires the auth-setup project (e2e/.auth/test*.json) + GreenMail mail infra.

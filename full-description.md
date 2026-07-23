@@ -17,4 +17,4 @@ Privacy:
 - Encrypted sync
 - Minimal data collection (email only)
 
-Built with Jazz.tools local-first technology for reliable offline sync across all your devices.
+Built with local-first technology for reliable offline sync across all your devices.
