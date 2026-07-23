@@ -367,9 +367,28 @@ pending invite on that group.
 Invite links are built from the subscriber's own frontend origin (`shareUrl` on `ShareRouteOpts`),
 never rowboat's.
 
-**Still broken until sub-project F:** account-merge's group link and account-deletion's group
-cleanup, both of which still drive the empty local group tables. `registerAuthTables` and those
-tables stay wired for them, so `cutover-cd` cannot merge to `main` yet.
+### Sub-project F — account cutover (landed)
+
+The last two local-group-table drivers moved to hosted rowboat, so `registerAuthTables` and the local
+`groups`/`group_members`/`group_inheritance` tables are **gone** — `cutover-cd` is mergeable to `main`.
+
+- **Account-merge** now runs `prepare`'s link and `finalize`'s grant through the same
+  `remoteGroupBackend` sharing uses (one instance, threaded into the merge routes via
+  `mountAuthRoutes(app, { groupBackend })`). The link needed a net-new rowboat primitive: a
+  `link`-two-existing-groups writer op + `POST /db/<id>/api/sync/groups/:childGroup/parents` +
+  `GroupBackend.link`. Each remote call is awaited **before** its local sync transaction (better-sqlite3
+  transactions can't contain `await`); both ops are idempotent so a retry after a failed local step
+  converges.
+- **Account-deletion is identity-only.** Post-cutover all data-plane access needs a CheckList JWT, so
+  deleting the better-auth identity revokes access outright (no user → no token → no author); the
+  caller's residual group memberships and owned groups are inert orphans left to deferred data-GC. The
+  route now makes **zero** group calls and the merge-component survivor bookkeeping is gone (inheritance
+  is group-id-keyed and outlives any one identity).
+- **Root groups are no longer provisioned locally.** rowboat lazily provisions a user's root group on
+  their first verified sync, so CheckList passes `provisionRootGroup: false` to `createIdentity` — the
+  better-auth `user.create.after` hook that used to write the local group tables is disabled.
+- `account_merge` (via `registerIdentityTables`) and `share_invites` (via `registerShareTables`) stay
+  local — they are CheckList identity state rowboat knows nothing about.
 
 ## Non-goals
 - Changing CheckList's login/branding (it stays CheckList's BetterAuth).
