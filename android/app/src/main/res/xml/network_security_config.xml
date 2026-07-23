@@ -10,7 +10,7 @@
     <!-- Certificate pinning for critical domains -->
     <domain-config>
         <domain includeSubdomains="true">checklist.rkroll.com</domain>
-        <domain includeSubdomains="true">cloud.jazz.tools</domain>
+        <domain includeSubdomains="true">rowboat.rkroll.com</domain>
         <domain includeSubdomains="true">api.stripe.com</domain>
         <trust-anchors>
             <certificates src="system" />

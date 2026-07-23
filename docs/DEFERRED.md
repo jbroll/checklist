@@ -112,11 +112,10 @@ Design preserved below.
   untyped `page` parameter at `e2e/error-handling.spec.ts:28`). Worth closing (add
   `scripts/**/*` to the backend `include`, and stop excluding `e2e/**/*` at the root, or give
   each its own `tsconfig.json`), but out of scope here.
-- **The committed Capacitor bundles under `android/` and `ios/` are stale build output** —
-  vendored chunks and source maps from an earlier frontend build are present in
-  `android/app/src/main/assets/public/`. These are build output, not source; they
-  regenerate from the current frontend via `npm run cap:sync`. No action needed
-  beyond a routine `cap:sync` before the next mobile release.
+- **Stale Capacitor web bundles on disk (not tracked in git)** — an earlier `cap sync` left
+  vendored chunks and source maps under `android/app/src/main/assets/public/`, which is
+  gitignored, so none of it is committed. It regenerates from the current frontend via
+  `npm run cap:sync` before the next mobile release.
 - **`knip.json`'s `better-auth` entry in `ignoreDependencies` has no home for its rationale** —
   `knip.json` is plain JSON and can't carry a comment. Recorded here: no source file imports
   `better-auth` directly, but the file:-linked `@jbroll/rowboat-auth-betterauth-react` package's
