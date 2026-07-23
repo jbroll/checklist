@@ -166,7 +166,7 @@ describe('utils', () => {
       });
     });
 
-    it('handles date string input (Jazz deserialization)', () => {
+    it('handles date string input (date-string deserialization)', () => {
       const dateString = '2024-06-15T14:30:00.000Z';
       const result = formatSessionDate(new Date(dateString), true);
       expect(result).toMatch(/^today @\d+:\d+ (am|pm)$/);
@@ -252,7 +252,7 @@ describe('utils', () => {
       expect(hasMultipleSessionsOnSameDay(session as any, sessions as any)).toBe(true);
     });
 
-    it('handles date string input (Jazz deserialization)', () => {
+    it('handles date string input (date-string deserialization)', () => {
       const session = { id: '1', createdAt: '2024-06-15T10:00:00.000Z' };
       const sessions = [session, { id: '2', createdAt: '2024-06-15T14:00:00.000Z' }];
       expect(hasMultipleSessionsOnSameDay(session as any, sessions as any)).toBe(true);

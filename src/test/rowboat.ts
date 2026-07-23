@@ -8,8 +8,8 @@
  *
  * ```ts
  * vi.mock('@/rowboat', async () => {
- *   const { rowboatJazzMock } = await import('@/test/rowboat');
- *   return rowboatJazzMock();
+ *   const { rowboatMock } = await import('@/test/rowboat');
+ *   return rowboatMock();
  * });
  * ```
  *
@@ -162,7 +162,7 @@ export interface RenderWithRowboatOptions {
 
 /**
  * Render `ui` against a fresh in-memory graph. The test file must have mocked `@/rowboat` with
- * `rowboatJazzMock()` (see module doc) so the component's `useRowboat`/`useSelect` calls
+ * `rowboatMock()` (see module doc) so the component's `useRowboat`/`useSelect` calls
  * resolve against this graph.
  */
 export function renderWithRowboat(
@@ -174,7 +174,7 @@ export function renderWithRowboat(
   return { graph, ...render(ui) };
 }
 
-export interface RowboatJazzMockOptions {
+export interface RowboatMockOptions {
   /** better-auth user id `useAuthor()`/`usePort().author` report; `null` for anonymous. */
   author?: string | null;
   mintGroup?: (parentGroupId?: string) => Promise<string>;
@@ -186,7 +186,7 @@ export interface RowboatJazzMockOptions {
  * `vi.mocked(usePort)`/`vi.mocked(useAuthor)` after importing, or pass `options` when the
  * default isn't suitable for a whole file.
  */
-export function rowboatJazzMock(options: RowboatJazzMockOptions = {}) {
+export function rowboatMock(options: RowboatMockOptions = {}) {
   const author = options.author ?? 'test-author';
   const mintGroup = options.mintGroup ?? (async () => 'test-group');
 

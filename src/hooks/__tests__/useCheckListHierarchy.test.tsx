@@ -10,8 +10,8 @@ import { makeGraph, setActiveGraph } from '@/test/rowboat';
 import { useCheckListHierarchy } from '../useCheckListHierarchy';
 
 vi.mock('@/rowboat', async () => {
-  const { rowboatJazzMock } = await import('@/test/rowboat');
-  return rowboatJazzMock();
+  const { rowboatMock } = await import('@/test/rowboat');
+  return rowboatMock();
 });
 
 const CREATED_BY = 'user-1';

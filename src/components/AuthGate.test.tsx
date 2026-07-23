@@ -13,7 +13,7 @@ import { AuthGate } from './AuthGate';
 // Mock the rowboat waist (@/lib/rowboat.tsx re-exported through @/rowboat) — AuthGate only uses the
 // auth surface (useAuthor/useSession/signIn/signOut), not the graph.
 const mockSignInSocial = vi.fn();
-const mockJazzSignOut = vi.fn();
+const mockSignOut = vi.fn();
 let mockAuthor: string | null = null;
 let mockSessionPending = false;
 
@@ -21,7 +21,7 @@ vi.mock('@/rowboat', () => ({
   useAuthor: () => mockAuthor,
   useSession: () => ({ isPending: mockSessionPending }),
   signIn: { social: (...args: unknown[]) => mockSignInSocial(...args) },
-  signOut: () => mockJazzSignOut(),
+  signOut: () => mockSignOut(),
 }));
 
 const mockShowAlert = vi.fn();
@@ -104,7 +104,7 @@ describe('AuthGate', () => {
 
     // Reset all mocks
     vi.clearAllMocks();
-    mockJazzSignOut.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue(undefined);
     mockShowConfirm.mockResolvedValue(true);
     mockShowAlert.mockResolvedValue(undefined);
 
@@ -246,13 +246,13 @@ describe('AuthGate', () => {
 
       await user.click(screen.getByRole('button', { name: /sign out/i }));
 
-      expect(mockJazzSignOut).toHaveBeenCalled();
+      expect(mockSignOut).toHaveBeenCalled();
       expect(localStorage.getItem('user-signed-out')).toBe('true');
     });
 
     it('handles sign out errors gracefully', async () => {
       const user = userEvent.setup();
-      mockJazzSignOut.mockRejectedValue(new Error('Sign out failed'));
+      mockSignOut.mockRejectedValue(new Error('Sign out failed'));
       mockAuthor = 'user-1';
 
       render(<AuthGate />);
@@ -318,7 +318,7 @@ describe('AuthGate', () => {
       });
 
       await waitFor(() => {
-        expect(mockJazzSignOut).toHaveBeenCalled();
+        expect(mockSignOut).toHaveBeenCalled();
       });
       expect(mockShowAlert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -349,7 +349,7 @@ describe('AuthGate', () => {
       });
 
       // Should not sign out (nor show the "Account Deleted" alert) if the API call fails
-      expect(mockJazzSignOut).not.toHaveBeenCalled();
+      expect(mockSignOut).not.toHaveBeenCalled();
     });
   });
 

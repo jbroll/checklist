@@ -51,7 +51,6 @@ const createMockTemplate = (options: { withCategories?: boolean } = {}) => {
   }
 
   return {
-    $jazz: { id: 'template-1' },
     name: 'Test Template',
     items,
     sessions: [

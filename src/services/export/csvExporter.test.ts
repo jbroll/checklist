@@ -11,7 +11,6 @@ const createMockTemplate = (options: { datesAsStrings?: boolean } = {}) => {
   const date = datesAsStrings ? '2024-11-01T00:00:00.000Z' : new Date('2024-11-01T00:00:00.000Z');
 
   return {
-    $jazz: { id: 'template-1' },
     name: 'Test Template',
     items: [
       {
