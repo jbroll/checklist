@@ -32,6 +32,14 @@ fi
 
 DEPLOY_SH="../deploy.sh/deploy.sh"
 
+# Backend API port, set once per environment. Each backend deploy.conf takes EXPRESS_APP_PORT and
+# each frontend deploy.conf takes APACHE_PROXY_RULES from it, so the proxy cannot drift off the port.
+if [[ "$ENV" == "prod" ]]; then
+    export APP_PORT="${APP_PORT:-3001}"
+else
+    export APP_PORT="${APP_PORT:-3002}"
+fi
+
 echo "=== CheckList Full Deployment ==="
 echo "Environment: $ENV"
 echo "Mode: $MODE"

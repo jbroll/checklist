@@ -73,6 +73,16 @@ is required first — is nutrition in scope for CheckList?**
   gitignored, so none of it is committed. It regenerates from the current frontend via
   `npm run cap:sync` before the next mobile release.
 
+- **checklist-test.rkroll.com has no rowboat tenant.** The backend throws at boot without
+  `ROWBOAT_DATABASE_ID` and `ROWBOAT_URL`, and `backend/secrets-test.env` still carries the Jazz keys
+  instead. To deploy the test instance: add a `provision:test` script modeled on `provision:prod`
+  (name `checklist-test`, JWKS and issuer on `https://checklist-test.rkroll.com/api/auth`, state in
+  `rowboat-tenant.test.json`), run it against `https://rowboat.rkroll.com`, rewrite
+  `secrets-test.env` with the tenant values and `BIND_HOST=127.0.0.1`, then deploy the backend
+  (`backend/deploy-test.conf`, port 3002) and the frontend (`deploy-test.conf`) together. No
+  `rowboat-tenant.prod.json` exists locally either, so confirm prod is provisioned before the next
+  prod deploy.
+
 ## Standing notes & rationale
 
 - **rowboat has a live schema-migration mechanism, but CheckList doesn't use it yet.** rowboat

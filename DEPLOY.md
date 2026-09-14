@@ -86,17 +86,19 @@ sudo systemctl restart checklist-api
 
 ## Advanced: Deploy Frontend or Backend Separately
 
-If you need to deploy only one component, use the individual deploy configs:
+If you need to deploy only one component, use the individual deploy configs. The backend port
+comes from `APP_PORT`, which `deploy-full.sh` sets to 3001 for prod and 3002 for test; a direct
+deploy must set it, or the config refuses to load. Add `DEPLOY_SH_CONF=deploy-test.conf` for test.
 
 **Frontend only:**
 ```bash
-../deploy.sh/deploy.sh update
+APP_PORT=3001 ../deploy.sh/deploy.sh update
 ```
 
 **Backend only:**
 ```bash
 cd backend
-../../deploy.sh/deploy.sh update
+APP_PORT=3001 ../../deploy.sh/deploy.sh update
 cd ..
 ```
 
