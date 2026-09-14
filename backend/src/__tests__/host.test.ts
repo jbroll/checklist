@@ -12,6 +12,7 @@ const DATABASE_ID = 'db_test_tenant';
 function testConfig(): ServerConfig {
   return {
     port: 0,
+    host: '127.0.0.1',
     dbPath: ':memory:',
     frontendUrl: 'http://localhost:5173',
     baseUrl: 'http://localhost:5173',
@@ -63,6 +64,19 @@ function claimsOf(token: string): Record<string, unknown> {
     unknown
   >;
 }
+
+describe('listen address', () => {
+  it('binds the configured host', async () => {
+    server = await createServer(testConfig());
+    const http = server.start();
+    await new Promise((resolve) => http.once('listening', resolve));
+    try {
+      expect(http.address()).toMatchObject({ address: '127.0.0.1' });
+    } finally {
+      await new Promise((resolve) => http.close(resolve));
+    }
+  });
+});
 
 // The data-plane credential: rowboat's resolveAuthor verifies these against CheckList's JWKS, so
 // iss/aud must match exactly what `npm run provision:*` registered for this database. A mismatch

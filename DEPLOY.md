@@ -78,6 +78,7 @@ sudo nano /var/lib/checklist-api.env
 # - BETTER_AUTH_SECRET
 # - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
 # - STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+# - BIND_HOST=127.0.0.1 (Apache is the only client; unset binds every interface, `::`)
 
 # Save and restart service
 sudo systemctl restart checklist-api

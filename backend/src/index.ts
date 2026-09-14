@@ -28,6 +28,8 @@ interface SmtpConfig {
 
 export interface ServerConfig {
   port: number;
+  /** Listen address; `::` binds every interface. */
+  host: string;
   dbPath: string;
   frontendUrl: string;
   baseUrl: string;
@@ -172,8 +174,8 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
     db,
     signJWT: identity.signJWT,
     start: () =>
-      app.listen(config.port, () => {
-        console.log(`[server] listening on :${config.port}`);
+      app.listen(config.port, config.host, () => {
+        console.log(`[server] listening on ${config.host}:${config.port}`);
       }),
   };
 }
@@ -231,6 +233,7 @@ function configFromEnv(): ServerConfig {
 
   return {
     port: Number(process.env.PORT) || 3001,
+    host: process.env.BIND_HOST || '::',
     dbPath,
     frontendUrl,
     baseUrl: frontendUrl,
