@@ -282,7 +282,8 @@ create database with `compileSchema(shared/schema)` → register the JWT issuer)
 
 - `npm run provision:local` — provisions the local `dev:rowboat` (:3020). Run once; **re-run after a
   `.rowboat-dev/` reset** — the tool detects the wiped tenant and re-bootstraps automatically.
-- `npm run provision:prod` — provisions rowboat.rkroll.com (operator step; see the deploy runbook).
+- `npm run provision:prod` — provisions the checklist tenant on rowboat.rkroll.com (operator step; see the deploy runbook).
+- `npm run provision:test` — provisions the checklist-test tenant on rowboat.rkroll.com.
 
 Outputs land in a gitignored `rowboat-tenant.<env>.json` (holds the once-shown `managementKey` +
 `databaseId` + issuer). The printed `databaseId` / `issuer` / `audience` are what sub-project C wires
@@ -319,7 +320,9 @@ In dev nothing is set by hand: `dev:rowboat` boots the local server, provisions 
 both into `.env.tenant.local`; `dev:frontend` and `dev:backend` run behind `scripts/with-tenant-env.sh`,
 which blocks until that file exists and then sources it. For prod, `VITE_ROWBOAT_SYNC_BASE` is exported
 in `deploy.conf` (baked into the bundle by `APACHE_BUILD_CMD`) and `ROWBOAT_DATABASE_ID` goes in the
-gitignored `backend/secrets.env`.
+gitignored `backend/secrets.env`. Test: `deploy-test.conf` reads `databaseId` from
+`rowboat-tenant.test.json`; `ROWBOAT_DATABASE_ID` and `ROWBOAT_URL` go in `backend/secrets-test.env`.
+The management key is in `pass` at `services/rowboat-checklist-test`.
 
 Two things that are easy to get wrong and produce one blanket symptom each:
 
