@@ -86,9 +86,9 @@ is required first — is nutrition in scope for CheckList?**
 - **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
   exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
   `/api/billing/tiers`. Mount it and restore that check when billing ships.
-  `backend/tsconfig.build.json` also excludes `src/billing/**` from the production build, because
-  `stripe.ts` imports `../../../shared/billing.js` from outside `rootDir`; include it and resolve
-  that import when billing ships.
+  The production bundle (`backend/tsup.config.ts`) contains only code reachable from `src/index.ts`
+  and `src/migrate-auth.ts`, so billing ships once index.ts mounts it, and `stripe.ts`'s
+  `../../../shared/billing.js` import must bundle cleanly then.
 
 ## Standing notes & rationale
 
