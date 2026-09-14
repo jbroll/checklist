@@ -78,6 +78,17 @@ describe('listen address', () => {
   });
 });
 
+describe('health', () => {
+  it('reports ok for the deploy health check', async () => {
+    server = await createServer(testConfig());
+
+    const res = await request(server.app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'ok' });
+    expect(res.body.timestamp).toBeDefined();
+  });
+});
+
 // The data-plane credential: rowboat's resolveAuthor verifies these against CheckList's JWKS, so
 // iss/aud must match exactly what `npm run provision:*` registered for this database. A mismatch
 // surfaces only as a blanket 401 on every sync, which is why it is asserted here.

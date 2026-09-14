@@ -83,6 +83,10 @@ is required first — is nutrition in scope for CheckList?**
   `rowboat-tenant.prod.json` exists locally either, so confirm prod is provisioned before the next
   prod deploy.
 
+- **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
+  exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
+  `/api/billing/tiers`. Mount it and restore that check when billing ships.
+
 ## Standing notes & rationale
 
 - **rowboat has a live schema-migration mechanism, but CheckList doesn't use it yet.** rowboat

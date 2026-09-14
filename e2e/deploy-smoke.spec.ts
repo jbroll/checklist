@@ -61,21 +61,6 @@ test.describe('Infrastructure Health', () => {
     console.log(`  Auth session endpoint: ${response.status()}`);
   });
 
-  test('billing endpoints - tiers endpoint responds', async ({ request, baseURL }) => {
-    const apiUrl = getApiUrl(baseURL!);
-
-    // Billing tiers endpoint requires Origin header for CORS
-    const response = await request.get(`${apiUrl}/billing/tiers`, {
-      headers: { Origin: baseURL! },
-    });
-    expect(response.status()).toBe(200);
-
-    const data = await response.json();
-    expect(data.tiers).toBeDefined();
-    expect(Array.isArray(data.tiers)).toBe(true);
-    console.log(`  Billing endpoint: ${response.status()} (${data.tiers.length} tiers)`);
-  });
-
   test('static assets - CSS and JS load correctly', async ({ page }) => {
     const errors: string[] = [];
     const loadedAssets: string[] = [];

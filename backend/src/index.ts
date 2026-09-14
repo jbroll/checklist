@@ -160,6 +160,10 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
 
   app.use(express.json());
 
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   const provider = identity.provider;
   mountShareRoutes(app, db, {
     provider,
