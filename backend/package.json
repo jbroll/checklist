@@ -25,6 +25,9 @@
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
+  "allowScripts": {
+    "better-sqlite3": true
+  },
   "devDependencies": {
     "@better-auth/utils": "^0.3.1",
     "@noble/ciphers": "^2.2.0",
