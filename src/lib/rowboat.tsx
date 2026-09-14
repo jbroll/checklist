@@ -37,6 +37,8 @@ import { ensureUserSettings, syncSubscriptionFromBackend } from '@/services/subs
 
 const APP_NAME = 'checklist';
 const SYNC_INTERVAL_MS = 5000;
+// rowboat 400s a push/pull without appVersion; 0 means this app has no schema versioning yet.
+const APP_VERSION = 0;
 
 // `<rowboatUrl>/db/<databaseId>/api/sync` — written by provision:* (see scripts/dev-rowboat.sh in
 // dev, the deploy env in prod). syncWithServer appends /sync and /pull; the group mint is /groups.
@@ -150,6 +152,7 @@ function RowboatBridge({
         await syncWithServer({
           db,
           apiBase: SYNC_BASE,
+          appVersion: APP_VERSION,
           author,
           headers: { authorization: `Bearer ${await getSyncToken()}` },
         });
@@ -207,6 +210,7 @@ function RowboatBridge({
           await syncWithServer({
             db,
             apiBase: SYNC_BASE,
+            appVersion: APP_VERSION,
             author,
             headers: { authorization: `Bearer ${await getSyncToken()}` },
           });
