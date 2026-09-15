@@ -180,3 +180,92 @@ describe('planUser duplicate ids', () => {
     expect(plan.notCarried.duplicateSessionIds).toBe(1);
   });
 });
+
+describe('planUser legacy folder defaults', () => {
+  // Folders created before the Jazz app wrote type/sharingMode/createdBy, matching the prod
+  // export findings: no `type`, no `sharingMode`, no `createdBy`, but with items.
+  const legacyUser: ExportUser = {
+    userId: 'user-legacy',
+    accountId: 'co_zLegacy',
+    rootFolderIds: ['no-type-with-items', 'no-type-no-items', 'no-sharing-mode', 'explicit'],
+    folders: [
+      {
+        id: 'no-type-with-items',
+        parentId: null,
+        childIds: [],
+        ownerAccountId: 'co_zLegacy',
+        groupId: 'co_zLegacy',
+        members: [],
+        name: 'ToDo',
+        sharingMode: 'private',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        items: [],
+      },
+      {
+        id: 'no-type-no-items',
+        parentId: null,
+        childIds: [],
+        ownerAccountId: 'co_zLegacy',
+        groupId: 'co_zLegacy',
+        members: [],
+        name: 'Organizer',
+        sharingMode: 'private',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'no-sharing-mode',
+        parentId: null,
+        childIds: [],
+        ownerAccountId: 'co_zLegacy',
+        groupId: 'co_zLegacy',
+        members: [],
+        name: 'Untyped Sharing',
+        type: 'folder',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'explicit',
+        parentId: null,
+        childIds: [],
+        ownerAccountId: 'co_zLegacy',
+        groupId: 'co_zLegacy',
+        members: [],
+        name: 'Shopping',
+        type: 'template-folder',
+        sharingMode: 'shared',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        items: [],
+      },
+    ],
+    userSettings: null,
+    viewState: null,
+  };
+
+  const plan = planUser(legacyUser);
+  const byId = new Map(plan.folders.map((f) => [f.id, f]));
+
+  it('defaults a typeless folder with an items array to template-folder', () => {
+    expect(byId.get('no-type-with-items')?.type).toBe('template-folder');
+  });
+
+  it('defaults a typeless folder with no items key to folder', () => {
+    expect(byId.get('no-type-no-items')?.type).toBe('folder');
+  });
+
+  it('defaults a missing sharingMode to private', () => {
+    expect(byId.get('no-sharing-mode')?.sharing_mode).toBe('private');
+  });
+
+  it('keeps an explicit type and sharingMode unchanged', () => {
+    expect(byId.get('explicit')).toMatchObject({ type: 'template-folder', sharing_mode: 'shared' });
+  });
+
+  it('counts defaulted type and sharingMode per user', () => {
+    expect(plan.notCarried.defaultedType).toBe(2);
+    expect(plan.notCarried.defaultedSharingMode).toBe(1);
+  });
+});

@@ -31,6 +31,8 @@ export interface NotCarried {
   ownedUnderForeign: string[];
   duplicateItemIds: number;
   duplicateSessionIds: number;
+  defaultedType: number;
+  defaultedSharingMode: number;
 }
 
 export interface UserPlan {
@@ -103,10 +105,34 @@ function toSessionData(session: ExportSession): SessionData {
   };
 }
 
+/**
+ * Jazz-era default for a folder exported without `type`: a folder is a list ("template-folder")
+ * if it has an `items` array, even an empty one, and an organizational folder otherwise.
+ * Mirrors `isTemplateFolder` (`folder.type === 'template-folder' || folder.items !== undefined`)
+ * at d51a192:src/hooks/useCheckListHierarchy.ts:143.
+ */
+function resolveFolderType(folder: ExportFolder): { type: string; defaulted: boolean } {
+  if (folder.type !== undefined) return { type: folder.type, defaulted: false };
+  return { type: folder.items !== undefined ? 'template-folder' : 'folder', defaulted: true };
+}
+
+// Every Jazz-era folder-creation site defaults sharingMode to 'private' (e.g.
+// d51a192:src/hooks/useCheckListHierarchy.ts:118), so an export missing the field gets the same.
+function resolveSharingMode(folder: ExportFolder): { sharingMode: string; defaulted: boolean } {
+  if (folder.sharingMode !== undefined) return { sharingMode: folder.sharingMode, defaulted: false };
+  return { sharingMode: 'private', defaulted: true };
+}
+
 function toFolderRowDraft(
   folder: ExportFolder,
   userId: string,
-): { draft: FolderRowDraft; duplicateItemIds: number; duplicateSessionIds: number } {
+): {
+  draft: FolderRowDraft;
+  duplicateItemIds: number;
+  duplicateSessionIds: number;
+  defaultedType: boolean;
+  defaultedSharingMode: boolean;
+} {
   const items = [...(folder.items ?? [])].sort(
     (a, b) => a.sortOrder - b.sortOrder || Date.parse(a.createdAt) - Date.parse(b.createdAt),
   );
@@ -115,13 +141,15 @@ function toFolderRowDraft(
   );
   const items_ = toOrderedMap(items.map(toTemplateItem));
   const sessions_ = toOrderedMap(sessions.map(toSessionData));
+  const type = resolveFolderType(folder);
+  const sharingMode = resolveSharingMode(folder);
   return {
     draft: {
       id: folder.id,
       name: folder.name,
-      type: folder.type,
+      type: type.type,
       parent_id: folder.parentId,
-      sharing_mode: folder.sharingMode,
+      sharing_mode: sharingMode.sharingMode,
       archived: folder.archived ?? false,
       expanded: folder.expanded ?? false,
       created_by: userId,
@@ -136,6 +164,8 @@ function toFolderRowDraft(
     },
     duplicateItemIds: items_.duplicates,
     duplicateSessionIds: sessions_.duplicates,
+    defaultedType: type.defaulted,
+    defaultedSharingMode: sharingMode.defaulted,
   };
 }
 
@@ -198,6 +228,8 @@ export function planUser(user: ExportUser): UserPlan {
     ownedUnderForeign: [],
     duplicateItemIds: 0,
     duplicateSessionIds: 0,
+    defaultedType: 0,
+    defaultedSharingMode: 0,
   };
   let rootImportedChildren = 0;
 
@@ -233,6 +265,8 @@ export function planUser(user: ExportUser): UserPlan {
       folders.push(built.draft);
       notCarried.duplicateItemIds += built.duplicateItemIds;
       notCarried.duplicateSessionIds += built.duplicateSessionIds;
+      if (built.defaultedType) notCarried.defaultedType += 1;
+      if (built.defaultedSharingMode) notCarried.defaultedSharingMode += 1;
       if (folder.archivedAt !== undefined) notCarried.archivedAt.push(id);
       const childCount = walkOwned(folder.childIds);
       if (childCount >= 2) notCarried.siblingOrderParents += 1;

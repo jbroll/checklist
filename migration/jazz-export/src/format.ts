@@ -47,12 +47,14 @@ export interface ExportFolder {
   groupId: string;
   members: ExportMember[]; // direct members of the folder's group, not those inherited from parent groups
   name: string;
-  type: 'folder' | 'template-folder';
-  sharingMode: 'private' | 'shared' | 'public';
+  // Folders created before the Jazz app wrote these fields have none of the three: the
+  // importer applies the Jazz-era isTemplateFolder/sharingMode defaults for them.
+  type?: 'folder' | 'template-folder';
+  sharingMode?: 'private' | 'shared' | 'public';
   expanded?: boolean;
   archived?: boolean;
   archivedAt?: string;
-  createdBy: string;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
   items?: ExportItem[];

@@ -127,7 +127,7 @@ async function cmdLists(args: Record<string, string | boolean>): Promise<number>
       );
       console.log(`${id} manifest folders=${entry.folders} items=${entry.items} sessions=${entry.sessions}`);
       console.log(
-        `${id} not-carried sibling-order-parents=${nc.siblingOrderParents} archivedAt=${nc.archivedAt.length} foreign-folders=${foreign.notCarried.length} carried-as-share=${foreign.carriedAsShare.length} owned-under-foreign=${nc.ownedUnderForeign.length} duplicate-item-ids=${nc.duplicateItemIds} duplicate-session-ids=${nc.duplicateSessionIds}`,
+        `${id} not-carried sibling-order-parents=${nc.siblingOrderParents} archivedAt=${nc.archivedAt.length} foreign-folders=${foreign.notCarried.length} carried-as-share=${foreign.carriedAsShare.length} owned-under-foreign=${nc.ownedUnderForeign.length} duplicate-item-ids=${nc.duplicateItemIds} duplicate-session-ids=${nc.duplicateSessionIds} defaulted-type=${nc.defaultedType} defaulted-sharing-mode=${nc.defaultedSharingMode}`,
       );
 
       const matches =

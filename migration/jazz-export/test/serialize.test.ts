@@ -58,6 +58,20 @@ describe('serializeFolder', () => {
     expect(Object.keys(out).sort()).toEqual(['childIds', 'createdAt', 'createdBy', 'groupId', 'id', 'members', 'name', 'ownerAccountId', 'parentId', 'sharingMode', 'type', 'updatedAt'].sort());
     expect(out.childIds).toEqual(['c1', 'c2']);
   });
+
+  it('omits type, sharingMode and createdBy for a folder created before those fields existed', () => {
+    const legacy: LoadedFolder = {
+      id: 'f3',
+      name: 'ToDo',
+      createdAt: d('2026-01-01T00:00:00.000Z'),
+      updatedAt: d('2026-01-01T00:00:00.000Z'),
+      items: [],
+    };
+    const out = serializeFolder(legacy, null, [], 'a', 'g', []);
+    expect(out).not.toHaveProperty('type');
+    expect(out).not.toHaveProperty('sharingMode');
+    expect(out).not.toHaveProperty('createdBy');
+  });
 });
 
 describe('countFolders', () => {

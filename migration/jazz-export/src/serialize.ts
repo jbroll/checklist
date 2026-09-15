@@ -50,12 +50,13 @@ export interface LoadedSession {
 export interface LoadedFolder {
   id: string;
   name: string;
-  type: 'folder' | 'template-folder';
-  sharingMode: 'private' | 'shared' | 'public';
+  // A pre-Jazz-app folder node lacks these; put() below omits them rather than write '' or undefined.
+  type?: 'folder' | 'template-folder';
+  sharingMode?: 'private' | 'shared' | 'public';
   expanded?: boolean;
   archived?: boolean;
   archivedAt?: Date;
-  createdBy: string;
+  createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
   items?: LoadedItem[];
@@ -161,12 +162,12 @@ export function serializeFolder(
     groupId,
     members,
     name: node.name,
-    type: node.type,
-    sharingMode: node.sharingMode,
-    createdBy: node.createdBy,
     createdAt: iso(node.createdAt, 'createdAt'),
     updatedAt: iso(node.updatedAt, 'updatedAt'),
   } as ExportFolder;
+  put(out, 'type', node.type);
+  put(out, 'sharingMode', node.sharingMode);
+  put(out, 'createdBy', node.createdBy);
   put(out, 'expanded', node.expanded);
   put(out, 'archived', node.archived);
   put(out, 'archivedAt', isoOpt(node.archivedAt, 'archivedAt'));
