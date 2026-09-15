@@ -3,7 +3,7 @@ import type { Account } from 'jazz-tools';
 import { createJazzTestAccount, setupJazzTestSync } from 'jazz-tools/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadTree } from '../src/load.js';
-import { FolderNode, ListsRoot, UserSettings, ViewState } from '../src/schema.js';
+import { FolderNode, ListsRoot, ReadOnlyAccount, UserSettings, ViewState } from '../src/schema.js';
 
 const now = new Date('2026-01-01T00:00:00.000Z');
 
@@ -103,6 +103,21 @@ describe('loadTree', () => {
     expect(out.userSettings).toEqual({ enableAutoCategorization: false });
     expect(out.viewState?.folderExpanded).toEqual({ [T.$jazz.id]: true });
     expect(out.accountId).toBe(me.$jazz.id);
+  });
+
+  it('ReadOnlyAccount login migration does not recreate a missing profile inbox', async () => {
+    const profile = me.$jazz.localNode.expectCoValueLoaded(me.$jazz.raw.get('profile')!).getCurrentContent() as unknown as {
+      get(key: string): unknown;
+      delete(key: string): void;
+    };
+    profile.delete('inbox');
+    expect(profile.get('inbox')).toBeUndefined();
+
+    await ReadOnlyAccount.fromRaw(me.$jazz.raw).applyMigration();
+    expect(profile.get('inbox')).toBeUndefined();
+
+    await (me.constructor as typeof Account).fromRaw(me.$jazz.raw).applyMigration();
+    expect(profile.get('inbox')).toBeDefined();
   });
 
   it('throws when the account has no root', async () => {

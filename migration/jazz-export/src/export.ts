@@ -3,11 +3,11 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import Database from 'better-sqlite3';
 import { parse } from 'dotenv';
-import type { Account } from 'jazz-tools';
 import { startWorker } from 'jazz-tools/worker';
 import { decryptCredentials } from './credentials.js';
 import type { Manifest, ManifestUser, UsersFile } from './format.js';
 import { loadTree } from './load.js';
+import { ReadOnlyAccount } from './schema.js';
 import { countFolders } from './serialize.js';
 
 const USAGE = 'Usage: npm run export -- --backup-dir <dir> --secrets <backend/secrets.env>';
@@ -80,14 +80,16 @@ async function main(): Promise<number> {
     }
     try {
       const creds = await decryptCredentials(encrypted, secret);
+      // Not the default Account: its applyMigration would create profile.inbox on a prod account.
       const started = await startWorker({
         accountID: creds.accountID,
         accountSecret: creds.accountSecret,
         syncServer,
         skipInboxLoad: true,
+        AccountSchema: ReadOnlyAccount,
       });
       try {
-        const exported = await loadTree(started.worker as unknown as Account, userId);
+        const exported = await loadTree(started.worker, userId);
         writePrivate(join(dir, `${userId}.json`), exported);
         users.push({ userId, accountId: exported.accountId, ...countFolders(exported.folders) });
       } finally {

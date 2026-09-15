@@ -25,6 +25,8 @@ npm install --legacy-peer-deps
 npm run export -- --backup-dir <dir> --secrets ../../backend/secrets.env
 ```
 
+The export logs in with an account class whose migration does nothing, so jazz-tools does not create a missing profile inbox. Logging in as an account can still rewrite its root's metadata (cojson stores the root reference as `trusting`), which is a no-op for accounts already used under jazz-tools 0.20.18.
+
 It prints one line per user, `<userId> folders=<n> items=<n> sessions=<n>`, then `failed=<n>` and one `<userId> <error>` line per failure, and exits 1 when any user failed.
 
 ## Import

@@ -1,7 +1,12 @@
-import { co, z } from 'jazz-tools';
+import { Account, co, z } from 'jazz-tools';
 
 // Copies of the Jazz-era schemas at d51a192 (src/schema/tree.ts, src/schema/index.ts).
-// No account schema and no migration: loading as a prod account must never write.
+// No app account schema and no migration: loading as a prod account must never write.
+
+// The base applyMigration creates profile.inbox when it is missing; this skips it on login.
+export class ReadOnlyAccount extends Account {
+  override async applyMigration(): Promise<void> {}
+}
 
 const itemSchema = z.object({
   id: z.string(),
