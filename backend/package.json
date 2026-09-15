@@ -8,6 +8,7 @@
     "start": "node dist/migrate-auth.js && node dist/index.js",
     "migrate-auth": "node dist/migrate-auth.js",
     "rotate": "tsx scripts/rotate.ts",
+    "import-jazz": "tsx scripts/import-jazz-backup.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

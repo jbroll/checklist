@@ -27,8 +27,7 @@
         "helmet",
         "nodemailer",
         "zod",
-        "tailwind-merge",
-        "@jbroll/rowboat-cli"
+        "tailwind-merge"
       ]
     }
   }

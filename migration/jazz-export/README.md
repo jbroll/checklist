@@ -34,9 +34,24 @@ It prints one line per user, `<userId> folders=<n> items=<n> sessions=<n>`, then
 From `backend/`:
 
 ```bash
-npx tsx scripts/import-jazz-backup.ts auth-db ...
-npx tsx scripts/import-jazz-backup.ts lists ...
+npx tsx scripts/import-jazz-backup.ts auth-db --backup <dir> --env <env file> --out <auth.db>
+npx tsx scripts/import-jazz-backup.ts lists   --backup <dir> --env <env file> --auth-db <copy of the installed auth.db>
 ```
+
+`--env` is a standalone env file for the target deploy with `BETTER_AUTH_SECRET`, `FRONTEND_URL`, `ROWBOAT_DATABASE_ID` and `ROWBOAT_URL`. `npm run import-jazz -- <step> ...` runs the same script.
+
+`auth-db` refuses an existing `--out`, writes it at mode 0600, and prints `users=<n> accounts=<n> verifications=<n> jwks=<keyId>`. Install that file as the backend's auth DB and start the backend, so rowboat can fetch its JWKS.
+
+`lists` signs each user's token from `--auth-db` without serving HTTP; pass a copy of the installed file. It refuses a manifest with failed exports. For each manifest user in order it mints a rowboat group per folder (parents first, a nested folder under its parent's group), writes the folders and the `user_settings` row as that user, then reads them back from a fresh replica and prints:
+
+```
+<userId> written folders=<n> items=<n> sessions=<n>
+<userId> read-back folders=<n> items=<n> sessions=<n> settings=<yes|no>
+<userId> manifest folders=<n> items=<n> sessions=<n>
+<userId> not-carried sibling-order-parents=<n> archivedAt=<n> foreign-folders=<n> owned-under-foreign=<n>
+```
+
+then `share-invites-not-carried=<n>`. Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
 
 ## Removal
 
