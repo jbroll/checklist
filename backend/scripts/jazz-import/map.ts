@@ -29,6 +29,8 @@ export interface NotCarried {
   archivedAt: string[];
   foreignFolders: string[];
   ownedUnderForeign: string[];
+  duplicateItemIds: number;
+  duplicateSessionIds: number;
 }
 
 export interface UserPlan {
@@ -39,15 +41,20 @@ export interface UserPlan {
   counts: { folders: number; items: number; sessions: number };
 }
 
-/** Build the rb.ordered keyed-map storage form, minting a fracKey per element in array order. */
-function toOrderedMap<T extends { id: string }>(items: T[]): OrderedMap<T> {
+/**
+ * Build the rb.ordered keyed-map storage form, minting a fracKey per element in array order.
+ * Returns the count of elements lost because a later element shared an earlier one's id.
+ */
+function toOrderedMap<T extends { id: string }>(items: T[]): { map: OrderedMap<T>; duplicates: number } {
   const map: OrderedMap<T> = {};
   let prev: string | undefined;
+  let duplicates = 0;
   for (const item of items) {
+    if (item.id in map) duplicates += 1;
     prev = fracKey.between(prev, undefined);
     map[item.id] = { ...item, __order: prev };
   }
-  return map;
+  return { map, duplicates };
 }
 
 function toTemplateItem(item: ExportItem): TemplateItem {
@@ -96,30 +103,39 @@ function toSessionData(session: ExportSession): SessionData {
   };
 }
 
-function toFolderRowDraft(folder: ExportFolder, userId: string): FolderRowDraft {
+function toFolderRowDraft(
+  folder: ExportFolder,
+  userId: string,
+): { draft: FolderRowDraft; duplicateItemIds: number; duplicateSessionIds: number } {
   const items = [...(folder.items ?? [])].sort(
     (a, b) => a.sortOrder - b.sortOrder || Date.parse(a.createdAt) - Date.parse(b.createdAt),
   );
   const sessions = [...(folder.sessions ?? [])].sort(
     (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
   );
+  const items_ = toOrderedMap(items.map(toTemplateItem));
+  const sessions_ = toOrderedMap(sessions.map(toSessionData));
   return {
-    id: folder.id,
-    name: folder.name,
-    type: folder.type,
-    parent_id: folder.parentId,
-    sharing_mode: folder.sharingMode,
-    archived: folder.archived ?? false,
-    expanded: folder.expanded ?? false,
-    created_by: userId,
-    created_at: Date.parse(folder.createdAt),
-    updated_at: Date.parse(folder.updatedAt),
-    items: toOrderedMap(items.map(toTemplateItem)),
-    sessions: toOrderedMap(sessions.map(toSessionData)),
-    default_items: folder.defaultItems ?? {},
-    show_zone_headings: folder.showZoneHeadings ?? false,
-    auto_categorize_enabled: folder.autoCategorizeEnabled ?? false,
-    autocomplete_domain: folder.autocompleteDomain ?? 'none',
+    draft: {
+      id: folder.id,
+      name: folder.name,
+      type: folder.type,
+      parent_id: folder.parentId,
+      sharing_mode: folder.sharingMode,
+      archived: folder.archived ?? false,
+      expanded: folder.expanded ?? false,
+      created_by: userId,
+      created_at: Date.parse(folder.createdAt),
+      updated_at: Date.parse(folder.updatedAt),
+      items: items_.map,
+      sessions: sessions_.map,
+      default_items: folder.defaultItems ?? {},
+      show_zone_headings: folder.showZoneHeadings ?? false,
+      auto_categorize_enabled: folder.autoCategorizeEnabled ?? false,
+      autocomplete_domain: folder.autocompleteDomain ?? 'none',
+    },
+    duplicateItemIds: items_.duplicates,
+    duplicateSessionIds: sessions_.duplicates,
   };
 }
 
@@ -180,6 +196,8 @@ export function planUser(user: ExportUser): UserPlan {
     archivedAt: [],
     foreignFolders: [],
     ownedUnderForeign: [],
+    duplicateItemIds: 0,
+    duplicateSessionIds: 0,
   };
   let rootImportedChildren = 0;
 
@@ -211,7 +229,10 @@ export function planUser(user: ExportUser): UserPlan {
         continue;
       }
       importedCount += 1;
-      folders.push(toFolderRowDraft(folder, user.userId));
+      const built = toFolderRowDraft(folder, user.userId);
+      folders.push(built.draft);
+      notCarried.duplicateItemIds += built.duplicateItemIds;
+      notCarried.duplicateSessionIds += built.duplicateSessionIds;
       if (folder.archivedAt !== undefined) notCarried.archivedAt.push(id);
       const childCount = walkOwned(folder.childIds);
       if (childCount >= 2) notCarried.siblingOrderParents += 1;

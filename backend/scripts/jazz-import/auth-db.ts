@@ -30,6 +30,11 @@ function insertRows(
     if (!row.id) {
       throw new Error(`${table} row missing id`);
     }
+    for (const key of Object.keys(row)) {
+      if (!destColumns.has(key) && !EXCLUDED_KEYS.has(key)) {
+        throw new Error(`users.json ${table} row has column ${key} the new auth DB lacks`);
+      }
+    }
     const keys = Object.keys(row).filter((k) => destColumns.has(k) && !EXCLUDED_KEYS.has(k));
     const columns = keys.join(', ');
     const placeholders = keys.map((k) => `@${k}`).join(', ');

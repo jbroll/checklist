@@ -92,4 +92,90 @@ describe('planUser', () => {
     expect(other.folders.map((f) => f.id)).toEqual(['S1']);
     expect(other.userSettings).toMatchObject({ id: 'user-other', enable_auto_categorization: true, view_folder_expanded: {} });
   });
+
+  it('reports 0 duplicate ids for the fixture user', () => {
+    expect(plan.notCarried.duplicateItemIds).toBe(0);
+    expect(plan.notCarried.duplicateSessionIds).toBe(0);
+  });
+});
+
+describe('planUser duplicate ids', () => {
+  const dupUser: ExportUser = {
+    userId: 'user-dup',
+    accountId: 'co_zDup',
+    rootFolderIds: ['T1'],
+    folders: [
+      {
+        id: 'T1',
+        parentId: null,
+        childIds: [],
+        ownerAccountId: 'co_zDup',
+        groupId: 'co_zDup',
+        name: 'Dup List',
+        type: 'template-folder',
+        sharingMode: 'private',
+        createdBy: 'co_zDup',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        items: [
+          {
+            id: 'item-dup',
+            name: 'First',
+            type: 'item',
+            path: '',
+            expanded: false,
+            sortOrder: 0,
+            archived: false,
+            defaultQuantity: '1',
+            createdAt: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'item-dup',
+            name: 'Second',
+            type: 'item',
+            path: '',
+            expanded: false,
+            sortOrder: 1,
+            archived: false,
+            defaultQuantity: '1',
+            createdAt: '2024-01-02T00:00:00.000Z',
+          },
+        ],
+        sessions: [
+          {
+            id: 'session-dup',
+            itemStates: {},
+            archived: false,
+            categoryExpanded: {},
+            viewMode: 'flat',
+            selectedCount: 0,
+            checkedCount: 0,
+            remainingCount: 0,
+            createdAt: '2024-02-01T00:00:00.000Z',
+            lastActivityAt: '2024-02-01T00:00:00.000Z',
+          },
+          {
+            id: 'session-dup',
+            itemStates: {},
+            archived: false,
+            categoryExpanded: {},
+            viewMode: 'flat',
+            selectedCount: 0,
+            checkedCount: 0,
+            remainingCount: 0,
+            createdAt: '2024-02-02T00:00:00.000Z',
+            lastActivityAt: '2024-02-02T00:00:00.000Z',
+          },
+        ],
+      },
+    ],
+    userSettings: null,
+    viewState: null,
+  };
+
+  it('counts elements lost to duplicate item and session ids within a folder', () => {
+    const plan = planUser(dupUser);
+    expect(plan.notCarried.duplicateItemIds).toBe(1);
+    expect(plan.notCarried.duplicateSessionIds).toBe(1);
+  });
 });

@@ -122,6 +122,35 @@ describe('buildAuthDb', () => {
     expect(result).toMatchObject({ users: 0, accounts: 0 });
   });
 
+  it('throws on a row with a column the new auth DB lacks, leaving no file behind', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'auth-db-'));
+    const envFile = writeEnv(dir);
+    const out = join(dir, 'imported.db');
+
+    const usersFile: UsersFile = {
+      user: [
+        {
+          id: 'u1',
+          name: 'Owner',
+          email: 'owner@example.com',
+          emailVerified: 0,
+          image: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          someJazzOnlyColumn: 'oops',
+        },
+      ],
+      account: [],
+      verification: [],
+    };
+    await expect(buildAuthDb(out, loadTarget(envFile, out), usersFile)).rejects.toThrow(
+      'users.json user row has column someJazzOnlyColumn the new auth DB lacks',
+    );
+    expect(existsSync(out)).toBe(false);
+    expect(existsSync(`${out}-wal`)).toBe(false);
+    expect(existsSync(`${out}-shm`)).toBe(false);
+  });
+
   it('rejects when the output path already exists', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'auth-db-'));
     const envFile = writeEnv(dir);
