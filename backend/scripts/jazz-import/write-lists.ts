@@ -15,26 +15,37 @@ export interface ReadBack {
   userSettings: boolean;
 }
 
-interface ImportArgs {
-  plan: UserPlan;
+export interface SessionTarget {
   syncBase: string;
   signJWT: (sub: string) => Promise<string>;
   workDir: string;
 }
 
+interface ImportArgs extends SessionTarget {
+  plan: UserPlan;
+}
+
+export interface ImportResult {
+  readBack: ReadBack;
+  groups: Map<string, string>; // folder id -> minted group id
+}
+
 const manifest = compileSchema(schema).manifest;
 
-async function openSession(
-  args: ImportArgs,
-  suffix: string,
-): Promise<{ session: DataSession; filename: string; token: string }> {
-  const token = await args.signJWT(args.plan.userId);
-  const filename = join(args.workDir, `${args.plan.userId}-${suffix}.db`);
+interface OpenSession {
+  session: DataSession;
+  filename: string;
+  token: string;
+}
+
+async function openSession(target: SessionTarget, userId: string, suffix: string): Promise<OpenSession> {
+  const token = await target.signJWT(userId);
+  const filename = join(target.workDir, `${userId}-${suffix}.db`);
   const session = await openDataSession({
     manifest,
     filename,
-    syncUrl: args.syncBase,
-    author: args.plan.userId,
+    syncUrl: target.syncBase,
+    author: userId,
     token,
     appVersion: 0,
   });
@@ -43,15 +54,15 @@ async function openSession(
 
 // DataSession.sync() does not expose onTiming, the only signal that a round finished, so the round
 // is run directly on the session's db.
-function completeSync(session: DataSession, args: ImportArgs, token: string, label: string): Promise<void> {
+function completeSync(target: SessionTarget, userId: string, open: OpenSession, label: string): Promise<void> {
   return syncUntilComplete({
-    label: `user ${args.plan.userId} ${label}`,
+    label: `user ${userId} ${label}`,
     runRound: (onComplete) =>
       syncWithServer({
-        db: session.db,
-        apiBase: args.syncBase,
-        author: args.plan.userId,
-        headers: { authorization: `Bearer ${token}` },
+        db: open.session.db,
+        apiBase: target.syncBase,
+        author: userId,
+        headers: { authorization: `Bearer ${open.token}` },
         appVersion: 0,
         onTiming: onComplete,
       }),
@@ -71,8 +82,9 @@ function countLiveElements(map: unknown): number {
     .length;
 }
 
-function removeReplica(filename: string): void {
-  for (const path of [filename, `${filename}-wal`, `${filename}-shm`]) {
+function closeAndRemove(open: OpenSession): void {
+  open.session.close();
+  for (const path of [open.filename, `${open.filename}-wal`, `${open.filename}-shm`]) {
     if (existsSync(path)) rmSync(path);
   }
 }
@@ -90,13 +102,13 @@ async function mintGroup(syncBase: string, token: string, parentGroup: string | 
   return groupId;
 }
 
-async function writeRows(args: ImportArgs): Promise<void> {
+async function writeRows(args: ImportArgs): Promise<Map<string, string>> {
   const { plan } = args;
-  const { session, filename, token } = await openSession(args, 'write');
+  const open = await openSession(args, plan.userId, 'write');
   try {
-    await completeSync(session, args, token, 'first sync');
-    const existingSettings = liveRows(session, 'user_settings').some((row) => row.id === plan.userId);
-    if (liveRows(session, 'folder').length > 0 || existingSettings) {
+    await completeSync(args, plan.userId, open, 'first sync');
+    const existingSettings = liveRows(open.session, 'user_settings').some((row) => row.id === plan.userId);
+    if (liveRows(open.session, 'folder').length > 0 || existingSettings) {
       throw new Error(`user ${plan.userId} already has rows in this tenant`);
     }
 
@@ -109,44 +121,53 @@ async function writeRows(args: ImportArgs): Promise<void> {
           throw new Error(`folder ${draft.id} has parent ${draft.parent_id} with no minted group`);
         }
       }
-      const groupId = await mintGroup(args.syncBase, token, parentGroup);
+      const groupId = await mintGroup(args.syncBase, open.token, parentGroup);
       groups.set(draft.id, groupId);
-      await session.db.create('folder', { ...draft, owner_group_id: groupId });
+      await open.session.db.create('folder', { ...draft, owner_group_id: groupId });
     }
 
-    await session.db.create('user_settings', plan.userSettings);
-    await completeSync(session, args, token, 'post-write sync');
+    await open.session.db.create('user_settings', plan.userSettings);
+    await completeSync(args, plan.userId, open, 'post-write sync');
     const [pendingCreates, pendingOps] = await Promise.all([
-      session.db.pendingCreateEntries(),
-      session.db.pendingOps(),
+      open.session.db.pendingCreateEntries(),
+      open.session.db.pendingOps(),
     ]);
     assertNothingPending(pendingCreates.length, pendingOps.length, `user ${plan.userId} post-write sync`);
+    return groups;
   } finally {
-    session.close();
-    removeReplica(filename);
+    closeAndRemove(open);
   }
 }
 
 async function readBack(args: ImportArgs): Promise<ReadBack> {
-  const { session, filename, token } = await openSession(args, 'verify');
+  const open = await openSession(args, args.plan.userId, 'verify');
   try {
-    await completeSync(session, args, token, 'read-back sync');
-    const folders = liveRows(session, 'folder');
+    await completeSync(args, args.plan.userId, open, 'read-back sync');
+    const folders = liveRows(open.session, 'folder');
     return {
       folders: folders.length,
       items: folders.reduce((sum, row) => sum + countLiveElements(row.items), 0),
       sessions: folders.reduce((sum, row) => sum + countLiveElements(row.sessions), 0),
-      userSettings: liveRows(session, 'user_settings').some((row) => row.id === args.plan.userId),
+      userSettings: liveRows(open.session, 'user_settings').some((row) => row.id === args.plan.userId),
     };
   } finally {
-    session.close();
-    removeReplica(filename);
+    closeAndRemove(open);
   }
 }
 
 // Writes one user's planned rows into the tenant as that user, then counts them from a fresh
 // replica. openSession signs a new token each time, so a slow write cannot expire the read-back.
-export async function importUserLists(args: ImportArgs): Promise<ReadBack> {
-  await writeRows(args);
-  return readBack(args);
+export async function importUserLists(args: ImportArgs): Promise<ImportResult> {
+  const groups = await writeRows(args);
+  return { readBack: await readBack(args), groups };
+}
+
+export async function visibleFolderIds(target: SessionTarget, userId: string): Promise<Set<string>> {
+  const open = await openSession(target, userId, 'shares');
+  try {
+    await completeSync(target, userId, open, 'shares sync');
+    return new Set(liveRows(open.session, 'folder').map((row) => String(row.id)));
+  } finally {
+    closeAndRemove(open);
+  }
 }

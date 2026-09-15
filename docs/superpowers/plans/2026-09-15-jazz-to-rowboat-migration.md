@@ -1086,12 +1086,14 @@ These steps touch prod (read-only), the test tenant (destructive) and the apps b
 ### Rehearsal 5: Import lists
 
 - [ ] `createServer` opens `--auth-db` read-write, so pass a copy: `cp ~/backups/checklist/2026-09-15/auth-test.db ~/backups/checklist/2026-09-15/auth-test-sign.db`, then `chmod 600` it.
-- [ ] `npx tsx scripts/import-jazz-backup.ts lists --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --auth-db ~/backups/checklist/2026-09-15/auth-test-sign.db` in `backend/`. Expected: exit 0; read-back equals written for all 3 users.
+- [ ] `npx tsx scripts/import-jazz-backup.ts lists --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --auth-db ~/backups/checklist/2026-09-15/auth-test-sign.db` in `backend/`. Expected: exit 0; read-back equals written for all 3 users. For the one accepted share: `LX7EFMws2IDxO7lZ0v4AHqUiczIQ7X9n shared-in folders=1 visible=1`, and that user's `not-carried` line shows `foreign-folders=0 carried-as-share=1`. Then `shares granted=1 non-user-members=<n> unmapped-roles=0 nested-without-parent=0`, where `non-user-members` counts server agent memberships.
 - [ ] If the import fails: Rehearsal 2 (reset the tenant), then `./deploy-full.sh test update` and the JWKS check from Rehearsal 4, then this step again. The auth DB does not need rebuilding — its signing key and users are unchanged. Note that the reset changes the `databaseId` the frontend bundle and backend env carry.
 
 ### Rehearsal 6: Verify
 
 - [ ] Read-back counts match written counts; manifest differences are explained by the not-carried lines.
 - [ ] Check the `not-carried` lines: `foreign-folders`, `owned-under-foreign`, `duplicate-item-ids` and `duplicate-session-ids` should all be 0. If any is not, stop and show the ids and counts to the user before accepting the rehearsal. Owned folders reachable only through someone else's shared folder are written by nobody under the current spec rule.
+- [ ] Every `shared-in` line has `visible` equal to `folders`, and `unmapped-roles` and `nested-without-parent` are 0. If not, show the `share-not-carried` lines to the user.
+- [ ] The recipient signs in and sees the shared template folder at the top level with the owner's items.
 - [ ] `npm run test:smoke:test` passes.
 - [ ] The user signs in on checklist-test with their prod account and compares lists with prod: nesting, notes, sessions, archived.

@@ -50,10 +50,30 @@ npx tsx scripts/import-jazz-backup.ts lists   --backup <dir> --env <env file> --
 <userId> written folders=<n> items=<n> sessions=<n>
 <userId> read-back folders=<n> items=<n> sessions=<n> settings=<yes|no>
 <userId> manifest folders=<n> items=<n> sessions=<n>
-<userId> not-carried sibling-order-parents=<n> archivedAt=<n> foreign-folders=<n> owned-under-foreign=<n> duplicate-item-ids=<n> duplicate-session-ids=<n>
+<userId> not-carried sibling-order-parents=<n> archivedAt=<n> foreign-folders=<n> carried-as-share=<n> owned-under-foreign=<n> duplicate-item-ids=<n> duplicate-session-ids=<n>
 ```
 
-then `share-invites-not-carried=<n>`. Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
+A folder owned by another account is written once, under its owner. In the owner's export, each member of that folder's group who is another migrated user becomes a share: after every user is written and read back, `lists` grants the recipient a role on the folder's rowboat group as the owner (`POST <sync base>/groups/<group>/members`), then syncs a fresh replica as each recipient and checks every granted folder is visible. `carried-as-share` counts this user's foreign folders carried that way. `foreign-folders` counts the rest, which this user loses.
+
+Jazz `reader`, `writer` and `admin` map to the rowboat roles of the same name. Not carried:
+
+- members with Jazz role `manager` or `writeOnly`, which have no rowboat equivalent
+- members that are not migrated users, such as the Jazz-era server agent
+- a share of a nested folder when the recipient gets none of its ancestors, since the app reaches a nested folder only through its parent
+- owned folders under someone else's folder (`owned-under-foreign`)
+- pending invites
+
+After the user lines it prints:
+
+```
+<recipientUserId> shared-in folders=<n> visible=<n>
+shares granted=<n> non-user-members=<n> unmapped-roles=<n> nested-without-parent=<n>
+share-not-carried folder=<id> role=<role>
+share-not-carried folder=<id> recipient=<userId> nested-without-parent
+share-invites-not-carried=<n>
+```
+
+Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a granted folder is not visible to its recipient, and stops with exit 1 when a grant fails. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
 
 ## Removal
 

@@ -18,7 +18,7 @@ In scope:
 Out of scope:
 
 - The prod cutover itself. It reuses both scripts and gets its own plan.
-- Collaborator shares and pending invites. They are reported, not migrated.
+- Pending invites. They are reported, not migrated.
 - Fixing the in-app JSON export; that is a separate backlog item.
 
 ## Facts the design rests on
@@ -138,11 +138,30 @@ Step B, lists (after the DB file is installed and the backend serves its JWKS). 
    `userSettings` and the three `viewState` maps.
 7. Sync, then pull back and compare counts with `manifest.json`.
 
+Step C, accepted collaborator shares (after every user is written and read back):
+
+1. The export records each folder group's direct members and their Jazz roles.
+2. For each folder written under its owner, every member who is another migrated user gets a grant.
+   Map Jazz `reader`, `writer` and `admin` to the rowboat roles of the same name (`DEFAULT_ROLES`).
+3. As the owner, `POST <sync base>/groups/<group>/members {account, role}` on the folder's minted
+   group, as rowboat's invite accept does.
+4. Per recipient, sync a fresh replica and check every granted folder id is visible.
+
+Not carried by step C, and reported:
+
+- Jazz `manager` and `writeOnly` members, which have no rowboat role
+- members who are not migrated users, such as the Jazz-era server agent
+- a share of a nested folder when the recipient gets no ancestor. rowboat would expose it, but the
+  app lists only top-level folders and reaches nested ones through their parent
+
+A granted folder's descendants become visible to the recipient through group inheritance.
+
 The script reports per user: counts written, counts read back, and anything not carried:
 
 - sibling folder order
 - `archivedAt`
-- folders owned by another account
+- folders owned by another account, split into those carried as a share and those not
+- owned folders under another account's folder
 - the share invite
 
 ## Rehearsal run on checklist-test
@@ -192,8 +211,11 @@ Jazz peer key.
   - a folder owned by another account
 - **Decryption.** A unit test round-trips `symmetricEncrypt` and `symmetricDecrypt` with a fixture
   secret.
+- **Shares.** `planShares` is unit-tested with inline exports covering reader, writer and admin
+  recipients, a non-user member, an unmapped role, a nested share without its parent, and members of
+  folders that are not written.
 - **Import end to end.** Run against the local dev rowboat with a fixture backup; assert read-back
-  counts.
+  counts and that the fixture's one share is granted and visible to its recipient.
 - **Export.** Verified by the rehearsal's manifest, since it needs real Jazz accounts.
 
 ## Risks
