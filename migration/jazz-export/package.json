@@ -1,0 +1,25 @@
+{
+  "name": "checklist-jazz-export",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "export": "tsx src/export.ts"
+  },
+  "dependencies": {
+    "better-auth": "1.5.6",
+    "better-sqlite3": "^12.4.1",
+    "dotenv": "^16.4.7",
+    "jazz-tools": "0.20.18"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.15"
+  },
+  "allowScripts": {
+    "better-sqlite3": true
+  }
+}
