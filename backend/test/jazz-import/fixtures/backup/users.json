@@ -1,0 +1,47 @@
+{
+  "user": [
+    {
+      "id": "user-owner",
+      "name": "Owner User",
+      "email": "owner@example.com",
+      "emailVerified": true,
+      "image": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "accountID": "co_zOwner",
+      "encryptedCredentials": "placeholder-encrypted-owner"
+    },
+    {
+      "id": "user-other",
+      "name": "Other User",
+      "email": "other@example.com",
+      "emailVerified": true,
+      "image": null,
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z",
+      "accountID": "co_zOther",
+      "encryptedCredentials": "placeholder-encrypted-other"
+    }
+  ],
+  "account": [
+    {
+      "id": "account-owner",
+      "accountId": "user-owner",
+      "providerId": "credential",
+      "userId": "user-owner",
+      "password": "placeholder-hash-owner",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "account-other",
+      "accountId": "user-other",
+      "providerId": "credential",
+      "userId": "user-other",
+      "password": "placeholder-hash-other",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    }
+  ],
+  "verification": []
+}

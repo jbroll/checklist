@@ -1,0 +1,22 @@
+{
+  "userId": "user-other",
+  "accountId": "co_zOther",
+  "rootFolderIds": ["S1"],
+  "folders": [
+    {
+      "id": "S1",
+      "parentId": null,
+      "childIds": [],
+      "ownerAccountId": "co_zOther",
+      "groupId": "co_zOther",
+      "name": "Shared With Me",
+      "type": "template-folder",
+      "sharingMode": "shared",
+      "createdBy": "co_zOther",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    }
+  ],
+  "userSettings": null,
+  "viewState": null
+}

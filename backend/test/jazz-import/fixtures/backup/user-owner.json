@@ -1,0 +1,176 @@
+{
+  "userId": "user-owner",
+  "accountId": "co_zOwner",
+  "rootFolderIds": ["F1", "S1"],
+  "folders": [
+    {
+      "id": "F1",
+      "parentId": null,
+      "childIds": ["T1", "F2"],
+      "ownerAccountId": "co_zOwner",
+      "groupId": "co_zOwner",
+      "name": "Groceries",
+      "type": "folder",
+      "sharingMode": "private",
+      "expanded": true,
+      "createdBy": "co_zOwner",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "T1",
+      "parentId": "F1",
+      "childIds": [],
+      "ownerAccountId": "co_zOwner",
+      "groupId": "co_zOwner",
+      "name": "Weekly List",
+      "type": "template-folder",
+      "sharingMode": "private",
+      "createdBy": "co_zOwner",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-05T00:00:00.000Z",
+      "items": [
+        {
+          "id": "item-c",
+          "name": "Paper towels",
+          "type": "item",
+          "path": "",
+          "expanded": false,
+          "sortOrder": 2,
+          "archived": true,
+          "defaultQuantity": "1",
+          "createdAt": "2024-01-03T00:00:00.000Z"
+        },
+        {
+          "id": "item-a",
+          "name": "Milk",
+          "type": "item",
+          "path": "",
+          "expanded": false,
+          "sortOrder": 0,
+          "archived": false,
+          "defaultQuantity": "1 gal",
+          "createdAt": "2024-01-01T00:00:00.000Z"
+        },
+        {
+          "id": "item-b",
+          "name": "Eggs",
+          "type": "item",
+          "path": "",
+          "expanded": false,
+          "sortOrder": 0,
+          "archived": false,
+          "defaultQuantity": "1 dozen",
+          "notes": "buy organic",
+          "createdAt": "2024-01-02T00:00:00.000Z"
+        }
+      ],
+      "sessions": [
+        {
+          "id": "session-new",
+          "itemStates": {
+            "item-b": {
+              "selected": false,
+              "checked": false
+            }
+          },
+          "archived": true,
+          "categoryExpanded": {},
+          "viewMode": "flat",
+          "selectedCount": 0,
+          "checkedCount": 0,
+          "remainingCount": 3,
+          "createdAt": "2024-02-02T00:00:00.000Z",
+          "lastActivityAt": "2024-02-02T00:00:00.000Z"
+        },
+        {
+          "id": "session-old",
+          "itemStates": {
+            "item-a": {
+              "selected": true,
+              "checked": true,
+              "selectedAt": "2024-02-01T01:00:00.000Z",
+              "checkedAt": "2024-02-01T02:00:00.000Z",
+              "notes": "extra ripe"
+            }
+          },
+          "archived": false,
+          "categoryExpanded": {},
+          "viewMode": "flat",
+          "selectedCount": 1,
+          "checkedCount": 1,
+          "remainingCount": 2,
+          "createdAt": "2024-02-01T00:00:00.000Z",
+          "lastActivityAt": "2024-02-01T02:00:00.000Z"
+        }
+      ],
+      "defaultItems": { "item-a": true },
+      "showZoneHeadings": true,
+      "autocompleteDomain": "grocery",
+      "autoCategorizeEnabled": true
+    },
+    {
+      "id": "F2",
+      "parentId": "F1",
+      "childIds": ["T2"],
+      "ownerAccountId": "co_zOwner",
+      "groupId": "co_zOwner",
+      "name": "Archived Stuff",
+      "type": "folder",
+      "sharingMode": "private",
+      "archived": true,
+      "archivedAt": "2024-03-01T00:00:00.000Z",
+      "createdBy": "co_zOwner",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-03-01T00:00:00.000Z"
+    },
+    {
+      "id": "T2",
+      "parentId": "F2",
+      "childIds": [],
+      "ownerAccountId": "co_zOwner",
+      "groupId": "co_zOwner",
+      "name": "Old List",
+      "type": "template-folder",
+      "sharingMode": "private",
+      "createdBy": "co_zOwner",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "S1",
+      "parentId": null,
+      "childIds": ["S2"],
+      "ownerAccountId": "co_zOther",
+      "groupId": "co_zOther",
+      "name": "Shared With Me",
+      "type": "template-folder",
+      "sharingMode": "shared",
+      "createdBy": "co_zOther",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "S2",
+      "parentId": "S1",
+      "childIds": [],
+      "ownerAccountId": "co_zOwner",
+      "groupId": "co_zOwner",
+      "name": "My Sub-list",
+      "type": "folder",
+      "sharingMode": "shared",
+      "createdBy": "co_zOwner",
+      "createdAt": "2024-01-16T00:00:00.000Z",
+      "updatedAt": "2024-01-16T00:00:00.000Z"
+    }
+  ],
+  "userSettings": {
+    "enableAutoCategorization": false,
+    "subscriptionTier": "plus"
+  },
+  "viewState": {
+    "folderExpanded": { "F1": true },
+    "templateCategoryExpanded": { "T1": { "c": true } },
+    "sessionCategoryExpanded": {}
+  }
+}

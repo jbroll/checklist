@@ -1,0 +1,9 @@
+{
+  "exportedAt": "2024-03-01T00:00:00.000Z",
+  "shareInvites": 1,
+  "users": [
+    { "userId": "user-owner", "accountId": "co_zOwner", "folders": 6, "items": 3, "sessions": 2 },
+    { "userId": "user-other", "accountId": "co_zOther", "folders": 1, "items": 0, "sessions": 0 }
+  ],
+  "failed": []
+}
