@@ -1057,12 +1057,13 @@ These steps touch prod (read-only), the test tenant (destructive) and the apps b
 
 ### Rehearsal 1: Export prod
 
+- [ ] `mkdir -p ~/backups/checklist`
 - [ ] `mkdir -m 700 ~/backups/checklist/2026-09-15`
 - [ ] On apps, back up the live DB to a temp file readable by the ssh user: `ssh apps 'sudo sqlite3 /var/lib/checklist-api-data/checklist-api/data/auth.db ".backup /tmp/checklist-auth-export.db" && sudo chown $USER /tmp/checklist-auth-export.db'`
 - [ ] `scp apps:/tmp/checklist-auth-export.db ~/backups/checklist/2026-09-15/auth.db`
 - [ ] `ssh apps 'rm /tmp/checklist-auth-export.db'`
 - [ ] `ssh apps 'sudo grep -E "^(JAZZ_PEER|JAZZ_API_KEY|VITE_JAZZ_API_KEY)=" /var/lib/checklist-api.env' > ~/backups/checklist/2026-09-15/jazz.env`, then `chmod 600` both files. If no key line exists there, look for `VITE_JAZZ_API_KEY` in the repo root `.env` and append it without printing.
-- [ ] `npm run export -- --backup-dir ~/backups/checklist/2026-09-15 --secrets ../../backend/secrets.env` in `migration/jazz-export/`. Expected: 3 users with counts, `failed=0`. Stop if any user failed.
+- [ ] `npm run export -- --backup-dir ~/backups/checklist/2026-09-15 --secrets ../../backend/secrets.env` in `migration/jazz-export/`. Expected: 3 users with counts, `failed=0`. Stop if any user failed. A re-run after a failure needs `manifest.json` moved aside first, because the export refuses to run while it exists.
 
 ### Rehearsal 2: Reset the test tenant (confirm with the user first)
 
@@ -1073,20 +1074,24 @@ These steps touch prod (read-only), the test tenant (destructive) and the apps b
 
 ### Rehearsal 3: Build the auth DB
 
-- [ ] `npx tsx scripts/import-jazz-backup.ts auth-db --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --out ~/backups/checklist/2026-09-15/auth-test.db` in `backend/`. Expected: `users=3 accounts=3`.
+- [ ] `npx tsx scripts/import-jazz-backup.ts auth-db --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --out ~/backups/checklist/2026-09-15/auth-test.db` in `backend/`. Expected: `users=3 accounts=3 verifications=<n> jwks=<keyId>`. Note the key id; Rehearsal 4 needs it.
 
 ### Rehearsal 4: Install on apps (confirm with the user first)
 
-- [ ] Stop `checklist-api-test`, move its `auth.db` aside as `auth.db.pre-rehearsal-2026-09-15`, copy `auth-test.db` into place owned `checklist:checklist` mode 600. Find the test service's `AUTH_DB_PATH` in `backend/deploy-test.conf` before moving anything.
+- [ ] Stop `checklist-api-test`, move its `auth.db` aside as `auth.db.pre-rehearsal-2026-09-15`, copy `auth-test.db` into place owned `checklist:checklist` mode 600. The path is `/var/lib/checklist-api-test-data/checklist-api-test/data/auth.db`; confirm it first with `ssh apps 'systemctl cat checklist-api-test'` before moving anything.
 - [ ] `./deploy-full.sh test update`.
 - [ ] `curl -s https://checklist-test.rkroll.com/api/auth/jwks` lists the key id printed in Rehearsal 3.
+- [ ] Nobody signs in on checklist-test until Rehearsal 5 exits 0. Sign-in creates a `user_settings` row, and the import then refuses that user.
 
 ### Rehearsal 5: Import lists
 
-- [ ] `npx tsx scripts/import-jazz-backup.ts lists --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --auth-db ~/backups/checklist/2026-09-15/auth-test.db` in `backend/`. Expected: exit 0; read-back equals written for all 3 users.
+- [ ] `createServer` opens `--auth-db` read-write, so pass a copy: `cp ~/backups/checklist/2026-09-15/auth-test.db ~/backups/checklist/2026-09-15/auth-test-sign.db`, then `chmod 600` it.
+- [ ] `npx tsx scripts/import-jazz-backup.ts lists --backup ~/backups/checklist/2026-09-15 --env secrets-test.env --auth-db ~/backups/checklist/2026-09-15/auth-test-sign.db` in `backend/`. Expected: exit 0; read-back equals written for all 3 users.
+- [ ] If the import fails: Rehearsal 2 (reset the tenant), then `./deploy-full.sh test update` and the JWKS check from Rehearsal 4, then this step again. The auth DB does not need rebuilding — its signing key and users are unchanged. Note that the reset changes the `databaseId` the frontend bundle and backend env carry.
 
 ### Rehearsal 6: Verify
 
 - [ ] Read-back counts match written counts; manifest differences are explained by the not-carried lines.
+- [ ] Check the `not-carried` lines: `foreign-folders`, `owned-under-foreign`, `duplicate-item-ids` and `duplicate-session-ids` should all be 0. If any is not, stop and show the ids and counts to the user before accepting the rehearsal. Owned folders reachable only through someone else's shared folder are written by nobody under the current spec rule.
 - [ ] `npm run test:smoke:test` passes.
 - [ ] The user signs in on checklist-test with their prod account and compares lists with prod: nesting, notes, sessions, archived.

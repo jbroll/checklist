@@ -2,7 +2,7 @@
 
 One-time migration of prod CheckList's Jazz-era users and lists into the rowboat-era backend, in two scripts:
 
-- **Export** (this package): reads a copy of the prod `auth.db`, decrypts each user's stored Jazz credentials with `BETTER_AUTH_SECRET`, logs in to Jazz Cloud as that account, and writes the account's folder tree to JSON. It only reads Jazz data.
+- **Export** (this package): reads a copy of the prod `auth.db`, decrypts each user's stored Jazz credentials with `BETTER_AUTH_SECRET`, logs in to Jazz Cloud as that account, and writes the account's folder tree to JSON. It writes no list data.
 - **Import** (`backend/scripts/import-jazz-backup.ts`): step `auth-db` builds the new auth database from `users.json`; step `lists` writes each user's folders into rowboat.
 
 ## Backup directory
@@ -48,11 +48,11 @@ npx tsx scripts/import-jazz-backup.ts lists   --backup <dir> --env <env file> --
 <userId> written folders=<n> items=<n> sessions=<n>
 <userId> read-back folders=<n> items=<n> sessions=<n> settings=<yes|no>
 <userId> manifest folders=<n> items=<n> sessions=<n>
-<userId> not-carried sibling-order-parents=<n> archivedAt=<n> foreign-folders=<n> owned-under-foreign=<n>
+<userId> not-carried sibling-order-parents=<n> archivedAt=<n> foreign-folders=<n> owned-under-foreign=<n> duplicate-item-ids=<n> duplicate-session-ids=<n>
 ```
 
 then `share-invites-not-carried=<n>`. Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
 
 ## Removal
 
-Delete this directory, `backend/scripts/import-jazz-backup.ts` and `backend/scripts/jazz-import/` after the prod cutover.
+Delete this directory, `backend/scripts/import-jazz-backup.ts` and `backend/scripts/jazz-import/` after the prod cutover. Also remove the `@jbroll/rowboat-cli` devDependency and the `import-jazz` script from `backend/package.json`.
