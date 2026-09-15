@@ -76,8 +76,9 @@ is required first — is nutrition in scope for CheckList?**
 - **Prod checklist-app still runs the Jazz-era backend** on `0.0.0.0:3001`, with no rowboat tenant
   (`deploy.conf` still carries `REPLACE_WITH_PROD_DATABASE_ID`). Before installing the rowboat-era
   backend there:
-  - back up existing Jazz users and their data, and migrate them to rowboat if possible (being
-    researched separately)
+  - back up existing Jazz users and their data, and migrate them to rowboat: a laptop-run export
+    (prod `auth.db` copy + each account's Jazz data → a JSON backup) and import (backup → fresh auth
+    DB + tenant rows), rehearsed first on checklist-test
   - run `npm run provision:prod`
   - replace `REPLACE_WITH_PROD_DATABASE_ID` in `deploy.conf`
   - set `ROWBOAT_DATABASE_ID` and `BIND_HOST=127.0.0.1` in `backend/secrets.env`
@@ -90,6 +91,20 @@ is required first — is nutrition in scope for CheckList?**
   `ARCHITECTURE.md` → Anonymous sessions & convergence and `useAnonClaim` in `src/lib/rowboat.tsx`),
   so every new device adds another copy. Needs a way to mark default seed content so it is not
   re-seeded or claimed on each new device login.
+
+- **The in-app JSON export loses data.** `src/services/export/types.ts` (format v2.0, unchanged
+  since the Jazz era) has no field for:
+  - item notes (`TemplateItem.notes`, `shared/schema.ts:29`) or per-session item notes
+    (`ItemState.notes`, `:40`)
+  - session ids (`SessionData.id`, `:46`), although `currentSessionId` refers to one
+  - folder nesting (`parent_id`, `:64`) or archived folders (`archived`, `:66`); import flattens
+    every entry into a top-level template folder (`src/services/import/jsonImporter.ts:4-8`)
+  - `default_items` (`:75`) and the per-folder `show_zone_headings`, `autocomplete_domain` and
+    `auto_categorize_enabled` settings
+  - the `user_settings` row
+
+  An export/import round trip is therefore not a backup. Extend the format and importer so a
+  round trip preserves everything in the schema.
 
 - **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
   exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
@@ -106,8 +121,8 @@ is required first — is nutrition in scope for CheckList?**
   control-plane** path. CheckList runs rowboat as an **embedded library**: the backend registers a
   single compiled schema at boot (`registerSyncTable`), so an *ongoing* schema change here still
   means a fresh `AUTH_DB_PATH` DB (see the Troubleshooting note in CLAUDE.md), NOT a live migration.
-  There is no production data to migrate, so the fresh-start / "delete existing data" path stands and
-  no legacy→rowboat migration will be built. Adopting rowboat's migration path (or its `movedFrom`
+  Prod's Jazz-era users and their data will be carried over once, by a one-time export/import (see
+  the prod item under Engineering), not by an in-place schema migration. Adopting rowboat's migration path (or its `movedFrom`
   DX for column renames) is a future option if CheckList ever needs to evolve a schema without
   discarding data.
 - **`knip.json`'s `better-auth` entry in `ignoreDependencies` has no home for its rationale** —
