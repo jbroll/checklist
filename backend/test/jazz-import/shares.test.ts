@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ExportFolder, ExportMember, ExportUser } from '../../../migration/jazz-export/src/format.js';
-import { planShares, splitForeignFolders } from '../../scripts/jazz-import/shares.js';
+import { planShares, shareReportLines, splitForeignFolders } from '../../scripts/jazz-import/shares.js';
 
 function folder(
   id: string,
@@ -81,14 +81,14 @@ describe('planShares', () => {
 
   it('counts members that are not migrated users without granting them', () => {
     expect(grantFor('Agent')).toEqual([]);
-    expect(plan.notCarried.nonUserMembers).toBe(1);
+    expect(plan.notCarried.nonUserMembers).toEqual([{ folderId: 'Agent', accountId: 'co_zAgent' }]);
   });
 
   it('reports roles with no rowboat equivalent instead of granting them', () => {
     expect(grantFor('Odd')).toEqual([]);
     expect(plan.notCarried.unmappedRoles).toEqual([
-      { folderId: 'Odd', role: 'writeOnly' },
-      { folderId: 'Odd', role: 'manager' },
+      { folderId: 'Odd', accountId: 'co_B', role: 'writeOnly' },
+      { folderId: 'Odd', accountId: 'co_C', role: 'manager' },
     ]);
   });
 
@@ -112,6 +112,23 @@ describe('planShares', () => {
     const stale = structuredClone(owner);
     delete (stale.folders[0] as Partial<ExportFolder>).members;
     expect(() => planShares([stale])).toThrow('folder Read has no members; re-run the export');
+  });
+});
+
+describe('shareReportLines', () => {
+  it('prints each grant with its role, counts admin grants and names every member not carried', () => {
+    expect(shareReportLines(planShares([owner, recipient, third]))).toEqual([
+      'share grant owner=user-a folder=Read recipient=user-b role=reader',
+      'share grant owner=user-a folder=Write recipient=user-b role=writer',
+      'share grant owner=user-a folder=Admin recipient=user-c role=admin',
+      'share grant owner=user-a folder=Shared recipient=user-c role=reader',
+      'share grant owner=user-a folder=SharedChild recipient=user-c role=writer',
+      'shares granted=5 admin-grants=1 non-user-members=1 unmapped-roles=2 nested-without-parent=1',
+      'share-not-carried folder=Agent member=co_zAgent reason=not-a-migrated-user',
+      'share-not-carried folder=Odd member=co_B role=writeOnly reason=unmapped-role',
+      'share-not-carried folder=Odd member=co_C role=manager reason=unmapped-role',
+      'share-not-carried folder=Nested recipient=user-b reason=nested-without-parent',
+    ]);
   });
 });
 

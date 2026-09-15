@@ -11,21 +11,22 @@ export interface ShareGrant {
 export interface SharePlan {
   grants: ShareGrant[];
   notCarried: {
-    nonUserMembers: number;
-    unmappedRoles: { folderId: string; role: string }[];
+    nonUserMembers: { folderId: string; accountId: string }[];
+    unmappedRoles: { folderId: string; accountId: string; role: string }[];
     nestedWithoutParent: { folderId: string; recipientUserId: string }[];
   };
 }
 
 // Jazz AccountRole -> rowboat DEFAULT_ROLES (reader < writer < admin). Jazz `manager` and
-// `writeOnly` have no rowboat equivalent and are reported instead of granted.
+// `writeOnly` have no rowboat equivalent and are reported instead of granted. A rowboat admin can
+// revoke or demote other admins, a Jazz admin could not, so admin grants are counted in the output.
 const ROWBOAT_ROLE: Record<string, string> = { reader: 'reader', writer: 'writer', admin: 'admin' };
 
 export function planShares(users: ExportUser[]): SharePlan {
   const userIdByAccount = new Map(users.map((u) => [u.accountId, u.userId]));
   const plan: SharePlan = {
     grants: [],
-    notCarried: { nonUserMembers: 0, unmappedRoles: [], nestedWithoutParent: [] },
+    notCarried: { nonUserMembers: [], unmappedRoles: [], nestedWithoutParent: [] },
   };
 
   for (const user of users) {
@@ -41,12 +42,12 @@ export function planShares(users: ExportUser[]): SharePlan {
         if (member.accountId === user.accountId) continue;
         const recipientUserId = userIdByAccount.get(member.accountId);
         if (recipientUserId === undefined) {
-          plan.notCarried.nonUserMembers += 1;
+          plan.notCarried.nonUserMembers.push({ folderId: id, accountId: member.accountId });
           continue;
         }
         const role = ROWBOAT_ROLE[member.role];
         if (role === undefined) {
-          plan.notCarried.unmappedRoles.push({ folderId: id, role: member.role });
+          plan.notCarried.unmappedRoles.push({ folderId: id, accountId: member.accountId, role: member.role });
           continue;
         }
         candidates.push({ ownerUserId: user.userId, folderId: id, recipientUserId, role });
@@ -67,6 +68,26 @@ export function planShares(users: ExportUser[]): SharePlan {
     }
   }
   return plan;
+}
+
+export function shareReportLines(plan: SharePlan): string[] {
+  const nc = plan.notCarried;
+  const adminGrants = plan.grants.filter((g) => g.role === 'admin').length;
+  return [
+    ...plan.grants.map(
+      (g) => `share grant owner=${g.ownerUserId} folder=${g.folderId} recipient=${g.recipientUserId} role=${g.role}`,
+    ),
+    `shares granted=${plan.grants.length} admin-grants=${adminGrants} non-user-members=${nc.nonUserMembers.length} unmapped-roles=${nc.unmappedRoles.length} nested-without-parent=${nc.nestedWithoutParent.length}`,
+    ...nc.nonUserMembers.map(
+      (m) => `share-not-carried folder=${m.folderId} member=${m.accountId} reason=not-a-migrated-user`,
+    ),
+    ...nc.unmappedRoles.map(
+      (u) => `share-not-carried folder=${u.folderId} member=${u.accountId} role=${u.role} reason=unmapped-role`,
+    ),
+    ...nc.nestedWithoutParent.map(
+      (n) => `share-not-carried folder=${n.folderId} recipient=${n.recipientUserId} reason=nested-without-parent`,
+    ),
+  ];
 }
 
 export function splitForeignFolders(

@@ -27,7 +27,7 @@ npm run export -- --backup-dir <dir> --secrets ../../backend/secrets.env
 
 The export logs in with an account class whose migration does nothing, so jazz-tools does not create a missing profile inbox. Logging in as an account can still rewrite its root's metadata (cojson stores the root reference as `trusting`), which is a no-op for accounts already used under jazz-tools 0.20.18.
 
-Each folder's `members` lists the accounts added directly to its group, from `getDirectMembers()`, with the role jazz-tools reports for them. Members a group gets through a parent group are not listed. Member accounts are not loaded.
+Each folder's `members` lists the accounts added directly to its group, from `getDirectMembers()`. The recorded role is the member's effective role: the highest of its direct role and any role inherited from a parent group (`cojson/src/coValues/group.ts:451-487`). Members a group gets through a parent group are not listed. Member accounts are not loaded.
 
 It prints one line per user, `<userId> folders=<n> items=<n> sessions=<n>`, then `failed=<n>` and one `<userId> <error>` line per failure, and exits 1 when any user failed.
 
@@ -67,11 +67,15 @@ After the user lines it prints:
 
 ```
 <recipientUserId> shared-in folders=<n> visible=<n>
-shares granted=<n> non-user-members=<n> unmapped-roles=<n> nested-without-parent=<n>
-share-not-carried folder=<id> role=<role>
-share-not-carried folder=<id> recipient=<userId> nested-without-parent
+share grant owner=<userId> folder=<id> recipient=<userId> role=<role>
+shares granted=<n> admin-grants=<n> non-user-members=<n> unmapped-roles=<n> nested-without-parent=<n>
+share-not-carried folder=<id> member=<accountId> reason=not-a-migrated-user
+share-not-carried folder=<id> member=<accountId> role=<role> reason=unmapped-role
+share-not-carried folder=<id> recipient=<userId> reason=nested-without-parent
 share-invites-not-carried=<n>
 ```
+
+A rowboat `admin` can revoke or demote any other admin of the group, including the owner, which a Jazz admin could not do. Check every `role=admin` grant before accepting an import.
 
 Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a granted folder is not visible to its recipient, and stops with exit 1 when a grant fails. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
 

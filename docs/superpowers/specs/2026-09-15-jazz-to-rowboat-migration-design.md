@@ -146,6 +146,8 @@ Step C, accepted collaborator shares (after every user is written and read back)
 3. As the owner, `POST <sync base>/groups/<group>/members {account, role}` on the folder's minted
    group, as rowboat's invite accept does.
 4. Per recipient, sync a fresh replica and check every granted folder id is visible.
+5. Print each grant with its role and count admin grants. A rowboat admin can revoke or demote the
+   owner, which a Jazz admin could not, so admin grants are shown to the user before acceptance.
 
 Not carried by step C, and reported:
 

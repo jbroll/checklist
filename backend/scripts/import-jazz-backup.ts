@@ -17,7 +17,7 @@ import { createServer } from '../src/index.js';
 import { buildAuthDb } from './jazz-import/auth-db.js';
 import { grantShares } from './jazz-import/grant-shares.js';
 import { planUser } from './jazz-import/map.js';
-import { planShares, type SharePlan, splitForeignFolders } from './jazz-import/shares.js';
+import { planShares, type SharePlan, shareReportLines, splitForeignFolders } from './jazz-import/shares.js';
 import { loadTarget } from './jazz-import/target-config.js';
 import { importUserLists } from './jazz-import/write-lists.js';
 
@@ -70,17 +70,6 @@ async function cmdAuthDb(args: Record<string, string | boolean>): Promise<void> 
   console.log(
     `users=${result.users} accounts=${result.accounts} verifications=${result.verifications} jwks=${result.jwksKeyId}`,
   );
-}
-
-function printShareSummary(plan: SharePlan): void {
-  const nc = plan.notCarried;
-  console.log(
-    `shares granted=${plan.grants.length} non-user-members=${nc.nonUserMembers} unmapped-roles=${nc.unmappedRoles.length} nested-without-parent=${nc.nestedWithoutParent.length}`,
-  );
-  for (const u of nc.unmappedRoles) console.log(`share-not-carried folder=${u.folderId} role=${u.role}`);
-  for (const n of nc.nestedWithoutParent) {
-    console.log(`share-not-carried folder=${n.folderId} recipient=${n.recipientUserId} nested-without-parent`);
-  }
 }
 
 async function cmdLists(args: Record<string, string | boolean>): Promise<number> {
@@ -166,7 +155,7 @@ async function cmdLists(args: Record<string, string | boolean>): Promise<number>
         exitCode = 1;
       }
     }
-    printShareSummary(sharePlan);
+    for (const line of shareReportLines(sharePlan)) console.log(line);
     console.log(`share-invites-not-carried=${manifest.shareInvites}`);
     return exitCode;
   } finally {
