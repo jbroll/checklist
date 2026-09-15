@@ -14,19 +14,19 @@ const template: LoadedFolder = {
   createdAt: d('2026-01-01T00:00:00.000Z'),
   updatedAt: d('2026-01-02T00:00:00.000Z'),
   items: [
-    { id: 'i1', name: 'Milk', type: 'item', path: 'Milk', expanded: false, sortOrder: 1, archived: false, defaultQuantity: '1', notes: 'whole', createdAt: d('2026-01-01T00:00:01.000Z') },
+    { id: 'i1', name: 'Milk', type: 'item', path: 'Milk', expanded: false, sortOrder: 1, archived: false, defaultQuantity: '1', notes: 'whole', createdAt: '2026-01-01T00:00:01.000Z' },
   ],
   sessions: [
     {
       id: 's1',
-      itemStates: { i1: { selected: true, checked: true, selectedAt: d('2026-01-04T00:00:00.000Z'), checkedAt: d('2026-01-04T00:01:00.000Z'), notes: 'got 2' } },
+      itemStates: { i1: { selected: true, checked: true, selectedAt: '2026-01-04T00:00:00.000Z', checkedAt: Date.parse('2026-01-04T00:01:00.000Z'), notes: 'got 2' } },
       archived: true,
       categoryExpanded: {},
       viewMode: 'flat',
       selectedCount: 1,
       checkedCount: 1,
       remainingCount: 0,
-      createdAt: d('2026-01-04T00:00:00.000Z'),
+      createdAt: '2026-01-04T00:00:00.000Z',
       lastActivityAt: d('2026-01-04T00:01:00.000Z'),
     },
   ],
@@ -44,6 +44,12 @@ describe('serializeFolder', () => {
     expect(out.items?.[0]).toMatchObject({ notes: 'whole', createdAt: '2026-01-01T00:00:01.000Z' });
     expect(out.sessions?.[0].itemStates.i1).toEqual({ selected: true, checked: true, selectedAt: '2026-01-04T00:00:00.000Z', checkedAt: '2026-01-04T00:01:00.000Z', notes: 'got 2' });
     expect(out).toMatchObject({ parentId: 'parent1', ownerAccountId: 'co_zOwner', groupId: 'co_zGroup', sharingMode: 'shared' });
+  });
+
+  it('names the itemStates path of an unsupported date', () => {
+    const bad = structuredClone(template);
+    (bad.sessions![0].itemStates.i1 as { checkedAt: unknown }).checkedAt = null;
+    expect(() => serializeFolder(bad, null, [], 'a', 'g')).toThrow('folder f1 sessions[0].itemStates["i1"].checkedAt: unsupported date value of type object');
   });
 
   it('omits optionals that were never set', () => {

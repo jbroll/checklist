@@ -8,6 +8,10 @@ import type {
   ExportViewState,
 } from './format.js';
 
+// A z.date() inside a JSON field is stored by JSON.stringify and read back undecoded: an ISO
+// string from another node, the original Date only on the node that wrote it.
+export type JsonDate = Date | string | number;
+
 export interface LoadedItem {
   id: string;
   name: string;
@@ -18,14 +22,14 @@ export interface LoadedItem {
   archived: boolean;
   defaultQuantity: string;
   notes?: string;
-  createdAt: Date;
+  createdAt: JsonDate;
 }
 
 export interface LoadedItemState {
   selected: boolean;
   checked: boolean;
-  selectedAt?: Date;
-  checkedAt?: Date;
+  selectedAt?: JsonDate;
+  checkedAt?: JsonDate;
   notes?: string;
 }
 
@@ -38,8 +42,8 @@ export interface LoadedSession {
   selectedCount: number;
   checkedCount: number;
   remainingCount: number;
-  createdAt: Date;
-  lastActivityAt: Date;
+  createdAt: JsonDate;
+  lastActivityAt: JsonDate;
 }
 
 export interface LoadedFolder {
@@ -76,10 +80,22 @@ function put<T extends object, K extends keyof T>(out: T, key: K, value: T[K] | 
   if (value !== undefined) out[key] = value as T[K];
 }
 
-const iso = (d: Date) => d.toISOString();
-const isoOpt = (d: Date | undefined) => (d === undefined ? undefined : d.toISOString());
+type Iso = (value: unknown, path: string) => string;
+type IsoOpt = (value: unknown, path: string) => string | undefined;
 
-function serializeItem(item: LoadedItem): ExportItem {
+// Errors name the field and the value's type, never the value: it may be list content.
+function isoAt(folderId: string): { iso: Iso; isoOpt: IsoOpt } {
+  const iso: Iso = (value, path) => {
+    const date =
+      value instanceof Date ? value : typeof value === 'string' || typeof value === 'number' ? new Date(value) : undefined;
+    if (date === undefined) throw new Error(`folder ${folderId} ${path}: unsupported date value of type ${typeof value}`);
+    if (Number.isNaN(date.getTime())) throw new Error(`folder ${folderId} ${path}: invalid date value of type ${typeof value}`);
+    return date.toISOString();
+  };
+  return { iso, isoOpt: (value, path) => (value === undefined ? undefined : iso(value, path)) };
+}
+
+function serializeItem(item: LoadedItem, path: string, iso: Iso): ExportItem {
   const out = {
     id: item.id,
     name: item.name,
@@ -89,28 +105,31 @@ function serializeItem(item: LoadedItem): ExportItem {
     sortOrder: item.sortOrder,
     archived: item.archived,
     defaultQuantity: item.defaultQuantity,
-    createdAt: iso(item.createdAt),
+    createdAt: iso(item.createdAt, `${path}.createdAt`),
   } as ExportItem;
   put(out, 'notes', item.notes);
   return out;
 }
 
-function serializeItemState(state: LoadedItemState): ExportItemState {
+function serializeItemState(state: LoadedItemState, path: string, isoOpt: IsoOpt): ExportItemState {
   const out = {
     selected: state.selected,
     checked: state.checked,
   } as ExportItemState;
-  put(out, 'selectedAt', isoOpt(state.selectedAt));
-  put(out, 'checkedAt', isoOpt(state.checkedAt));
+  put(out, 'selectedAt', isoOpt(state.selectedAt, `${path}.selectedAt`));
+  put(out, 'checkedAt', isoOpt(state.checkedAt, `${path}.checkedAt`));
   put(out, 'notes', state.notes);
   return out;
 }
 
-function serializeSession(session: LoadedSession): ExportSession {
+function serializeSession(session: LoadedSession, path: string, { iso, isoOpt }: { iso: Iso; isoOpt: IsoOpt }): ExportSession {
   return {
     id: session.id,
     itemStates: Object.fromEntries(
-      Object.entries(session.itemStates).map(([id, state]) => [id, serializeItemState(state)]),
+      Object.entries(session.itemStates).map(([id, state]) => [
+        id,
+        serializeItemState(state, `${path}.itemStates[${JSON.stringify(id)}]`, isoOpt),
+      ]),
     ),
     archived: session.archived,
     categoryExpanded: { ...session.categoryExpanded },
@@ -118,8 +137,8 @@ function serializeSession(session: LoadedSession): ExportSession {
     selectedCount: session.selectedCount,
     checkedCount: session.checkedCount,
     remainingCount: session.remainingCount,
-    createdAt: iso(session.createdAt),
-    lastActivityAt: iso(session.lastActivityAt),
+    createdAt: iso(session.createdAt, `${path}.createdAt`),
+    lastActivityAt: iso(session.lastActivityAt, `${path}.lastActivityAt`),
   };
 }
 
@@ -130,6 +149,8 @@ export function serializeFolder(
   ownerAccountId: string,
   groupId: string,
 ): ExportFolder {
+  const dates = isoAt(node.id);
+  const { iso, isoOpt } = dates;
   const out = {
     id: node.id,
     parentId,
@@ -140,14 +161,14 @@ export function serializeFolder(
     type: node.type,
     sharingMode: node.sharingMode,
     createdBy: node.createdBy,
-    createdAt: iso(node.createdAt),
-    updatedAt: iso(node.updatedAt),
+    createdAt: iso(node.createdAt, 'createdAt'),
+    updatedAt: iso(node.updatedAt, 'updatedAt'),
   } as ExportFolder;
   put(out, 'expanded', node.expanded);
   put(out, 'archived', node.archived);
-  put(out, 'archivedAt', isoOpt(node.archivedAt));
-  put(out, 'items', node.items?.map(serializeItem));
-  put(out, 'sessions', node.sessions?.map(serializeSession));
+  put(out, 'archivedAt', isoOpt(node.archivedAt, 'archivedAt'));
+  put(out, 'items', node.items?.map((item, i) => serializeItem(item, `items[${i}]`, iso)));
+  put(out, 'sessions', node.sessions?.map((session, i) => serializeSession(session, `sessions[${i}]`, dates)));
   put(out, 'defaultItems', node.defaultItems ? { ...node.defaultItems } : undefined);
   put(out, 'showZoneHeadings', node.showZoneHeadings);
   put(out, 'autocompleteDomain', node.autocompleteDomain);
