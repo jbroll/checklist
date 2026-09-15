@@ -1,10 +1,12 @@
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { syncWithServer } from '@jbroll/rowboat-client';
 import { decodeRow } from '@jbroll/rowboat-cli/src/column-types.js';
 import { type DataSession, openDataSession } from '@jbroll/rowboat-cli/src/data-session.js';
 import { compileSchema } from '@jbroll/rowboat-schema';
 import { schema } from '../../../shared/schema.js';
 import type { UserPlan } from './map.js';
+import { assertNothingPending, syncUntilComplete } from './sync-round.js';
 
 export interface ReadBack {
   folders: number;
@@ -37,6 +39,23 @@ async function openSession(
     appVersion: 0,
   });
   return { session, filename, token };
+}
+
+// DataSession.sync() does not expose onTiming, the only signal that a round finished, so the round
+// is run directly on the session's db.
+function completeSync(session: DataSession, args: ImportArgs, token: string, label: string): Promise<void> {
+  return syncUntilComplete({
+    label: `user ${args.plan.userId} ${label}`,
+    runRound: (onComplete) =>
+      syncWithServer({
+        db: session.db,
+        apiBase: args.syncBase,
+        author: args.plan.userId,
+        headers: { authorization: `Bearer ${token}` },
+        appVersion: 0,
+        onTiming: onComplete,
+      }),
+  });
 }
 
 function liveRows(session: DataSession, table: string): Record<string, unknown>[] {
@@ -75,7 +94,7 @@ async function writeRows(args: ImportArgs): Promise<void> {
   const { plan } = args;
   const { session, filename, token } = await openSession(args, 'write');
   try {
-    await session.sync();
+    await completeSync(session, args, token, 'first sync');
     const existingSettings = liveRows(session, 'user_settings').some((row) => row.id === plan.userId);
     if (liveRows(session, 'folder').length > 0 || existingSettings) {
       throw new Error(`user ${plan.userId} already has rows in this tenant`);
@@ -96,7 +115,12 @@ async function writeRows(args: ImportArgs): Promise<void> {
     }
 
     await session.db.create('user_settings', plan.userSettings);
-    await session.sync();
+    await completeSync(session, args, token, 'post-write sync');
+    const [pendingCreates, pendingOps] = await Promise.all([
+      session.db.pendingCreateEntries(),
+      session.db.pendingOps(),
+    ]);
+    assertNothingPending(pendingCreates.length, pendingOps.length, `user ${plan.userId} post-write sync`);
   } finally {
     session.close();
     removeReplica(filename);
@@ -104,9 +128,9 @@ async function writeRows(args: ImportArgs): Promise<void> {
 }
 
 async function readBack(args: ImportArgs): Promise<ReadBack> {
-  const { session, filename } = await openSession(args, 'verify');
+  const { session, filename, token } = await openSession(args, 'verify');
   try {
-    await session.sync();
+    await completeSync(session, args, token, 'read-back sync');
     const folders = liveRows(session, 'folder');
     return {
       folders: folders.length,
