@@ -34,12 +34,18 @@ export interface ExportSession {
   lastActivityAt: string;
 }
 
+export interface ExportMember {
+  accountId: string;
+  role: string; // Jazz AccountRole: reader | writer | admin | manager | writeOnly
+}
+
 export interface ExportFolder {
   id: string;
   parentId: string | null; // null = in root.folders
   childIds: string[]; // Jazz order
   ownerAccountId: string;
   groupId: string;
+  members: ExportMember[]; // direct members of the folder's group, not those inherited from parent groups
   name: string;
   type: 'folder' | 'template-folder';
   sharingMode: 'private' | 'shared' | 'public';

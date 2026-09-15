@@ -9,6 +9,10 @@
       "childIds": [],
       "ownerAccountId": "co_zOther",
       "groupId": "co_zOther",
+      "members": [
+        { "accountId": "co_zOther", "role": "admin" },
+        { "accountId": "co_zOwner", "role": "writer" }
+      ],
       "name": "Shared With Me",
       "type": "template-folder",
       "sharingMode": "shared",

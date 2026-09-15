@@ -3,6 +3,7 @@ import type {
   ExportFolder,
   ExportItem,
   ExportItemState,
+  ExportMember,
   ExportSession,
   ExportUserSettings,
   ExportViewState,
@@ -148,6 +149,7 @@ export function serializeFolder(
   childIds: string[],
   ownerAccountId: string,
   groupId: string,
+  members: ExportMember[],
 ): ExportFolder {
   const dates = isoAt(node.id);
   const { iso, isoOpt } = dates;
@@ -157,6 +159,7 @@ export function serializeFolder(
     childIds,
     ownerAccountId,
     groupId,
+    members,
     name: node.name,
     type: node.type,
     sharingMode: node.sharingMode,

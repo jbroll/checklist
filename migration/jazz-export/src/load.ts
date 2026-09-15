@@ -1,4 +1,4 @@
-import type { Account } from 'jazz-tools';
+import type { Account, Group } from 'jazz-tools';
 import type { ExportFolder, ExportUser, ExportViewState } from './format.js';
 import { FolderNode, ListsRoot } from './schema.js';
 import { type LoadedFolder, type LoadedSettings, serializeFolder, serializeSettings, serializeViewState } from './serialize.js';
@@ -34,10 +34,15 @@ export async function loadTree(account: Account, userId: string): Promise<Export
 
     const ownerAccountId: string | undefined = node.$jazz.refs.owner?.id;
     if (!ownerAccountId) throw new Error(`folder ${id} has no owner ref`);
-    const groupId: string = node.$jazz.owner.$jazz.id;
+    const group: Group = node.$jazz.owner;
+    const groupId: string = group.$jazz.id;
     const childIds = refIds(node.children);
+    // getDirectMembers skips parent-group keys and never touches member.account, so no account loads.
+    const members = group.getDirectMembers().map((m) => ({ accountId: m.id, role: m.role }));
 
-    folders.push(serializeFolder({ ...(node as LoadedFolder), id }, parentId, childIds, ownerAccountId, groupId));
+    folders.push(
+      serializeFolder({ ...(node as LoadedFolder), id }, parentId, childIds, ownerAccountId, groupId, members),
+    );
     for (const childId of childIds) await walk(childId, id);
   }
 

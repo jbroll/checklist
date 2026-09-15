@@ -38,7 +38,7 @@ const template: LoadedFolder = {
 
 describe('serializeFolder', () => {
   it('converts dates to ISO and keeps notes, archivedAt and ownership', () => {
-    const out = serializeFolder(template, 'parent1', [], 'co_zOwner', 'co_zGroup');
+    const out = serializeFolder(template, 'parent1', [], 'co_zOwner', 'co_zGroup', [{ accountId: 'co_zOther', role: 'reader' }]);
     expect(out.createdAt).toBe('2026-01-01T00:00:00.000Z');
     expect(out.archivedAt).toBe('2026-01-03T00:00:00.000Z');
     expect(out.items?.[0]).toMatchObject({ notes: 'whole', createdAt: '2026-01-01T00:00:01.000Z' });
@@ -49,21 +49,21 @@ describe('serializeFolder', () => {
   it('names the itemStates path of an unsupported date', () => {
     const bad = structuredClone(template);
     (bad.sessions![0].itemStates.i1 as { checkedAt: unknown }).checkedAt = null;
-    expect(() => serializeFolder(bad, null, [], 'a', 'g')).toThrow('folder f1 sessions[0].itemStates["i1"].checkedAt: unsupported date value of type object');
+    expect(() => serializeFolder(bad, null, [], 'a', 'g', [])).toThrow('folder f1 sessions[0].itemStates["i1"].checkedAt: unsupported date value of type object');
   });
 
   it('omits optionals that were never set', () => {
     const bare: LoadedFolder = { id: 'f2', name: 'Box', type: 'folder', sharingMode: 'private', createdBy: 'a', createdAt: d('2026-01-01T00:00:00.000Z'), updatedAt: d('2026-01-01T00:00:00.000Z') };
-    const out = serializeFolder(bare, null, ['c1', 'c2'], 'a', 'g');
-    expect(Object.keys(out).sort()).toEqual(['childIds', 'createdAt', 'createdBy', 'groupId', 'id', 'name', 'ownerAccountId', 'parentId', 'sharingMode', 'type', 'updatedAt'].sort());
+    const out = serializeFolder(bare, null, ['c1', 'c2'], 'a', 'g', []);
+    expect(Object.keys(out).sort()).toEqual(['childIds', 'createdAt', 'createdBy', 'groupId', 'id', 'members', 'name', 'ownerAccountId', 'parentId', 'sharingMode', 'type', 'updatedAt'].sort());
     expect(out.childIds).toEqual(['c1', 'c2']);
   });
 });
 
 describe('countFolders', () => {
   it('sums items and sessions, treating missing lists as empty', () => {
-    const a = serializeFolder(template, null, [], 'a', 'g');
-    const b = serializeFolder({ id: 'f2', name: 'Box', type: 'folder', sharingMode: 'private', createdBy: 'a', createdAt: d('2026-01-01T00:00:00.000Z'), updatedAt: d('2026-01-01T00:00:00.000Z') }, null, [], 'a', 'g');
+    const a = serializeFolder(template, null, [], 'a', 'g', []);
+    const b = serializeFolder({ id: 'f2', name: 'Box', type: 'folder', sharingMode: 'private', createdBy: 'a', createdAt: d('2026-01-01T00:00:00.000Z'), updatedAt: d('2026-01-01T00:00:00.000Z') }, null, [], 'a', 'g', []);
     expect(countFolders([a, b])).toEqual({ folders: 2, items: 1, sessions: 1 });
   });
 });

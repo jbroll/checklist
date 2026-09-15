@@ -105,6 +105,35 @@ describe('loadTree', () => {
     expect(out.accountId).toBe(me.$jazz.id);
   });
 
+  it('records the direct members of each folder group with their roles', async () => {
+    const readGroup = Group.create({ owner: me });
+    readGroup.addMember(other, 'reader');
+    const R = folder(readGroup, me, 'R', 'template-folder');
+    const child = folder(Group.create({ owner: me }), me, 'Child', 'template-folder');
+    (child.$jazz.owner as Group).addMember(readGroup);
+    const writeGroup = Group.create({ owner: me });
+    writeGroup.addMember(other, 'writer');
+    const W = folder(writeGroup, me, 'W', 'folder', {
+      children: co.list(FolderNode).create([child], { owner: writeGroup }),
+    });
+    const root = ListsRoot.create({ folders: co.list(FolderNode).create([R, W], { owner: me }) }, { owner: me });
+    me.$jazz.set('root', root);
+
+    const out = await loadTree(me, 'user-1');
+    const membersOf = (id: string) =>
+      [...(out.folders.find((f) => f.id === id)?.members ?? [])].sort((a, b) => a.role.localeCompare(b.role));
+
+    expect(membersOf(R.$jazz.id)).toEqual([
+      { accountId: me.$jazz.id, role: 'admin' },
+      { accountId: other.$jazz.id, role: 'reader' },
+    ]);
+    expect(membersOf(W.$jazz.id)).toEqual([
+      { accountId: me.$jazz.id, role: 'admin' },
+      { accountId: other.$jazz.id, role: 'writer' },
+    ]);
+    expect(membersOf(child.$jazz.id)).toEqual([{ accountId: me.$jazz.id, role: 'admin' }]);
+  });
+
   it('ReadOnlyAccount login migration does not recreate a missing profile inbox', async () => {
     const profile = me.$jazz.localNode.expectCoValueLoaded(me.$jazz.raw.get('profile')!).getCurrentContent() as unknown as {
       get(key: string): unknown;

@@ -111,6 +111,7 @@ describe('planUser duplicate ids', () => {
         childIds: [],
         ownerAccountId: 'co_zDup',
         groupId: 'co_zDup',
+        members: [{ accountId: 'co_zDup', role: 'admin' }],
         name: 'Dup List',
         type: 'template-folder',
         sharingMode: 'private',
