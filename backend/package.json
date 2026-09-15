@@ -29,6 +29,7 @@
   "devDependencies": {
     "@better-auth/utils": "^0.3.1",
     "@jbroll/rowboat-auth-betterauth": "file:../../rowboat/packages/auth-betterauth",
+    "@jbroll/rowboat-cli": "file:../../rowboat/packages/rowboat-cli",
     "@jbroll/rowboat-sharing": "file:../../rowboat/packages/sharing",
     "@noble/ciphers": "^2.2.0",
     "@types/better-sqlite3": "^7.6.13",
