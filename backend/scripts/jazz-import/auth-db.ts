@@ -1,4 +1,4 @@
-import { chmodSync, existsSync } from 'node:fs';
+import { chmodSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import type { UsersFile } from '../../../migration/jazz-export/src/format.js';
 import { createServer } from '../../src/index.js';
 import type { Target } from './target-config.js';
@@ -52,19 +52,29 @@ export async function buildAuthDb(
     throw new Error(`${outPath} already exists`);
   }
 
-  const server = await createServer({ ...target.config, dbPath: outPath });
+  // Create the file at 0o600 up front so the copied password hashes are never briefly readable
+  // under createServer's default (usually 0o644) file mode.
+  writeFileSync(outPath, '', { mode: 0o600 });
+
+  let server: Awaited<ReturnType<typeof createServer>> | undefined;
   try {
-    const counts = server.db.transaction(() => {
-      const userCount = insertRows(server.db, 'user', users.user);
-      const accountCount = insertRows(server.db, 'account', users.account);
-      const verificationCount = insertRows(server.db, 'verification', users.verification);
+    server = await createServer({ ...target.config, dbPath: outPath });
+    const db = server.db;
+
+    const counts = db.transaction(() => {
+      const userCount = insertRows(db, 'user', users.user);
+      const accountCount = insertRows(db, 'account', users.account);
+      const verificationCount = insertRows(db, 'verification', users.verification);
       return { userCount, accountCount, verificationCount };
     })();
 
     // Ensures a jwks row exists before we read its kid; the probe subject is never persisted
     // anywhere but the JWT itself.
     await server.signJWT((users.user[0]?.id as string | undefined) ?? 'import-key-probe');
-    const jwksKeyId = (server.db.prepare('SELECT id FROM jwks').get() as { id: string }).id;
+    const jwksKeyId = (db.prepare('SELECT id FROM jwks').get() as { id: string }).id;
+
+    db.close();
+    chmodSync(outPath, 0o600);
 
     return {
       users: counts.userCount,
@@ -72,8 +82,15 @@ export async function buildAuthDb(
       verifications: counts.verificationCount,
       jwksKeyId,
     };
-  } finally {
-    server.db.close();
-    chmodSync(outPath, 0o600);
+  } catch (err) {
+    // Any failure past this point — a bad row, a signJWT error — must not leave a half-built db
+    // behind: buildAuthDb refuses an existing outPath, so a leftover file would block every retry,
+    // and one left after the insert transaction commits but before signJWT would hold real copied
+    // password hashes with no jwks row to authenticate against.
+    server?.db.close();
+    for (const path of [outPath, `${outPath}-wal`, `${outPath}-shm`]) {
+      if (existsSync(path)) rmSync(path);
+    }
+    throw err;
   }
 }

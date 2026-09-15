@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -96,6 +96,30 @@ describe('buildAuthDb', () => {
     expect(signIn.status).toBe(200);
     const jwks = await request(server.app).get('/api/auth/jwks');
     expect((jwks.body as { keys: { kid: string }[] }).keys.map((k) => k.kid)).toContain(kid);
+  });
+
+  it('leaves no file behind on failure, so a retry to the same path succeeds', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'auth-db-'));
+    const envFile = writeEnv(dir);
+    const out = join(dir, 'imported.db');
+
+    // A user row without `id` fails inside the insert transaction, after createServer has
+    // already created and migrated the file at `out`.
+    const badUsersFile: UsersFile = {
+      user: [{ email: 'no-id@example.com' }],
+      account: [],
+      verification: [],
+    };
+    await expect(buildAuthDb(out, loadTarget(envFile, out), badUsersFile)).rejects.toThrow(
+      'row missing id',
+    );
+    expect(existsSync(out)).toBe(false);
+    expect(existsSync(`${out}-wal`)).toBe(false);
+    expect(existsSync(`${out}-shm`)).toBe(false);
+
+    const goodUsersFile: UsersFile = { user: [], account: [], verification: [] };
+    const result = await buildAuthDb(out, loadTarget(envFile, out), goodUsersFile);
+    expect(result).toMatchObject({ users: 0, accounts: 0 });
   });
 
   it('rejects when the output path already exists', async () => {
