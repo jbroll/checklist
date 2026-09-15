@@ -84,6 +84,19 @@ sudo nano /var/lib/checklist-api.env
 sudo systemctl restart checklist-api
 ```
 
+## Test Environment Prerequisites
+
+`checklist-test.rkroll.com` runs on its own rowboat tenant, separate from prod.
+
+- `npm run provision:test` writes `rowboat-tenant.test.json` (git-ignored);
+  `deploy-test.conf` reads the database ID from it.
+- `backend/secrets-test.env` needs `ROWBOAT_DATABASE_ID`,
+  `ROWBOAT_URL=https://rowboat.rkroll.com`,
+  `FRONTEND_URL=https://checklist-test.rkroll.com`, and `BIND_HOST=127.0.0.1`.
+- The backend needs a fresh auth DB — a Jazz-era one fails with
+  `no such column: target_group_id`.
+- `./deploy-full.sh test update` deploys both halves.
+
 ## Advanced: Deploy Frontend or Backend Separately
 
 If you need to deploy only one component, use the individual deploy configs. The backend port

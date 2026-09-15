@@ -73,15 +73,23 @@ is required first — is nutrition in scope for CheckList?**
   gitignored, so none of it is committed. It regenerates from the current frontend via
   `npm run cap:sync` before the next mobile release.
 
-- **checklist-test.rkroll.com has no rowboat tenant.** The backend throws at boot without
-  `ROWBOAT_DATABASE_ID` and `ROWBOAT_URL`, and `backend/secrets-test.env` still carries the Jazz keys
-  instead. To deploy the test instance: add a `provision:test` script modeled on `provision:prod`
-  (name `checklist-test`, JWKS and issuer on `https://checklist-test.rkroll.com/api/auth`, state in
-  `rowboat-tenant.test.json`), run it against `https://rowboat.rkroll.com`, rewrite
-  `secrets-test.env` with the tenant values and `BIND_HOST=127.0.0.1`, then deploy the backend
-  (`backend/deploy-test.conf`, port 3002) and the frontend (`deploy-test.conf`) together. No
-  `rowboat-tenant.prod.json` exists locally either, so confirm prod is provisioned before the next
-  prod deploy.
+- **Prod checklist-app still runs the Jazz-era backend** on `0.0.0.0:3001`, with no rowboat tenant
+  (`deploy.conf` still carries `REPLACE_WITH_PROD_DATABASE_ID`). Before installing the rowboat-era
+  backend there:
+  - back up existing Jazz users and their data, and migrate them to rowboat if possible (being
+    researched separately)
+  - run `npm run provision:prod`
+  - replace `REPLACE_WITH_PROD_DATABASE_ID` in `deploy.conf`
+  - set `ROWBOAT_DATABASE_ID` and `BIND_HOST=127.0.0.1` in `backend/secrets.env`
+  - start the backend on a fresh auth DB — a Jazz-era DB fails with
+    `no such column: target_group_id`
+
+- **New-device login duplicates default seed content.** Signing into an existing account in a
+  private window produced a second copy of the default "Quick Errands" list. New-device login
+  appears to seed default content and then claim it into the account (anonymous-session claim; see
+  `ARCHITECTURE.md` → Anonymous sessions & convergence and `useAnonClaim` in `src/lib/rowboat.tsx`),
+  so every new device adds another copy. Needs a way to mark default seed content so it is not
+  re-seeded or claimed on each new device login.
 
 - **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
   exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
