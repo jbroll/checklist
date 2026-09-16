@@ -179,7 +179,11 @@ function buildDefaultUserSettings(id: string): UserSettingsRow {
     subscription_status: 'beta',
     subscription_ends_at: 0,
     max_lists: DEFAULT_TIER_LIMITS.free.maxItems,
-    session_retention_days: DEFAULT_TIER_LIMITS.free.retentionDays,
+    // Jazz carried no retention setting, so default to unlimited rather than the free-tier
+    // window: a migration must not silently archive years of history on first sign-in.
+    // Retention can be turned on later deliberately. `sessionRetentionDays` from the export,
+    // when present, still overrides this below.
+    session_retention_days: -1,
     subscription_synced_at: 0,
     view_folder_expanded: {},
     view_template_category_expanded: {},

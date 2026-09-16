@@ -800,7 +800,7 @@ describe('planUser', () => {
       subscription_status: 'beta',
       default_autocomplete_domain: 'none',
       max_lists: 3,
-      session_retention_days: 7,
+      session_retention_days: -1,
       subscription_ends_at: 0,
       subscription_synced_at: 0,
       view_folder_expanded: { F1: true },
@@ -835,7 +835,7 @@ Run in `backend/`: `npx vitest run test/jazz-import/map.test.ts`. Expected: FAIL
 - If the Task 1 findings say ordered columns must be JSON strings at `db.create`, keep `FolderRowDraft` as objects here anyway and have Task 6 stringify at write time.
 - Defaults: `sharing_mode` from `sharingMode`; `archived ?? false`; `expanded ?? false`; `default_items ?? {}`; `show_zone_headings ?? false`; `auto_categorize_enabled ?? false`; `autocomplete_domain ?? 'none'`.
 - `siblingOrderParents`: count of parents (with the root as one parent) that end up with two or more imported children.
-- `userSettings`: start from the values in `buildDefaultUserSettings` (`src/services/subscriptionService.ts:126-142`) with `max_lists: DEFAULT_TIER_LIMITS.free.maxItems` and `session_retention_days: DEFAULT_TIER_LIMITS.free.retentionDays` imported from `../../../shared/billing.js`, then override each column whose export field is present, and the three `view_*` columns from `viewState`.
+- `userSettings`: start from the values in `buildDefaultUserSettings` (`src/services/subscriptionService.ts:126-142`) with `max_lists: DEFAULT_TIER_LIMITS.free.maxItems`, then override each column whose export field is present, and the three `view_*` columns from `viewState`. `session_retention_days` defaults to `-1` (unlimited) instead of the free-tier value: Jazz carried no retention setting, and a migration must not silently archive years of history on first sign-in. An export's `sessionRetentionDays`, when present, still overrides this.
 - `counts` covers written folders only.
 
 - [ ] **Step 5: Run the mapping test.** Expected: all pass.

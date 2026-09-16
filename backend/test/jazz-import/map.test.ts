@@ -74,7 +74,7 @@ describe('planUser', () => {
       subscription_status: 'beta',
       default_autocomplete_domain: 'none',
       max_lists: 3,
-      session_retention_days: 7,
+      session_retention_days: -1,
       subscription_ends_at: 0,
       subscription_synced_at: 0,
       view_folder_expanded: { F1: true },
@@ -96,6 +96,19 @@ describe('planUser', () => {
   it('reports 0 duplicate ids for the fixture user', () => {
     expect(plan.notCarried.duplicateItemIds).toBe(0);
     expect(plan.notCarried.duplicateSessionIds).toBe(0);
+  });
+
+  it('preserves an explicit sessionRetentionDays from the export instead of defaulting to unlimited', () => {
+    const withRetention: ExportUser = {
+      userId: 'user-retention',
+      accountId: 'co_zRetention',
+      rootFolderIds: [],
+      folders: [],
+      userSettings: { sessionRetentionDays: 14 },
+      viewState: null,
+    };
+    const retentionPlan = planUser(withRetention);
+    expect(retentionPlan.userSettings.session_retention_days).toBe(14);
   });
 });
 

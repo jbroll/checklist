@@ -135,7 +135,10 @@ Step B, lists (after the DB file is installed and the backend serves its JWKS). 
    - `items` and `sessions` are `rb.ordered` maps whose `__order` follows `sortOrder`, then
      `createdAt`.
 6. Create the `user_settings` row with `id` and `owner_group_id` equal to the user id, mapping
-   `userSettings` and the three `viewState` maps.
+   `userSettings` and the three `viewState` maps. `session_retention_days` defaults to `-1`
+   (unlimited) rather than the free-tier window: Jazz carried no retention setting, and archiving
+   years of history on first sign-in was not a decision the migration gets to make silently. An
+   export's `sessionRetentionDays`, when present, still overrides this.
 7. Sync, then pull back and compare counts with `manifest.json`.
 
 Step C, accepted collaborator shares (after every user is written and read back):
