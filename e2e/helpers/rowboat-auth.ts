@@ -73,6 +73,19 @@ export async function signUpAndSignIn(page: Page, creds: SignUpCredentials): Pro
 }
 
 /**
+ * Open the email auth dialog at its default sign-in mode (for EXISTING accounts).
+ * Pair with the `#signin-email` / `#signin-password` fields and the `Sign In` submit.
+ */
+export async function openEmailSignInForm(page: Page): Promise<void> {
+  await page
+    .getByRole('button', { name: /sign in/i })
+    .first()
+    .click({ timeout: 15000 });
+  await page.getByRole('button', { name: /continue with email/i }).click({ timeout: 10000 });
+  await page.getByRole('heading', { name: /sign in with email/i }).waitFor({ timeout: 10000 });
+}
+
+/**
  * True when the authenticated app shell is mounted: the app header is present AND the
  * "Sign In" button is absent (it only renders when unauthenticated). Polls with reload-retry
  * to absorb the post-signup reload and sync-loop cold start.

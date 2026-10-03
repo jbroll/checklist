@@ -2,7 +2,11 @@ import { reactiveArrayStore, relational } from '@jbroll/rowboat-schema';
 import { describe, expect, it } from 'vitest';
 import { schema } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
-import { buildQuickErrandsFolder, seedDefaultFolders } from '../defaultData';
+import {
+  buildQuickErrandsFolder,
+  seedDefaultFolders,
+  shouldSeedDefaultFolders,
+} from '../defaultData';
 
 function makeGraph() {
   return relational(schema, reactiveArrayStore());
@@ -59,5 +63,55 @@ describe('defaultData', () => {
     await seedDefaultFolders(g, 'g1', 'anon', true);
 
     expect(g.folder.all()).toHaveLength(0);
+  });
+
+  it('shouldSeedDefaultFolders is false for anonymous users even with zero folders', () => {
+    expect(shouldSeedDefaultFolders({ isAnonymous: true, totalFolderCount: 0 })).toBe(false);
+    expect(shouldSeedDefaultFolders({ isAnonymous: true, totalFolderCount: 5 })).toBe(false);
+  });
+
+  it('shouldSeedDefaultFolders is true for a fresh account with zero folder rows', () => {
+    expect(shouldSeedDefaultFolders({ isAnonymous: false, totalFolderCount: 0 })).toBe(true);
+  });
+
+  it('shouldSeedDefaultFolders is false when the account already holds folders', () => {
+    expect(shouldSeedDefaultFolders({ isAnonymous: false, totalFolderCount: 1 })).toBe(false);
+    expect(shouldSeedDefaultFolders({ isAnonymous: false, totalFolderCount: 3 })).toBe(false);
+  });
+
+  it('shouldSeedDefaultFolders counts tombstoned (soft-deleted) rows — a user who deleted everything is not re-seeded', () => {
+    // totalFolderCount includes `__deleted` tombstones, so a store whose only folder rows are
+    // tombstones must not seed again.
+    expect(shouldSeedDefaultFolders({ isAnonymous: false, totalFolderCount: 2 })).toBe(false);
+  });
+
+  it('seedDefaultFolders uses a deterministic folder id per account so concurrent devices converge', async () => {
+    const g1 = makeGraph();
+    const g2 = makeGraph();
+    await seedDefaultFolders(g1, 'g1', 'user-1');
+    await seedDefaultFolders(g2, 'g2', 'user-1');
+    const id1 = parseFolderRow(g1.folder.all()[0].$data).id;
+    const id2 = parseFolderRow(g2.folder.all()[0].$data).id;
+    expect(id1).toBe(id2);
+  });
+
+  it('seedDefaultFolders uses deterministic item ids per account so concurrent seeds merge', async () => {
+    const g1 = makeGraph();
+    const g2 = makeGraph();
+    await seedDefaultFolders(g1, 'g1', 'user-1');
+    await seedDefaultFolders(g2, 'g2', 'user-1');
+    const items1 = parseFolderRow(g1.folder.all()[0].$data).items.map((i) => i.id);
+    const items2 = parseFolderRow(g2.folder.all()[0].$data).items.map((i) => i.id);
+    expect(items1).toEqual(items2);
+  });
+
+  it('seedDefaultFolders isolates seeds between accounts', async () => {
+    const g1 = makeGraph();
+    const g2 = makeGraph();
+    await seedDefaultFolders(g1, 'g1', 'user-1');
+    await seedDefaultFolders(g2, 'g2', 'user-2');
+    const id1 = parseFolderRow(g1.folder.all()[0].$data).id;
+    const id2 = parseFolderRow(g2.folder.all()[0].$data).id;
+    expect(id1).not.toBe(id2);
   });
 });

@@ -31,7 +31,7 @@ import { compileSchema, type RelationalGraph } from '@jbroll/rowboat-schema';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { getSyncToken } from '@/lib/syncToken';
 import { schema } from '@/schema/folder';
-import { seedDefaultFolders } from '@/services/defaultData';
+import { seedDefaultFolders, shouldSeedDefaultFolders } from '@/services/defaultData';
 import { runCleanupIfNeeded } from '@/services/sessionCleanupService';
 import { ensureUserSettings, syncSubscriptionFromBackend } from '@/services/subscriptionService';
 
@@ -184,9 +184,11 @@ function RowboatBridge({
   //       id+group = the identity: for a signed-in user that's `user.id`, whose root scope group
   //       is also `user.id`, so the row converges across devices with no minted group. Anonymous
   //       users get a local, never-synced ANON_IDENTITY-scoped row.
-  //   (2) For a GENUINELY NEW user (no pre-existing settings row), the default "Quick Errands"
-  //       list — gating on settings-absence means we don't re-seed after the user deletes all
-  //       their lists (an improvement over a plain `folders.length === 0` seed).
+  //   (2) The default "Quick Errands" list, gated on the account store having NEVER held any
+  //       folder row (including tombstones) — see `shouldSeedDefaultFolders`. Gating on
+  //       settings-absence was wrong: the anon-claim adopts the anonymous settings row into the
+  //       account store before this runs, so every signup-after-anon-visit read "not a new user"
+  //       and never seeded.
   const provisionedRef = useRef(false);
   useEffect(() => {
     // Wait until the auth session has SETTLED before provisioning. On a reload of a signed-in
@@ -222,17 +224,17 @@ function RowboatBridge({
           .filter((r) => !r.__deleted)
           .toArray();
         if (cancelled || provisionedRef.current) return;
-        const isNewUser = existingSettings.length === 0;
-        if (isNewUser) {
+        if (existingSettings.length === 0) {
           await ensureUserSettings(graph, identity, identity);
-          const existingFolders = await db
-            .table('folder')
-            .filter((r) => !r.__deleted)
-            .toArray();
-          if (cancelled) return;
-          if (existingFolders.length === 0) {
-            await seedDefaultFolders(graph, await mintGroup(), identity, !author);
-          }
+        }
+
+        // Seed gate, independent of the settings singleton: the account store has never held
+        // ANY folder row — including `__deleted` tombstones, which sync like live rows, so a
+        // user who deleted all their lists is not re-seeded. Anonymous stores never seed.
+        const totalFolderCount = await db.table('folder').count();
+        if (cancelled || provisionedRef.current) return;
+        if (shouldSeedDefaultFolders({ isAnonymous: !author, totalFolderCount })) {
+          await seedDefaultFolders(graph, await mintGroup(), identity, !author);
         }
         provisionedRef.current = true;
         if (author) {

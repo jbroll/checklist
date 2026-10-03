@@ -1,11 +1,15 @@
 /**
  * Default data seeded for a brand-new user.
  *
- * A starter "Quick Errands" template list is seeded for a genuinely new user. The seed
- * runs once at account-init (rowboat.tsx RowboatBridge), alongside `ensureUserSettings` — gated on
- * the user being genuinely new (no pre-existing `user_settings` row), which also means it does NOT
- * re-seed after a user deletes all their lists (an improvement over a plain `folders.length === 0`
- * check).
+ * A starter "Quick Errands" template list is seeded for a brand-new user. The seed
+ * runs once at account-init (rowboat.tsx RowboatBridge), alongside `ensureUserSettings` — gated
+ * by `shouldSeedDefaultFolders` on the account store having never held any folder row (including
+ * tombstones), which also means it does NOT re-seed after a user deletes all their lists.
+ *
+ * Seed ids are DETERMINISTIC per account (`quick-errands-<createdBy>` for the folder,
+ * `<folderId>-item-<index>` for items): two devices signing into the same account before
+ * either has pushed converge on one row via id-keyed last-write-wins instead of minting
+ * duplicates. Random ids would duplicate on every new-device login that races the first push.
  *
  * The folder is created with all six items + their default-selected flags in ONE write, rather
  * than an addFolder + six createItem calls — the latter would each read-modify-write the same
@@ -29,7 +33,8 @@ const QUICK_ERRANDS_ITEMS = [
 
 /**
  * Build the "Quick Errands" template folder row with all six items pre-selected (every item id in
- * `default_items`). Top-level items carry `path === name`.
+ * `default_items`). Top-level items carry `path === name`. Item ids derive from the folder id so
+ * concurrent seeds of the same account merge key-by-key instead of doubling the item list.
  */
 export function buildQuickErrandsFolder(
   id: string,
@@ -38,7 +43,7 @@ export function buildQuickErrandsFolder(
   now: number,
 ): FolderRow {
   const items: TemplateItem[] = QUICK_ERRANDS_ITEMS.map((name, index) => ({
-    id: crypto.randomUUID(),
+    id: `${id}-item-${index}`,
     name,
     type: 'item',
     path: name,
@@ -73,10 +78,34 @@ export function buildQuickErrandsFolder(
 }
 
 /**
+ * Decide whether to seed the default "Quick Errands" list for an account store.
+ *
+ * Seeding is gated on the account store having NEVER held any folder row —
+ * `totalFolderCount` counts every row including soft-deleted tombstones
+ * (`__deleted`), which sync like live rows, so a user who deleted all their
+ * lists is not re-seeded. The gate is folder-absence, not settings-absence:
+ * the anon-claim adopts the anonymous settings row into the account store
+ * before provisioning reads, so a fresh signup-after-anon-visit would
+ * otherwise read "not a new user" and never seed. Anonymous stores are
+ * transient and get claimed into the account on login, so they never seed.
+ */
+export function shouldSeedDefaultFolders({
+  isAnonymous,
+  totalFolderCount,
+}: {
+  isAnonymous: boolean;
+  totalFolderCount: number;
+}): boolean {
+  if (isAnonymous) return false;
+  return totalFolderCount === 0;
+}
+
+/**
  * Seed the default "Quick Errands" list for a brand-new user. No-op if any folder already exists
- * (a cheap second guard; the caller gates on the user being new). One write — never overwrites.
- * Anonymous users never get seeded content: their store is transient and would be claimed into
- * the signed-in account, producing a duplicate "Quick Errands" on every new device login.
+ * (a cheap second guard; the caller gates via `shouldSeedDefaultFolders`). One write — never
+ * overwrites. Anonymous users never get seeded content: their store is transient and would be
+ * claimed into the signed-in account, producing a duplicate "Quick Errands" on every new device
+ * login.
  */
 export async function seedDefaultFolders(
   g: Graph,
@@ -86,7 +115,12 @@ export async function seedDefaultFolders(
 ): Promise<void> {
   if (isAnonymous) return;
   if (g.folder.all().length > 0) return;
-  const folder = buildQuickErrandsFolder(crypto.randomUUID(), ownerGroupId, createdBy, Date.now());
+  const folder = buildQuickErrandsFolder(
+    `quick-errands-${createdBy}`,
+    ownerGroupId,
+    createdBy,
+    Date.now(),
+  );
   await g.folder.create({
     ...folder,
     items: toOrderedMap(folder.items),
