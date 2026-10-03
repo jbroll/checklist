@@ -97,20 +97,6 @@ is required first — is nutrition in scope for CheckList?**
   so every new device adds another copy. Needs a way to mark default seed content so it is not
   re-seeded or claimed on each new device login.
 
-- **The in-app JSON export loses data.** `src/services/export/types.ts` (format v2.0, unchanged
-  since the Jazz era) has no field for:
-  - item notes (`TemplateItem.notes`, `shared/schema.ts:29`) or per-session item notes
-    (`ItemState.notes`, `:40`)
-  - session ids (`SessionData.id`, `:46`), although `currentSessionId` refers to one
-  - folder nesting (`parent_id`, `:64`) or archived folders (`archived`, `:66`); import flattens
-    every entry into a top-level template folder (`src/services/import/jsonImporter.ts:4-8`)
-  - `default_items` (`:75`) and the per-folder `show_zone_headings`, `autocomplete_domain` and
-    `auto_categorize_enabled` settings
-  - the `user_settings` row
-
-  An export/import round trip is therefore not a backup. Extend the format and importer so a
-  round trip preserves everything in the schema.
-
 - **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
   exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
   `/api/billing/tiers`. Mount it and restore that check when billing ships.

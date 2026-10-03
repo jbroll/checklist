@@ -316,4 +316,151 @@ describe('validators', () => {
       expect(result.stats.duplicateFolders).toBe(1);
     });
   });
+
+  describe('v2.1 validation', () => {
+    it('accepts v2.1 exports with the new optional fields', () => {
+      const data = {
+        version: '2.1',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            id: 'org-1',
+            name: 'Home',
+            type: 'folder',
+            parentId: null,
+            archived: false,
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+          {
+            id: 'tpl-1',
+            name: 'Groceries',
+            type: 'template-folder',
+            parentId: 'org-1',
+            archived: true,
+            defaultItems: { 'item-1': true },
+            showZoneHeadings: true,
+            autocompleteDomain: 'grocery',
+            autoCategorizeEnabled: true,
+            items: [
+              {
+                id: 'item-1',
+                name: 'Apples',
+                type: 'item',
+                sortOrder: 0,
+                notes: 'granny smith',
+                createdAt: '2024-11-01T00:00:00.000Z',
+                updatedAt: '2024-11-01T00:00:00.000Z',
+              },
+            ],
+            sessions: [
+              {
+                id: 'session-1',
+                name: '2024-11-01',
+                archived: false,
+                viewMode: 'flat',
+                categoryExpanded: { 'cat-1': true },
+                itemStates: {
+                  'item-1': { selected: true, checked: false, notes: 'bought 3' },
+                },
+                createdAt: '2024-11-01T00:00:00.000Z',
+                lastActivityAt: '2024-11-01T00:00:00.000Z',
+              },
+            ],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+        userSettings: {
+          defaultAutocompleteDomain: 'grocery',
+          enableAutoCategorization: true,
+          viewFolderExpanded: {},
+          viewTemplateCategoryExpanded: {},
+          viewSessionCategoryExpanded: {},
+        },
+      };
+
+      const result = validateJsonData(makeGraph(), data);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('rejects invalid types on the new optional fields', () => {
+      const data = {
+        version: '2.1',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            id: 'tpl-1',
+            name: 'Groceries',
+            type: 'template-folder',
+            parentId: 42,
+            archived: 'yes',
+            items: [
+              {
+                id: 'item-1',
+                name: 'Apples',
+                type: 'item',
+                sortOrder: 0,
+                notes: 7,
+                createdAt: '2024-11-01T00:00:00.000Z',
+                updatedAt: '2024-11-01T00:00:00.000Z',
+              },
+            ],
+            sessions: [
+              {
+                id: 5,
+                name: 'x',
+                archived: false,
+                viewMode: 'flat',
+                categoryExpanded: 'nope',
+                itemStates: {
+                  'item-1': { selected: true, checked: false, notes: 3 },
+                },
+                createdAt: '2024-11-01T00:00:00.000Z',
+                lastActivityAt: '2024-11-01T00:00:00.000Z',
+              },
+            ],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+        userSettings: { defaultAutocompleteDomain: 9, enableAutoCategorization: true },
+      };
+
+      const result = validateJsonData(makeGraph(), data);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some((e) => e.includes('parentId'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('archived'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('notes'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('categoryExpanded'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('defaultAutocompleteDomain'))).toBe(true);
+    });
+
+    it('still accepts v2.0 exports', () => {
+      const data = {
+        version: '2.0',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            name: 'Groceries',
+            type: 'template-folder',
+            items: [],
+            sessions: [],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+
+      const result = validateJsonData(makeGraph(), data);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
 });

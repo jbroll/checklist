@@ -1,11 +1,13 @@
 /**
  * JSON import functionality
  *
- * Imports template folders (with items + session history) from JSON format. Supports v2.0
- * (hierarchical items with IDs) format — see `../export/jsonExporter.ts`, whose output this
- * mirrors: `ExportedData.folders` is a FLAT array of template folders (the export format never
- * nests organizational folders), so import creates one new top-level `template-folder` row per
- * entry — no folder-tree recursion needed.
+ * Imports a full/partial backup from JSON format. Supports v2.0 (flat template-folder list)
+ * and v2.1 (folder tree with identity + settings + notes + user_settings). v2.1 `ExportedData.
+ * folders` carries `id`/`parentId`/`archived`/`type` so import rebuilds the tree: folder ids
+ * are reused when free (remapped on conflict), parent_id links resolve through the remap, and
+ * name conflicts are resolved per parent. Exported item ids are always remapped (sessions and
+ * `default_items` references follow through the id map); exported session ids are reused when
+ * free, remapped only on conflict.
  *
  * Takes the rowboat graph `g` + a `mintGroup`/`createdBy` pair (same contract as
  * `useCheckListHierarchy.addFolder`), and writes plain `FolderRow`s via `folderOps.addFolder`.
@@ -20,9 +22,11 @@ import type {
   ExportedFolder,
   ExportedSession,
   ExportedTemplateItem,
+  ExportedUserSettings,
 } from '../export/types';
 import { itemsList, sessionsList } from '../folderListHandles';
 import * as folderOps from '../folderOps';
+import { ensureUserSettings } from '../subscriptionService';
 import { type BaseImportResult, type ItemToImport, importItems } from './baseImporter';
 import type { ImportResult } from './types';
 import { validateJsonData } from './validators';
@@ -68,6 +72,13 @@ export async function importJson(
 
   const exportData = data as ExportedData;
   const result = await importFolders(g, exportData, ctx);
+  try {
+    await importUserSettings(g, exportData.userSettings, ctx);
+  } catch (error) {
+    result.warnings.push(
+      `Failed to restore user settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
 
   return {
     ...result,
@@ -179,6 +190,64 @@ function flattenExportedItemsToImport(
   return items;
 }
 
+/**
+ * Order exported folders parent-first so each folder's parent (when present in the export) is
+ * created before it. Folders whose parent is absent are treated as roots; leftover folders
+ * (malformed parent cycles) are appended as roots so the import can't stall.
+ */
+function orderFoldersForImport(folders: ExportedFolder[]): ExportedFolder[] {
+  const childrenByParent = new Map<string | null, ExportedFolder[]>();
+  for (const folder of folders) {
+    const parent = typeof folder.parentId === 'string' ? folder.parentId : null;
+    const bucket = childrenByParent.get(parent);
+    if (bucket) {
+      bucket.push(folder);
+    } else {
+      childrenByParent.set(parent, [folder]);
+    }
+  }
+
+  const out: ExportedFolder[] = [];
+  const queued = new Set<ExportedFolder>();
+  const visit = (folder: ExportedFolder): void => {
+    if (queued.has(folder)) return;
+    queued.add(folder);
+    out.push(folder);
+    for (const child of childrenByParent.get(folder.id ?? '') ?? []) {
+      visit(child);
+    }
+  };
+  for (const root of childrenByParent.get(null) ?? []) {
+    visit(root);
+  }
+  for (const folder of folders) {
+    if (!queued.has(folder)) visit(folder);
+  }
+  return out;
+}
+
+/** Existing sibling names for `parentId`, seeded lazily and cached per import. */
+function siblingNamesFor(
+  g: Graph,
+  parentId: string | null,
+  cache: Map<string | null, Set<string>>,
+): Set<string> {
+  const cached = cache.get(parentId);
+  if (cached) return cached;
+  const names = new Set<string>();
+  if (parentId === null) {
+    for (const f of folderOps.topLevelFolders(g)) names.add(f.name);
+  } else {
+    // An import-created parent may not be readable back yet on the real IndexedDB graph, so only
+    // seed from the graph for parents that pre-exist; import-created parents get their children
+    // tracked via the set as they are created.
+    const parent = folderOps.findById(g, parentId);
+    if (parent) for (const f of folderOps.childrenOf(g, parentId)) names.add(f.name);
+  }
+  cache.set(parentId, names);
+  return names;
+}
+
 async function importFolders(
   g: Graph,
   data: ExportedData,
@@ -191,43 +260,91 @@ async function importFolders(
   let itemsAdded = 0;
   let sessionsCreated = 0;
 
-  const parentId = ctx.parentId ?? null;
-  const parentGroupId = parentId ? folderOps.findById(g, parentId)?.owner_group_id : undefined;
-  const siblingNames = new Set(folderOps.childrenOf(g, parentId).map((f) => f.name));
+  // Exported id -> actual row id / owner group. Kept in-memory: on the real IndexedDB graph a
+  // freshly created row is not immediately readable, so parents/children created within this
+  // import resolve through these maps, never through graph read-backs.
+  const folderIdMap = new Map<string, string>();
+  const folderGroupMap = new Map<string, string>();
+  const siblingNames = new Map<string | null, Set<string>>();
 
-  for (const exportedFolder of data.folders) {
+  for (const exportedFolder of orderFoldersForImport(data.folders)) {
     try {
+      const exportedId = exportedFolder.id;
+      const exportedParentId = exportedFolder.parentId;
+      // A parent created earlier in this import resolves through the id map; an exported parent
+      // that already exists in the graph is honored as-is; anything else falls back to ctx.parentId.
+      const parentId =
+        typeof exportedParentId === 'string'
+          ? (folderIdMap.get(exportedParentId) ??
+            (folderOps.findById(g, exportedParentId) ? exportedParentId : (ctx.parentId ?? null)))
+          : (ctx.parentId ?? null);
+      const parentGroupId =
+        (typeof exportedParentId === 'string' ? folderGroupMap.get(exportedParentId) : undefined) ??
+        (parentId ? folderOps.findById(g, parentId)?.owner_group_id : undefined);
+
+      const names = siblingNamesFor(g, parentId, siblingNames);
       let finalName = exportedFolder.name;
       let nameConflict = false;
-      if (siblingNames.has(finalName)) {
+      if (names.has(finalName)) {
         let counter = 1;
-        while (siblingNames.has(`${exportedFolder.name} (${counter})`)) counter++;
+        while (names.has(`${exportedFolder.name} (${counter})`)) counter++;
         finalName = `${exportedFolder.name} (${counter})`;
         nameConflict = true;
       }
-      siblingNames.add(finalName);
+      names.add(finalName);
 
       const idMap = new Map<string, string>();
       const items = exportedFolder.items
         ? flattenHierarchicalItems(exportedFolder.items, undefined, idMap)
         : [];
-      const sessions = (exportedFolder.sessions ?? []).map((s) => importSession(s, items, idMap));
+      const usedSessionIds = new Set<string>();
+      const sessions = (exportedFolder.sessions ?? []).map((s) =>
+        importSession(s, items, idMap, usedSessionIds),
+      );
 
       const ownerGroupId = await ctx.mintGroup(parentGroupId);
       const now = Date.now();
+      // Already used by an earlier folder in this import counts as a conflict too — the graph
+      // read-back alone can miss it on the real IndexedDB store (writes propagate async).
+      const existing =
+        exportedId && !folderIdMap.has(exportedId) ? folderOps.findById(g, exportedId) : undefined;
       const row = await folderOps.addFolder(g, {
-        id: generateId(),
+        id: existing ? generateId() : (exportedId ?? generateId()),
         name: finalName,
         parentId,
-        type: 'template-folder',
+        type: exportedFolder.type === 'folder' ? 'folder' : 'template-folder',
         ownerGroupId,
         createdBy: ctx.createdBy,
         now,
       });
-      await g.folder.update(row.id, {
+      if (exportedId) {
+        folderIdMap.set(exportedId, row.id);
+        folderGroupMap.set(exportedId, ownerGroupId);
+      }
+
+      // Restore timestamps, archived flag, per-folder settings, and default_items (remapped).
+      const restore: Record<string, unknown> = {
         created_at: new Date(exportedFolder.createdAt).getTime(),
         updated_at: new Date(exportedFolder.updatedAt).getTime(),
-      });
+      };
+      if (exportedFolder.archived) restore.archived = true;
+      if (exportedFolder.showZoneHeadings !== undefined) {
+        restore.show_zone_headings = exportedFolder.showZoneHeadings;
+      }
+      if (exportedFolder.autocompleteDomain !== undefined) {
+        restore.autocomplete_domain = exportedFolder.autocompleteDomain;
+      }
+      if (exportedFolder.autoCategorizeEnabled !== undefined) {
+        restore.auto_categorize_enabled = exportedFolder.autoCategorizeEnabled;
+      }
+      const defaultItems: Record<string, boolean> = {};
+      for (const [oldItemId, enabled] of Object.entries(exportedFolder.defaultItems ?? {})) {
+        const newItemId = idMap.get(oldItemId);
+        if (newItemId) defaultItems[newItemId] = enabled;
+      }
+      if (Object.keys(defaultItems).length > 0) restore.default_items = defaultItems;
+      await g.folder.update(row.id, restore);
+
       const itemHandle = itemsList(g, row.id);
       for (const item of items) await itemHandle.append(item);
       const sessionHandle = sessionsList(g, row.id);
@@ -240,12 +357,12 @@ async function importFolders(
 
       if (nameConflict) {
         warnings.push(
-          `Template "${exportedFolder.name}" imported as "${finalName}" due to name conflict`,
+          `Folder "${exportedFolder.name}" imported as "${finalName}" due to name conflict`,
         );
       }
     } catch (error) {
       errors.push(
-        `Failed to import template "${exportedFolder.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to import folder "${exportedFolder.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
@@ -282,6 +399,7 @@ function flattenHierarchicalItems(
       sortOrder: exportedItem.sortOrder ?? sortOrderCounter++,
       archived: false,
       defaultQuantity: exportedItem.defaultQuantity || '',
+      ...(exportedItem.notes ? { notes: exportedItem.notes } : {}),
       createdAt: new Date(exportedItem.createdAt).getTime(),
     });
 
@@ -297,39 +415,63 @@ function importSession(
   exportedSession: ExportedSession,
   items: TemplateItem[],
   idMap: Map<string, string>,
+  usedSessionIds: Set<string>,
 ): SessionData {
   const itemStates: Record<string, ItemState> = {};
 
   for (const [oldItemId, exportedState] of Object.entries(exportedSession.itemStates)) {
     const newItemId = idMap.get(oldItemId);
-    if (newItemId) {
-      itemStates[newItemId] = {
-        selected: exportedState.selected,
-        checked: exportedState.checked,
-        selectedAt: exportedState.selectedAt
-          ? new Date(exportedState.selectedAt).getTime()
-          : undefined,
-        checkedAt: exportedState.checkedAt
-          ? new Date(exportedState.checkedAt).getTime()
-          : undefined,
-      };
-    }
+    if (!newItemId) continue;
+    itemStates[newItemId] = {
+      selected: exportedState.selected,
+      checked: exportedState.checked,
+      selectedAt: exportedState.selectedAt
+        ? new Date(exportedState.selectedAt).getTime()
+        : undefined,
+      checkedAt: exportedState.checkedAt ? new Date(exportedState.checkedAt).getTime() : undefined,
+      ...(exportedState.notes ? { notes: exportedState.notes } : {}),
+    };
   }
 
   const selectedCount = Object.values(itemStates).filter((s) => s.selected).length;
   const checkedCount = Object.values(itemStates).filter((s) => s.checked).length;
   const remainingCount = items.length - checkedCount;
 
+  let id = generateId();
+  if (exportedSession.id && !usedSessionIds.has(exportedSession.id)) {
+    id = exportedSession.id; // reuse exported id; remap only on conflict
+  }
+  usedSessionIds.add(id);
+
   return {
-    id: generateId(),
+    id,
     itemStates,
     archived: exportedSession.archived ?? false,
     viewMode: exportedSession.viewMode || 'zone-in-hierarchy',
-    categoryExpanded: {},
+    categoryExpanded: exportedSession.categoryExpanded ?? {},
     selectedCount,
     checkedCount,
     remainingCount,
     createdAt: new Date(exportedSession.createdAt).getTime(),
     lastActivityAt: new Date(exportedSession.lastActivityAt).getTime(),
   };
+}
+
+/** Restore or merge the exported user_settings row (preferences + view-state maps). */
+async function importUserSettings(
+  g: Graph,
+  exported: ExportedUserSettings | undefined,
+  ctx: JsonImportContext,
+): Promise<void> {
+  if (!exported) return;
+  await ensureUserSettings(g, ctx.createdBy, ctx.createdBy);
+  const settings = g.user_settings.all()[0]?.$data;
+  if (!settings) return;
+  await g.user_settings.update(settings.id, {
+    default_autocomplete_domain: exported.defaultAutocompleteDomain,
+    enable_auto_categorization: exported.enableAutoCategorization,
+    view_folder_expanded: exported.viewFolderExpanded,
+    view_template_category_expanded: exported.viewTemplateCategoryExpanded,
+    view_session_category_expanded: exported.viewSessionCategoryExpanded,
+  });
 }

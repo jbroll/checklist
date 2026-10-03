@@ -235,7 +235,7 @@ describe('jsonExporter', () => {
 
       const result = exportAllFolders(g);
 
-      expect(result.version).toBe('2.0');
+      expect(result.version).toBe('2.1');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Test Template');
       expect(result.folders[0].items).toHaveLength(1);
@@ -263,7 +263,7 @@ describe('jsonExporter', () => {
     it('should handle an empty graph', () => {
       const result = exportAllFolders(makeGraph());
 
-      expect(result.version).toBe('2.0');
+      expect(result.version).toBe('2.1');
       expect(result.folders).toHaveLength(0);
     });
 
@@ -281,12 +281,11 @@ describe('jsonExporter', () => {
       expect(result.folders[0].items?.[0].name).toBe('Test Item');
     });
 
-    it('should skip archived template folders and their subtrees', () => {
+    it('exports archived folders and their subtrees, preserving archived flags (backup policy)', () => {
       const g = graphWith(
         templateFolder('t1', 'Live'),
         templateFolder('t2', 'Archived', [], [], { archived: true }),
         templateFolder('org', 'Org', [], [], { type: 'folder' }),
-        // a template nested under an archived organizational folder must be skipped
         templateFolder('archived-org', 'Archived Org', [], [], {
           type: 'folder',
           archived: true,
@@ -296,15 +295,27 @@ describe('jsonExporter', () => {
 
       const result = exportAllFolders(g);
 
-      expect(result.folders.map((f) => f.name)).toEqual(['Live']);
+      expect(result.folders.map((f) => f.name).sort()).toEqual([
+        'Archived',
+        'Archived Org',
+        'Hidden Under Archived',
+        'Live',
+        'Org',
+      ]);
+      expect(result.folders.find((f) => f.name === 'Archived')?.archived).toBe(true);
+      expect(result.folders.find((f) => f.name === 'Hidden Under Archived')?.archived).toBe(false);
+      expect(result.folders.find((f) => f.name === 'Hidden Under Archived')?.parentId).toBe(
+        'archived-org',
+      );
     });
 
-    it('should not export organizational folders', () => {
+    it('exports organizational folders with their type preserved', () => {
       const g = graphWith(templateFolder('org', 'Org Folder', [], [], { type: 'folder' }));
 
       const result = exportAllFolders(g);
 
-      expect(result.folders).toHaveLength(0);
+      expect(result.folders).toHaveLength(1);
+      expect(result.folders[0].type).toBe('folder');
     });
 
     it('should export session item states with ISO dates', () => {
@@ -339,7 +350,7 @@ describe('jsonExporter', () => {
 
       const result = exportTemplate(folder);
 
-      expect(result.version).toBe('2.0');
+      expect(result.version).toBe('2.1');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Test Template');
     });
@@ -401,7 +412,7 @@ describe('jsonExporter', () => {
 
       const result = exportAllFolders(g);
 
-      expect(result.version).toBe('2.0');
+      expect(result.version).toBe('2.1');
       expect(result.folders).toHaveLength(1);
 
       const items = result.folders[0].items;
@@ -523,6 +534,111 @@ describe('jsonExporter', () => {
       expect(deepItem?.name).toBe('Deep Item');
       expect(deepItem?.type).toBe('item');
       expect(deepItem?.children).toBeUndefined();
+    });
+  });
+
+  describe('v2.1 round-trip fields', () => {
+    it('exports item notes', () => {
+      const g = graphWith(
+        templateFolder('t1', 'Test', [
+          item('item-1', 'Apples', 'item', 'apples', 0, { notes: 'granny smith' }),
+        ]),
+      );
+
+      const result = exportAllFolders(g);
+
+      expect(result.folders[0].items?.[0].notes).toBe('granny smith');
+    });
+
+    it('exports session id, categoryExpanded, and per-state notes', () => {
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Test',
+          [item('item-1', 'Apples')],
+          [
+            session(
+              'session-9',
+              { 'item-1': { selected: true, checked: false, notes: 'organic' } },
+              { categoryExpanded: { 'cat-1': true } },
+            ),
+          ],
+        ),
+      );
+
+      const result = exportAllFolders(g);
+
+      const exported = result.folders[0].sessions?.[0];
+      expect(exported?.id).toBe('session-9');
+      expect(exported?.categoryExpanded).toEqual({ 'cat-1': true });
+      expect(exported?.itemStates['item-1'].notes).toBe('organic');
+    });
+
+    it('exports folder identity, nesting, archived flag, and settings', () => {
+      const g = graphWith(
+        templateFolder('org-1', 'Home', [], [], { type: 'folder' }),
+        templateFolder('t1', 'Groceries', [], [], {
+          parent_id: 'org-1',
+          archived: true,
+          default_items: { 'item-1': true },
+          show_zone_headings: true,
+          autocomplete_domain: 'grocery',
+          auto_categorize_enabled: true,
+        }),
+      );
+
+      const result = exportAllFolders(g);
+
+      const org = result.folders.find((f) => f.name === 'Home');
+      const tpl = result.folders.find((f) => f.name === 'Groceries');
+      expect(org?.type).toBe('folder');
+      expect(org?.id).toBe('org-1');
+      expect(org?.parentId).toBeNull();
+      expect(tpl?.id).toBe('t1');
+      expect(tpl?.parentId).toBe('org-1');
+      expect(tpl?.archived).toBe(true);
+      expect(tpl?.defaultItems).toEqual({ 'item-1': true });
+      expect(tpl?.showZoneHeadings).toBe(true);
+      expect(tpl?.autocompleteDomain).toBe('grocery');
+      expect(tpl?.autoCategorizeEnabled).toBe(true);
+    });
+
+    it('exports the user_settings row when present', () => {
+      const g = makeGraph({
+        user_settings: [
+          {
+            id: 'user-1',
+            owner_group_id: 'user-1',
+            default_autocomplete_domain: 'grocery',
+            enable_auto_categorization: true,
+            subscription_tier: 'free',
+            subscription_status: 'beta',
+            subscription_ends_at: 0,
+            max_lists: 3,
+            session_retention_days: 30,
+            subscription_synced_at: 0,
+            view_folder_expanded: { 'org-1': true },
+            view_template_category_expanded: {},
+            view_session_category_expanded: {},
+          },
+        ],
+      });
+
+      const result = exportAllFolders(g);
+
+      expect(result.userSettings).toEqual({
+        defaultAutocompleteDomain: 'grocery',
+        enableAutoCategorization: true,
+        viewFolderExpanded: { 'org-1': true },
+        viewTemplateCategoryExpanded: {},
+        viewSessionCategoryExpanded: {},
+      });
+    });
+
+    it('omits userSettings when no user_settings row exists', () => {
+      const result = exportAllFolders(makeGraph());
+
+      expect(result.userSettings).toBeUndefined();
     });
   });
 });

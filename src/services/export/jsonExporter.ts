@@ -1,11 +1,16 @@
 /**
  * JSON export functionality.
  *
- * Exports folder structures with all template items and session history to JSON format.
- * Version 2.0: hierarchical structure and neutral terminology.
+ * Exports the full folder tree (organizational + template folders, archived included) with
+ * items, session history, per-folder settings, and the user_settings row to JSON format.
+ * Version 2.1: hierarchical structure, neutral terminology, round-trip fidelity.
+ *
+ * Backup policy (v2.1): archived folders and organizational folders ARE exported, with their
+ * `archived` flags and `parent_id` links, so an export/import round trip is a true backup.
+ * Pre-v2.1 behavior skipped archived subtrees and dropped org folders.
  *
  * Reads the rowboat relational graph. `exportAllFolders(g)` walks the folder tree (top-level
- * folders + descendants, skipping archived subtrees) and exports every template folder. Timestamps
+ * folders + descendants, archived subtrees included) and exports every folder. Timestamps
  * live in the folder row's json columns as epoch-ms NUMBERS; `buildItemTree`/`generateSessionName`
  * and the exported-format mappers consume `Date`, so numbers are converted to `Date`
  * (`toDatedItem`/`toDatedSession`) before those run. NO FALLBACKS for a missing date.
@@ -16,6 +21,7 @@ import packageJson from '../../../package.json';
 import { generateSessionName } from '../../lib/utils';
 import type { FolderRow, SessionData, schema, TemplateItem } from '../../schema/folder';
 import { parseFolderRow } from '../../schema/folderData';
+import { parseUserSettingsRow } from '../../schema/userSettingsData';
 import { buildItemTree, type ItemTreeNode } from '../../utils/itemTreeHelpers';
 import type {
   ExportedData,
@@ -23,6 +29,7 @@ import type {
   ExportedItemState,
   ExportedSession,
   ExportedTemplateItem,
+  ExportedUserSettings,
 } from './types';
 
 type Graph = RelationalGraph<typeof schema>;
@@ -79,13 +86,14 @@ function toDatedSession(session: SessionData): DatedSession {
 }
 
 /**
- * Collect every non-archived template folder in the graph, walking top-level folders and their
- * descendants. An archived folder is skipped along with its whole subtree.
+ * Collect every folder in the graph — organizational and template, archived and live — walking
+ * top-level folders and their descendants. Dangling rows (parent_id referencing a missing folder)
+ * are emitted as roots.
  */
-function collectTemplateFolders(g: Graph): FolderRow[] {
+function collectFolders(g: Graph): FolderRow[] {
+  const rows = g.folder.all().map((node) => parseFolderRow(node.$data));
   const childrenByParent = new Map<string | null, FolderRow[]>();
-  for (const node of g.folder.all()) {
-    const row = parseFolderRow(node.$data);
+  for (const row of rows) {
     const bucket = childrenByParent.get(row.parent_id);
     if (bucket) {
       bucket.push(row);
@@ -95,9 +103,11 @@ function collectTemplateFolders(g: Graph): FolderRow[] {
   }
 
   const out: FolderRow[] = [];
+  const seen = new Set<string>();
   const visit = (row: FolderRow): void => {
-    if (row.archived) return; // skip node + subtree
-    if (isTemplateFolder(row)) out.push(row);
+    if (seen.has(row.id)) return;
+    seen.add(row.id);
+    out.push(row);
     for (const child of childrenByParent.get(row.id) ?? []) {
       visit(child);
     }
@@ -105,44 +115,58 @@ function collectTemplateFolders(g: Graph): FolderRow[] {
   for (const root of childrenByParent.get(null) ?? []) {
     visit(root);
   }
+  for (const row of rows) {
+    if (!seen.has(row.id)) visit(row);
+  }
   return out;
 }
 
 /**
- * Export all template folders from the graph.
- *
+ * Export all folders from the graph (full backup: org + template, archived included), plus the
+ * user_settings row when one exists.
  */
 export function exportAllFolders(g: Graph): ExportedData {
+  const userSettings = exportUserSettings(g);
   return {
-    version: '2.0',
+    version: '2.1',
     exportDate: new Date().toISOString(),
     appVersion: packageJson.version,
-    folders: collectTemplateFolders(g).map(exportTemplateFolder),
+    folders: collectFolders(g).map(exportFolder),
+    ...(userSettings ? { userSettings } : {}),
   };
 }
 
 /**
- * Export a single template folder row.
- *
+ * Export a single template folder row (single-template scope — not a full backup, so the
+ * user_settings row is not included; an unresolvable parentId is left for import to fall back on).
  */
 export function exportTemplate(folder: FolderRow): ExportedData {
   return {
-    version: '2.0',
+    version: '2.1',
     exportDate: new Date().toISOString(),
     appVersion: packageJson.version,
-    folders: [exportTemplateFolder(folder)],
+    folders: [exportFolder(folder)],
   };
 }
 
 /**
- * Convert a template folder row to exported format.
+ * Convert a folder row to exported format. v2.1 carries identity (`id`/`parentId`), the
+ * `archived` flag, `type` (organizational rows included), and the per-folder settings so a
+ * round trip rebuilds the tree and restores everything.
  */
-function exportTemplateFolder(folder: FolderRow): ExportedFolder {
+function exportFolder(folder: FolderRow): ExportedFolder {
   return {
+    id: folder.id,
     name: folder.name,
-    type: 'template-folder', // all templates are template-folders in the export format
-    items: exportTemplateItems(folder.items),
-    sessions: exportSessions(folder.sessions),
+    type: isTemplateFolder(folder) ? 'template-folder' : 'folder',
+    parentId: folder.parent_id,
+    archived: folder.archived,
+    items: isTemplateFolder(folder) ? exportTemplateItems(folder.items) : undefined,
+    sessions: isTemplateFolder(folder) ? exportSessions(folder.sessions) : undefined,
+    defaultItems: folder.default_items,
+    showZoneHeadings: folder.show_zone_headings,
+    autocompleteDomain: folder.autocomplete_domain,
+    autoCategorizeEnabled: folder.auto_categorize_enabled,
     createdAt: new Date(folder.created_at).toISOString(),
     updatedAt: new Date(folder.updated_at).toISOString(),
     // NOTE: currentSessionId removed from schema — tracked locally per-device.
@@ -150,7 +174,7 @@ function exportTemplateFolder(folder: FolderRow): ExportedFolder {
 }
 
 /**
- * Export template items in hierarchical structure (v2.0).
+ * Export template items in hierarchical structure (v2.1).
  *
  * Uses `buildItemTree()` to convert flat path-keyed items to a nested structure.
  */
@@ -178,6 +202,9 @@ function convertTreeNodeToExport(node: ItemTreeNode<DatedItem>): ExportedTemplat
   if (item.defaultQuantity) {
     exportedItem.defaultQuantity = item.defaultQuantity;
   }
+  if (item.notes) {
+    exportedItem.notes = item.notes;
+  }
 
   if (item.type === 'category' && children.length > 0) {
     exportedItem.children = children.map((child) => convertTreeNodeToExport(child));
@@ -187,7 +214,7 @@ function convertTreeNodeToExport(node: ItemTreeNode<DatedItem>): ExportedTemplat
 }
 
 /**
- * Export sessions with neutral terminology (v2.0).
+ * Export sessions with neutral terminology (v2.1).
  */
 function exportSessions(sessions: SessionData[]): ExportedSession[] {
   const datedSessions = sessions.map(toDatedSession);
@@ -206,18 +233,41 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
       if (state.checkedAt) {
         exportedState.checkedAt = state.checkedAt.toISOString();
       }
+      if (state.notes) {
+        exportedState.notes = state.notes;
+      }
       itemStates[itemId] = exportedState;
     }
 
     return {
+      id: session.id,
       name: generateSessionName(session.createdAt, datedSessions),
       archived: session.archived,
       viewMode: session.viewMode,
+      categoryExpanded: session.categoryExpanded,
       itemStates,
       createdAt: session.createdAt.toISOString(),
       lastActivityAt: session.lastActivityAt.toISOString(),
     };
   });
+}
+
+/**
+ * Export the user_settings singleton (preferences + view-state maps). Subscription-cache
+ * columns are deliberately excluded — the backend is their source of truth and refreshes them
+ * on sync. Returns undefined when no row exists (brand-new user).
+ */
+function exportUserSettings(g: Graph): ExportedUserSettings | undefined {
+  const node = g.user_settings.all()[0];
+  if (!node) return undefined;
+  const settings = parseUserSettingsRow(node.$data);
+  return {
+    defaultAutocompleteDomain: settings.default_autocomplete_domain,
+    enableAutoCategorization: settings.enable_auto_categorization,
+    viewFolderExpanded: settings.view_folder_expanded,
+    viewTemplateCategoryExpanded: settings.view_template_category_expanded,
+    viewSessionCategoryExpanded: settings.view_session_category_expanded,
+  };
 }
 
 /**

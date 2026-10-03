@@ -145,7 +145,7 @@ describe('exportService', () => {
 
       const result = exportToJson(g, { type: 'all-folders' });
 
-      expect(result.version).toBe('2.0');
+      expect(result.version).toBe('2.1');
       expect(result.folders).toHaveLength(1);
       expect(result.folders[0].name).toBe('Groceries');
       expect(result.exportDate).toBeDefined();
@@ -234,7 +234,7 @@ describe('exportService', () => {
       expect(result).toContain('\n');
       expect(result).toContain('  '); // indentation
       const parsed = JSON.parse(result);
-      expect(parsed.version).toBe('2.0');
+      expect(parsed.version).toBe('2.1');
     });
 
     it('should export to compact JSON when pretty=false', () => {
@@ -246,7 +246,7 @@ describe('exportService', () => {
 
       expect(result.split('\n')).toHaveLength(1);
       const parsed = JSON.parse(result);
-      expect(parsed.version).toBe('2.0');
+      expect(parsed.version).toBe('2.1');
     });
   });
 

@@ -12,8 +12,8 @@ import type { ValidationResult } from './types';
 
 type Graph = RelationalGraph<typeof schema>;
 
-const CURRENT_VERSION = '2.0';
-const SUPPORTED_VERSIONS = ['2.0'];
+const CURRENT_VERSION = '2.1';
+const SUPPORTED_VERSIONS = ['2.0', '2.1'];
 
 /**
  * Count items recursively
@@ -117,6 +117,34 @@ export function validateJsonData(g: Graph, data: unknown): ValidationResult {
     }
   }
 
+  // Validate optional user_settings (v2.1)
+  if (exportData.userSettings !== undefined) {
+    const us = exportData.userSettings;
+    if (typeof us !== 'object' || us === null || Array.isArray(us)) {
+      errors.push('Invalid "userSettings": must be an object');
+    } else {
+      if (typeof us.defaultAutocompleteDomain !== 'string') {
+        errors.push('Invalid userSettings: "defaultAutocompleteDomain" must be a string');
+      }
+      if (typeof us.enableAutoCategorization !== 'boolean') {
+        errors.push('Invalid userSettings: "enableAutoCategorization" must be a boolean');
+      }
+      for (const key of [
+        'viewFolderExpanded',
+        'viewTemplateCategoryExpanded',
+        'viewSessionCategoryExpanded',
+      ] as const) {
+        const value = us[key];
+        if (
+          value !== undefined &&
+          (typeof value !== 'object' || value === null || Array.isArray(value))
+        ) {
+          errors.push(`Invalid userSettings: "${key}" must be an object`);
+        }
+      }
+    }
+  }
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -151,6 +179,41 @@ function validateFolder(folder: Partial<ExportedFolder>, index: number): string[
     errors.push(`${prefix}: Missing required field "updatedAt"`);
   } else if (!isValidISODate(folder.updatedAt)) {
     errors.push(`${prefix}: Invalid updatedAt format`);
+  }
+
+  // v2.1 optional fields
+  if (folder.id !== undefined && (typeof folder.id !== 'string' || folder.id === '')) {
+    errors.push(`${prefix}: Invalid "id"`);
+  }
+  if (
+    folder.parentId !== undefined &&
+    folder.parentId !== null &&
+    typeof folder.parentId !== 'string'
+  ) {
+    errors.push(`${prefix}: Invalid "parentId"`);
+  }
+  if (folder.archived !== undefined && typeof folder.archived !== 'boolean') {
+    errors.push(`${prefix}: Invalid "archived"`);
+  }
+  if (
+    folder.defaultItems !== undefined &&
+    (typeof folder.defaultItems !== 'object' ||
+      folder.defaultItems === null ||
+      Array.isArray(folder.defaultItems))
+  ) {
+    errors.push(`${prefix}: Invalid "defaultItems"`);
+  }
+  if (folder.showZoneHeadings !== undefined && typeof folder.showZoneHeadings !== 'boolean') {
+    errors.push(`${prefix}: Invalid "showZoneHeadings"`);
+  }
+  if (folder.autocompleteDomain !== undefined && typeof folder.autocompleteDomain !== 'string') {
+    errors.push(`${prefix}: Invalid "autocompleteDomain"`);
+  }
+  if (
+    folder.autoCategorizeEnabled !== undefined &&
+    typeof folder.autoCategorizeEnabled !== 'boolean'
+  ) {
+    errors.push(`${prefix}: Invalid "autoCategorizeEnabled"`);
   }
 
   // Validate template-folder specific fields
@@ -242,6 +305,11 @@ function validateTemplateItem(item: unknown, index: number, prefix: string): str
     errors.push(`${itemPrefix}: Missing or invalid "updatedAt"`);
   }
 
+  // v2.1: optional notes
+  if (typedItem.notes !== undefined && typeof typedItem.notes !== 'string') {
+    errors.push(`${itemPrefix}: Invalid "notes"`);
+  }
+
   return errors;
 }
 
@@ -263,6 +331,36 @@ function validateSession(session: unknown, index: number, prefix: string): strin
   // Required fields
   if (!typedSession.itemStates || typeof typedSession.itemStates !== 'object') {
     errors.push(`${sessionPrefix}: Missing or invalid "itemStates"`);
+  } else {
+    // v2.1: optional per-state notes
+    for (const [itemId, state] of Object.entries(
+      typedSession.itemStates as Record<string, unknown>,
+    )) {
+      if (
+        state &&
+        typeof state === 'object' &&
+        'notes' in state &&
+        typeof (state as Record<string, unknown>).notes !== 'string'
+      ) {
+        errors.push(`${sessionPrefix}.itemStates.${itemId}: Invalid "notes"`);
+      }
+    }
+  }
+
+  // v2.1: optional fields
+  if (
+    typedSession.id !== undefined &&
+    (typeof typedSession.id !== 'string' || typedSession.id === '')
+  ) {
+    errors.push(`${sessionPrefix}: Invalid "id"`);
+  }
+  if (
+    typedSession.categoryExpanded !== undefined &&
+    (typeof typedSession.categoryExpanded !== 'object' ||
+      typedSession.categoryExpanded === null ||
+      Array.isArray(typedSession.categoryExpanded))
+  ) {
+    errors.push(`${sessionPrefix}: Invalid "categoryExpanded"`);
   }
 
   // Validate timestamps

@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FolderRow, TemplateItem } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
+import { parseUserSettingsRow } from '@/schema/userSettingsData';
 import { makeGraph } from '@/test/rowboat';
 import { PATH_SEPARATOR } from '../../utils/pathUtils';
 import type { ExportedData, ExportedFolder, ExportedTemplateItem } from '../export/types';
@@ -56,12 +57,51 @@ function itemsOf(g: Graph, id: string): TemplateItem[] {
   return parseFolderRow(node.$data).items;
 }
 
+/** Read a folder row, failing the test loudly if it is missing. */
+function requireFolderRow(g: Graph, id: string): FolderRow {
+  const row = folderOps.findById(g, id);
+  if (!row) throw new Error(`folder ${id} not found after import`);
+  return row;
+}
+
 /** Default group-minting/attribution context for `importJson`. */
 function ctx(overrides: Partial<JsonImportContext> = {}): JsonImportContext {
   return {
     createdBy: 'user-1',
     mintGroup: async () => 'group-new',
     ...overrides,
+  };
+}
+
+const NOV_1_ISO = '2024-11-01T00:00:00.000Z';
+
+/** A v2.1 ExportedData literal. */
+function v21(folders: ExportedFolder[], userSettings?: ExportedData['userSettings']): ExportedData {
+  return {
+    version: '2.1',
+    exportDate: NOV_1_ISO,
+    appVersion: '1.0.0',
+    folders,
+    ...(userSettings ? { userSettings } : {}),
+  };
+}
+
+/** A v2.1 ExportedFolder literal. */
+function v21Folder(
+  id: string | undefined,
+  name: string,
+  type: 'folder' | 'template-folder',
+  parentId: string | null | undefined,
+  extra: Partial<ExportedFolder> = {},
+): ExportedFolder {
+  return {
+    name,
+    type,
+    ...(id !== undefined ? { id } : {}),
+    ...(parentId !== undefined ? { parentId } : {}),
+    createdAt: NOV_1_ISO,
+    updatedAt: NOV_1_ISO,
+    ...extra,
   };
 }
 
@@ -200,7 +240,7 @@ describe('jsonImporter', () => {
       const items = itemsOf(g, folderId);
       const newItemId = items[0].id;
       expect(newItemId).not.toBe('exported-item-1');
-      const sessions = parseFolderRow(g.folder(folderId)!.$data).sessions;
+      const sessions = requireFolderRow(g, folderId).sessions;
       expect(sessions).toHaveLength(1);
       expect(sessions[0].itemStates[newItemId]).toBeDefined();
       expect(sessions[0].itemStates[newItemId].selected).toBe(true);
@@ -450,6 +490,248 @@ describe('jsonImporter', () => {
           importItemsFromJson(makeGraph(), 'nonexistent', JSON.stringify(items)),
         ).rejects.toThrow('Template nonexistent not found');
       });
+    });
+  });
+
+  describe('v2.1 import restoration', () => {
+    it('rebuilds the folder tree, reusing exported folder ids and honoring parent_id', async () => {
+      const exportData = v21([
+        v21Folder('org-1', 'Home', 'folder', null),
+        v21Folder('tpl-1', 'Groceries', 'template-folder', 'org-1'),
+        v21Folder('tpl-2', 'Tools', 'template-folder', 'org-1'),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      expect(result.stats.foldersCreated).toBe(3);
+      expect(folderOps.findById(g, 'org-1')?.type).toBe('folder');
+      expect(folderOps.findById(g, 'tpl-1')?.parent_id).toBe('org-1');
+      expect(folderOps.findById(g, 'tpl-2')?.parent_id).toBe('org-1');
+    });
+
+    it('remaps a conflicting exported folder id but keeps children attached', async () => {
+      const g = graphWith(templateFolder('org-1', 'Existing Org', [], { type: 'folder' }));
+      const exportData = v21([
+        v21Folder('org-1', 'Home', 'folder', null),
+        v21Folder('tpl-1', 'Groceries', 'template-folder', 'org-1'),
+      ]);
+
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const ids = result.data?.folderIds ?? [];
+      const orgId = ids[0];
+      expect(orgId).not.toBe('org-1'); // conflicting id → remapped
+      expect(folderOps.findById(g, orgId)?.name).toBe('Home');
+      // tpl-1 was free → id reused, parent resolves through the remap
+      expect(ids[1]).toBe('tpl-1');
+      expect(folderOps.findById(g, 'tpl-1')?.parent_id).toBe(orgId);
+    });
+
+    it('preserves archived flags', async () => {
+      const exportData = v21([
+        v21Folder('t1', 'Archived Template', 'template-folder', null, { archived: true }),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      expect(folderOps.findById(g, 't1')?.archived).toBe(true);
+    });
+
+    it('restores item notes', async () => {
+      const exportData = v21([
+        v21Folder('t1', 'Groceries', 'template-folder', null, {
+          items: [
+            {
+              id: 'item-1',
+              name: 'Apples',
+              type: 'item',
+              sortOrder: 0,
+              notes: 'granny smith',
+              createdAt: NOV_1_ISO,
+              updatedAt: NOV_1_ISO,
+            },
+          ],
+        }),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const items = itemsOf(g, 't1');
+      expect(items).toHaveLength(1);
+      expect(items[0].notes).toBe('granny smith');
+    });
+
+    it('reuses exported session ids and restores per-state notes + categoryExpanded', async () => {
+      const exportData = v21([
+        v21Folder('t1', 'Groceries', 'template-folder', null, {
+          items: [
+            {
+              id: 'item-1',
+              name: 'Apples',
+              type: 'item',
+              sortOrder: 0,
+              createdAt: NOV_1_ISO,
+              updatedAt: NOV_1_ISO,
+            },
+          ],
+          sessions: [
+            {
+              id: 'session-9',
+              name: '2024-11-01',
+              archived: false,
+              viewMode: 'flat',
+              categoryExpanded: { 'cat-1': true },
+              itemStates: {
+                'item-1': { selected: true, checked: false, notes: 'bought 3' },
+              },
+              createdAt: NOV_1_ISO,
+              lastActivityAt: NOV_1_ISO,
+            },
+          ],
+        }),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const row = requireFolderRow(g, 't1');
+      const sessions = row.sessions;
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].id).toBe('session-9');
+      expect(sessions[0].categoryExpanded).toEqual({ 'cat-1': true });
+      const newItemId = row.items[0].id;
+      expect(newItemId).not.toBe('item-1');
+      expect(sessions[0].itemStates[newItemId]).toBeDefined();
+      expect(sessions[0].itemStates[newItemId].notes).toBe('bought 3');
+    });
+
+    it('remaps default_items keys to the imported item ids', async () => {
+      const exportData = v21([
+        v21Folder('t1', 'Groceries', 'template-folder', null, {
+          items: [
+            {
+              id: 'exported-item-1',
+              name: 'Milk',
+              type: 'item',
+              sortOrder: 0,
+              createdAt: NOV_1_ISO,
+              updatedAt: NOV_1_ISO,
+            },
+          ],
+          defaultItems: { 'exported-item-1': true },
+        }),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const row = requireFolderRow(g, 't1');
+      const newItemId = row.items[0].id;
+      expect(newItemId).not.toBe('exported-item-1');
+      expect(row.default_items).toEqual({ [newItemId]: true });
+    });
+
+    it('restores per-folder settings', async () => {
+      const exportData = v21([
+        v21Folder('t1', 'Groceries', 'template-folder', null, {
+          showZoneHeadings: true,
+          autocompleteDomain: 'grocery',
+          autoCategorizeEnabled: true,
+        }),
+      ]);
+
+      const g = makeGraph();
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const row = requireFolderRow(g, 't1');
+      expect(row.show_zone_headings).toBe(true);
+      expect(row.autocomplete_domain).toBe('grocery');
+      expect(row.auto_categorize_enabled).toBe(true);
+    });
+
+    it('merges exported user_settings into an existing row', async () => {
+      const g = makeGraph({
+        user_settings: [
+          {
+            id: 'user-1',
+            owner_group_id: 'user-1',
+            default_autocomplete_domain: 'none',
+            enable_auto_categorization: false,
+            subscription_tier: 'free',
+            subscription_status: 'beta',
+            subscription_ends_at: 0,
+            max_lists: 3,
+            session_retention_days: 30,
+            subscription_synced_at: 0,
+            view_folder_expanded: {},
+            view_template_category_expanded: {},
+            view_session_category_expanded: {},
+          },
+        ],
+      });
+      const exportData = v21([], {
+        defaultAutocompleteDomain: 'hardware',
+        enableAutoCategorization: true,
+        viewFolderExpanded: { 'org-1': true },
+        viewTemplateCategoryExpanded: {},
+        viewSessionCategoryExpanded: {},
+      });
+
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const settings = parseUserSettingsRow(g.user_settings.all()[0].$data);
+      expect(settings.default_autocomplete_domain).toBe('hardware');
+      expect(settings.enable_auto_categorization).toBe(true);
+      expect(settings.view_folder_expanded).toEqual({ 'org-1': true });
+      expect(g.user_settings.all()).toHaveLength(1);
+    });
+
+    it('creates a user_settings row from the export when none exists', async () => {
+      const g = makeGraph();
+      const exportData = v21([], {
+        defaultAutocompleteDomain: 'hardware',
+        enableAutoCategorization: true,
+        viewFolderExpanded: {},
+        viewTemplateCategoryExpanded: {},
+        viewSessionCategoryExpanded: {},
+      });
+
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      const settings = parseUserSettingsRow(g.user_settings.all()[0].$data);
+      expect(settings.default_autocomplete_domain).toBe('hardware');
+      expect(settings.enable_auto_categorization).toBe(true);
+    });
+
+    it('keeps name-conflict rename behavior, scoped per parent', async () => {
+      const g = graphWith(
+        templateFolder('org-1', 'Home', [], { type: 'folder' }),
+        templateFolder('org-2', 'Work', [], { type: 'folder' }),
+      );
+      const exportData = v21([
+        v21Folder('a-1', 'Groceries', 'template-folder', 'org-1'),
+        v21Folder('a-2', 'Groceries', 'template-folder', 'org-2'),
+      ]);
+
+      const result = await importJson(g, JSON.stringify(exportData), ctx());
+
+      expect(result.success).toBe(true);
+      expect(folderOps.findById(g, 'a-1')?.name).toBe('Groceries');
+      expect(folderOps.findById(g, 'a-2')?.name).toBe('Groceries');
+      expect(folderOps.findById(g, 'a-1')?.parent_id).toBe('org-1');
+      expect(folderOps.findById(g, 'a-2')?.parent_id).toBe('org-2');
     });
   });
 });
