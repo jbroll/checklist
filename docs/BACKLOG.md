@@ -68,11 +68,6 @@ is required first — is nutrition in scope for CheckList?**
 
 ## Engineering
 
-- **Stale Capacitor web bundles on disk (not tracked in git)** — an earlier `cap sync` left
-  vendored chunks and source maps under `android/app/src/main/assets/public/`, which is
-  gitignored, so none of it is committed. It regenerates from the current frontend via
-  `npm run cap:sync` before the next mobile release.
-
 - **Prod checklist-app still runs the Jazz-era backend** on `0.0.0.0:3001`, with no rowboat tenant
   (`deploy.conf` still carries `REPLACE_WITH_PROD_DATABASE_ID`). Before installing the rowboat-era
   backend there:
