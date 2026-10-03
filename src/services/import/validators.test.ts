@@ -441,6 +441,42 @@ describe('validators', () => {
       expect(result.errors.some((e) => e.includes('defaultAutocompleteDomain'))).toBe(true);
     });
 
+    it('rejects invalid types on the subscription-cache fields', () => {
+      const data = {
+        version: '2.1',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [],
+        userSettings: {
+          defaultAutocompleteDomain: 'grocery',
+          enableAutoCategorization: true,
+          viewFolderExpanded: {},
+          viewTemplateCategoryExpanded: {},
+          viewSessionCategoryExpanded: {},
+          subscriptionTier: 7,
+          subscriptionStatus: true,
+          subscriptionEndsAt: 'soon',
+          maxLists: 'many',
+          sessionRetentionDays: null,
+          subscriptionSyncedAt: {},
+        },
+      };
+
+      const result = validateJsonData(makeGraph(), data);
+
+      expect(result.isValid).toBe(false);
+      for (const key of [
+        'subscriptionTier',
+        'subscriptionStatus',
+        'subscriptionEndsAt',
+        'maxLists',
+        'sessionRetentionDays',
+        'subscriptionSyncedAt',
+      ]) {
+        expect(result.errors.some((e) => e.includes(key))).toBe(true);
+      }
+    });
+
     it('still accepts v2.0 exports', () => {
       const data = {
         version: '2.0',

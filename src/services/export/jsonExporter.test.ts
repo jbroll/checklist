@@ -603,7 +603,7 @@ describe('jsonExporter', () => {
       expect(tpl?.autoCategorizeEnabled).toBe(true);
     });
 
-    it('exports the user_settings row when present', () => {
+    it('exports the user_settings row including subscription-cache columns', () => {
       const g = makeGraph({
         user_settings: [
           {
@@ -611,12 +611,12 @@ describe('jsonExporter', () => {
             owner_group_id: 'user-1',
             default_autocomplete_domain: 'grocery',
             enable_auto_categorization: true,
-            subscription_tier: 'free',
-            subscription_status: 'beta',
-            subscription_ends_at: 0,
-            max_lists: 3,
-            session_retention_days: 30,
-            subscription_synced_at: 0,
+            subscription_tier: 'plus',
+            subscription_status: 'active',
+            subscription_ends_at: 1767225600000,
+            max_lists: 50,
+            session_retention_days: 365,
+            subscription_synced_at: 1730419200000,
             view_folder_expanded: { 'org-1': true },
             view_template_category_expanded: {},
             view_session_category_expanded: {},
@@ -632,6 +632,12 @@ describe('jsonExporter', () => {
         viewFolderExpanded: { 'org-1': true },
         viewTemplateCategoryExpanded: {},
         viewSessionCategoryExpanded: {},
+        subscriptionTier: 'plus',
+        subscriptionStatus: 'active',
+        subscriptionEndsAt: 1767225600000,
+        maxLists: 50,
+        sessionRetentionDays: 365,
+        subscriptionSyncedAt: 1730419200000,
       });
     });
 

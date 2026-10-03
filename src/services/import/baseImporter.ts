@@ -30,6 +30,8 @@ export interface ItemToImport {
   defaultQuantity?: string;
   /** Optional context for error messages (e.g., "Row 5") */
   context?: string;
+  /** Item notes (JSON import only — CSV/TXT have no notes column) */
+  notes?: string;
 }
 
 /** Read the template folder row, throwing if it doesn't exist or isn't a template folder. */
@@ -95,6 +97,7 @@ export async function importItems(
         sortOrder: nextSortOrder++,
         archived: false,
         defaultQuantity,
+        ...(item.notes ? { notes: item.notes } : {}),
         createdAt: now,
       };
 

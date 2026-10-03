@@ -142,6 +142,25 @@ export function validateJsonData(g: Graph, data: unknown): ValidationResult {
           errors.push(`Invalid userSettings: "${key}" must be an object`);
         }
       }
+      // v2.1: subscription-cache columns — optional (a v2.1 export without them still imports),
+      // but when present they must be the right type.
+      for (const key of ['subscriptionTier', 'subscriptionStatus'] as const) {
+        const value = us[key];
+        if (value !== undefined && typeof value !== 'string') {
+          errors.push(`Invalid userSettings: "${key}" must be a string`);
+        }
+      }
+      for (const key of [
+        'subscriptionEndsAt',
+        'maxLists',
+        'sessionRetentionDays',
+        'subscriptionSyncedAt',
+      ] as const) {
+        const value = us[key];
+        if (value !== undefined && typeof value !== 'number') {
+          errors.push(`Invalid userSettings: "${key}" must be a number`);
+        }
+      }
     }
   }
 

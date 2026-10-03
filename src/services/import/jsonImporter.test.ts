@@ -444,6 +444,39 @@ describe('jsonImporter', () => {
         expect(result.imported).toBe(2);
         expect(result.errors).toHaveLength(0);
       });
+
+      it('restores item notes from a v2.1 payload', async () => {
+        const items: ExportedTemplateItem[] = [
+          {
+            id: 'cat-1',
+            name: 'Produce',
+            type: 'category',
+            sortOrder: 0,
+            notes: 'organic only',
+            children: [
+              {
+                id: 'item-1',
+                name: 'Apples',
+                type: 'item',
+                sortOrder: 0,
+                notes: 'granny smith',
+                createdAt: NOV_1_ISO,
+                updatedAt: NOV_1_ISO,
+              },
+            ],
+            createdAt: NOV_1_ISO,
+            updatedAt: NOV_1_ISO,
+          },
+        ];
+
+        const g = graphWith(templateFolder('t1', 'Groceries'));
+        const result = await importItemsFromJson(g, 't1', JSON.stringify(items));
+
+        expect(result.imported).toBe(2);
+        const imported = itemsOf(g, 't1');
+        expect(imported.find((i) => i.name === 'Produce')?.notes).toBe('organic only');
+        expect(imported.find((i) => i.name === 'Apples')?.notes).toBe('granny smith');
+      });
     });
 
     describe('error handling', () => {
@@ -694,6 +727,11 @@ describe('jsonImporter', () => {
       expect(settings.default_autocomplete_domain).toBe('hardware');
       expect(settings.enable_auto_categorization).toBe(true);
       expect(settings.view_folder_expanded).toEqual({ 'org-1': true });
+      // Subscription cache absent from the export → the row's existing values are left alone
+      expect(settings.subscription_tier).toBe('free');
+      expect(settings.subscription_status).toBe('beta');
+      expect(settings.max_lists).toBe(3);
+      expect(settings.session_retention_days).toBe(30);
       expect(g.user_settings.all()).toHaveLength(1);
     });
 

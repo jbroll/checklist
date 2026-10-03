@@ -27,9 +27,10 @@ export interface ExportedData {
 }
 
 /**
- * Per-user settings backup. Excludes the subscription cache columns (`subscription_tier` etc.) —
- * those are the backend's source of truth and are refreshed on sync, so restoring them from a
- * backup could show stale limits offline.
+ * Per-user settings backup. Includes the subscription-cache columns (`subscription_tier` etc.) so
+ * a backup round trip preserves the full row; a stale restore is transient and self-correcting
+ * (sync refreshes the cache from the backend). The cache fields stay optional so v2.1 exports made
+ * before they were added still import.
  */
 export interface ExportedUserSettings {
   defaultAutocompleteDomain: string;
@@ -37,6 +38,17 @@ export interface ExportedUserSettings {
   viewFolderExpanded: Record<string, boolean>;
   viewTemplateCategoryExpanded: Record<string, Record<string, boolean>>;
   viewSessionCategoryExpanded: Record<string, Record<string, boolean>>;
+  /** v2.1: subscription-cache columns — restored on import when present */
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
+  /** epoch ms (0 = none) */
+  subscriptionEndsAt?: number;
+  /** cached for offline display (-1 = unlimited) */
+  maxLists?: number;
+  /** cached (-1 = unlimited) */
+  sessionRetentionDays?: number;
+  /** epoch ms (0 = never) */
+  subscriptionSyncedAt?: number;
 }
 
 /**

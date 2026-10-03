@@ -148,6 +148,12 @@ describe('JSON export → import round trip', () => {
         settingsRow('user-1', {
           default_autocomplete_domain: 'grocery',
           enable_auto_categorization: true,
+          subscription_tier: 'plus',
+          subscription_status: 'active',
+          subscription_ends_at: 1767225600000,
+          max_lists: 50,
+          session_retention_days: 365,
+          subscription_synced_at: 1730419200000,
           view_folder_expanded: { 'org-1': true },
         }),
       ],
@@ -201,5 +207,12 @@ describe('JSON export → import round trip', () => {
     expect(settings.default_autocomplete_domain).toBe('grocery');
     expect(settings.enable_auto_categorization).toBe(true);
     expect(settings.view_folder_expanded).toEqual({ 'org-1': true });
+    // subscription cache preserved too — a backup round trip restores the full row
+    expect(settings.subscription_tier).toBe('plus');
+    expect(settings.subscription_status).toBe('active');
+    expect(settings.subscription_ends_at).toBe(1767225600000);
+    expect(settings.max_lists).toBe(50);
+    expect(settings.session_retention_days).toBe(365);
+    expect(settings.subscription_synced_at).toBe(1730419200000);
   });
 });

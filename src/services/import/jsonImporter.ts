@@ -180,6 +180,7 @@ function flattenExportedItemsToImport(
       path: itemPath,
       type: exportedItem.type || 'item',
       defaultQuantity: exportedItem.defaultQuantity || '',
+      ...(exportedItem.notes ? { notes: exportedItem.notes } : {}),
     });
 
     if (exportedItem.children && exportedItem.children.length > 0) {
@@ -457,7 +458,7 @@ function importSession(
   };
 }
 
-/** Restore or merge the exported user_settings row (preferences + view-state maps). */
+/** Restore or merge the exported user_settings row (preferences + view-state maps + subscription cache). */
 async function importUserSettings(
   g: Graph,
   exported: ExportedUserSettings | undefined,
@@ -473,5 +474,23 @@ async function importUserSettings(
     view_folder_expanded: exported.viewFolderExpanded,
     view_template_category_expanded: exported.viewTemplateCategoryExpanded,
     view_session_category_expanded: exported.viewSessionCategoryExpanded,
+    // Subscription cache restored only when present — v2.1 exports made before the cache fields
+    // were added leave the row's (default) values alone.
+    ...(exported.subscriptionTier !== undefined
+      ? { subscription_tier: exported.subscriptionTier }
+      : {}),
+    ...(exported.subscriptionStatus !== undefined
+      ? { subscription_status: exported.subscriptionStatus }
+      : {}),
+    ...(exported.subscriptionEndsAt !== undefined
+      ? { subscription_ends_at: exported.subscriptionEndsAt }
+      : {}),
+    ...(exported.maxLists !== undefined ? { max_lists: exported.maxLists } : {}),
+    ...(exported.sessionRetentionDays !== undefined
+      ? { session_retention_days: exported.sessionRetentionDays }
+      : {}),
+    ...(exported.subscriptionSyncedAt !== undefined
+      ? { subscription_synced_at: exported.subscriptionSyncedAt }
+      : {}),
   });
 }

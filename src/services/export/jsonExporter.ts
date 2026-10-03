@@ -253,9 +253,10 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
 }
 
 /**
- * Export the user_settings singleton (preferences + view-state maps). Subscription-cache
- * columns are deliberately excluded — the backend is their source of truth and refreshes them
- * on sync. Returns undefined when no row exists (brand-new user).
+ * Export the user_settings singleton (preferences + view-state maps + subscription cache). The
+ * cache columns are included so a backup round trip preserves the full row — a stale restore is
+ * transient and self-correcting, since sync refreshes the cache from the backend. Returns
+ * undefined when no row exists (brand-new user).
  */
 function exportUserSettings(g: Graph): ExportedUserSettings | undefined {
   const node = g.user_settings.all()[0];
@@ -267,6 +268,12 @@ function exportUserSettings(g: Graph): ExportedUserSettings | undefined {
     viewFolderExpanded: settings.view_folder_expanded,
     viewTemplateCategoryExpanded: settings.view_template_category_expanded,
     viewSessionCategoryExpanded: settings.view_session_category_expanded,
+    subscriptionTier: settings.subscription_tier,
+    subscriptionStatus: settings.subscription_status,
+    subscriptionEndsAt: settings.subscription_ends_at,
+    maxLists: settings.max_lists,
+    sessionRetentionDays: settings.session_retention_days,
+    subscriptionSyncedAt: settings.subscription_synced_at,
   };
 }
 
