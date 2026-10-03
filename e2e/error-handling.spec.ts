@@ -7,13 +7,9 @@
  * The "Import Errors" group is un-skipped: the Import dialog is now wired (TreeView's "More
  * options" → Import opens `ImportDialog`), so `openImportDialog` works.
  *
- * The "Subscription Limits" group stays `test.skip` (see per-test TODO(e2e) notes) — NOT because
- * list-limit enforcement is unwired (it is: `AppContainer.handleAddFolder`/
- * `handleAddTemplateClick` call `subscriptionService.canCreateList`/`isAtListLimit` and open the
- * Upgrade dialog on the limit), but because these tests additionally depend on `/billing/success`
- * successfully syncing a free-tier subscription onto an anonymous session, which hard-errors today
- * (no code path creates the `user_settings` singleton row for a fresh anonymous user), and one test
- * also needs the header's "Upgrade" menu item, which AppContainer never wires up.
+ * The "Subscription Limits" group is active. The tests mock `/api/billing/subscription` and
+ * create their own lists; they no longer rely on the default "Quick Errands" seed, which is not
+ * created for anonymous sessions.
  */
 
 import { expect, test, type Page } from '@playwright/test';
@@ -305,8 +301,8 @@ test.describe('Subscription Limits', () => {
   // a row to update — the free tier flows through and the upgrade dialog shows real tier info.
   test('should show upgrade dialog when list limit is reached', async ({ page }) => {
     // Free tier enforces a 3-list limit (from TIER_LIMITS.free; the mocked tier.maxLists is only a
-    // cached display value, not the enforced limit). A new user is seeded the default "Quick
-    // Errands" list, which takes 1 of the 3 slots.
+    // cached display value, not the enforced limit). Anonymous sessions are no longer seeded a
+    // default list, so we create 3 lists from scratch to reach the limit.
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
         status: 200,
@@ -330,8 +326,8 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // Quick Errands takes 1 of the 3 slots; create 2 more to reach the limit.
-    for (let i = 1; i <= 2; i++) {
+    // Create 3 lists to reach the free-tier limit.
+    for (let i = 1; i <= 3; i++) {
       await createList(page, `Test List ${i}`);
     }
 
@@ -344,8 +340,8 @@ test.describe('Subscription Limits', () => {
   });
 
   test('should prevent creating lists beyond limit', async ({ page }) => {
-    // Free tier enforces a 3-list limit (from TIER_LIMITS.free); the seeded "Quick Errands" list
-    // takes 1 slot.
+    // Free tier enforces a 3-list limit (from TIER_LIMITS.free). Anonymous sessions are no longer
+    // seeded a default list, so we create 3 lists from scratch to reach the limit.
     await page.route('/api/billing/subscription', (route) => {
       route.fulfill({
         status: 200,
@@ -368,15 +364,15 @@ test.describe('Subscription Limits', () => {
     await page.getByRole('button', { name: /dashboard/i }).click();
     await waitForPageLoad(page);
 
-    // The seeded "Quick Errands" list takes 1 of the 3 slots; create 2 more to reach the limit.
-    for (let i = 1; i <= 2; i++) {
+    // Create 3 lists to reach the free-tier limit.
+    for (let i = 1; i <= 3; i++) {
       await createList(page, `Limited List ${i}`);
     }
 
-    // Verify the seeded + created lists exist (3 total = the limit)
-    await expect(page.getByText('Quick Errands')).toBeVisible();
+    // Verify all 3 lists exist (3 total = the limit)
     await expect(page.getByText('Limited List 1')).toBeVisible();
     await expect(page.getByText('Limited List 2')).toBeVisible();
+    await expect(page.getByText('Limited List 3')).toBeVisible();
 
     // Try to create one more list beyond the limit - should show upgrade dialog instead
     await page.getByRole('button', { name: /new list/i }).click();

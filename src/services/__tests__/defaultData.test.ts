@@ -51,4 +51,13 @@ describe('defaultData', () => {
     await seedDefaultFolders(g, 'g1', 'user-1');
     expect(g.folder.all()).toHaveLength(1);
   });
+
+  it('seedDefaultFolders does not create a folder for anonymous users', async () => {
+    const g = makeGraph();
+    expect(g.folder.all()).toHaveLength(0);
+
+    await seedDefaultFolders(g, 'g1', 'anon', true);
+
+    expect(g.folder.all()).toHaveLength(0);
+  });
 });

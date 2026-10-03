@@ -90,13 +90,6 @@ is required first — is nutrition in scope for CheckList?**
   - start the backend on a fresh auth DB — a Jazz-era DB fails with
     `no such column: target_group_id`
 
-- **New-device login duplicates default seed content.** Signing into an existing account in a
-  private window produced a second copy of the default "Quick Errands" list. New-device login
-  appears to seed default content and then claim it into the account (anonymous-session claim; see
-  `ARCHITECTURE.md` → Anonymous sessions & convergence and `useAnonClaim` in `src/lib/rowboat.tsx`),
-  so every new device adds another copy. Needs a way to mark default seed content so it is not
-  re-seeded or claimed on each new device login.
-
 - **Billing routes are not mounted.** `backend/src/billing/routes.ts` (tiers, checkout, webhook)
   exists but `backend/src/index.ts` never wires it, so the deploy smoke test no longer checks
   `/api/billing/tiers`. Mount it and restore that check when billing ships.

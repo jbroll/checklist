@@ -75,12 +75,16 @@ export function buildQuickErrandsFolder(
 /**
  * Seed the default "Quick Errands" list for a brand-new user. No-op if any folder already exists
  * (a cheap second guard; the caller gates on the user being new). One write — never overwrites.
+ * Anonymous users never get seeded content: their store is transient and would be claimed into
+ * the signed-in account, producing a duplicate "Quick Errands" on every new device login.
  */
 export async function seedDefaultFolders(
   g: Graph,
   ownerGroupId: string,
   createdBy: string,
+  isAnonymous = false,
 ): Promise<void> {
+  if (isAnonymous) return;
   if (g.folder.all().length > 0) return;
   const folder = buildQuickErrandsFolder(crypto.randomUUID(), ownerGroupId, createdBy, Date.now());
   await g.folder.create({

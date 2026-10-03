@@ -231,7 +231,7 @@ function RowboatBridge({
             .toArray();
           if (cancelled) return;
           if (existingFolders.length === 0) {
-            await seedDefaultFolders(graph, await mintGroup(), identity);
+            await seedDefaultFolders(graph, await mintGroup(), identity, !author);
           }
         }
         provisionedRef.current = true;

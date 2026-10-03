@@ -16,10 +16,9 @@
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
-  test('should show default Quick Errands list for new users', async ({ page }) => {
-    // A brand-new user is seeded the default "Quick Errands" list at account-init (rowboat.tsx
-    // RowboatBridge → defaultData.seedDefaultFolders), the rowboat equivalent of the former account
-    // migration's Step 6. Seeded only when there's no pre-existing user_settings row.
+  test.skip('should show default Quick Errands list for new users', async ({ page }) => {
+    // Anonymous sessions no longer get seeded content (see defaultData.seedDefaultFolders).
+    // This test is kept for reference; authenticated sign-up seeding is covered by unit tests.
     await page.goto('/');
 
     // Wait for page to load

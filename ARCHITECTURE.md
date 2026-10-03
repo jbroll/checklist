@@ -111,8 +111,9 @@ crash-resume-safe), and the provider remounts on the identity flip (`key = ident
 converges **identity-keyed singletons** (a row whose `id` equals its scope key — `user_settings`) to
 the one canonical `id = user.id` row instead of duplicating it (D2). Account-init provisioning
 (`RowboatBridge`, gated until the auth session and the claim have settled) then: provisions the
-`user_settings` singleton, seeds the default "Quick Errands" list for genuinely-new users,
-auto-archives sessions past the tier's retention window, and re-asserts the subscription tier
+`user_settings` singleton, seeds the default "Quick Errands" list for genuinely-new
+authenticated users (anonymous stores are never seeded — they are transient and claimed on
+sign-in, which duplicated the seed on every new-device login), auto-archives sessions past the tier's retention window, and re-asserts the subscription tier
 authoritatively from the backend so an adopted/stale cache can't leave a paying user downgraded.
 
 ### Account merge
