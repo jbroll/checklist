@@ -30,7 +30,7 @@ pre-commit:
     unit-tests:
       glob: "*.{ts,tsx}"
       run: '"${ORG_HOOKS}/scripts/flake-run.sh" unit'
-    # Playwright e2e drives the real app; flake-run.sh adds retries + the local gate.
+    # Playwright e2e runs on the CI host (ci/e2e); locally it spawns ~100 chromium processes.
     e2e-tests:
       glob: "*.{ts,tsx,html}"
-      run: '"${ORG_HOOKS}/scripts/flake-run.sh" e2e'
+      run: '"${ORG_HOOKS}/scripts/sci-run.sh" --label e2e e2e'

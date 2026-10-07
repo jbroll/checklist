@@ -54,7 +54,9 @@ persistence (sync) to work. Always use `npm run dev` to start both servers.
 
 ## Git Commit Rules
 
-**Pre-commit**: Runs type-check, lint, unit tests, E2E tests (6-10 min).
+**Pre-commit**: Runs type-check, lint and unit tests locally, then E2E on the CI host via
+`sci` (`ci/e2e`). Never run `npm run test:e2e` or `npx playwright test` on the laptop; dispatch
+`sci push checklist/e2e` instead.
     ALL HOOK CHECKS MUST PASS
     YOU MAY NOT BYPASS THE COMMIT HOOKS
 
