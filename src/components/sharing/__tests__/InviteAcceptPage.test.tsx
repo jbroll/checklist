@@ -127,10 +127,11 @@ describe('InviteAcceptPage', () => {
     expect(mockAcceptInvite).toHaveBeenCalledWith(TOKEN);
     expect(window.location.href).not.toBe('/');
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    // Under load the redirect effect can schedule its timer after the success screen renders.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
     });
-    expect(window.location.href).toBe('/');
+    await waitFor(() => expect(window.location.href).toBe('/'));
   });
 
   it('shows the wrong-account screen when accept says wrong_account', async () => {
