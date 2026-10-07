@@ -165,8 +165,10 @@ export default defineConfig({
           // requireEmailVerification requirement so email/password signup can be exercised
           // without SMTP/GreenMail. Unset means prod/dev behaviour (verification ON) is
           // untouched — this is the one env var that turns it off, and only in the
-          // Playwright-launched dev server.
-          CHECKLIST_TEST_AUTH: '1',
+          // Playwright-launched dev server. '0' with GreenMail: signup sends the verification
+          // email e2e/invite.setup.ts waits for only when verification is required. Always set
+          // explicitly, because dotenv would otherwise fill it from a local backend/.env.
+          CHECKLIST_TEST_AUTH: hasEmailInfra ? '0' : '1',
         },
         stdout: 'pipe',
         stderr: 'pipe',

@@ -11,7 +11,29 @@
  * - shareUrl: readonly `input[value*="/invite/"]` rendered by ShareDialog
  *   after a successful invite (the `lastShareUrl` block).
  */
+import { gunzipSync } from 'node:zlib';
 import { expect, type Page } from '@playwright/test';
+
+/**
+ * Resolves once a successful sync push carries the folder. Call before createFolder: the row
+ * rides the 5s background sync, and a page closed before that push leaves an invitee with
+ * access to an empty group.
+ */
+export function waitForFolderPush(page: Page, folderName: string): Promise<unknown> {
+  return page.waitForResponse(
+    (res) => {
+      const req = res.request();
+      if (req.method() !== 'POST' || !req.url().endsWith('/api/sync/sync') || !res.ok()) {
+        return false;
+      }
+      const raw = req.postDataBuffer();
+      if (!raw) return false;
+      const body = req.headers()['content-encoding'] === 'gzip' ? gunzipSync(raw) : raw;
+      return body.toString('utf8').includes(folderName);
+    },
+    { timeout: 30000 },
+  );
+}
 
 /** Create a template folder via the authenticated app UI. */
 export async function createFolder(page: Page, name: string): Promise<void> {
@@ -77,7 +99,10 @@ export async function revokeInvite(page: Page, recipientEmail: string): Promise<
     .getByRole('button', { name: /revoke invite/i })
     .first()
     .click();
-  await expect(page.getByText(recipientEmail)).toHaveCount(0, { timeout: 10000 });
+  // The "Invite emailed to …" line stays up after a revoke, so check the pending rows only.
+  await expect(page.getByRole('listitem').filter({ hasText: recipientEmail })).toHaveCount(0, {
+    timeout: 10000,
+  });
 }
 
 export async function assertFolderVisible(page: Page, folderName: string): Promise<void> {

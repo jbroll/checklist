@@ -16,6 +16,7 @@ import {
   generateInvite,
   openShareDialog,
   revokeInvite,
+  waitForFolderPush,
 } from './helpers/invite-helper';
 import { uniqueFolderName } from './helpers/folder-name';
 
@@ -48,10 +49,12 @@ test.describe('Invite closed loop', () => {
   test('organizer creates a folder and generates a real invite', async ({ page }) => {
     await page.goto('/');
     await waitForHomeReady(page);
+    const pushed = waitForFolderPush(page, FOLDER);
     await createFolder(page, FOLDER);
     await openShareDialog(page, FOLDER);
     shareUrl = await generateInvite(page, TEST_ACCOUNTS.recipient.email, 'writer');
     expect(shareUrl).toContain('/invite/');
+    await pushed;
   });
 
   test('recipient sees the real validated invite details', async ({ browser }) => {
@@ -72,7 +75,9 @@ test.describe('Invite closed loop', () => {
     }
   });
 
-  test('unauthenticated visitor sees invite details + sign-in prompt', async ({ browser }) => {
+  test('unauthenticated visitor is asked to sign in and sees no invite details', async ({
+    browser,
+  }) => {
     expect(shareUrl).toBeTruthy();
     // Empty storage = truly signed out (a bare context would inherit test1's session).
     const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
@@ -80,25 +85,33 @@ test.describe('Invite closed loop', () => {
     try {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
-      await expect(page.getByText(`has invited you to ${FOLDER}`)).toBeVisible({
-        timeout: 20000,
-      });
-      await page.getByRole('button', { name: /accept invite/i }).click();
-      await expect(page.getByText(/sign in to continue/i)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/sign in to continue/i)).toBeVisible({ timeout: 20000 });
       await expect(page.getByText(/continue with google/i)).toBeVisible();
+      await expect(page.getByText(FOLDER)).toHaveCount(0);
+      await expect(page.getByText(TEST_ACCOUNTS.organizer.email)).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /accept invite/i })).toHaveCount(0);
     } finally {
       await ctx.close();
     }
   });
 
-  test('wrong account (test3) sees the email-mismatch state', async ({ browser }) => {
+  // Validate answers a non-recipient exactly as it answers a bad token, so the wrong-account
+  // screen only follows a refused accept, which a non-recipient never reaches.
+  test('wrong account (test3) gets the invalid-invite error and sees no details', async ({
+    browser,
+  }) => {
     expect(shareUrl).toBeTruthy();
     const ctx = await browser.newContext({ storageState: path.join(AUTH_DIR, 'test3.json') });
     const page = await ctx.newPage();
     try {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
-      await expect(page.getByText(/wrong account/i)).toBeVisible({ timeout: 20000 });
+      await expect(page.getByRole('heading', { name: /invite error/i })).toBeVisible({
+        timeout: 20000,
+      });
+      await expect(page.getByText('This invite link is no longer valid.')).toBeVisible();
+      await expect(page.getByText(FOLDER)).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /accept invite/i })).toHaveCount(0);
     } finally {
       await ctx.close();
     }
