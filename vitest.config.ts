@@ -18,6 +18,8 @@ export default defineConfig({
       ? ['default', process.env.VITEST_FLAKE_REPORTER]
       : ['default'],
     environment: 'jsdom',
+    // Radix/userEvent tests take ~0.5s idle and cross the 5s default when the host is loaded.
+    testTimeout: 15_000,
     setupFiles: './src/test/setup.ts',
     css: true,
     // Limit concurrency to prevent crashes

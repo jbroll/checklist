@@ -57,8 +57,7 @@ async function startRename(user: ReturnType<typeof userEvent.setup>) {
   return screen.getByRole('textbox');
 }
 
-// Opening the Radix menu costs ~0.7s idle and passes the 5s default on a loaded host.
-describe('SessionRowView', { timeout: 15_000 }, () => {
+describe('SessionRowView', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
