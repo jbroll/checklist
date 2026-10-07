@@ -5,6 +5,7 @@ import { decodeRow } from '@jbroll/rowboat-cli/src/column-types.js';
 import { type DataSession, openDataSession } from '@jbroll/rowboat-cli/src/data-session.js';
 import { compileSchema } from '@jbroll/rowboat-schema';
 import { schema } from '../../../shared/schema.js';
+import { SCHEMA_VERSION } from '../../../shared/schemaVersion.js';
 import type { UserPlan } from './map.js';
 import { assertNothingPending, syncUntilComplete } from './sync-round.js';
 
@@ -47,7 +48,7 @@ async function openSession(target: SessionTarget, userId: string, suffix: string
     syncUrl: target.syncBase,
     author: userId,
     token,
-    appVersion: 0,
+    appVersion: SCHEMA_VERSION,
   });
   return { session, filename, token };
 }
@@ -63,7 +64,7 @@ function completeSync(target: SessionTarget, userId: string, open: OpenSession, 
         apiBase: target.syncBase,
         author: userId,
         headers: { authorization: `Bearer ${open.token}` },
-        appVersion: 0,
+        appVersion: SCHEMA_VERSION,
         onTiming: onComplete,
       }),
   });

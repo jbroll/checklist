@@ -251,10 +251,10 @@ npm run preview      # Test production build
   `docs/HOSTED_ROWBOAT.md` → sub-projects C+D.
 - **Pull works, push is blocked** → a CORS preflight rejecting `Content-Encoding` (the client gzips
   push bodies); same doc section.
-- A schema change means re-provisioning the tenant: wipe `.rowboat-dev/`, `rowboat-tenant.local.json`
-  and `.env.tenant.local`, then let `npm run dev` re-bootstrap. (rowboat's live schema-migration path —
-  `migrating` state + `POST /v1/databases/:id/schema` + the `rowboat migrate` CLI — is available now
-  that CheckList is on StaaS, but is not wired here yet; see `docs/BACKLOG.md` → Standing notes.)
+- A schema change needs a new lock entry: run `npm run schema:lock` and commit
+  `shared/schema.lock.json`. `provision:*` refuses a stale lock, and re-running it migrates the
+  existing tenant to the new version. The client's sync `appVersion` is the lock's last version
+  (`shared/schemaVersion.ts`), so ship the new bundle before migrating a deployed tenant.
 
 ## Important Notes for AI Assistants
 

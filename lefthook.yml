@@ -22,6 +22,9 @@ pre-commit:
     # imports) can never fire here. Skip it — lefthook merges local `skip:` over remote.
     ts-jazz-waist:
       skip: true
+    schema-lock:
+      glob: "shared/schema*"
+      run: npm run --silent schema:check
     # Unit suite (frontend + backend) with flake tolerance: retries absorb a
     # one-off flake, outcomes recorded to a local firehose, chronic flakes trip.
     unit-tests:

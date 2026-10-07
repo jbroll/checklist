@@ -90,6 +90,9 @@ sudo systemctl restart checklist-api
 
 - `npm run provision:test` writes `rowboat-tenant.test.json` (git-ignored);
   `deploy-test.conf` reads the database ID from it.
+- Deploy the frontend before re-running `provision:*` against a deployed tenant. Provisioning moves
+  the tenant to the schema lock's last version, and a bundle built against an older lock is then
+  refused on every sync with `409 schema_behind`.
 - `backend/secrets-test.env` needs `ROWBOAT_DATABASE_ID`,
   `ROWBOAT_URL=https://rowboat.rkroll.com`,
   `FRONTEND_URL=https://checklist-test.rkroll.com`, and `BIND_HOST=127.0.0.1`.

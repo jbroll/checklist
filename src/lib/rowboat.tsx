@@ -34,11 +34,10 @@ import { schema } from '@/schema/folder';
 import { seedDefaultFolders, shouldSeedDefaultFolders } from '@/services/defaultData';
 import { runCleanupIfNeeded } from '@/services/sessionCleanupService';
 import { ensureUserSettings, syncSubscriptionFromBackend } from '@/services/subscriptionService';
+import { SCHEMA_VERSION as APP_VERSION } from '../../shared/schemaVersion.js';
 
 const APP_NAME = 'checklist';
 const SYNC_INTERVAL_MS = 5000;
-// rowboat 400s a push/pull without appVersion; 0 means this app has no schema versioning yet.
-const APP_VERSION = 0;
 
 // `<rowboatUrl>/db/<databaseId>/api/sync` — written by provision:* (see scripts/dev-rowboat.sh in
 // dev, the deploy env in prod). syncWithServer appends /sync and /pull; the group mint is /groups.
@@ -68,7 +67,7 @@ const PortContext = createContext<PortContextValue | null>(null);
 
 // Authenticated mint: hosted rowboat creates a scope group the caller admins, nested under their
 // root group. Anonymous users have no token and never sync, so an anon folder gets a purely-local
-// group id — its rows are re-scoped to the user's group by adopt on sign-in (C2).
+// group id — adopt on sign-in moves its rows to a server group minted here (`mintScope`).
 async function serverMintGroup(parentGroupId?: string): Promise<string> {
   const res = await fetch(`${SYNC_BASE}/groups`, {
     method: 'POST',
@@ -268,10 +267,13 @@ export function RowboatProvider({ children }: { children: ReactNode }) {
   // Claims the anon store into the authenticated identity's store on login. The `key` below
   // remounts `RowboatBridge` (fresh db + graph) once `author` flips, so the claimed rows show
   // up without any extra wiring here.
+  // Each anonymous folder's local group becomes its own server group, so sharing one adopted
+  // folder never touches the root group (which the sharing server refuses to invite into).
   const { claiming } = useAnonClaim({
     app: APP_NAME,
     tables: manifest,
     options: dbOptions,
+    mintScope: () => serverMintGroup(),
     onError: (err) => {
       console.error('[rowboat] useAnonClaim failed:', err);
     },

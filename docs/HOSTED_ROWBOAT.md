@@ -285,6 +285,13 @@ create database with `compileSchema(shared/schema)` → register the JWT issuer)
 - `npm run provision:prod` — provisions the checklist tenant on rowboat.rkroll.com (operator step; see the deploy runbook).
 - `npm run provision:test` — provisions the checklist-test tenant on rowboat.rkroll.com.
 
+Each run checks `shared/schema.lock.json` and refuses when it is missing or its last hash is not the
+schema's (`npm run schema:lock` appends a version, `npm run schema:check` tests it). A new database is
+created at the lock's last version. An existing one is migrated to it, and a database created before
+schema hashes is first adopted at the highest lock version matching its stored manifest. The client
+sends that version as its sync `appVersion` (`shared/schemaVersion.ts`), and a tenant refuses a lower
+one with `409 schema_behind`.
+
 Outputs land in a gitignored `rowboat-tenant.<env>.json` (holds the once-shown `managementKey` +
 `databaseId` + issuer). The printed `databaseId` / `issuer` / `audience` are what sub-project C wires
 into the app's env. The issuer contract: `audience = databaseId`, `jwksUrl`/`issuer` = CheckList's

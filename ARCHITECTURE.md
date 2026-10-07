@@ -107,7 +107,10 @@ The folder's `owner_group_id` is a per-folder scope group, minted server-side vi
 
 Anonymous users get a local, never-synced store scoped to `ANON_IDENTITY`. On sign-in,
 `useAnonClaim` **adopts** that store into the authenticated account's scope (`adoptAnonStore`,
-crash-resume-safe), and the provider remounts on the identity flip (`key = identity`). Adopt
+crash-resume-safe), and the provider remounts on the identity flip (`key = identity`). Each
+anonymous folder's local group is replaced by a newly minted server group (`mintScope`), because
+folders in the root group could not be shared: the sharing server refuses invites to a root group,
+which holds every private row. Adopt
 converges **identity-keyed singletons** (a row whose `id` equals its scope key — `user_settings`) to
 the one canonical `id = user.id` row instead of duplicating it (D2). Account-init provisioning
 (`RowboatBridge`, gated until the auth session and the claim have settled) then: provisions the

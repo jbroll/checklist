@@ -94,16 +94,11 @@ is required first — is nutrition in scope for CheckList?**
 
 ## Standing notes & rationale
 
-- **rowboat has a live schema-migration mechanism, but CheckList doesn't use it yet.** rowboat
-  landed a full live-migration stack (a `migrating` state + off-thread migration worker + `POST
-  /v1/databases/:id/schema` + the `rowboat migrate` CLI + `movedFrom` column-move DX) — the **StaaS /
-  control-plane** path. CheckList runs rowboat as an **embedded library**: the backend registers a
-  single compiled schema at boot (`registerSyncTable`), so an *ongoing* schema change here still
-  means a fresh `AUTH_DB_PATH` DB (see the Troubleshooting note in CLAUDE.md), NOT a live migration.
-  Prod's Jazz-era users and their data will be carried over once, by a one-time export/import (see
-  the prod item under Engineering), not by an in-place schema migration. Adopting rowboat's migration path (or its `movedFrom`
-  DX for column renames) is a future option if CheckList ever needs to evolve a schema without
-  discarding data.
+- **Schema changes migrate the tenant in place.** `provision:*` migrates an existing tenant to the
+  schema lock's last version (see `docs/HOSTED_ROWBOAT.md` → sub-project B). rowboat's
+  `rowboat migrate --plan` (expand/contract classification) and `movedFrom` column renames are not
+  wired into a CheckList script yet. Prod's Jazz-era users and their data will be carried over once,
+  by a one-time export/import (see the prod item under Engineering).
 - **`knip.json`'s `better-auth` entry in `ignoreDependencies` has no home for its rationale** —
   `knip.json` is plain JSON and can't carry a comment. Recorded here: no source file imports
   `better-auth` directly, but the file:-linked `@jbroll/rowboat-auth-betterauth-react` package's
