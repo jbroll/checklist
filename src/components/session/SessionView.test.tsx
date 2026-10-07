@@ -8,7 +8,7 @@
  * (see `mockUserSettingsRows`), which is exercised directly via the `user_settings` stub.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NavState } from '@/lib/useNavigationHistory';
@@ -682,6 +682,75 @@ describe('SessionView', () => {
 
       // onSwitchSession should be available in the component
       expect(props.onSwitchSession).toBe(onSwitchSession);
+    });
+  });
+
+  describe('keyboard shortcuts', () => {
+    function renderWithSelectedItems(overrides = {}) {
+      const items = [
+        createMockItem('item-1', 'Milk', 'item'),
+        createMockItem('item-2', 'Bread', 'item'),
+      ];
+      const session = createMockSession('session-1', {
+        'item-1': { selected: true, checked: false },
+        'item-2': { selected: true, checked: false },
+      });
+      const template = createMockTemplate('template-1', items, [session]);
+      const props = createDefaultProps({ template, ...overrides });
+      render(<SessionView {...props} />);
+      return props;
+    }
+
+    it('arrows down to an item and checks it off', async () => {
+      const user = userEvent.setup();
+      renderWithSelectedItems();
+
+      const rows = document.querySelectorAll<HTMLElement>('[data-item-id]');
+      expect(rows).toHaveLength(2);
+      await user.keyboard('{ArrowDown}');
+      expect(rows[0]).toHaveFocus();
+      await user.keyboard('{ArrowDown}{ }');
+
+      expect(sessionService.toggleItemChecked).toHaveBeenCalledWith(
+        mockGraph,
+        'template-1',
+        'session-1',
+        rows[1].dataset.itemId,
+      );
+    });
+
+    it('opens the add form with n', async () => {
+      const user = userEvent.setup();
+      renderWithSelectedItems();
+
+      await user.keyboard('n');
+
+      expect(mockNavigateTo).toHaveBeenCalledWith({
+        view: 'session',
+        templateId: 'template-1',
+        sessionId: 'session-1',
+        editing: true,
+      });
+    });
+
+    it('leaves the session with Escape', async () => {
+      const user = userEvent.setup();
+      const props = renderWithSelectedItems();
+
+      await user.keyboard('{Escape}');
+
+      expect(props.onBack).toHaveBeenCalledOnce();
+    });
+
+    it('is off while the add form is open', () => {
+      mockNavState = { ...mockNavState, editing: true };
+      const props = renderWithSelectedItems({ navState: mockNavState });
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      fireEvent.keyDown(document.body, { key: 'n' });
+
+      expect(props.onBack).not.toHaveBeenCalled();
+      expect(mockNavigateTo).not.toHaveBeenCalled();
     });
   });
 

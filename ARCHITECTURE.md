@@ -33,6 +33,12 @@ browser back/forward toggle tree↔session and the in-session edit mode. It is *
 session pushes a history entry, but a reload / pasted `#session/…` URL lands on the tree (no
 deep-link/id-resolution restore).
 
+The session view's keyboard shortcuts (`src/components/session/useSessionKeyboard.ts`) are one
+`keydown` listener on `document`, off while the edit form is open. It skips events from text
+fields, events with Ctrl/Alt/Meta held, already-handled events, and any event while a dialog or menu
+is mounted, so Radix overlays and `ItemInput` keep their own Escape. Arrow keys move DOM focus
+through the rendered `[data-item-id]` rows, so collapsed zones are skipped.
+
 ## Data model (rowboat relational schema)
 
 The schema is authored once in Zod with rowboat's `rb.*` column helpers and shared by frontend and

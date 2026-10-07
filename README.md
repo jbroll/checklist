@@ -65,7 +65,13 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 **Templates** are reusable checklists organized in folders.
 
-**Sessions** are created when you "use" a template - they track what's in your cart and what you've purchased without modifying the template.
+**Sessions** are created when you "use" a template - they track what's in your cart and what you've purchased without modifying the template. A session is labeled by its date until you give it a name with **Rename** in its row menu.
+
+Keyboard shortcuts in a session:
+- `↓` / `↑`: move between items
+- `Space` / `Enter`: check or uncheck the focused item
+- `N`: open the add/edit form
+- `Esc`: leave the session
 
 **rowboat** provides:
 - Real-time sync

@@ -192,10 +192,10 @@ export const SessionItemRow = memo(function SessionItemRow({
     <div
       ref={canActuallyDrag ? setDragRef : undefined}
       data-item-id={item.id}
-      {...(canActuallyDrag ? dragAttributes : {})}
+      {...(canActuallyDrag ? dragAttributes : { tabIndex: -1 })}
       {...(canActuallyDrag ? dragListeners : {})}
       {...(canActuallyDrag ? longPressHandlers : {})}
-      className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 ${
+      className={`flex items-center gap-3 rounded px-1 py-0.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
         isInsertionPointSelected ? 'bg-interactive-active' : 'hover:bg-interactive-hover'
       } ${onSelectItem ? 'cursor-pointer' : ''} ${canActuallyDrag && !isDragging ? 'cursor-grab' : ''} ${isDragging ? 'opacity-50 cursor-grabbing' : ''} ${
         isHolding && canActuallyDrag

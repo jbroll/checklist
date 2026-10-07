@@ -18,6 +18,7 @@ import { useScrollPreservation } from './useScrollPreservation';
 import { useSessionDragDrop } from './useSessionDragDrop';
 import { useSessionHandlers } from './useSessionHandlers';
 import { useSessionItems } from './useSessionItems';
+import { useSessionKeyboard } from './useSessionKeyboard';
 import { useViewMode } from './useViewMode';
 import { ZoneInHierarchyRenderer } from './ZoneInHierarchyRenderer';
 
@@ -148,6 +149,14 @@ export function SessionView({
     sessionId,
     g,
     activeItems,
+  });
+
+  useSessionKeyboard({
+    enabled: !!session && !showAddForm,
+    containerRef: scrollContainerRef,
+    onToggleChecked: handlers.handleToggleChecked,
+    onAdd: () => setShowAddForm(true),
+    onBack,
   });
 
   // Build hierarchical tree structure (memoized for performance)

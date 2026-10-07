@@ -110,6 +110,21 @@ describe('SessionItemRow', () => {
       const itemText = screen.getByText('Test Item');
       expect(itemText).toHaveClass('line-through');
     });
+
+    it('can take focus programmatically without joining the tab order', () => {
+      const { container } = render(<SessionItemRow {...defaultProps} zone="selected" />);
+
+      const row = container.firstChild as HTMLElement;
+      expect(row).toHaveAttribute('tabindex', '-1');
+      row.focus();
+      expect(row).toHaveFocus();
+    });
+
+    it('keeps tab order when the row is selectable', () => {
+      const { container } = render(<SessionItemRow {...defaultProps} onSelectItem={vi.fn()} />);
+
+      expect(container.firstChild).toHaveAttribute('tabindex', '0');
+    });
   });
 
   describe('checkbox interactions - available zone', () => {

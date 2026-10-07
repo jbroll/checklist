@@ -7,12 +7,6 @@
 
 ## Product features
 
-### High priority (competitive parity)
-
-| Feature | Effort | Notes |
-|---------|--------|-------|
-| **Keyboard shortcuts** | 2-3h | Enter, Escape, arrow navigation |
-
 ### Medium priority (nice to have)
 
 | Feature | Effort | Notes |
