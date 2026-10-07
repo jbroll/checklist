@@ -9,6 +9,7 @@ import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { signIn, signOut, useAuthor, useSession } from '@/rowboat';
+import { logSharingError, withErrorCode } from './sharingErrorText';
 
 const REDIRECT_AFTER_ACCEPT_MS = 2000;
 
@@ -19,6 +20,10 @@ interface InviteAcceptPageProps {
 type ValidInvite = Extract<InviteAcceptanceState, { status: 'valid' }>;
 
 function inviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'error' }>): string {
+  return withErrorCode(baseInviteErrorMessage(state), state.error);
+}
+
+function baseInviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'error' }>) {
   // The server collapses invalid, expired, used, and addressed-to-someone-else into one answer.
   if (state.reason === 'invalid') return 'This invite link is no longer valid.';
   if (state.error instanceof SharingError && state.error.code === 'inviter_no_longer_admin') {
@@ -43,6 +48,9 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
     sessionPending: session.isPending,
     sharing,
   });
+
+  const failure = state.status === 'error' ? state.error : null;
+  useEffect(() => logSharingError('invite', failure), [failure]);
 
   // The shared folder appears once the next sync pulls it: visibility follows group membership.
   useEffect(() => {

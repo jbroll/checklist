@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import type { FolderRow } from '@/schema/folder';
+import { logSharingError, withErrorCode } from './sharingErrorText';
 
 type Role = 'reader' | 'writer' | 'admin';
 
@@ -35,11 +36,14 @@ function shareErrorMessage(err: Error): string {
   const code = err instanceof SharingError ? err.code : null;
   switch (code) {
     case 'root_group':
-      return "This list can't be shared as it is: it lives in your account's private group.";
+      return withErrorCode(
+        "This list can't be shared as it is: it lives in your account's private group.",
+        err,
+      );
     case 'forbidden':
-      return 'Only an admin of this list can share it.';
+      return withErrorCode('Only an admin of this list can share it.', err);
     default:
-      return 'Something went wrong. Please try again.';
+      return withErrorCode('Something went wrong. Please try again.', err);
   }
 }
 
@@ -109,6 +113,8 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     },
     [pendingInvites, revoke],
   );
+
+  useEffect(() => logSharingError('share dialog', error), [error]);
 
   const formError = error ? shareErrorMessage(error) : null;
 

@@ -111,17 +111,21 @@ describe('ShareDialog', () => {
   });
 
   it.each([
-    ['root_group', 400, /can't be shared as it is/],
-    ['forbidden', 403, /Only an admin of this list can share it/],
-    ['invalid_role', 400, /Something went wrong/],
-    [null, 401, /Something went wrong/],
-  ])('shows the message for a %s failure, not the server text', async (code, status, text) => {
-    mockCreateInvite.mockRejectedValue(new SharingError('raw server text', status, code));
+    ['root_group', 400, /can't be shared as it is: .* \(root_group\)$/],
+    ['forbidden', 403, /^Only an admin of this list can share it\. \(forbidden\)$/],
+    ['invalid_role', 400, /^Something went wrong\. Please try again\. \(invalid_role\)$/],
+    [null, 401, /^Something went wrong\. Please try again\. \(401\)$/],
+  ])('shows the message and code for a %s failure, not the server text', async (code, status, text) => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failure = new SharingError('raw server text', status, code);
+    mockCreateInvite.mockRejectedValue(failure);
     render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
     enterRecipient('r@example.com');
     fireEvent.click(screen.getByRole('button', { name: /email invite/i }));
     await waitFor(() => expect(screen.getByText(text)).toBeInTheDocument());
-    expect(screen.queryByText('raw server text')).not.toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalledWith('[sharing] share dialog:', failure);
+    consoleError.mockRestore();
+    expect(screen.queryByText(/raw server text/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Invite emailed/)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText(/colleague@example.com/i)).toHaveValue('r@example.com');
   });

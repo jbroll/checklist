@@ -135,7 +135,10 @@ pending-invite lists and for invite, remove and revoke. It offers Copy link (`se
 Email invite, and sends the folder name as `targetName` (folded to one line, cut to 200 characters)
 so the email and the accept page name the list. Errors are shown by `SharingError.code`:
 `root_group` (the folder is still in the account's private root group), `forbidden` (not an admin of
-the folder), otherwise a generic message.
+the folder), otherwise a generic message. Every message on the dialog and the invite page ends with
+the error code, or the HTTP status when there is none (`sharingErrorText.ts`), and the full error
+goes to the browser console. The server's own error text is never shown; rowboat's share routes
+write it to the backend log.
 
 Invites are token-based, time-limited, and server-validated (recipient email must match the
 authenticated session; the sender must still have access at acceptance). `App.tsx` routes

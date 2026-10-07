@@ -104,11 +104,17 @@ describe('InviteAcceptPage', () => {
     expect(await screen.findByText('This invite link is no longer valid.')).toBeInTheDocument();
   });
 
-  it('shows a retry message when validate fails', async () => {
-    mockValidateInvite.mockRejectedValue(new TypeError('network down'));
+  it('shows a retry message without a code when validate fails on the network', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failure = new TypeError('network down');
+    mockValidateInvite.mockRejectedValue(failure);
     render(<InviteAcceptPage token={TOKEN} />);
-    expect(await screen.findByText(/Something went wrong with this invite/)).toBeInTheDocument();
-    expect(screen.queryByText('network down')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('Something went wrong with this invite. Please try again.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/network down/)).not.toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalledWith('[sharing] invite:', failure);
+    consoleError.mockRestore();
   });
 
   it('accepts, shows success, then returns to the dashboard', async () => {
@@ -143,7 +149,10 @@ describe('InviteAcceptPage', () => {
     mockAcceptInvite.mockRejectedValue(new SharingError('gone', 400, 'invalid_token'));
     render(<InviteAcceptPage token={TOKEN} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Accept Invite' }));
-    expect(await screen.findByText('This invite link is no longer valid.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('This invite link is no longer valid. (invalid_token)'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/gone/)).not.toBeInTheDocument();
   });
 
   it('explains when the inviter lost admin before the accept', async () => {
@@ -152,7 +161,11 @@ describe('InviteAcceptPage', () => {
     render(<InviteAcceptPage token={TOKEN} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Accept Invite' }));
     await waitFor(() =>
-      expect(screen.getByText(/can no longer share this list/)).toBeInTheDocument(),
+      expect(
+        screen.getByText(
+          'The person who invited you can no longer share this list. (inviter_no_longer_admin)',
+        ),
+      ).toBeInTheDocument(),
     );
   });
 });
