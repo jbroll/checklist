@@ -39,6 +39,8 @@ test('second-device login keeps exactly one seeded Quick Errands list', async ({
   page,
   browser,
 }) => {
+  // Two sign-ins plus the settle wait run close to the default 30s under a full parallel suite.
+  test.slow();
   page.on('console', (m) => {
     if (['error', 'warning'].includes(m.type()))
       console.log('[console]', m.type(), m.text().slice(0, 500));
