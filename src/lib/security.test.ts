@@ -4,22 +4,16 @@
  * Tests for security-related utilities and validation functions.
  */
 
-import { describe, expect, it } from 'vitest';
+import {
+  inviteTokenFromPath,
+  stashInviteToken,
+  takeStashedInviteToken,
+} from '@jbroll/rowboat-sharing-react';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-// Token validation constants (should match AuthGate.tsx)
-const TOKEN_REGEX = /^[a-zA-Z0-9_-]+$/;
-const MAX_TOKEN_LENGTH = 128;
+const TOKEN = 'a1b2c3d4'.repeat(8);
 
-/**
- * Validates an invite token format to prevent open redirect attacks.
- */
-function isValidToken(token: string): boolean {
-  if (!token) return false;
-  if (token.length > MAX_TOKEN_LENGTH) return false;
-  return TOKEN_REGEX.test(token);
-}
-
-// Email validation (should match ShareDialog.tsx)
+// Email validation
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const MAX_EMAIL_LENGTH = 254;
 
@@ -29,75 +23,42 @@ function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email);
 }
 
-describe('Token Validation', () => {
-  describe('valid tokens', () => {
-    it('should accept alphanumeric tokens', () => {
-      expect(isValidToken('abc123')).toBe(true);
-    });
-
-    it('should accept tokens with underscores', () => {
-      expect(isValidToken('abc_123')).toBe(true);
-    });
-
-    it('should accept tokens with hyphens', () => {
-      expect(isValidToken('abc-123')).toBe(true);
-    });
-
-    it('should accept hex tokens (typical invite format)', () => {
-      expect(isValidToken('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4')).toBe(true);
-    });
-
-    it('should accept base64url tokens', () => {
-      expect(isValidToken('abcABC123_-')).toBe(true);
-    });
-
-    it('should accept tokens at max length', () => {
-      const maxToken = 'a'.repeat(MAX_TOKEN_LENGTH);
-      expect(isValidToken(maxToken)).toBe(true);
-    });
+describe('invite token from the path', () => {
+  it('accepts a 64-hex token, with or without a trailing slash', () => {
+    expect(inviteTokenFromPath(`/invite/${TOKEN}`)).toBe(TOKEN);
+    expect(inviteTokenFromPath(`/invite/${TOKEN}/`)).toBe(TOKEN);
   });
 
-  describe('invalid tokens', () => {
-    it('should reject empty tokens', () => {
-      expect(isValidToken('')).toBe(false);
-    });
+  it('rejects anything that is not a 64-hex token', () => {
+    for (const path of [
+      '/invite/',
+      '/invite/abc123',
+      `/invite/${TOKEN.toUpperCase()}`,
+      `/invite/${TOKEN}a`,
+      `/invite/${TOKEN}/extra`,
+      '/invite/../../../etc/passwd',
+      '/invite/<script>alert(1)</script>',
+      `/invite/${TOKEN}?next=//evil.example`,
+    ]) {
+      expect(inviteTokenFromPath(path)).toBeNull();
+    }
+  });
+});
 
-    it('should reject tokens with spaces', () => {
-      expect(isValidToken('abc 123')).toBe(false);
-    });
+describe('stashed invite token', () => {
+  beforeEach(() => sessionStorage.clear());
 
-    it('should reject tokens with special characters', () => {
-      expect(isValidToken('abc!123')).toBe(false);
-      expect(isValidToken('abc@123')).toBe(false);
-      expect(isValidToken('abc#123')).toBe(false);
-      expect(isValidToken('abc$123')).toBe(false);
-      expect(isValidToken('abc%123')).toBe(false);
-    });
+  it('returns a stashed token once', () => {
+    stashInviteToken(TOKEN);
+    expect(takeStashedInviteToken()).toBe(TOKEN);
+    expect(takeStashedInviteToken()).toBeNull();
+  });
 
-    it('should reject tokens with slashes (path injection)', () => {
-      expect(isValidToken('abc/123')).toBe(false);
-      expect(isValidToken('../../../etc/passwd')).toBe(false);
-    });
-
-    it('should reject tokens with URL characters', () => {
-      expect(isValidToken('abc?foo=bar')).toBe(false);
-      expect(isValidToken('abc&bar=baz')).toBe(false);
-    });
-
-    it('should reject tokens exceeding max length', () => {
-      const tooLongToken = 'a'.repeat(MAX_TOKEN_LENGTH + 1);
-      expect(isValidToken(tooLongToken)).toBe(false);
-    });
-
-    it('should reject potential XSS payloads', () => {
-      expect(isValidToken('<script>alert(1)</script>')).toBe(false);
-      expect(isValidToken('javascript:alert(1)')).toBe(false);
-    });
-
-    it('should reject tokens with newlines', () => {
-      expect(isValidToken('abc\n123')).toBe(false);
-      expect(isValidToken('abc\r123')).toBe(false);
-    });
+  it('drops a malformed stash so it can never become a redirect target', () => {
+    for (const bad of ['//evil.example', 'javascript:alert(1)', '../x', 'abc\n123', '']) {
+      stashInviteToken(bad);
+      expect(takeStashedInviteToken()).toBeNull();
+    }
   });
 });
 

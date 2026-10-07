@@ -129,10 +129,21 @@ a two-login flow requiring source-email confirmation before finalize). The merge
 ## Folder sharing
 
 Folders are shared through rowboat's sharing routes (invite → accept → grant into the folder's scope
-group). Delivery is **capability-gated** (`src/components/sharing/`): Copy-link is always available;
-on devices with `navigator.share` the OS share sheet is offered, otherwise an Email Invite. Invites
-are token-based, time-limited, and server-validated (recipient email must match the authenticated
-session; the sender must still have access at acceptance). `InviteAcceptPage` handles `/invite/:token`.
+group). `src/components/sharing/` holds only markup; the state comes from
+`@jbroll/rowboat-sharing-react`. `ShareDialog` uses `useShareManager` for the collaborator and
+pending-invite lists and for invite, remove and revoke. It offers Copy link (`sendEmail: false`) and
+Email invite, and sends the folder name as `targetName` (folded to one line, cut to 200 characters)
+so the email and the accept page name the list. Errors are shown by `SharingError.code`:
+`root_group` (the folder is still in the account's private root group), `forbidden` (not an admin of
+the folder), otherwise a generic message.
+
+Invites are token-based, time-limited, and server-validated (recipient email must match the
+authenticated session; the sender must still have access at acceptance). `App.tsx` routes
+`/invite/<64-hex token>` (`inviteTokenFromPath`) to `InviteAcceptPage`, which maps
+`useInviteAcceptance` states onto its screens and redirects to `/` two seconds after an accept. A
+signed-out visitor signs in first: the token is stashed in `sessionStorage` (`stashInviteToken`) so
+it stays out of the OAuth callback URL, and `AuthGate` returns to the invite page with
+`takeStashedInviteToken`, which drops a malformed value.
 
 ## Billing & subscriptions
 

@@ -1,3 +1,4 @@
+import { inviteTokenFromPath } from '@jbroll/rowboat-sharing-react';
 import { RefreshCw } from 'lucide-react';
 import {
   Component,
@@ -158,8 +159,7 @@ function App() {
 
   // Parse current route
   const pathname = window.location.pathname;
-  const inviteMatch = pathname.match(/^\/invite\/(.+)$/);
-  const inviteToken = inviteMatch ? inviteMatch[1] : null;
+  const inviteToken = inviteTokenFromPath(pathname);
   const isResetPasswordPage = pathname === '/reset-password';
   const isVerifyEmailPage = pathname === '/verify-email';
   const isBillingCancel = pathname === '/billing/cancel';

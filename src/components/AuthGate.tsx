@@ -1,3 +1,4 @@
+import { takeStashedInviteToken } from '@jbroll/rowboat-sharing-react';
 import { useEffect, useState } from 'react';
 import { useDialog } from '@/lib/dialog-context';
 import { signIn, signOut, useAuthor, useSession } from '@/rowboat';
@@ -46,25 +47,9 @@ export function AuthGate() {
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
 
-      const pendingToken = sessionStorage.getItem('pending-invite-token');
+      const pendingToken = takeStashedInviteToken();
       if (pendingToken) {
-        sessionStorage.removeItem('pending-invite-token');
-        const TOKEN_REGEX = /^[a-zA-Z0-9_-]+$/;
-        const MAX_TOKEN_LENGTH = 128;
-        if (TOKEN_REGEX.test(pendingToken) && pendingToken.length <= MAX_TOKEN_LENGTH) {
-          window.location.href = `/invite/${pendingToken}`;
-          return;
-        }
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const inviteToken = urlParams.get('inviteToken');
-      if (inviteToken) {
-        const TOKEN_REGEX = /^[a-zA-Z0-9_-]+$/;
-        const MAX_TOKEN_LENGTH = 128;
-        if (TOKEN_REGEX.test(inviteToken) && inviteToken.length <= MAX_TOKEN_LENGTH) {
-          window.location.href = `/invite/${inviteToken}`;
-        }
+        window.location.href = `/invite/${pendingToken}`;
       }
     }
   }, [isAuthenticated]);

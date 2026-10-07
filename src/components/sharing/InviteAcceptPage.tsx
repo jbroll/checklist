@@ -1,26 +1,31 @@
-import { useSharing } from '@jbroll/rowboat-sharing-react';
+import type { InviteAcceptanceState } from '@jbroll/rowboat-sharing-react';
+import {
+  SharingError,
+  stashInviteToken,
+  useInviteAcceptance,
+  useSharing,
+} from '@jbroll/rowboat-sharing-react';
 import { Apple, Check, Loader2, Share2, XCircle } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { signIn, signOut, useAuthor, useSession } from '@/rowboat';
+
+const REDIRECT_AFTER_ACCEPT_MS = 2000;
 
 interface InviteAcceptPageProps {
   token: string;
 }
 
-interface InviteDetails {
-  inviterEmail?: string;
-  role?: string;
-}
+type ValidInvite = Extract<InviteAcceptanceState, { status: 'valid' }>;
 
-type PageState =
-  | { type: 'loading' }
-  | { type: 'not_authenticated' }
-  | { type: 'email_mismatch'; userEmail: string }
-  | { type: 'valid'; invite: InviteDetails }
-  | { type: 'accepting' }
-  | { type: 'success' }
-  | { type: 'error'; message: string };
+function inviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'error' }>): string {
+  // The server collapses invalid, expired, used, and addressed-to-someone-else into one answer.
+  if (state.reason === 'invalid') return 'This invite link is no longer valid.';
+  if (state.error instanceof SharingError && state.error.code === 'inviter_no_longer_admin') {
+    return 'The person who invited you can no longer share this list.';
+  }
+  return 'Something went wrong with this invite. Please try again.';
+}
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   const sharing = useSharing({
@@ -30,84 +35,23 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
 
   const author = useAuthor();
   const session = useSession();
-  const isAuthenticated = author !== null;
   const userEmail = session.data?.user?.email ?? '';
 
-  const [state, setState] = useState<PageState>({ type: 'loading' });
+  const { state, accept } = useInviteAcceptance({
+    token,
+    isAuthenticated: author !== null,
+    sessionPending: session.isPending,
+    sharing,
+  });
 
-  // Track if we've moved past the initial validation phase so a later re-render (e.g. the
-  // session/author refs changing) doesn't re-trigger /validate mid-accept.
-  const hasStartedAcceptingRef = useRef(false);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on token + isAuthenticated by design; sharing is a fresh object every render
+  // The shared folder appears once the next sync pulls it: visibility follows group membership.
   useEffect(() => {
-    if (hasStartedAcceptingRef.current) {
-      return;
-    }
-
-    // Wait for the session to resolve before deciding anything.
-    if (session.isPending) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      setState({ type: 'not_authenticated' });
-      return;
-    }
-
-    async function doValidation() {
-      try {
-        const data = await sharing.validateInvite(token);
-
-        if (!data.valid) {
-          // The server withholds the reason (invalid, expired, already accepted, or a valid
-          // token addressed to a different email all come back as `{ valid: false }`) so a
-          // non-recipient can't probe for which case applies.
-          setState({
-            type: 'error',
-            message: 'This invite link is no longer valid.',
-          });
-          return;
-        }
-
-        setState({ type: 'valid', invite: data });
-      } catch (error) {
-        console.error('Failed to validate invite:', error);
-        setState({ type: 'error', message: 'Failed to load invite. Please try again.' });
-      }
-    }
-
-    doValidation();
-  }, [token, isAuthenticated, session.isPending]);
-
-  const handleAccept = async () => {
-    hasStartedAcceptingRef.current = true;
-    setState({ type: 'accepting' });
-
-    try {
-      await sharing.acceptInvite(token);
-
-      setState({ type: 'success' });
-
-      // The shared folder shows up once the client's next periodic sync pulls it (no explicit
-      // "add to my folders" step under rowboat — visibility follows group membership).
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to accept invite:', error);
-      const message = error instanceof Error ? error.message : 'Failed to accept invite';
-
-      // The backend rejects a non-recipient with this exact message on accept (validate can't
-      // distinguish it, see above). Show the "wrong account" recovery screen.
-      if (/not sent to your account/i.test(message)) {
-        setState({ type: 'email_mismatch', userEmail });
-        return;
-      }
-
-      setState({ type: 'error', message });
-    }
-  };
+    if (state.status !== 'accepted') return;
+    const timer = setTimeout(() => {
+      window.location.href = '/';
+    }, REDIRECT_AFTER_ACCEPT_MS);
+    return () => clearTimeout(timer);
+  }, [state.status]);
 
   const handleDecline = () => {
     window.location.href = '/';
@@ -116,27 +60,27 @@ export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-secondary p-4">
       <div className="w-full max-w-md">
-        {state.type === 'loading' && <LoadingState />}
+        {state.status === 'loading' && <LoadingState />}
 
-        {state.type === 'not_authenticated' && <NotAuthenticatedState token={token} />}
+        {state.status === 'not_authenticated' && <NotAuthenticatedState token={token} />}
 
-        {state.type === 'email_mismatch' && (
-          <EmailMismatchState userEmail={state.userEmail} token={token} />
+        {state.status === 'wrong_account' && (
+          <EmailMismatchState userEmail={userEmail} token={token} />
         )}
 
-        {state.type === 'valid' && (
+        {state.status === 'valid' && (
           <ValidInviteState
-            invite={state.invite}
-            onAccept={handleAccept}
+            invite={state}
+            onAccept={() => void accept()}
             onDecline={handleDecline}
           />
         )}
 
-        {state.type === 'accepting' && <AcceptingState />}
+        {state.status === 'accepting' && <AcceptingState />}
 
-        {state.type === 'success' && <SuccessState />}
+        {state.status === 'accepted' && <SuccessState />}
 
-        {state.type === 'error' && <ErrorState message={state.message} />}
+        {state.status === 'error' && <ErrorState message={inviteErrorMessage(state)} />}
       </div>
     </div>
   );
@@ -155,8 +99,7 @@ function LoadingState() {
 
 function NotAuthenticatedState({ token }: { token: string }) {
   const handleGoogleSignIn = () => {
-    // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
-    sessionStorage.setItem('pending-invite-token', token);
+    stashInviteToken(token);
     signIn.social({
       provider: 'google',
       callbackURL: window.location.origin,
@@ -164,8 +107,7 @@ function NotAuthenticatedState({ token }: { token: string }) {
   };
 
   const handleAppleSignIn = () => {
-    // Store invite token in sessionStorage to avoid exposing in OAuth callback URL
-    sessionStorage.setItem('pending-invite-token', token);
+    stashInviteToken(token);
     signIn.social({
       provider: 'apple',
       callbackURL: window.location.origin,
@@ -280,7 +222,7 @@ function ValidInviteState({
   onAccept,
   onDecline,
 }: {
-  invite: InviteDetails;
+  invite: ValidInvite;
   onAccept: () => void;
   onDecline: () => void;
 }) {
@@ -293,7 +235,7 @@ function ValidInviteState({
         Folder Invitation
       </h1>
       <p className="mb-6 text-center text-content-secondary">
-        {invite.inviterEmail} has invited you to collaborate
+        {invite.inviterEmail ?? 'Someone'} has invited you to {invite.targetName ?? 'collaborate'}
       </p>
 
       <RoleDetails role={invite.role} />
@@ -373,7 +315,7 @@ function ErrorState({ message }: { message: string }) {
 /**
  * Display role level with rowboat's role names (reader/writer/admin).
  */
-function RoleDetails({ role }: { role?: string }) {
+function RoleDetails({ role }: { role: string | null }) {
   const labels: Record<string, { name: string; description: string }> = {
     reader: { name: 'Reader', description: 'You can view items in this folder' },
     writer: { name: 'Writer', description: 'You can view and modify items in this folder' },

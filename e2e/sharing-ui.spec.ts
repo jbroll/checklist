@@ -201,11 +201,10 @@ test.describe('Share Dialog UI', () => {
       route.fulfill({
         status: 403,
         contentType: 'application/json',
-        // useSharing surfaces the response's `error` field as the thrown Error.message,
-        // which ShareDialog renders as the form error — put the human sentence there
-        // (rowboat's error contract, not the former `{error, message}` split).
+        // ShareDialog picks its message from `code`; the server's `error` text is never shown.
         body: JSON.stringify({
           error: 'You do not have permission to share this folder',
+          code: 'forbidden',
         }),
       });
     });
@@ -221,7 +220,31 @@ test.describe('Share Dialog UI', () => {
     await page.getByRole('button', { name: 'Email invite' }).click();
 
     // Verify error message (with longer timeout to allow for API call)
-    await expect(page.locator('text=You do not have permission to share this folder')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Only an admin of this list can share it.')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=You do not have permission to share this folder')).toHaveCount(0);
+  });
+
+  test('names the folder in the invite request', async ({ page }) => {
+    let body: Record<string, unknown> | null = null;
+    await page.route('**/api/shares/invite', (route) => {
+      body = route.request().postDataJSON();
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'new-invite-token-123',
+          shareUrl: 'http://localhost:5173/invite/new-invite-token-123',
+          emailSent: false,
+        }),
+      });
+    });
+
+    await openShareDialog(page);
+    await page.getByRole('dialog').getByPlaceholder('colleague@example.com').fill('newuser@example.com');
+    await page.getByRole('button', { name: 'Copy link' }).click();
+
+    await expect(page.locator('text=Invite link ready')).toBeVisible();
+    expect(body).toMatchObject({ targetName: 'Share Test Folder', sendEmail: false });
   });
 
   test('should have permission dropdown with reader/writer/admin options', async ({ page }) => {
@@ -280,6 +303,8 @@ test.describe('Invite Accept Page UI', () => {
   // per-error-code screens the originals encoded.
 
   const PASSWORD = 'Checklist-Invite-Test-2026!';
+  // The router only takes the server's token shape (64 lowercase hex) as an invite link.
+  const INVITE_PATH = `/invite/${'0f'.repeat(32)}`;
 
   function authenticate(page: Page, prefix: string): Promise<void> {
     return signUpAndSignIn(page, {
@@ -300,7 +325,7 @@ test.describe('Invite Accept Page UI', () => {
   }) => {
     // Anonymous: the page shows the sign-in prompt WITHOUT calling validate, so nothing about the
     // invite (sender, role, or even that the token resolves) is disclosed.
-    await page.goto('/invite/some-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('text=Sign In to Continue')).toBeVisible();
     await expect(page.locator('text=Continue with Google')).toBeVisible();
@@ -322,7 +347,7 @@ test.describe('Invite Accept Page UI', () => {
       });
     });
 
-    await page.goto('/invite/loading-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('text=Loading invite...')).toBeVisible({ timeout: 3000 });
   });
@@ -331,7 +356,7 @@ test.describe('Invite Accept Page UI', () => {
     await authenticate(page, 'invite-valid');
     await mockValidate(page, { valid: true, inviterEmail: 'alice@example.com', role: 'writer' });
 
-    await page.goto('/invite/valid-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('text=Folder Invitation')).toBeVisible();
     await expect(
@@ -342,13 +367,27 @@ test.describe('Invite Accept Page UI', () => {
     await expect(page.locator('button:has-text("Decline")')).toBeVisible();
   });
 
+  test('names the shared list when the invite carries one', async ({ page }) => {
+    await authenticate(page, 'invite-target');
+    await mockValidate(page, {
+      valid: true,
+      inviterEmail: 'alice@example.com',
+      role: 'writer',
+      targetName: 'Lake House',
+    });
+
+    await page.goto(INVITE_PATH);
+
+    await expect(page.locator('text=alice@example.com has invited you to Lake House')).toBeVisible();
+  });
+
   test('shows a generic error for an invalid, revoked, or expired invite', async ({ page }) => {
     // rowboat's validate returns `{ valid: false }` for ANY unusable token, so there is one
     // generic message — the former per-code copy ("invalid or revoked" / "has expired") is gone.
     await authenticate(page, 'invite-invalid');
     await mockValidate(page, { valid: false });
 
-    await page.goto('/invite/invalid-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('text=Invite Error')).toBeVisible();
     await expect(page.locator('text=This invite link is no longer valid.')).toBeVisible();
@@ -360,7 +399,7 @@ test.describe('Invite Accept Page UI', () => {
     await authenticate(page, 'invite-nonrecipient');
     await mockValidate(page, { valid: false });
 
-    await page.goto('/invite/not-yours-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('text=Invite Error')).toBeVisible();
     await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
@@ -385,7 +424,7 @@ test.describe('Invite Accept Page UI', () => {
       await authenticate(page, `invite-${role}`);
       await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role });
 
-      await page.goto(`/invite/${role}-token`);
+      await page.goto(INVITE_PATH);
 
       await expect(page.locator(`text=${label}`).first()).toBeVisible();
       await expect(page.locator(`text=${description}`)).toBeVisible();
@@ -396,7 +435,7 @@ test.describe('Invite Accept Page UI', () => {
     await authenticate(page, 'invite-error-dash');
     await mockValidate(page, { valid: false });
 
-    await page.goto('/invite/invalid-token');
+    await page.goto(INVITE_PATH);
 
     await expect(page.locator('button:has-text("Go to Dashboard")')).toBeVisible();
   });
@@ -405,7 +444,7 @@ test.describe('Invite Accept Page UI', () => {
     await authenticate(page, 'invite-decline');
     await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role: 'writer' });
 
-    await page.goto('/invite/valid-token');
+    await page.goto(INVITE_PATH);
     await page.click('button:has-text("Decline")');
 
     await page.waitForURL('/');

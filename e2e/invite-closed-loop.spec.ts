@@ -62,7 +62,7 @@ test.describe('Invite closed loop', () => {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
       // Real backend validation + real recipient session -> the "valid" state.
-      await expect(page.getByText(/has invited you to collaborate/i)).toBeVisible({
+      await expect(page.getByText(`has invited you to ${FOLDER}`)).toBeVisible({
         timeout: 20000,
       });
       await expect(page.getByText(TEST_ACCOUNTS.organizer.email)).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Invite closed loop', () => {
     try {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
-      await expect(page.getByText(/has invited you to collaborate/i)).toBeVisible({
+      await expect(page.getByText(`has invited you to ${FOLDER}`)).toBeVisible({
         timeout: 20000,
       });
       await page.getByRole('button', { name: /accept invite/i }).click();
@@ -134,7 +134,7 @@ test.describe('Invite closed loop', () => {
     try {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
-      await expect(page.getByText(/has invited you to collaborate/i)).toBeVisible({
+      await expect(page.getByText(`has invited you to ${FOLDER}`)).toBeVisible({
         timeout: 20000,
       });
       await page.getByRole('button', { name: /accept invite/i }).click();

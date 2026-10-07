@@ -1,5 +1,4 @@
-import type { Collaborator, InviteToken } from '@jbroll/rowboat-sharing-react';
-import { useSharing } from '@jbroll/rowboat-sharing-react';
+import { SharingError, useShareManager, useSharing } from '@jbroll/rowboat-sharing-react';
 import { Share2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,27 @@ const ROLE_COLORS: Record<Role, { bg: string; text: string }> = {
   admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
 };
 
+const MAX_TARGET_NAME_LENGTH = 200;
+
+// The server rejects a targetName that is empty, over 200 UTF-16 units, or holds a line break.
+export function inviteTargetName(name: string): string | undefined {
+  let oneLine = name.replace(/\s+/g, ' ').trim().slice(0, MAX_TARGET_NAME_LENGTH);
+  if (/[\uD800-\uDBFF]$/.test(oneLine)) oneLine = oneLine.slice(0, -1);
+  return oneLine.trimEnd() || undefined;
+}
+
+function shareErrorMessage(err: Error): string {
+  const code = err instanceof SharingError ? err.code : null;
+  switch (code) {
+    case 'root_group':
+      return "This list can't be shared as it is: it lives in your account's private group.";
+    case 'forbidden':
+      return 'Only an admin of this list can share it.';
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+}
+
 interface ShareDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,103 +54,63 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
     apiBaseUrl: '/api/shares',
     fetchFn: (input, init) => fetch(input, { ...init, credentials: 'include' }),
   });
-
-  const groupId = folder.owner_group_id;
-
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [pendingInvites, setPendingInvites] = useState<InviteToken[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [lastShareUrl, setLastShareUrl] = useState<string | null>(null);
+  // Every tree row mounts a closed dialog, so only an open one loads its group.
+  const { collaborators, pendingInvites, loading, error, lastShareUrl, invite, remove, revoke } =
+    useShareManager(open ? folder.owner_group_id : null, sharing);
 
   const [recipient, setRecipient] = useState('');
   const [role, setRole] = useState<Role>('writer');
   const [expiresInDays, setExpiresInDays] = useState(7);
-  const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sharing methods are stable via useCallback in the hook
-  const loadAccessData = useCallback(async () => {
-    setIsLoadingData(true);
-    try {
-      const [collabs, invites] = await Promise.all([
-        sharing.getCollaborators(groupId),
-        sharing.getPendingInvites(groupId),
-      ]);
-      setCollaborators(collabs);
-      setPendingInvites(invites);
-    } catch (err) {
-      console.error('Failed to load share access data:', err);
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, [groupId]);
-
   useEffect(() => {
-    if (open) {
-      loadAccessData();
-    } else {
-      setLastShareUrl(null);
+    if (!open) {
       setSuccessMessage(null);
-      setFormError(null);
       setRecipient('');
     }
-  }, [open, loadAccessData]);
+  }, [open]);
 
   const handleCreateInvite = useCallback(
     async (sendEmail: boolean) => {
       const trimmed = recipient.trim();
       if (!trimmed) return;
 
-      setFormError(null);
       setSuccessMessage(null);
       setIsCreating(true);
-      try {
-        const result = await sharing.createInvite(groupId, trimmed, role, {
-          sendEmail,
-          expiresInDays,
-        });
-        setLastShareUrl(result.shareUrl);
-        setSuccessMessage(result.emailSent ? `Invite emailed to ${trimmed}` : 'Invite link ready');
-        setRecipient('');
-        await loadAccessData();
-      } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'Failed to create invite');
-      } finally {
-        setIsCreating(false);
-      }
+      const result = await invite(trimmed, role, {
+        sendEmail,
+        expiresInDays,
+        targetName: inviteTargetName(folder.name),
+      });
+      setIsCreating(false);
+      if (!result) return;
+      setSuccessMessage(result.emailSent ? `Invite emailed to ${trimmed}` : 'Invite link ready');
+      setRecipient('');
     },
-    [recipient, role, expiresInDays, groupId, loadAccessData, sharing.createInvite],
+    [recipient, role, expiresInDays, folder.name, invite],
   );
 
   const handleRemoveCollaborator = useCallback(
     async (accountId: string) => {
       if (!confirm('Remove this collaborator? They will lose access to this folder.')) return;
-      try {
-        await sharing.removeCollaborator(groupId, accountId);
-      } catch (err) {
-        console.error('Failed to remove collaborator', accountId, err);
-      }
-      await loadAccessData();
+      await remove(accountId);
     },
-    [groupId, loadAccessData, sharing.removeCollaborator],
+    [remove],
   );
 
   const handleRevokeInvite = useCallback(
     async (token: string) => {
-      const invite = pendingInvites.find((i) => i.token === token);
-      const label = invite?.recipientEmail ?? token;
+      const pending = pendingInvites.find((i) => i.token === token);
+      const label = pending?.recipientEmail ?? token;
       if (!confirm(`Revoke invite for ${label}? They will no longer be able to use this link.`))
         return;
-      try {
-        await sharing.revokeInvite(token);
-      } catch (err) {
-        console.error('Failed to revoke invite', label, err);
-      }
-      await loadAccessData();
+      await revoke(token);
     },
-    [pendingInvites, loadAccessData, sharing.revokeInvite],
+    [pendingInvites, revoke],
   );
+
+  const formError = error ? shareErrorMessage(error) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -235,7 +215,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
             <p className="mb-2 text-sm font-medium text-content-primary">
               Collaborators {collaborators.length > 0 && `(${collaborators.length})`}
             </p>
-            {isLoadingData ? (
+            {loading ? (
               <p className="text-sm text-content-secondary">Loading...</p>
             ) : collaborators.length === 0 ? (
               <p className="text-sm text-content-secondary">No collaborators yet</p>

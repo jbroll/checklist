@@ -18,8 +18,9 @@ accounts + the real backend + real rowboat sync**.
 | revoked invite shows an error to the recipient | Organizer revokes → recipient gets `not_found` error | ✅ |
 | recipient accepts and gains folder access | Accept → RBAC grant → folder appears in recipient tree | ✅ |
 
-Invites are **copy-link only** — checklist does not email invites. GreenMail is
-used solely to verify the test accounts' signup emails so they can log in.
+The suite does not read the invite email, which names the folder (its subject is
+`<inviter> invited you to <folder name>`). GreenMail is used to verify the test
+accounts' signup emails so they can log in.
 
 ## Infrastructure
 
@@ -51,12 +52,3 @@ npm run test:e2e:invite:tunnel
 
 GreenMail needs no real credentials — any username/password works and the
 per-recipient mailbox is auto-created on first access.
-
-## Related fix
-
-While building this suite, a real bug was found and fixed in
-`src/components/sharing/InviteAcceptPage.tsx`: the validate `useEffect` depended on
-the unstable `me`/`sharing` object refs, causing an **infinite re-validation loop**
-(~1600 `/validate` calls in 8s) that tripped the token rate limiter and left
-authenticated users on an "Invite Error" page. It now keys on the stable account
-id (`meId`) and validates twice (pre/post account load).

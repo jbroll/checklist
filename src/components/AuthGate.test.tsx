@@ -5,6 +5,7 @@
  * `@/rowboat` waist (better-auth `useAuthor`/`useSession`/`signIn`/`signOut`).
  */
 
+import { stashInviteToken, takeStashedInviteToken } from '@jbroll/rowboat-sharing-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -412,6 +413,38 @@ describe('AuthGate', () => {
 
       container = screen.getByTestId('app-container');
       expect(container).toHaveAttribute('data-authenticated', 'true');
+    });
+  });
+
+  describe('invite token stashed across sign-in', () => {
+    const token = 'ab'.repeat(32);
+
+    it('returns to the invite page once signed in, and consumes the stash', () => {
+      stashInviteToken(token);
+      mockAuthor = 'user-1';
+
+      render(<AuthGate />);
+
+      expect(window.location.href).toBe(`/invite/${token}`);
+      expect(takeStashedInviteToken()).toBeNull();
+    });
+
+    it('leaves the stash alone while anonymous', () => {
+      stashInviteToken(token);
+
+      render(<AuthGate />);
+
+      expect(window.location.href).toBe('http://localhost/');
+      expect(takeStashedInviteToken()).toBe(token);
+    });
+
+    it('ignores a malformed stash', () => {
+      stashInviteToken('//evil.example');
+      mockAuthor = 'user-1';
+
+      render(<AuthGate />);
+
+      expect(window.location.href).toBe('http://localhost/');
     });
   });
 });
