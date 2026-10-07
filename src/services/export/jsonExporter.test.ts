@@ -574,6 +574,38 @@ describe('jsonExporter', () => {
       expect(exported?.itemStates['item-1'].notes).toBe('organic');
     });
 
+    it('exports a user-set session name and marks it custom', () => {
+      const g = graphWith(
+        templateFolder('t1', 'Test', [], [session('session-1', {}, { name: 'Party prep' })]),
+      );
+
+      const exported = exportAllFolders(g).folders[0].sessions?.[0];
+
+      expect(exported?.name).toBe('Party prep');
+      expect(exported?.customName).toBe(true);
+    });
+
+    it('exports the generated date name for an unnamed or blank-named session', () => {
+      const g = graphWith(
+        templateFolder(
+          't1',
+          'Test',
+          [],
+          [
+            session('session-1'),
+            session('session-2', {}, { name: '', createdAt: NOV_1 + 2 * 86_400_000 }),
+          ],
+        ),
+      );
+
+      const [unnamed, blank] = exportAllFolders(g).folders[0].sessions ?? [];
+
+      expect(unnamed.name).toBe('2024-11-01');
+      expect(unnamed.customName).toBeUndefined();
+      expect(blank.name).toBe('2024-11-03');
+      expect(blank.customName).toBeUndefined();
+    });
+
     it('exports folder identity, nesting, archived flag, and settings', () => {
       const g = graphWith(
         templateFolder('org-1', 'Home', [], [], { type: 'folder' }),

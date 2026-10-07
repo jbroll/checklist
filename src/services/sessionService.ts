@@ -419,6 +419,16 @@ export async function unarchiveSession(
   });
 }
 
+/** Rename a session. Blank clears it to '' (not undefined, which JSON drops on the sync wire). */
+export async function renameSession(
+  g: Graph,
+  templateId: string,
+  sessionId: string,
+  name: string,
+): Promise<void> {
+  await updateSession(g, templateId, sessionId, { name: name.trim() });
+}
+
 /** Delete a session (hard delete - removes it from the template). */
 export async function deleteSession(
   g: Graph,

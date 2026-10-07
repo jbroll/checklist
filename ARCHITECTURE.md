@@ -12,7 +12,11 @@ sync-native relational store), **BetterAuth**, and **Stripe**.
 
 **Template–Session model.** A *template folder* holds a reusable list (its `items`). "Using" a
 template opens a *shopping session* that tracks per-item state (in-cart / checked) **separately**
-from the template, so templates stay clean. One template can back many sessions.
+from the template, so templates stay clean. One template can back many sessions. A session is
+labelled by its creation date unless the user names it (`SessionData.name`; an empty string clears
+the name, since an `undefined` field write would not survive the sync wire). JSON export marks a
+user-set name with `customName: true`, and import restores only those, so older exports that carry
+a generated date name import as unnamed.
 
 ```
 📁 Folder (organizational)          type: "folder"

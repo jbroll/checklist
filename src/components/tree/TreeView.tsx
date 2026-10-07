@@ -226,6 +226,13 @@ export function TreeView({
     [g],
   );
 
+  const handleRenameSession = useCallback(
+    (templateId: string, sessionId: string, name: string) => {
+      void sessionService.renameSession(g, templateId, sessionId, name);
+    },
+    [g],
+  );
+
   const handleDeleteSession = useCallback(
     (templateId: string, sessionId: string) => {
       void sessionService.deleteSession(g, templateId, sessionId);
@@ -309,6 +316,7 @@ export function TreeView({
           }
           onDelete={(sessionId) => handleDeleteSession(folder.id, sessionId)}
           onExport={(sessionId) => onExportSession?.(folder.id, sessionId)}
+          onRename={(sessionId, name) => handleRenameSession(folder.id, sessionId, name)}
           allSessions={activeSessions}
           hideArchiveAction={hideArchiveAction}
         />

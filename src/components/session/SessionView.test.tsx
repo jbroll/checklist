@@ -515,6 +515,24 @@ describe('SessionView', () => {
       expect(screen.getByText('Test Template')).toBeInTheDocument();
     });
 
+    it('appends the session name to the header when the session is named', () => {
+      const session = { ...createMockSession('session-1'), name: 'Weekly shop' };
+      const template = createMockTemplate('template-1', [], [session]);
+      render(<SessionView {...createDefaultProps({ template })} />);
+
+      expect(
+        screen.getByRole('heading', { name: 'Test Template · Weekly shop' }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows only the template name when the session name is blank', () => {
+      const session = { ...createMockSession('session-1'), name: '' };
+      const template = createMockTemplate('template-1', [], [session]);
+      render(<SessionView {...createDefaultProps({ template })} />);
+
+      expect(screen.getByRole('heading', { name: 'Test Template' })).toBeInTheDocument();
+    });
+
     it('calls onBack when back button is clicked', async () => {
       const user = userEvent.setup();
       const onBack = vi.fn();

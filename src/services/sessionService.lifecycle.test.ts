@@ -12,6 +12,7 @@ import { makeGraph } from '@/test/rowboat';
 import {
   archiveSession,
   deleteSession,
+  renameSession,
   toggleCategoryExpanded,
   unarchiveSession,
   updateSessionItemNotes,
@@ -219,6 +220,42 @@ describe('Session Lifecycle Functions', () => {
       expect(sessionsOf(g).length).toBe(2);
       expect(sessionsOf(g)[0].id).toBe('session-1');
       expect(sessionsOf(g)[1].id).toBe('session-3');
+    });
+  });
+
+  describe('renameSession', () => {
+    it('sets the session name', async () => {
+      const g = seed();
+
+      await renameSession(g, 'template-1', 'session-1', 'Weekly shop');
+
+      expect(sessionsOf(g)[0].name).toBe('Weekly shop');
+      expect(sessionsOf(g)[1].name).toBeUndefined();
+    });
+
+    it('trims surrounding whitespace', async () => {
+      const g = seed();
+
+      await renameSession(g, 'template-1', 'session-1', '  Party prep  ');
+
+      expect(sessionsOf(g)[0].name).toBe('Party prep');
+    });
+
+    it('clears the name when the input is blank', async () => {
+      const g = makeGraph({
+        folder: [templateFolder([{ ...session('session-1'), name: 'Old name' }])],
+      });
+
+      await renameSession(g, 'template-1', 'session-1', '   ');
+
+      expect(sessionsOf(g)[0].name).toBe('');
+    });
+
+    it('throws if the session is missing', async () => {
+      const g = seed();
+      await expect(renameSession(g, 'template-1', 'nope', 'X')).rejects.toThrow(
+        'Session nope not found',
+      );
     });
   });
 

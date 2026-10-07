@@ -441,6 +441,41 @@ describe('validators', () => {
       expect(result.errors.some((e) => e.includes('defaultAutocompleteDomain'))).toBe(true);
     });
 
+    it('rejects a custom session name that is not a non-empty string', () => {
+      const session = (extra: Record<string, unknown>) => ({
+        archived: false,
+        viewMode: 'flat',
+        itemStates: {},
+        createdAt: '2024-11-01T00:00:00.000Z',
+        lastActivityAt: '2024-11-01T00:00:00.000Z',
+        ...extra,
+      });
+      const data = {
+        version: '2.1',
+        exportDate: '2024-11-01T00:00:00.000Z',
+        appVersion: '1.0.0',
+        folders: [
+          {
+            name: 'Groceries',
+            type: 'template-folder',
+            sessions: [
+              session({ name: 'ok', customName: 'yes' }),
+              session({ name: '', customName: true }),
+              session({ name: 'Party prep', customName: true }),
+            ],
+            createdAt: '2024-11-01T00:00:00.000Z',
+            updatedAt: '2024-11-01T00:00:00.000Z',
+          },
+        ],
+      };
+
+      const result = validateJsonData(makeGraph(), data);
+
+      expect(result.errors.filter((e) => e.includes('customName'))).toHaveLength(1);
+      expect(result.errors.filter((e) => e.includes('"name"'))).toHaveLength(1);
+      expect(result.errors.some((e) => e.includes('sessions[2]'))).toBe(false);
+    });
+
     it('rejects invalid types on the subscription-cache fields', () => {
       const data = {
         version: '2.1',

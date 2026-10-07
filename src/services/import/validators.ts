@@ -373,6 +373,15 @@ function validateSession(session: unknown, index: number, prefix: string): strin
   ) {
     errors.push(`${sessionPrefix}: Invalid "id"`);
   }
+  if (typedSession.customName !== undefined && typeof typedSession.customName !== 'boolean') {
+    errors.push(`${sessionPrefix}: Invalid "customName"`);
+  }
+  if (
+    typedSession.customName === true &&
+    (typeof typedSession.name !== 'string' || typedSession.name.trim() === '')
+  ) {
+    errors.push(`${sessionPrefix}: Missing or invalid "name"`);
+  }
   if (
     typedSession.categoryExpanded !== undefined &&
     (typeof typedSession.categoryExpanded !== 'object' ||

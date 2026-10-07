@@ -3,6 +3,10 @@
     {
       "version": 1,
       "hash": "sha256:bf3e49c4f02cb653bee9ad3a05c7bb78730c894080df107e3b4317f8d5fac99d"
+    },
+    {
+      "version": 2,
+      "hash": "sha256:3308caa7c5c48bb8d32b10c7c8281b56c6164573a8a1d513d1860a1a3fdc59c7"
     }
   ]
 }

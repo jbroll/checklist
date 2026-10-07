@@ -3,6 +3,7 @@ import { Pencil, Plus } from 'lucide-react';
 
 interface SessionHeaderProps {
   templateName: string;
+  sessionName?: string;
   showAddForm: boolean;
   onToggleAddForm: (show: boolean) => void;
   onClearOrNew: () => void;
@@ -18,6 +19,7 @@ interface SessionHeaderProps {
  */
 export function SessionHeader({
   templateName,
+  sessionName,
   showAddForm,
   onToggleAddForm,
   onClearOrNew,
@@ -30,7 +32,7 @@ export function SessionHeader({
     <div className="border-b border-divider-primary p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-lg font-semibold text-content-primary sm:text-xl lg:text-2xl truncate">
-          {templateName}
+          {sessionName ? `${templateName} · ${sessionName}` : templateName}
         </h1>
         {showAddForm ? (
           <button

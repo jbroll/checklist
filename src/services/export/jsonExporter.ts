@@ -73,6 +73,7 @@ function toDatedSession(session: SessionData): DatedSession {
   }
   return {
     id: session.id,
+    ...(session.name ? { name: session.name } : {}),
     itemStates,
     archived: session.archived,
     categoryExpanded: session.categoryExpanded,
@@ -241,7 +242,8 @@ function exportSessions(sessions: SessionData[]): ExportedSession[] {
 
     return {
       id: session.id,
-      name: generateSessionName(session.createdAt, datedSessions),
+      name: session.name || generateSessionName(session.createdAt, datedSessions),
+      ...(session.name ? { customName: true } : {}),
       archived: session.archived,
       viewMode: session.viewMode,
       categoryExpanded: session.categoryExpanded,

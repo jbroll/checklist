@@ -122,8 +122,10 @@ export interface ExportedTemplateItem {
 export interface ExportedSession {
   /** v2.1: session row id — import reuses it when free, remaps only on conflict */
   id?: string;
-  /** Session name (generated from createdAt, e.g., "2025-11-01" or "2025-11-01 14:30") */
+  /** The user-set name, or one generated from createdAt (e.g. "2025-11-01" or "2025-11-01 14:30") */
   name: string;
+  /** True when `name` was set by the user; import restores only those. Absent in older exports. */
+  customName?: boolean;
   /** Soft delete flag - archived sessions are hidden by default */
   archived: boolean;
   /** View mode for displaying items */

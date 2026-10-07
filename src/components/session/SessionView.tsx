@@ -237,6 +237,7 @@ export function SessionView({
             {/* Header */}
             <SessionHeader
               templateName={template.name}
+              sessionName={session.name}
               showAddForm={showAddForm}
               onToggleAddForm={setShowAddForm}
               onClearOrNew={handlers.handleClearOrNew}

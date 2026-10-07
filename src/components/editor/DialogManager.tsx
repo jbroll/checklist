@@ -129,8 +129,8 @@ export function DialogManager({
           const template = templates.find((t) => t.id === sessionExportData.templateId);
           const session = template?.sessions.find((s) => s.id === sessionExportData.sessionId);
           if (template && session) {
-            // Generate session name from createdAt
-            const sessionName = new Date(session.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
+            const sessionName =
+              session.name || new Date(session.createdAt).toISOString().split('T')[0];
             return (
               <Suspense fallback={null}>
                 <SessionExportDialog

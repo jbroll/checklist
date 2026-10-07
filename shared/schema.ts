@@ -44,6 +44,7 @@ export type ItemState = z.infer<typeof ItemStateSchema>;
 /** A shopping/list session over a template's items. */
 export const SessionDataSchema = z.object({
   id: z.string(),
+  name: z.optional(z.string()), // '' and absent both mean "unnamed"
   itemStates: z.record(z.string(), ItemStateSchema),
   archived: z.boolean(),
   categoryExpanded: z.record(z.string(), z.boolean()),

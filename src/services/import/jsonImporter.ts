@@ -444,8 +444,11 @@ function importSession(
   }
   usedSessionIds.add(id);
 
+  const name = exportedSession.customName === true ? exportedSession.name.trim() : '';
+
   return {
     id,
+    ...(name ? { name } : {}),
     itemStates,
     archived: exportedSession.archived ?? false,
     viewMode: exportedSession.viewMode || 'zone-in-hierarchy',
