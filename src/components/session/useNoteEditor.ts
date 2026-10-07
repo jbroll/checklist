@@ -6,7 +6,7 @@ import * as templateService from '@/services/templateService';
 
 type Graph = RelationalGraph<typeof schema>;
 
-type NoteZone = 'available' | 'selected' | 'checked';
+export type NoteZone = 'available' | 'selected' | 'checked';
 
 interface UseNoteEditorOptions {
   template: FolderRow;
@@ -16,9 +16,11 @@ interface UseNoteEditorOptions {
   activeItems: TemplateItem[];
 }
 
+const isTemplateZone = (zone: NoteZone) => zone === 'available';
+
 /**
- * Hook for managing note editing state and operations.
- * Handles both template-level notes (available zone) and session-level notes.
+ * Tracks the one open inline note editor and saves its note: the template note in the
+ * available zone, the session note in the selected/checked zones.
  */
 export function useNoteEditor({
   template,
@@ -27,52 +29,46 @@ export function useNoteEditor({
   g,
   activeItems,
 }: UseNoteEditorOptions) {
-  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
-  const [noteEditingItemId, setNoteEditingItemId] = useState<string | null>(null);
-  const [noteEditingZone, setNoteEditingZone] = useState<NoteZone>('available');
+  const [noteEditing, setNoteEditing] = useState<{ itemId: string; zone: NoteZone } | null>(null);
 
-  const openNoteEditor = (zone: NoteZone) => (itemId: string) => {
-    setNoteEditingItemId(itemId);
-    setNoteEditingZone(zone);
-    setNoteEditorOpen(true);
+  const toggleNoteEditor = (zone: NoteZone) => (itemId: string) => {
+    setNoteEditing((current) =>
+      current?.itemId === itemId && isTemplateZone(current.zone) === isTemplateZone(zone)
+        ? null
+        : { itemId, zone },
+    );
   };
 
-  const handleSaveNote = (note: string) => {
-    if (!noteEditingItemId) return;
+  const closeNoteEditor = () => setNoteEditing(null);
 
-    if (noteEditingZone === 'available') {
-      templateService.updateItemNotes(g, template.id, noteEditingItemId, note);
-    } else {
-      SessionService.updateSessionItemNotes(g, template.id, sessionId, noteEditingItemId, note);
+  const editingNoteItemId = (zone: NoteZone): string | null =>
+    noteEditing && isTemplateZone(noteEditing.zone) === isTemplateZone(zone)
+      ? noteEditing.itemId
+      : null;
+
+  const saveNote = (note: string) => {
+    if (!noteEditing) return;
+    const { itemId, zone } = noteEditing;
+    const trimmed = note.trim();
+    const currentNote = isTemplateZone(zone)
+      ? activeItems.find((i) => i.id === itemId)?.notes || ''
+      : session?.itemStates?.[itemId]?.notes || '';
+
+    if (trimmed !== currentNote) {
+      if (isTemplateZone(zone)) {
+        templateService.updateItemNotes(g, template.id, itemId, trimmed);
+      } else {
+        SessionService.updateSessionItemNotes(g, template.id, sessionId, itemId, trimmed);
+      }
     }
+    setNoteEditing(null);
   };
-
-  // Compute current note values for the editor
-  const noteEditingItem = noteEditingItemId
-    ? activeItems.find((i) => i.id === noteEditingItemId)
-    : null;
-
-  const noteEditingCurrentNote =
-    noteEditingZone === 'available'
-      ? noteEditingItem?.notes || ''
-      : session?.itemStates?.[noteEditingItemId || '']?.notes || '';
-
-  const noteEditingTemplateNote =
-    noteEditingZone !== 'available' ? noteEditingItem?.notes : undefined;
 
   return {
-    // State
-    noteEditorOpen,
-    setNoteEditorOpen,
-
-    // Computed values for dialog
-    noteEditingItemName: noteEditingItem?.name || '',
-    noteEditingCurrentNote,
-    noteEditingTemplateNote,
-    noteEditingType: noteEditingZone === 'available' ? ('template' as const) : ('session' as const),
-
-    // Handlers
-    openNoteEditor,
-    handleSaveNote,
+    noteEditing,
+    editingNoteItemId,
+    toggleNoteEditor,
+    closeNoteEditor,
+    saveNote,
   };
 }

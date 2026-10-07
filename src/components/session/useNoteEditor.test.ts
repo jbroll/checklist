@@ -1,7 +1,7 @@
 /**
  * Unit tests for useNoteEditor hook
  *
- * Tests note editing state management and save operations.
+ * Tests inline note editing state (one open editor at a time) and save operations.
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -36,231 +36,117 @@ describe('useNoteEditor', () => {
 
   const mockG = {} as any;
 
+  function renderNoteEditor({
+    items = [createMockItem('item-1', 'Test Item')],
+    session = { itemStates: {} } as any,
+  }: {
+    items?: ReturnType<typeof createMockItem>[];
+    session?: any;
+  } = {}) {
+    return renderHook(() =>
+      useNoteEditor({
+        template: mockTemplate,
+        session,
+        sessionId: 'session-1',
+        g: mockG,
+        activeItems: items as any,
+      }),
+    );
+  }
+
   beforeEach(() => {
     mockUpdateSessionItemNotes.mockReset();
     mockUpdateItemNotes.mockReset();
   });
 
   describe('initial state', () => {
-    it('starts with editor closed', () => {
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: [],
-        }),
-      );
+    it('starts with no note open', () => {
+      const { result } = renderNoteEditor();
 
-      expect(result.current.noteEditorOpen).toBe(false);
-    });
-
-    it('has empty initial editing values', () => {
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: [],
-        }),
-      );
-
-      expect(result.current.noteEditingItemName).toBe('');
-      expect(result.current.noteEditingCurrentNote).toBe('');
-      expect(result.current.noteEditingTemplateNote).toBeUndefined();
+      expect(result.current.noteEditing).toBeNull();
+      expect(result.current.editingNoteItemId('available')).toBeNull();
+      expect(result.current.editingNoteItemId('selected')).toBeNull();
     });
   });
 
-  describe('openNoteEditor', () => {
-    it('opens editor for available zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'existing note')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+  describe('toggleNoteEditor', () => {
+    it('opens the editor on an item in the available zone', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('available')('item-1');
+        result.current.toggleNoteEditor('available')('item-1');
       });
 
-      expect(result.current.noteEditorOpen).toBe(true);
-      expect(result.current.noteEditingItemName).toBe('Test Item');
-      expect(result.current.noteEditingCurrentNote).toBe('existing note');
-      expect(result.current.noteEditingType).toBe('template');
+      expect(result.current.noteEditing).toEqual({ itemId: 'item-1', zone: 'available' });
+      expect(result.current.editingNoteItemId('available')).toBe('item-1');
     });
 
-    it('opens editor for selected zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'template note')];
-      const session = {
-        itemStates: {
-          'item-1': { notes: 'session note' },
-        },
-      };
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: session as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+    it('reports a session-note editor to both session zones but not the available zone', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('selected')('item-1');
+        result.current.toggleNoteEditor('selected')('item-1');
       });
 
-      expect(result.current.noteEditorOpen).toBe(true);
-      expect(result.current.noteEditingCurrentNote).toBe('session note');
-      expect(result.current.noteEditingTemplateNote).toBe('template note');
-      expect(result.current.noteEditingType).toBe('session');
+      expect(result.current.editingNoteItemId('selected')).toBe('item-1');
+      expect(result.current.editingNoteItemId('checked')).toBe('item-1');
+      expect(result.current.editingNoteItemId('available')).toBeNull();
     });
 
-    it('opens editor for checked zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'template note')];
-      const session = {
-        itemStates: {
-          'item-1': { notes: 'checked note' },
-        },
-      };
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: session as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+    it('closes the editor when toggled again on the same item', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('checked')('item-1');
+        result.current.toggleNoteEditor('selected')('item-1');
+      });
+      act(() => {
+        result.current.toggleNoteEditor('selected')('item-1');
       });
 
-      expect(result.current.noteEditingCurrentNote).toBe('checked note');
-      expect(result.current.noteEditingType).toBe('session');
+      expect(result.current.noteEditing).toBeNull();
     });
 
-    it('handles item with no notes', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('available')('item-1');
+    it('keeps only one editor open at a time', () => {
+      const { result } = renderNoteEditor({
+        items: [createMockItem('item-1', 'One'), createMockItem('item-2', 'Two')],
       });
 
-      expect(result.current.noteEditingCurrentNote).toBe('');
-    });
-
-    it('handles missing session item state', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
       act(() => {
-        result.current.openNoteEditor('selected')('item-1');
+        result.current.toggleNoteEditor('selected')('item-1');
+      });
+      act(() => {
+        result.current.toggleNoteEditor('selected')('item-2');
       });
 
-      expect(result.current.noteEditingCurrentNote).toBe('');
-    });
-
-    it('handles unknown item ID', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('available')('unknown-item');
-      });
-
-      expect(result.current.noteEditorOpen).toBe(true);
-      expect(result.current.noteEditingItemName).toBe('');
+      expect(result.current.noteEditing).toEqual({ itemId: 'item-2', zone: 'selected' });
     });
   });
 
-  describe('setNoteEditorOpen', () => {
-    it('can close the editor', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+  describe('closeNoteEditor', () => {
+    it('closes without saving', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('available')('item-1');
+        result.current.toggleNoteEditor('available')('item-1');
       });
-
-      expect(result.current.noteEditorOpen).toBe(true);
-
       act(() => {
-        result.current.setNoteEditorOpen(false);
+        result.current.closeNoteEditor();
       });
 
-      expect(result.current.noteEditorOpen).toBe(false);
+      expect(result.current.noteEditing).toBeNull();
+      expect(mockUpdateItemNotes).not.toHaveBeenCalled();
     });
   });
 
-  describe('handleSaveNote', () => {
-    it('saves template note for available zone', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+  describe('saveNote', () => {
+    it('saves the template note for the available zone and closes', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('available')('item-1');
+        result.current.toggleNoteEditor('available')('item-1');
       });
-
       act(() => {
-        result.current.handleSaveNote('new note content');
+        result.current.saveNote('new note content');
       });
 
       expect(mockUpdateItemNotes).toHaveBeenCalledWith(
@@ -270,27 +156,17 @@ describe('useNoteEditor', () => {
         'new note content',
       );
       expect(mockUpdateSessionItemNotes).not.toHaveBeenCalled();
+      expect(result.current.noteEditing).toBeNull();
     });
 
-    it('saves session note for selected zone', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+    it('saves the session note for the selected zone', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('selected')('item-1');
+        result.current.toggleNoteEditor('selected')('item-1');
       });
-
       act(() => {
-        result.current.handleSaveNote('session note');
+        result.current.saveNote('session note');
       });
 
       expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
@@ -303,25 +179,14 @@ describe('useNoteEditor', () => {
       expect(mockUpdateItemNotes).not.toHaveBeenCalled();
     });
 
-    it('saves session note for checked zone', () => {
-      const items = [createMockItem('item-1', 'Test Item')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
+    it('saves the session note for the checked zone', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.openNoteEditor('checked')('item-1');
+        result.current.toggleNoteEditor('checked')('item-1');
       });
-
       act(() => {
-        result.current.handleSaveNote('checked zone note');
+        result.current.saveNote('checked zone note');
       });
 
       expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
@@ -333,85 +198,87 @@ describe('useNoteEditor', () => {
       );
     });
 
-    it('does nothing when no item is being edited', () => {
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: null,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: [],
-        }),
-      );
+    it('trims the note before saving', () => {
+      const { result } = renderNoteEditor();
 
       act(() => {
-        result.current.handleSaveNote('note');
+        result.current.toggleNoteEditor('available')('item-1');
+      });
+      act(() => {
+        result.current.saveNote('  padded \n');
+      });
+
+      expect(mockUpdateItemNotes).toHaveBeenCalledWith(mockG, 'template-1', 'item-1', 'padded');
+    });
+
+    it('clears the note when the trimmed result is empty', () => {
+      const { result } = renderNoteEditor({
+        session: { itemStates: { 'item-1': { notes: 'old note' } } },
+      });
+
+      act(() => {
+        result.current.toggleNoteEditor('selected')('item-1');
+      });
+      act(() => {
+        result.current.saveNote('   ');
+      });
+
+      expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
+        mockG,
+        'template-1',
+        'session-1',
+        'item-1',
+        '',
+      );
+    });
+
+    it('skips the write when the note is unchanged', () => {
+      const { result } = renderNoteEditor({
+        items: [createMockItem('item-1', 'Test Item', 'same note')],
+      });
+
+      act(() => {
+        result.current.toggleNoteEditor('available')('item-1');
+      });
+      act(() => {
+        result.current.saveNote('same note ');
+      });
+
+      expect(mockUpdateItemNotes).not.toHaveBeenCalled();
+      expect(result.current.noteEditing).toBeNull();
+    });
+
+    it('compares a session note against the session note, not the template note', () => {
+      const { result } = renderNoteEditor({
+        items: [createMockItem('item-1', 'Test Item', 'template note')],
+        session: { itemStates: { 'item-1': { notes: 'session note' } } },
+      });
+
+      act(() => {
+        result.current.toggleNoteEditor('selected')('item-1');
+      });
+      act(() => {
+        result.current.saveNote('template note');
+      });
+
+      expect(mockUpdateSessionItemNotes).toHaveBeenCalledWith(
+        mockG,
+        'template-1',
+        'session-1',
+        'item-1',
+        'template note',
+      );
+    });
+
+    it('does nothing when no item is being edited', () => {
+      const { result } = renderNoteEditor();
+
+      act(() => {
+        result.current.saveNote('note');
       });
 
       expect(mockUpdateItemNotes).not.toHaveBeenCalled();
       expect(mockUpdateSessionItemNotes).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('noteEditingTemplateNote', () => {
-    it('is undefined for available zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'template note')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('available')('item-1');
-      });
-
-      expect(result.current.noteEditingTemplateNote).toBeUndefined();
-    });
-
-    it('is set for selected zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'template note')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('selected')('item-1');
-      });
-
-      expect(result.current.noteEditingTemplateNote).toBe('template note');
-    });
-
-    it('is set for checked zone', () => {
-      const items = [createMockItem('item-1', 'Test Item', 'template note')];
-
-      const { result } = renderHook(() =>
-        useNoteEditor({
-          template: mockTemplate,
-          session: { itemStates: {} } as any,
-          sessionId: 'session-1',
-          g: mockG,
-          activeItems: items as any,
-        }),
-      );
-
-      act(() => {
-        result.current.openNoteEditor('checked')('item-1');
-      });
-
-      expect(result.current.noteEditingTemplateNote).toBe('template note');
     });
   });
 });

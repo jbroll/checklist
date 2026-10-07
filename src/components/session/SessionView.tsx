@@ -10,10 +10,9 @@ import * as userSettingsService from '@/services/userSettingsService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
 import { ItemNodeRenderer } from './ItemNodeRenderer';
-import { NoteEditorDialog } from './NoteEditorDialog';
 import { SessionHeader } from './SessionHeader';
 import { SessionZone } from './SessionZone';
-import { useNoteEditor } from './useNoteEditor';
+import { type NoteZone, useNoteEditor } from './useNoteEditor';
 import { useScrollPreservation } from './useScrollPreservation';
 import { useSessionDragDrop } from './useSessionDragDrop';
 import { useSessionHandlers } from './useSessionHandlers';
@@ -150,6 +149,15 @@ export function SessionView({
     g,
     activeItems,
   });
+
+  const noteProps = (zone: NoteZone) => ({
+    onEditNote: noteEditor.toggleNoteEditor(zone),
+    noteEditingItemId: noteEditor.editingNoteItemId(zone),
+    onSaveNote: noteEditor.saveNote,
+    onCancelNote: noteEditor.closeNoteEditor,
+  });
+  const sessionNoteProps = noteProps('selected');
+  const templateNoteProps = noteProps('available');
 
   useSessionKeyboard({
     enabled: !!session && !showAddForm,
@@ -295,7 +303,7 @@ export function SessionView({
                   onToggleSelected={handlers.handleToggleSelected}
                   onToggleChecked={handlers.handleToggleChecked}
                   onDeleteItem={handlers.handleDeleteItem}
-                  onEditNote={noteEditor.openNoteEditor('selected')}
+                  {...sessionNoteProps}
                   {...viewerCommonProps}
                 />
               )}
@@ -312,7 +320,7 @@ export function SessionView({
                   onToggleSelected={handlers.handleToggleSelected}
                   onToggleChecked={handlers.handleToggleChecked}
                   onDeleteItem={handlers.handleDeleteItem}
-                  onEditNote={noteEditor.openNoteEditor('selected')}
+                  {...sessionNoteProps}
                   {...viewerCommonProps}
                 />
               )}
@@ -362,9 +370,7 @@ export function SessionView({
                         onBatchDeselectAll: handlers.handleBatchDefaultDeselectAll,
                         onBatchToggle: handlers.handleBatchDefaultToggle,
                       }}
-                      itemEditModeProps={{
-                        onEditNote: noteEditor.openNoteEditor('available'),
-                      }}
+                      itemEditModeProps={templateNoteProps}
                     >
                       <div className="divide-y divide-divider-secondary">
                         {/* Invisible anchor element for scroll preservation */}
@@ -394,7 +400,7 @@ export function SessionView({
                             onBatchSelectAll={handlers.handleBatchDefaultSelectAll}
                             onBatchDeselectAll={handlers.handleBatchDefaultDeselectAll}
                             onBatchToggle={handlers.handleBatchDefaultToggle}
-                            onEditNote={noteEditor.openNoteEditor('available')}
+                            {...templateNoteProps}
                           />
                         ))}
                       </div>
@@ -414,17 +420,6 @@ export function SessionView({
           </div>
         ) : null}
       </DragOverlay>
-
-      {/* Note Editor Dialog */}
-      <NoteEditorDialog
-        open={noteEditor.noteEditorOpen}
-        onOpenChange={noteEditor.setNoteEditorOpen}
-        itemName={noteEditor.noteEditingItemName}
-        note={noteEditor.noteEditingCurrentNote}
-        templateNote={noteEditor.noteEditingTemplateNote}
-        onSave={noteEditor.handleSaveNote}
-        noteType={noteEditor.noteEditingType}
-      />
     </DndContext>
   );
 }

@@ -23,6 +23,9 @@ interface ZoneInHierarchyRendererProps {
   canDrag: (itemId: string) => boolean;
   // Notes
   onEditNote?: (itemId: string) => void;
+  noteEditingItemId?: string | null;
+  onSaveNote?: (note: string) => void;
+  onCancelNote?: () => void;
 }
 
 export function ZoneInHierarchyRenderer({
@@ -42,6 +45,9 @@ export function ZoneInHierarchyRenderer({
   canEdit,
   canDrag,
   onEditNote,
+  noteEditingItemId,
+  onSaveNote,
+  onCancelNote,
 }: ZoneInHierarchyRendererProps) {
   const showZoneHeadings = template.show_zone_headings;
 
@@ -60,6 +66,9 @@ export function ZoneInHierarchyRenderer({
     canEditItemFn: canEdit,
     canDragItemFn: canDrag,
     onEditNote,
+    noteEditingItemId,
+    onSaveNote,
+    onCancelNote,
   };
 
   // Only include categories that have items selected or checked

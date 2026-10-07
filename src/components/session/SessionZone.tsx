@@ -58,6 +58,9 @@ export interface SessionZoneItemEditModeProps {
   canEditItemFn?: (itemId: string) => boolean;
   canDragItemFn?: (itemId: string) => boolean;
   onEditNote?: (itemId: string) => void;
+  noteEditingItemId?: string | null;
+  onSaveNote?: (note: string) => void;
+  onCancelNote?: () => void;
 }
 
 interface SessionZoneProps {
@@ -119,6 +122,9 @@ export function SessionZone({
     canEditItemFn,
     canDragItemFn,
     onEditNote,
+    noteEditingItemId,
+    onSaveNote,
+    onCancelNote,
   } = itemEditModeProps;
   const g = useRowboat();
   const [editValue, setEditValue] = useState('');
@@ -245,6 +251,9 @@ export function SessionZone({
           onEnterEditMode={onEnterItemEditMode ? () => onEnterItemEditMode(item.id) : undefined}
           onExitEditMode={onExitItemEditMode}
           onEditNote={onEditNote}
+          isNoteOpen={noteEditingItemId === item.id}
+          onSaveNote={onSaveNote}
+          onCancelNote={onCancelNote}
         />
       ))}
     </div>

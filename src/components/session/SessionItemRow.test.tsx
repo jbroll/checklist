@@ -6,7 +6,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ItemState, TemplateItem } from '@/schema/folder';
 import { SessionItemRow } from './SessionItemRow';
 
@@ -297,6 +297,126 @@ describe('SessionItemRow', () => {
       );
 
       expect(screen.getByRole('button', { name: /edit session note/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('inline note editor', () => {
+    const noteProps = {
+      isNoteOpen: true,
+      onEditNote: vi.fn(),
+      onSaveNote: vi.fn(),
+      onCancelNote: vi.fn(),
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('is not shown when the note is closed', () => {
+      render(<SessionItemRow {...defaultProps} {...noteProps} isNoteOpen={false} />);
+
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('opens under the row with the template note in the available zone, focused', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Buy organic');
+      const { container } = render(
+        <SessionItemRow {...defaultProps} {...noteProps} item={item} zone="available" />,
+      );
+
+      const textarea = screen.getByRole('textbox', { name: /template note for milk/i });
+      expect(textarea).toHaveValue('Buy organic');
+      expect(textarea).toHaveFocus();
+      expect(textarea).toHaveAttribute('maxlength', '2000');
+      expect(container.querySelector('[data-item-id]')?.contains(textarea)).toBe(false);
+      expect(screen.queryByText('Template note:')).not.toBeInTheDocument();
+    });
+
+    it('edits the session note in the selected zone and shows the template note for reference', () => {
+      const item = createMockItem('item-1', 'Milk', 'item', 'Buy organic');
+      const state: ItemState = { selected: true, checked: false, notes: 'Two cartons' };
+      render(
+        <SessionItemRow
+          {...defaultProps}
+          {...noteProps}
+          item={item}
+          state={state}
+          zone="selected"
+        />,
+      );
+
+      expect(screen.getByRole('textbox', { name: /session note for milk/i })).toHaveValue(
+        'Two cartons',
+      );
+      expect(screen.getByText('Template note:')).toBeInTheDocument();
+      expect(screen.getAllByText('Buy organic').length).toBeGreaterThan(0);
+    });
+
+    it('saves the draft on Enter', async () => {
+      const user = userEvent.setup();
+      render(<SessionItemRow {...defaultProps} {...noteProps} />);
+
+      await user.type(screen.getByRole('textbox'), 'Get two{Enter}');
+
+      expect(noteProps.onSaveNote).toHaveBeenCalledOnce();
+      expect(noteProps.onSaveNote).toHaveBeenCalledWith('Get two');
+    });
+
+    it('inserts a newline on Shift+Enter instead of saving', async () => {
+      const user = userEvent.setup();
+      render(<SessionItemRow {...defaultProps} {...noteProps} />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'one{Shift>}{Enter}{/Shift}two');
+
+      expect(textarea).toHaveValue('one\ntwo');
+      expect(noteProps.onSaveNote).not.toHaveBeenCalled();
+    });
+
+    it('cancels on Escape without saving', async () => {
+      const user = userEvent.setup();
+      render(<SessionItemRow {...defaultProps} {...noteProps} />);
+
+      await user.type(screen.getByRole('textbox'), 'draft{Escape}');
+      await user.tab();
+
+      expect(noteProps.onCancelNote).toHaveBeenCalledOnce();
+      expect(noteProps.onSaveNote).not.toHaveBeenCalled();
+    });
+
+    it('saves on blur', async () => {
+      const user = userEvent.setup();
+      render(<SessionItemRow {...defaultProps} {...noteProps} />);
+
+      await user.type(screen.getByRole('textbox'), 'blurred');
+      await user.tab();
+
+      expect(noteProps.onSaveNote).toHaveBeenCalledOnce();
+      expect(noteProps.onSaveNote).toHaveBeenCalledWith('blurred');
+    });
+
+    it('saves once and does not reopen when the note icon is clicked on the open row', async () => {
+      const user = userEvent.setup();
+      render(<SessionItemRow {...defaultProps} {...noteProps} />);
+
+      await user.type(screen.getByRole('textbox'), 'closing');
+      await user.click(screen.getByRole('button', { name: /edit template note/i }));
+
+      expect(noteProps.onSaveNote).toHaveBeenCalledOnce();
+      expect(noteProps.onSaveNote).toHaveBeenCalledWith('closing');
+      expect(noteProps.onEditNote).not.toHaveBeenCalled();
+    });
+
+    it('does not select the row while typing in the note', async () => {
+      const user = userEvent.setup();
+      const onSelectItem = vi.fn();
+      render(<SessionItemRow {...defaultProps} {...noteProps} onSelectItem={onSelectItem} />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.click(textarea);
+      await user.type(textarea, ' x');
+
+      expect(onSelectItem).not.toHaveBeenCalled();
     });
   });
 

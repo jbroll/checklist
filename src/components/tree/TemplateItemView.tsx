@@ -1,6 +1,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { Archive, Folder, MoreVertical, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { InlineNoteEditor, toggleInlineNote } from '@/components/session/InlineNoteEditor';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,10 @@ interface TemplateItemViewProps {
   enableEdit?: boolean; // Enable double-click to edit (default: true)
   showCheckbox?: boolean; // Show checkbox for selection (SessionView normal mode)
   onCheckboxToggle?: (itemId: string) => void; // Separate handler for checkbox (SessionView selected state)
-  onEditNote?: (itemId: string) => void; // Open note editor dialog
+  onEditNote?: (itemId: string) => void; // Toggle this row's inline note editor
+  isNoteOpen?: boolean;
+  onSaveNote?: (note: string) => void;
+  onCancelNote?: () => void;
 }
 
 export function TemplateItemView({
@@ -48,12 +52,16 @@ export function TemplateItemView({
   showCheckbox = false,
   onCheckboxToggle,
   onEditNote,
+  isNoteOpen = false,
+  onSaveNote,
+  onCancelNote,
 }: TemplateItemViewProps) {
   // Note: hasChildren prop is kept for API compatibility but categories always show chevrons
   void _hasChildren;
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
   const inputRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const { showConfirm } = useDialog();
 
   const isCategory = item.type === 'category';
@@ -165,187 +173,205 @@ export function TemplateItemView({
   };
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: This div is conditionally interactive for drag-and-drop and item selection
-    <div
-      ref={setDropRef}
-      data-item-id={item.id}
-      onClick={handleRowClick}
-      onKeyDown={(e) => {
-        if (onSelect && !showCheckbox && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          handleRowClick(e as unknown as React.MouseEvent);
-        }
-      }}
-      role={onSelect && !showCheckbox ? 'button' : undefined}
-      tabIndex={onSelect && !showCheckbox ? 0 : undefined}
-      className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
-        isOver && isCategory
-          ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500 border-dashed rounded'
-          : ''
-      } ${onSelect && !showCheckbox ? 'cursor-pointer' : ''}`}
-    >
-      <IndentedRow
-        level={level}
-        expanded={isCategory ? (expanded ?? item.expanded ?? true) : false}
-        onToggleExpand={isCategory ? handleToggle : () => {}}
-        hasChildren={isCategory}
-        className="group"
+    <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: This div is conditionally interactive for drag-and-drop and item selection */}
+      <div
+        ref={setDropRef}
+        data-item-id={item.id}
+        onClick={handleRowClick}
+        onKeyDown={(e) => {
+          if (onSelect && !showCheckbox && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            handleRowClick(e as unknown as React.MouseEvent);
+          }
+        }}
+        role={onSelect && !showCheckbox ? 'button' : undefined}
+        tabIndex={onSelect && !showCheckbox ? 0 : undefined}
+        className={`transition-all ${isDragging ? 'opacity-50' : ''} ${
+          isOver && isCategory
+            ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500 border-dashed rounded'
+            : ''
+        } ${onSelect && !showCheckbox ? 'cursor-pointer' : ''}`}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Selection Checkbox - only show for items (not categories) */}
-          {showCheckbox && !isCategory && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCheckboxChange();
-              }}
-              className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors shrink-0 ${
-                isChecked
-                  ? 'border-blue-500 bg-blue-500 text-white'
-                  : 'border-divider-tertiary hover:border-blue-400'
-              }`}
-            >
-              {isChecked && (
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  aria-label="Selected"
-                  role="img"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-          )}
-
-          <div
-            ref={enableDrag ? setDragRef : undefined}
-            {...(enableDrag ? dragAttributes : {})}
-            {...(enableDrag ? dragListeners : {})}
-            className={`flex-1 min-w-0 ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
-          >
-            <div
-              className={`flex flex-wrap items-center gap-x-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
-                isSelected ? 'bg-interactive-active' : ''
-              }`}
-            >
-              {/* Icon */}
-              {isCategory && <Folder className="h-4 w-4 shrink-0" />}
-
-              {/* Name (Editable) */}
-              {isEditing ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleSaveEdit}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                />
-              ) : (
-                <span
-                  {...doubleTapHandlers}
-                  className={`flex-1 min-w-0 truncate text-left ${
-                    isCategory ? 'font-semibold text-content-primary' : 'text-content-primary'
-                  }`}
-                >
-                  {item.name}
-                </span>
-              )}
-
-              {/* Quantity Badge (items only) */}
-              {!isCategory && item.defaultQuantity && (
-                <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-content-secondary shrink-0">
-                  {item.defaultQuantity}
-                </span>
-              )}
-              {/* Note preview - wraps to new line on mobile, inline on desktop */}
-              {item.notes && !isEditing && (
-                <span className="basis-full sm:basis-auto text-xs text-content-tertiary truncate sm:max-w-[200px]">
-                  {item.notes.split('\n')[0]}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Notes icon - show in checkbox mode (SessionView normal mode) */}
-          {showCheckbox && onEditNote && !isEditing && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditNote(item.id);
-              }}
-              className={`shrink-0 rounded p-1 transition-colors ${
-                item.notes
-                  ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700'
-                  : 'text-content-disabled hover:bg-interactive-hover hover:text-content-secondary'
-              }`}
-              aria-label="Edit note"
-            >
-              <StickyNote className="h-4 w-4" />
-            </button>
-          )}
-
-          {/* Archived indicator */}
-          {item.archived && !isEditing && (
-            <Archive className="h-4 w-4 shrink-0 text-content-disabled" />
-          )}
-
-          {/* Delete Icon (SessionView adding mode) */}
-          {showDeleteIcon && !isEditing && onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              className="shrink-0 rounded p-1 text-content-tertiary hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
-              aria-label="Delete item"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-
-          {/* Actions Menu - only show when not in session normal mode (showCheckbox) */}
-          {!isEditing && !showDeleteIcon && !showCheckbox && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  className="shrink-0 rounded p-1 hover:bg-interactive-hover"
-                  aria-label="More options"
-                >
-                  <MoreVertical className="h-4 w-4 text-content-secondary" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleStartEdit}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Rename
-                </DropdownMenuItem>
-                {!isCategory && onEditNote && (
-                  <DropdownMenuItem onClick={() => onEditNote(item.id)}>
-                    <StickyNote className="mr-2 h-4 w-4" />
-                    Edit Note
-                  </DropdownMenuItem>
+        <IndentedRow
+          level={level}
+          expanded={isCategory ? (expanded ?? item.expanded ?? true) : false}
+          onToggleExpand={isCategory ? handleToggle : () => {}}
+          hasChildren={isCategory}
+          className="group"
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Selection Checkbox - only show for items (not categories) */}
+            {showCheckbox && !isCategory && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCheckboxChange();
+                }}
+                className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors shrink-0 ${
+                  isChecked
+                    ? 'border-blue-500 bg-blue-500 text-white'
+                    : 'border-divider-tertiary hover:border-blue-400'
+                }`}
+              >
+                {isChecked && (
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                    aria-label="Selected"
+                    role="img"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                 )}
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </IndentedRow>
-    </div>
+              </button>
+            )}
+
+            <div
+              ref={enableDrag ? setDragRef : undefined}
+              {...(enableDrag ? dragAttributes : {})}
+              {...(enableDrag ? dragListeners : {})}
+              className={`flex-1 min-w-0 ${enableDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            >
+              <div
+                className={`flex flex-wrap items-center gap-x-2 rounded px-2 py-1 -mx-2 w-full transition-colors ${
+                  isSelected ? 'bg-interactive-active' : ''
+                }`}
+              >
+                {/* Icon */}
+                {isCategory && <Folder className="h-4 w-4 shrink-0" />}
+
+                {/* Name (Editable) */}
+                {isEditing ? (
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleSaveEdit}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 min-w-0 rounded border border-green-500 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                  />
+                ) : (
+                  <span
+                    {...doubleTapHandlers}
+                    className={`flex-1 min-w-0 truncate text-left ${
+                      isCategory ? 'font-semibold text-content-primary' : 'text-content-primary'
+                    }`}
+                  >
+                    {item.name}
+                  </span>
+                )}
+
+                {/* Quantity Badge (items only) */}
+                {!isCategory && item.defaultQuantity && (
+                  <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-content-secondary shrink-0">
+                    {item.defaultQuantity}
+                  </span>
+                )}
+                {/* Note preview - wraps to new line on mobile, inline on desktop */}
+                {item.notes && !isEditing && (
+                  <span className="basis-full sm:basis-auto text-xs text-content-tertiary truncate sm:max-w-[200px]">
+                    {item.notes.split('\n')[0]}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Notes icon - show in checkbox mode (SessionView normal mode) */}
+            {showCheckbox && onEditNote && !isEditing && (
+              <button
+                type="button"
+                // Keep focus in the open textarea so the click below closes it instead of a blur
+                // closing it first and the click reopening it.
+                onMouseDown={(e) => {
+                  if (isNoteOpen) e.preventDefault();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleInlineNote(isNoteOpen, noteRef, () => onEditNote(item.id));
+                }}
+                className={`shrink-0 rounded p-1 transition-colors ${
+                  item.notes
+                    ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700'
+                    : 'text-content-disabled hover:bg-interactive-hover hover:text-content-secondary'
+                }`}
+                aria-label="Edit note"
+              >
+                <StickyNote className="h-4 w-4" />
+              </button>
+            )}
+
+            {/* Archived indicator */}
+            {item.archived && !isEditing && (
+              <Archive className="h-4 w-4 shrink-0 text-content-disabled" />
+            )}
+
+            {/* Delete Icon (SessionView adding mode) */}
+            {showDeleteIcon && !isEditing && onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="shrink-0 rounded p-1 text-content-tertiary hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
+                aria-label="Delete item"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+
+            {/* Actions Menu - only show when not in session normal mode (showCheckbox) */}
+            {!isEditing && !showDeleteIcon && !showCheckbox && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 rounded p-1 hover:bg-interactive-hover"
+                    aria-label="More options"
+                  >
+                    <MoreVertical className="h-4 w-4 text-content-secondary" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleStartEdit}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Rename
+                  </DropdownMenuItem>
+                  {!isCategory && onEditNote && (
+                    <DropdownMenuItem onClick={() => onEditNote(item.id)}>
+                      <StickyNote className="mr-2 h-4 w-4" />
+                      Edit Note
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </IndentedRow>
+      </div>
+      {isNoteOpen && onSaveNote && onCancelNote && (
+        <InlineNoteEditor
+          ref={noteRef}
+          note={item.notes || ''}
+          noteType="template"
+          itemName={item.name}
+          onSave={onSaveNote}
+          onCancel={onCancelNote}
+          style={{ paddingLeft: `${level * 20 + 56}px` }}
+        />
+      )}
+    </>
   );
 }

@@ -31,6 +31,9 @@ interface ItemNodeRendererProps {
   onBatchDeselectAll: (itemIds: string[]) => void;
   onBatchToggle: (itemIds: string[]) => void;
   onEditNote: (itemId: string) => void;
+  noteEditingItemId: string | null;
+  onSaveNote: (note: string) => void;
+  onCancelNote: () => void;
 }
 
 /**
@@ -78,6 +81,9 @@ export function ItemNodeRenderer({
   onBatchDeselectAll,
   onBatchToggle,
   onEditNote,
+  noteEditingItemId,
+  onSaveNote,
+  onCancelNote,
 }: ItemNodeRendererProps) {
   const { item, children } = node;
   const parentPath = getParentPath(item.path);
@@ -116,6 +122,9 @@ export function ItemNodeRenderer({
           }}
           itemEditModeProps={{
             onEditNote,
+            noteEditingItemId,
+            onSaveNote,
+            onCancelNote,
           }}
         >
           <div className="pl-4">
@@ -145,6 +154,9 @@ export function ItemNodeRenderer({
                 onBatchDeselectAll={onBatchDeselectAll}
                 onBatchToggle={onBatchToggle}
                 onEditNote={onEditNote}
+                noteEditingItemId={noteEditingItemId}
+                onSaveNote={onSaveNote}
+                onCancelNote={onCancelNote}
               />
             ))}
           </div>
@@ -194,6 +206,9 @@ export function ItemNodeRenderer({
         enableEdit={showAddForm}
         showCheckbox={item.type === 'item'}
         onEditNote={onEditNote}
+        isNoteOpen={noteEditingItemId === item.id}
+        onSaveNote={onSaveNote}
+        onCancelNote={onCancelNote}
       />
       {/* Reorder zone after each sibling */}
       <ReorderDropZone
@@ -232,6 +247,9 @@ export function ItemNodeRenderer({
               onBatchDeselectAll={onBatchDeselectAll}
               onBatchToggle={onBatchToggle}
               onEditNote={onEditNote}
+              noteEditingItemId={noteEditingItemId}
+              onSaveNote={onSaveNote}
+              onCancelNote={onCancelNote}
             />
           ))}
         </div>

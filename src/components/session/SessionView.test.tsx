@@ -605,16 +605,6 @@ describe('SessionView', () => {
     });
   });
 
-  describe('note editor', () => {
-    it('does not show note editor dialog by default', () => {
-      const props = createDefaultProps();
-      render(<SessionView {...props} />);
-
-      // Note editor should not be visible
-      expect(screen.queryByText(/note editor/i)).not.toBeInTheDocument();
-    });
-  });
-
   describe('category expansion state', () => {
     it('uses category expanded state from per-user view state', () => {
       // Set navigation state to show edit mode

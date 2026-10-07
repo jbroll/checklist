@@ -25,6 +25,9 @@ interface FlatViewRendererProps {
   canDrag: (itemId: string) => boolean;
   // Notes
   onEditNote?: (itemId: string) => void;
+  noteEditingItemId?: string | null;
+  onSaveNote?: (note: string) => void;
+  onCancelNote?: () => void;
 }
 
 export function FlatViewRenderer({
@@ -44,6 +47,9 @@ export function FlatViewRenderer({
   canEdit,
   canDrag,
   onEditNote,
+  noteEditingItemId,
+  onSaveNote,
+  onCancelNote,
 }: FlatViewRendererProps) {
   const showZoneHeadings = template.show_zone_headings;
 
@@ -61,6 +67,9 @@ export function FlatViewRenderer({
     canEditItemFn: canEdit,
     canDragItemFn: canDrag,
     onEditNote,
+    noteEditingItemId,
+    onSaveNote,
+    onCancelNote,
   };
 
   return (
