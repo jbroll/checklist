@@ -309,6 +309,7 @@ export function TreeView({
           key={session.id}
           session={session}
           templateName={folder.name}
+          items={folder.items}
           level={node.level + 1}
           onOpen={(sessionId) => onOpenSession?.(folder.id, sessionId)}
           onArchive={(sessionId) =>

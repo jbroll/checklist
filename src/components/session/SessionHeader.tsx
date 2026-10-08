@@ -11,6 +11,7 @@ interface SessionHeaderProps {
   getViewModeLabel: () => string;
   getViewModeIcon: () => LucideIcon;
   onBack: () => void;
+  completedIn?: string;
 }
 
 /**
@@ -27,13 +28,19 @@ export function SessionHeader({
   getViewModeLabel,
   getViewModeIcon,
   onBack,
+  completedIn,
 }: SessionHeaderProps) {
   return (
     <div className="border-b border-divider-primary p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold text-content-primary sm:text-xl lg:text-2xl truncate">
-          {sessionName ? `${templateName} · ${sessionName}` : templateName}
-        </h1>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-content-primary sm:text-xl lg:text-2xl truncate">
+            {sessionName ? `${templateName} · ${sessionName}` : templateName}
+          </h1>
+          {completedIn && (
+            <p className="text-sm text-content-secondary">{`Completed in ${completedIn}`}</p>
+          )}
+        </div>
         {showAddForm ? (
           <button
             type="button"

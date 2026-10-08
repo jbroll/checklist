@@ -16,8 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDialog } from '@/lib/dialog-context';
-import { formatSessionDate } from '@/lib/utils';
-import type { SessionData } from '@/schema/folder';
+import { formatDuration, formatSessionDate } from '@/lib/utils';
+import type { SessionData, TemplateItem } from '@/schema/folder';
+import { getSessionDuration, isSessionComplete } from '@/services/sessionStats';
 import { IndentedRow } from './IndentedRow';
 
 /**
@@ -43,6 +44,7 @@ function hasMultipleOnSameDay(
 interface SessionRowViewProps {
   session: SessionData;
   templateName: string;
+  items: readonly TemplateItem[];
   level: number;
   onOpen: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
@@ -56,6 +58,7 @@ interface SessionRowViewProps {
 export const SessionRowView = memo(function SessionRowView({
   session,
   templateName,
+  items,
   level,
   onOpen,
   onDelete,
@@ -80,6 +83,8 @@ export const SessionRowView = memo(function SessionRowView({
   const sessionDateLabel = formatSessionDate(new Date(session.createdAt), showTime);
   const label = session.name || sessionDateLabel;
   const displayName = `${templateName} - ${label}`;
+  const duration = isSessionComplete(session) ? getSessionDuration(session, items) : null;
+  const doneIn = duration === null ? null : formatDuration(duration);
 
   const handleStartEdit = () => {
     renameRequested.current = true;
@@ -190,6 +195,11 @@ export const SessionRowView = memo(function SessionRowView({
 
             {/* Session stats */}
             <div className="flex items-center gap-1 text-base">
+              {doneIn && (
+                <span className="mr-1 whitespace-nowrap text-xs text-content-tertiary">
+                  {`Done in ${doneIn}`}
+                </span>
+              )}
               <span className="text-green-600">{session.checkedCount}</span>
               <span className="text-content-primary">/</span>
               <span className="text-content-primary">

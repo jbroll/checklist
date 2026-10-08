@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cn,
+  formatDuration,
   formatRelativeTime,
   formatSessionDate,
   generateId,
@@ -170,6 +171,35 @@ describe('utils', () => {
       const dateString = '2024-06-15T14:30:00.000Z';
       const result = formatSessionDate(new Date(dateString), true);
       expect(result).toMatch(/^today @\d+:\d+ (am|pm)$/);
+    });
+  });
+
+  describe('formatDuration', () => {
+    const MIN = 60_000;
+
+    it('shows <1 min under a minute', () => {
+      expect(formatDuration(0)).toBe('<1 min');
+      expect(formatDuration(59_000)).toBe('<1 min');
+    });
+
+    it('shows rounded minutes under an hour', () => {
+      expect(formatDuration(MIN)).toBe('1 min');
+      expect(formatDuration(12 * MIN + 29_000)).toBe('12 min');
+      expect(formatDuration(12 * MIN + 31_000)).toBe('13 min');
+    });
+
+    it('shows hours and minutes from an hour up', () => {
+      expect(formatDuration(65 * MIN)).toBe('1 h 5 min');
+      expect(formatDuration(150 * MIN)).toBe('2 h 30 min');
+    });
+
+    it('drops zero minutes on whole hours', () => {
+      expect(formatDuration(60 * MIN)).toBe('1 h');
+      expect(formatDuration(120 * MIN)).toBe('2 h');
+    });
+
+    it('rounds up into the next hour', () => {
+      expect(formatDuration(59 * MIN + 45_000)).toBe('1 h');
     });
   });
 

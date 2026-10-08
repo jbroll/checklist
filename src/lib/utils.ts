@@ -100,6 +100,16 @@ export function formatSessionDate(date: Date | string, showTime = true): string 
   return dateStr;
 }
 
+/** Format a duration in ms as "<1 min", "N min" or "H h M min" (whole hours drop " 0 min"). */
+export function formatDuration(ms: number): string {
+  if (ms < 60_000) return '<1 min';
+  const totalMinutes = Math.round(ms / 60_000);
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+}
+
 /**
  * Get the start of day (midnight) for a given date
  */

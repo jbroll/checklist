@@ -464,7 +464,7 @@ These are expected by users. Missing any is a dealbreaker.
 | Encrypted sync | ✅ | Better than plaintext (most competitors). |
 | Item quantity | ✅ | `defaultQuantity` field with UI in ItemInput. |
 | Item notes | ✅ | Template + session-level notes with modal editor. |
-| Activity timestamps | ✅ Schema | `selectedAt`, `checkedAt`, `lastActivityAt`. Needs UI exposure. |
+| Activity timestamps | Partial | `checkedAt` drives the completion time on finished sessions; `selectedAt`, `lastActivityAt` not shown yet. |
 | Multiple view modes | ✅ | `zone-in-hierarchy` and `flat` modes exist. |
 | **Auto-categorization** | ✅ | 4,368 items (grocery, hardware, outdoor), fuzzy matching, auto-creates categories. |
 | **Autocomplete suggestions** | ✅ | Multi-domain search with keyboard navigation. |
@@ -480,7 +480,7 @@ CheckList's data model is already richer than most competitors. The opportunity 
 | `notes` | TemplateItem | Partial | Expandable detail or tooltip |
 | `notes` | ItemState (session) | Partial | Quick inline edit while shopping |
 | `selectedAt` | ItemState | ❌ | Session analytics |
-| `checkedAt` | ItemState | ❌ | "Completed in 23 min" stats |
+| `checkedAt` | ItemState | ✅ | "Done in 23 min" on the session row, "Completed in" in the session header |
 | `lastActivityAt` | SessionData | ❌ | "Last used 3 days ago" |
 | `viewMode` | SessionData | ✅ | Already working |
 
@@ -521,8 +521,7 @@ Many "missing features" come from **project management apps** (Notion, ClickUp, 
 1. **Search** - Filter items by name across all templates
 2. **Expose quantity inline** - Already stored, just show it
 3. **Quick notes access** - Tap to see/edit without modal
-4. **Session stats** - Use existing timestamps for completion time
-5. **Smart input** - AI parses text at entry time, stores in existing fields
+4. **Smart input** - AI parses text at entry time, stores in existing fields
 
 ### What Makes CheckList Different
 

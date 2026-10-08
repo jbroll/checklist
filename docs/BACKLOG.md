@@ -11,7 +11,6 @@
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Expose timestamps in UI | 2-3h | Show "completed in X min" stats |
 | Session comparison | 4-6h | Compare items across sessions |
 | Over-limit banner | 2-3h | Banner for downgraded users exceeding free tier |
 

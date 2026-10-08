@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatSessionDate } from '@/lib/utils';
-import type { SessionData } from '@/schema/folder';
+import type { SessionData, TemplateItem } from '@/schema/folder';
 import { SessionRowView } from './SessionRowView';
 
 const { showConfirm } = vi.hoisted(() => ({ showConfirm: vi.fn() }));
@@ -30,6 +30,20 @@ function makeSession(overrides: Partial<SessionData> = {}): SessionData {
   };
 }
 
+function makeItem(id: string): TemplateItem {
+  return {
+    id,
+    name: id,
+    type: 'item',
+    path: id,
+    expanded: false,
+    sortOrder: 0,
+    archived: false,
+    defaultQuantity: '',
+    createdAt: CREATED_AT,
+  };
+}
+
 function renderRow(
   session: SessionData,
   props: Partial<Parameters<typeof SessionRowView>[0]> = {},
@@ -40,6 +54,7 @@ function renderRow(
     <SessionRowView
       session={session}
       templateName="Groceries"
+      items={[]}
       level={1}
       onOpen={vi.fn()}
       onArchive={onArchive}
@@ -166,6 +181,33 @@ describe('SessionRowView', () => {
       await user.click(screen.getByRole('button', { name: /more options/i }));
 
       expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('completion time', () => {
+    const MIN = 60_000;
+    const items = ['a', 'b'].map((id) => makeItem(id));
+    const checkedStates = {
+      a: { selected: true, checked: true, checkedAt: CREATED_AT },
+      b: { selected: true, checked: true, checkedAt: CREATED_AT + 12 * MIN },
+    };
+
+    it('shows how long a completed session took', () => {
+      renderRow(makeSession({ itemStates: checkedStates, checkedCount: 2 }), { items });
+      expect(screen.getByText('Done in 12 min')).toBeInTheDocument();
+    });
+
+    it('shows nothing while items are still selected', () => {
+      renderRow(makeSession({ itemStates: checkedStates, checkedCount: 2, selectedCount: 1 }), {
+        items,
+      });
+      expect(screen.queryByText(/Done in/)).not.toBeInTheDocument();
+    });
+
+    it('shows nothing when the duration is unknown', () => {
+      const oneChecked = { a: checkedStates.a };
+      renderRow(makeSession({ itemStates: oneChecked, checkedCount: 1 }), { items });
+      expect(screen.queryByText(/Done in/)).not.toBeInTheDocument();
     });
   });
 });

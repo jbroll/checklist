@@ -3,9 +3,11 @@ import { Package } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
 import type { NavState } from '@/lib/useNavigationHistory';
+import { formatDuration } from '@/lib/utils';
 import { useRowboat, useSelect } from '@/rowboat';
 import type { FolderRow, SessionData } from '@/schema/folder';
 import { parseUserSettingsRow } from '@/schema/userSettingsData';
+import { getSessionDuration, isSessionComplete } from '@/services/sessionStats';
 import * as userSettingsService from '@/services/userSettingsService';
 import { buildItemTree } from '@/utils/itemTreeHelpers';
 import { FlatViewRenderer } from './FlatViewRenderer';
@@ -223,6 +225,9 @@ export function SessionView({
     return templateCategoryExpanded[itemId] ?? true;
   };
 
+  const duration =
+    session && isSessionComplete(session) ? getSessionDuration(session, template.items) : null;
+
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -262,6 +267,7 @@ export function SessionView({
               getViewModeLabel={getViewModeLabel}
               getViewModeIcon={getViewModeIcon}
               onBack={onBack}
+              completedIn={duration === null ? undefined : formatDuration(duration)}
             />
 
             {/* Add Item Form */}
