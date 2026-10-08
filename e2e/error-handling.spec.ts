@@ -551,12 +551,17 @@ test.describe('Data Sync Errors', () => {
 
     // Delete the app's IndexedDB stores to simulate storage loss. Names are
     // `checklist::<identity>` (storeName(APP_NAME, identity)), so enumerate rather
-    // than hardcode. Fails loudly if there is nothing to delete — a silent no-op
-    // here is how this test was vacuous before.
-    const deleted = await page.evaluate(async () => {
-      const names = (await window.indexedDB.databases())
-        .map((d) => d.name)
-        .filter((n): n is string => !!n && n.startsWith('checklist::'));
+    // than hardcode. Dexie creates the store on its first query, which can land after
+    // waitForPageLoad, so wait for it; a silent no-op here made this test vacuous before.
+    const listStores = () =>
+      page.evaluate(async () =>
+        (await window.indexedDB.databases())
+          .map((d) => d.name)
+          .filter((n): n is string => !!n && n.startsWith('checklist::')),
+      );
+    await expect.poll(async () => (await listStores()).length).toBeGreaterThan(0);
+    const names = await listStores();
+    await page.evaluate(async (names) => {
       await Promise.all(
         names.map(
           (name) =>
@@ -568,9 +573,7 @@ test.describe('Data Sync Errors', () => {
             }),
         ),
       );
-      return names;
-    });
-    expect(deleted.length).toBeGreaterThan(0);
+    }, names);
 
     await page.reload();
     await waitForPageLoad(page);
