@@ -47,11 +47,6 @@ function createMockItem(id: string, name: string, type: 'item' | 'category' = 'i
   };
 }
 
-// Helper to create mock template (rowboat FolderRow shape) for edit tests
-function createMockTemplate(id: string) {
-  return { id, items: [], sessions: [] };
-}
-
 // Minimal props for SessionZone
 const defaultProps = {
   items: [],

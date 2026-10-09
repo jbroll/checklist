@@ -32,8 +32,11 @@ const seed = (sessions: ReturnType<typeof session>[]) =>
     ],
   });
 
-const sessionsOf = (g: ReturnType<typeof makeGraph>) =>
-  parseFolderRow(g.folder('t1')!.$data).sessions;
+const sessionsOf = (g: ReturnType<typeof makeGraph>) => {
+  const node = g.folder('t1');
+  if (!node) throw new Error('template t1 not found');
+  return parseFolderRow(node.$data).sessions;
+};
 
 describe('cleanupExpiredSessions', () => {
   beforeEach(() => {

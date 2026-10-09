@@ -157,15 +157,14 @@ describe('ItemInput - existing item search', () => {
 
       const listbox = screen.getByRole('listbox');
       // Milk is selected - should have a filled checkbox (green background)
-      const milkOption = within(listbox).getByText('Milk').closest('button')!;
-      const milkCheckbox = milkOption.querySelector('span:first-child')!;
-      expect(milkCheckbox.className).toContain('bg-green-600');
+      const checkboxOf = (name: string) =>
+        within(listbox).getByText(name).closest('button')?.querySelector('span:first-child');
+      expect(checkboxOf('Milk')?.className).toContain('bg-green-600');
 
       // Almond Milk is not selected - should have an empty checkbox
-      const almondOption = within(listbox).getByText('Almond Milk').closest('button')!;
-      const almondCheckbox = almondOption.querySelector('span:first-child')!;
-      expect(almondCheckbox.className).toContain('border-neutral-300');
-      expect(almondCheckbox.className).not.toContain('bg-green-600');
+      const almondCheckbox = checkboxOf('Almond Milk');
+      expect(almondCheckbox?.className).toContain('border-neutral-300');
+      expect(almondCheckbox?.className).not.toContain('bg-green-600');
     });
 
     it('shows section headers when both existing items and dictionary suggestions are present', async () => {

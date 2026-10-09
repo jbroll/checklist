@@ -44,9 +44,9 @@ describe('D1: concurrent checks on different items merge with no lost survivor',
     await setItemChecked(g, 'f', 's1', 'x', true);
     await setItemChecked(g, 'f', 's1', 'y', true);
 
-    const s = getSession(g, 'f', 's1')!;
-    expect(s.itemStates.x.checked).toBe(true);
-    expect(s.itemStates.y.checked).toBe(true);
+    const s = getSession(g, 'f', 's1');
+    expect(s?.itemStates.x.checked).toBe(true);
+    expect(s?.itemStates.y.checked).toBe(true);
   });
 
   it('each item-state write is a single sub-path op, never a whole-cell write', async () => {

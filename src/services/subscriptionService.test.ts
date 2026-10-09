@@ -440,7 +440,6 @@ describe('SubscriptionService - Backend Integration', () => {
     global.fetch = mockFetch;
     mockFetch.mockReset();
     // Mock window.location
-    // biome-ignore lint/suspicious/noExplicitAny: test-only teardown of a read-only DOM global
     delete (window as any).location;
     window.location = { href: '' } as Location;
   });
