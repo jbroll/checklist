@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def signingValue = { String key, String env -> keystoreProps.getProperty(key) ?: System.getenv(env) }
+def releaseStoreFile = signingValue('storeFile', 'KJEKIT_KEYSTORE_FILE')
+
 android {
     namespace = "com.kjekit.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +24,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseStoreFile) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword signingValue('storePassword', 'KJEKIT_KEYSTORE_PASSWORD')
+                keyAlias signingValue('keyAlias', 'KJEKIT_KEY_ALIAS')
+                keyPassword signingValue('keyPassword', 'KJEKIT_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            // Without a keystore the release build stays unsigned, so cap sync and debug builds still work.
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

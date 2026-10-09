@@ -19,25 +19,18 @@ Guide for publishing kjekit/CheckList to the Google Play Store.
   keytool -genkey -v -keystore kjekit-release.keystore \
     -alias kjekit -keyalg RSA -keysize 2048 -validity 10000
   ```
-- [ ] Store keystore securely (NEVER commit to git)
-- [ ] Configure `android/app/build.gradle` for release signing:
-  ```gradle
-  android {
-      signingConfigs {
-          release {
-              storeFile file("kjekit-release.keystore")
-              storePassword System.getenv("KEYSTORE_PASSWORD")
-              keyAlias "kjekit"
-              keyPassword System.getenv("KEY_PASSWORD")
-          }
-      }
-      buildTypes {
-          release {
-              signingConfig signingConfigs.release
-          }
-      }
-  }
+- [ ] Store keystore securely (NEVER commit to git). `android/.gitignore` ignores `*.keystore`, `*.jks` and `keystore.properties`.
+- [ ] Point the release build at it. `android/app/build.gradle` reads `android/keystore.properties`,
+  falling back to environment variables per key; paths are relative to `android/`:
+  ```properties
+  storeFile=kjekit-release.keystore
+  storePassword=...
+  keyAlias=kjekit
+  keyPassword=...
   ```
+  The environment fallbacks are `KJEKIT_KEYSTORE_FILE`, `KJEKIT_KEYSTORE_PASSWORD`,
+  `KJEKIT_KEY_ALIAS` and `KJEKIT_KEY_PASSWORD`.
+  With no `storeFile` set, `bundleRelease` still builds, unsigned.
 - [ ] Consider using Google Play App Signing (recommended)
 
 ---

@@ -31,9 +31,9 @@ App identity: bundle id `com.kjekit.app` (`capacitor.config.ts`, `android/app/bu
 ## Google Play
 
 1. Create a Play developer account and complete identity verification.
-2. Generate a release keystore, keep it out of git, and wire `signingConfigs release` in `android/app/build.gradle`. Prefer Play App Signing.
+2. Generate a release keystore and describe it in `android/keystore.properties` (gitignored; keys and env fallbacks in `docs/GooglePlayStore.md`). `android/app/build.gradle` signs `bundleRelease` with it. Prefer Play App Signing.
 3. Capture 2-8 phone screenshots into `playstore/screenshots/` (recommended: folder tree, list items, shopping session, autocomplete, share dialog, shared-list indicator). Spec in `playstore/README.md`.
-4. Build the release artifact:
+4. Build the release artifact. Gradle 8.14 cannot run on JDK 25, so set `JAVA_HOME` to a JDK 17 or 21 (e.g. `/usr/lib/jvm/openjdk21`):
    ```bash
    npm run build
    npx cap sync android
