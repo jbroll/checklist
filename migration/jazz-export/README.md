@@ -47,6 +47,7 @@ npx tsx scripts/import-jazz-backup.ts lists   --backup <dir> --env <env file> --
 `lists` signs each user's token from `--auth-db` without serving HTTP; pass a copy of the installed file. It refuses a manifest with failed exports. For each manifest user in order it mints a rowboat group per folder (parents first, a nested folder under its parent's group), writes the folders and the `user_settings` row as that user, then reads them back from a fresh replica and prints:
 
 ```
+<userId> already-present folders=<n> settings=<yes|no>
 <userId> written folders=<n> items=<n> sessions=<n>
 <userId> read-back folders=<n> items=<n> sessions=<n> settings=<yes|no>
 <userId> manifest folders=<n> items=<n> sessions=<n>
@@ -77,7 +78,22 @@ share-invites-not-carried=<n>
 
 A rowboat `admin` can revoke or demote any other admin of the group, including the owner, which a Jazz admin could not do. Check every `role=admin` grant before accepting an import.
 
-Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a granted folder is not visible to its recipient, and stops with exit 1 when a grant fails. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws. A user who already has rows in the tenant throws `user <id> already has rows in this tenant`, so a second run fails at the first user instead of writing duplicates.
+Manifest folder counts include folders owned by other accounts, which are not written. It exits 1 when a granted folder is not visible to its recipient, and stops with exit 1 when a grant fails. It exits 1 when a read-back differs from the written counts, and stops with exit 1 at the first user whose import throws.
+
+### Re-running after a failure
+
+`lists` can be re-run with the same arguments after it stops partway. For each user it first syncs what the tenant already holds, then writes only what is missing:
+
+- A folder already in the tenant is kept as is, since each folder is pushed as one row carrying its items and sessions. Its group is reused, so a missing child is minted under it.
+- The `user_settings` row is created only if missing.
+- `already-present` counts the folders and settings row a previous run pushed. `written` is always the backup's full count, and `read-back` counts the user's own folders, not folders shared to them.
+- Grants are upserts in rowboat, so granting a share again changes nothing.
+
+It stops with an error and writes nothing for that user when the tenant does not match the backup: a folder created by this user that the backup does not have, a folder whose `name` or `parent_id` differs from the backup, or a folder whose parent is missing. Folders created by another user are shares and are ignored.
+
+A group minted for a folder whose row never pushed stays in rowboat with no rows. The re-run mints a new group for that folder, and nothing removes the empty one.
+
+`auth-db` needs no resume: it deletes `--out` when it fails, so a retry starts clean, and it refuses an `--out` that already exists.
 
 ## Removal
 

@@ -107,20 +107,23 @@ async function cmdLists(args: Record<string, string | boolean>): Promise<number>
     for (const [index, entry] of manifest.users.entries()) {
       const id = entry.userId;
       let plan: ReturnType<typeof planUser>;
-      let readBack: Awaited<ReturnType<typeof importUserLists>>['readBack'];
+      let result: Awaited<ReturnType<typeof importUserLists>>;
       try {
         plan = planUser(users[index]);
-        const result = await importUserLists({ plan, ...sessionTarget });
-        readBack = result.readBack;
+        result = await importUserLists({ plan, ...sessionTarget });
         for (const [folderId, groupId] of result.groups) groups.set(folderId, groupId);
       } catch (err) {
         console.error(`${id} error ${message(err)}`);
         return 1;
       }
 
+      const { readBack } = result;
       const written = plan.counts;
       const nc = plan.notCarried;
       const foreign = splitForeignFolders(id, nc.foreignFolders, sharePlan.grants);
+      console.log(
+        `${id} already-present folders=${result.existingFolders} settings=${result.existingUserSettings ? 'yes' : 'no'}`,
+      );
       console.log(`${id} written folders=${written.folders} items=${written.items} sessions=${written.sessions}`);
       console.log(
         `${id} read-back folders=${readBack.folders} items=${readBack.items} sessions=${readBack.sessions} settings=${readBack.userSettings ? 'yes' : 'no'}`,

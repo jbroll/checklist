@@ -68,8 +68,6 @@ is required first — is nutrition in scope for CheckList?**
     and the import is `backend/scripts/import-jazz-backup.ts` (steps `auth-db` and `lists`); the
     import has run against a local fixture backup, the export is covered by unit tests against
     in-memory Jazz sync, and neither has run on checklist-test yet
-  - before the prod cutover, decide how to recover a user whose import fails partway: the CLI has
-    no cleanup for minted groups or partly pushed rows
   - run `npm run provision:prod`
   - replace `REPLACE_WITH_PROD_DATABASE_ID` in `deploy.conf`
   - set `ROWBOAT_DATABASE_ID` and `BIND_HOST=127.0.0.1` in `backend/secrets.env`
