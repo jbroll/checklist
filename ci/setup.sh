@@ -5,8 +5,8 @@
 #
 # checklist's e2e runs against the self-hosted rowboat sync backend (started by
 # Playwright's webServer via `npm run dev`) plus a mock OAuth server from global
-# setup. The work here: source secrets, expose ORG_HOOKS, link + build the file:
-# sibling (rowboat — the @jbroll/* packages), and write a backend env.
+# setup. The work here: source secrets, expose ORG_HOOKS, check the file:
+# sibling (rowboat, the @jbroll/* packages), and write a backend env.
 
 # ── Env: secrets and service endpoints ────────────────────────────────────────
 SECRETS="$HOME/.config/checklist/secrets.env"
@@ -19,53 +19,15 @@ SERVICES="$HOME/.config/checklist/services.env"
 # org-hooks checkout on this host.
 export ORG_HOOKS="${ORG_HOOKS:-$HOME/src/org-hooks}"
 
-# ── Sibling file: dependencies ────────────────────────────────────────────────
-# checklist depends on rowboat (@jbroll/*) via file:../*. CI worktrees land in
-# ~/ci-worktrees/checklist-<id>/ where this sibling doesn't exist; provide it
-# from ci-workspace so npm install resolves.
-# Same fs → symlink. Cross fs → rsync (a cross-fs symlink of the sibling dir
-# breaks npm's file: resolution). The job runs in a mount namespace where
-# ci-workspace (/home) and ci-worktrees (/data) are SEPARATE devices, so in
-# practice CI takes the rsync path.
-CI_WORKSPACE="${CI_WORKSPACE:-$HOME/ci-workspace}"
-WT_PARENT="$(dirname "$WORKTREE")"
-
-# link_sibling NAME — refresh $WT_PARENT/NAME from $CI_WORKSPACE/NAME every run
-# (a stale copy silently ships old/partial dist — the bug this replaces).
-link_sibling() {
-    name="$1"; target="$CI_WORKSPACE/$name"; link="$WT_PARENT/$name"
-    [ -d "$target" ] || return 0
-    tdev="$(stat -c '%d' "$target"    2>/dev/null || echo x)"
-    ldev="$(stat -c '%d' "$WT_PARENT" 2>/dev/null || echo y)"
-    if [ "$tdev" = "$ldev" ]; then
-        [ "$(readlink "$link" 2>/dev/null)" = "$target" ] && return 0
-        rm -rf "$link"; ln -s "$target" "$link"
-        echo "[ci/setup] symlinked $name -> $target"
-    else
-        rm -rf "$link"; mkdir -p "$link"
-        rsync -a --delete --exclude='node_modules' --exclude='.git' "$target/" "$link/"
-        echo "[ci/setup] rsynced $name -> $link (cross-fs)"
-    fi
-}
-
-# rowboat is consumed as PRE-BUILT dist (no per-worktree build — ci-workspace/
-# rowboat is kept current+built out of band, rebuilt on rowboat land). Its dist
-# imports zod/better-auth/cross-@jbroll by bare specifier, and vite resolves
-# those from the package's realpath — so the copy MUST carry a node_modules.
-# Same-fs symlink gets it via the whole-dir link; the cross-fs rsync excludes
-# node_modules, so symlink it back to the pre-built ci-workspace copy (a cross-fs
-# symlink resolves fine for node module lookup — only the file: sibling dir
-# itself can't be a cross-fs symlink).
-link_sibling rowboat
-ROWBOAT="$WT_PARENT/rowboat"
-if [ ! -e "$ROWBOAT/node_modules" ] && [ -d "$CI_WORKSPACE/rowboat/node_modules" ]; then
-    ln -sfn "$CI_WORKSPACE/rowboat/node_modules" "$ROWBOAT/node_modules"
-    echo "[ci/setup] linked rowboat node_modules -> $CI_WORKSPACE/rowboat/node_modules"
-fi
+# ── Sibling file: dependency ──────────────────────────────────────────────────
+# rowboat (@jbroll/*, consumed as built dist via file:../rowboat) is built at
+# origin/HEAD by the CI server from CI_DEPS in ci/simple-ci.conf and linked at
+# ../rowboat before this script runs.
+ROWBOAT="$(dirname "$WORKTREE")/rowboat"
 if [ -f "$ROWBOAT/packages/schema/dist/index.d.ts" ] && [ -f "$ROWBOAT/packages/auth-betterauth/dist/index.d.ts" ]; then
     echo "[ci/setup] rowboat dist present ($ROWBOAT)"
 else
-    echo "[ci/setup] ERROR: rowboat dist missing at $ROWBOAT — build \$CI_WORKSPACE/rowboat (git reset --hard origin/main && npm ci && npm run build)." >&2
+    echo "[ci/setup] ERROR: rowboat dist missing at $ROWBOAT; check the job log's dep: line and CI_DEPS in ci/simple-ci.conf." >&2
 fi
 
 # ── backend env ──────────────────────────────────────────────────────────────
