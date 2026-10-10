@@ -426,7 +426,15 @@ describe('AuthGate', () => {
       render(<AuthGate />);
 
       expect(window.location.href).toBe(`/invite/${token}`);
-      expect(takeStashedInviteToken()).toBeNull();
+      expect(takeStashedInviteToken()).toEqual({ available: true, token: null });
+    });
+
+    it('stays put when nothing is stashed', () => {
+      mockAuthor = 'user-1';
+
+      render(<AuthGate />);
+
+      expect(window.location.href).toBe('http://localhost/');
     });
 
     it('leaves the stash alone while anonymous', () => {
@@ -435,11 +443,12 @@ describe('AuthGate', () => {
       render(<AuthGate />);
 
       expect(window.location.href).toBe('http://localhost/');
-      expect(takeStashedInviteToken()).toBe(token);
+      expect(takeStashedInviteToken()).toEqual({ available: true, token });
     });
 
     it('ignores a malformed stash', () => {
-      stashInviteToken('//evil.example');
+      // stashInviteToken refuses a malformed token, so plant one the way a hostile page could.
+      sessionStorage.setItem('pending-invite-token', '//evil.example');
       mockAuthor = 'user-1';
 
       render(<AuthGate />);

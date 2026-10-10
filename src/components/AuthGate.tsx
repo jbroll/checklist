@@ -47,9 +47,9 @@ export function AuthGate() {
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
 
-      const pendingToken = takeStashedInviteToken();
-      if (pendingToken) {
-        window.location.href = `/invite/${pendingToken}`;
+      const stashed = takeStashedInviteToken();
+      if (stashed.available && stashed.token) {
+        window.location.href = `/invite/${stashed.token}`;
       }
     }
   }, [isAuthenticated]);

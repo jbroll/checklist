@@ -243,7 +243,8 @@ function ValidInviteState({
         Folder Invitation
       </h1>
       <p className="mb-6 text-center text-content-secondary">
-        {invite.inviterEmail ?? 'Someone'} has invited you to {invite.targetName ?? 'collaborate'}
+        {invite.inviter.deleted ? 'Someone' : invite.inviter.email} has invited you to{' '}
+        {invite.targetName ?? 'collaborate'}
       </p>
 
       <RoleDetails role={invite.role} />

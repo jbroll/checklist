@@ -40,7 +40,14 @@ import { InviteAcceptPage } from '../InviteAcceptPage';
 const TOKEN = 'cd'.repeat(32);
 
 function validInvite(extra: Record<string, unknown> = {}) {
-  return { valid: true, inviterEmail: 'alice@example.com', role: 'writer', ...extra };
+  return {
+    valid: true,
+    inviter: { deleted: false, email: 'alice@example.com' },
+    role: 'writer',
+    appRole: null,
+    targetName: null,
+    ...extra,
+  };
 }
 
 beforeEach(() => {
@@ -78,7 +85,7 @@ describe('InviteAcceptPage', () => {
     render(<InviteAcceptPage token={TOKEN} />);
     fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }));
     expect(mockSignInSocial).toHaveBeenCalledWith(expect.objectContaining({ provider: 'google' }));
-    expect(takeStashedInviteToken()).toBe(TOKEN);
+    expect(takeStashedInviteToken()).toEqual({ available: true, token: TOKEN });
   });
 
   it('names the list in a valid invite when it has a target name', async () => {
@@ -98,10 +105,24 @@ describe('InviteAcceptPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('names a deleted inviter as "Someone"', async () => {
+    mockValidateInvite.mockResolvedValue(
+      validInvite({ inviter: { deleted: true }, targetName: 'Lake House' }),
+    );
+    render(<InviteAcceptPage token={TOKEN} />);
+    expect(await screen.findByText('Someone has invited you to Lake House')).toBeInTheDocument();
+  });
+
   it('shows the generic invalid message when validate says no', async () => {
-    mockValidateInvite.mockResolvedValue({ valid: false });
+    mockValidateInvite.mockResolvedValue({ valid: false, code: 'invalid_token' });
     render(<InviteAcceptPage token={TOKEN} />);
     expect(await screen.findByText('This invite link is no longer valid.')).toBeInTheDocument();
+  });
+
+  it('shows the wrong-account screen when validate says wrong_account', async () => {
+    mockValidateInvite.mockResolvedValue({ valid: false, code: 'wrong_account' });
+    render(<InviteAcceptPage token={TOKEN} />);
+    expect(await screen.findByText('Wrong Account')).toBeInTheDocument();
   });
 
   it('shows a retry message without a code when validate fails on the network', async () => {

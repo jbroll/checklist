@@ -45,6 +45,11 @@ export interface ServerConfig {
   rowboatAgentId: string;
   emailAuth: EmailAuthConfig;
   smtp?: SmtpConfig;
+  /**
+   * CHECKLIST_TEST_AUTH only: mark each new signup's email verified. rowboat counts an email as
+   * the account's (for invite validate/accept) only once verified, and e2e has no mail round trip.
+   */
+  verifySignups?: boolean;
 }
 
 // Builds a nodemailer-backed SendEmail port when SMTP is configured; undefined otherwise. Mirrors
@@ -139,6 +144,11 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
       : undefined,
   });
   await identity.registerIdentityTables();
+  if (config.verifySignups) {
+    // TEMP: lives on this connection only, so it never persists into a dev auth.db.
+    db.exec(`CREATE TEMP TRIGGER verify_signups AFTER INSERT ON main.user
+      BEGIN UPDATE main.user SET emailVerified = 1 WHERE id = NEW.id; END`);
+  }
 
   const app = express();
   app.set('trust proxy', true);
@@ -272,6 +282,7 @@ function configFromEnv(): ServerConfig {
       minPasswordLength: 8,
       maxPasswordLength: 128,
     },
+    verifySignups: isTestAuth,
   };
 }
 

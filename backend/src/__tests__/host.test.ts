@@ -162,3 +162,21 @@ describe('actor-token minting for the sharing group backend', () => {
     }
   });
 });
+
+describe('test-auth signup verification', () => {
+  function emailVerified(db: RowboatServer['db'], email: string): unknown {
+    return db.prepare('SELECT emailVerified FROM user WHERE email = ?').pluck().get(email);
+  }
+
+  it('marks a new signup verified when verifySignups is on', async () => {
+    server = await createServer({ ...testConfig(), verifySignups: true });
+    await signUpAndSignIn(server.app, 'v@example.test', 'password-123');
+    expect(emailVerified(server.db, 'v@example.test')).toBe(1);
+  });
+
+  it('leaves a new signup unverified by default', async () => {
+    server = await createServer(testConfig());
+    await signUpAndSignIn(server.app, 'u@example.test', 'password-123');
+    expect(emailVerified(server.db, 'u@example.test')).toBe(0);
+  });
+});

@@ -49,15 +49,21 @@ describe('stashed invite token', () => {
   beforeEach(() => sessionStorage.clear());
 
   it('returns a stashed token once', () => {
-    stashInviteToken(TOKEN);
-    expect(takeStashedInviteToken()).toBe(TOKEN);
-    expect(takeStashedInviteToken()).toBeNull();
+    expect(stashInviteToken(TOKEN)).toBe(true);
+    expect(takeStashedInviteToken()).toEqual({ available: true, token: TOKEN });
+    expect(takeStashedInviteToken()).toEqual({ available: true, token: null });
+  });
+
+  it('refuses to stash a malformed token', () => {
+    for (const bad of ['//evil.example', 'javascript:alert(1)', '../x', 'abc\n123', '']) {
+      expect(() => stashInviteToken(bad)).toThrow();
+    }
   });
 
   it('drops a malformed stash so it can never become a redirect target', () => {
     for (const bad of ['//evil.example', 'javascript:alert(1)', '../x', 'abc\n123', '']) {
-      stashInviteToken(bad);
-      expect(takeStashedInviteToken()).toBeNull();
+      sessionStorage.setItem('pending-invite-token', bad);
+      expect(takeStashedInviteToken()).toEqual({ available: true, token: null });
     }
   });
 });

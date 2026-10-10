@@ -40,7 +40,8 @@ accounts' signup emails so they can log in.
   env the suite self-excludes, so normal `npm run test:e2e` / CI is unaffected.
   With mail env the dev server runs with `CHECKLIST_TEST_AUTH=0`, so email verification is
   required and signup sends the verification email the setup reads. Without it, `1` turns
-  verification off for the default suites.
+  verification off for the default suites and marks each new signup's email verified, since
+  rowboat lets an account validate or accept an invite only for a verified address.
 
 ## Running
 

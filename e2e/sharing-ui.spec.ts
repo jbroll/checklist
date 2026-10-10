@@ -14,8 +14,9 @@
  *
  * "Invite Accept Page UI" is rewritten for rowboat's model (see the describe block's own header):
  * the ported InviteAcceptPage is CLIENT-GATED (anon → "Sign In to Continue", never validates) and
- * rowboat's validate collapses every failure to `{ valid: false }` (no-leak design), returning
- * `{ valid: true, inviterEmail, role }` on success. The tests authenticate via the
+ * rowboat's validate answers a failure with `{ valid: false, code }` and no invite details
+ * (`invalid_token` for an unusable token, `wrong_account` for an invite to another email), and
+ * `{ valid: true, inviter, role, appRole, targetName }` on success. The tests authenticate via the
  * CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock validate in that shape.
  */
 
@@ -26,20 +27,18 @@ import { signUpAndSignIn, uniqueAuthedEmail } from './helpers/rowboat-auth';
 // Mock data for tests
 const mockCollaborators = [
   {
-    userId: 'user-1',
     accountId: 'co_user_1',
     email: 'owner@example.com',
     name: 'Owner User',
-    permission: 'admin',
     role: 'admin',
+    deleted: false,
   },
   {
-    userId: 'user-2',
     accountId: 'co_user_2',
     email: 'editor@example.com',
     name: 'Editor User',
-    permission: 'writer',
     role: 'writer',
+    deleted: false,
   },
 ];
 
@@ -62,8 +61,26 @@ const mockPendingInvites = [
 
 test.describe('Share Dialog UI', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock the collaborators and invites endpoints
+    // useShareManager lists pending invites only for an admin of the folder's group, and asks
+    // for memberships alongside collaborators, so the memberships mock takes the group id from
+    // the collaborators request.
+    let folderGroup: string | null = null;
+    await page.route('**/api/shares/user/memberships', async (route) => {
+      for (let i = 0; i < 50 && folderGroup === null; i++) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          memberships: folderGroup ? [{ groupId: folderGroup, role: 'admin' }] : [],
+        }),
+      });
+    });
+
     await page.route('**/api/shares/targets/*/collaborators', (route) => {
+      const match = new URL(route.request().url()).pathname.match(/\/targets\/([^/]+)\//);
+      folderGroup = match ? decodeURIComponent(match[1]) : null;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -126,8 +143,8 @@ test.describe('Share Dialog UI', () => {
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 5000 }).catch(() => {});
     await page.waitForSelector('text=Collaborators (2)', { timeout: 10000 });
 
-    // Verify collaborators are shown. ShareDialog renders `name ?? email ?? accountId`
-    // per collaborator (the name wins when present), so assert the names — the emails
+    // Verify collaborators are shown. ShareDialog renders `name ?? email` per live
+    // collaborator (the name wins when present), so assert the names — the emails
     // are only surfaced for nameless collaborators.
     await expect(page.locator('text=Owner User')).toBeVisible();
     await expect(page.locator('text=Editor User')).toBeVisible();
@@ -294,10 +311,11 @@ test.describe('Invite Accept Page UI', () => {
   // The ported InviteAcceptPage is CLIENT-GATED and reads through rowboat's `useSharing`:
   //  - An anonymous visitor sees "Sign In to Continue" and validate is NEVER called, so nothing
   //    about the invite is disclosed.
-  //  - Only an authenticated user validates. rowboat's server deliberately collapses every
-  //    validate failure (invalid / revoked / expired / not-yours) to `{ valid: false }` — a
-  //    no-leak-to-non-owners design — and returns `{ valid: true, inviterEmail, role }` on success.
-  //    Email-mismatch is surfaced only at ACCEPT time (a 403), never from validate.
+  //  - Only an authenticated user validates. rowboat's server answers a failure with
+  //    `{ valid: false, code }` and no inviter, role or target: `invalid_token` for an invalid,
+  //    revoked, expired or used token, `wrong_account` for a pending invite to another email.
+  //    It returns `{ valid: true, inviter, role, appRole, targetName }` on success, where
+  //    `inviter` is `{ deleted: false, email }` or `{ deleted: true }`.
   // So these tests authenticate via the CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock
   // validate in rowboat's shape. They assert rowboat's (coarser, more private) behavior, not the
   // per-error-code screens the originals encoded.
@@ -312,6 +330,11 @@ test.describe('Invite Accept Page UI', () => {
       password: PASSWORD,
       name: 'Invite Tester',
     });
+  }
+
+  // A valid answer missing inviter, role or targetName is a failed state in useInviteAcceptance.
+  function validBody(email: string, role: string, targetName: string | null = null) {
+    return { valid: true, inviter: { deleted: false, email }, role, appRole: null, targetName };
   }
 
   function mockValidate(page: Page, body: Record<string, unknown>): Promise<void> {
@@ -343,7 +366,7 @@ test.describe('Invite Accept Page UI', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ valid: true, inviterEmail: 'sender@example.com', role: 'writer' }),
+        body: JSON.stringify(validBody('sender@example.com', 'writer')),
       });
     });
 
@@ -354,7 +377,7 @@ test.describe('Invite Accept Page UI', () => {
 
   test('shows invite details for a valid invite', async ({ page }) => {
     await authenticate(page, 'invite-valid');
-    await mockValidate(page, { valid: true, inviterEmail: 'alice@example.com', role: 'writer' });
+    await mockValidate(page, validBody('alice@example.com', 'writer'));
 
     await page.goto(INVITE_PATH);
 
@@ -369,12 +392,7 @@ test.describe('Invite Accept Page UI', () => {
 
   test('names the shared list when the invite carries one', async ({ page }) => {
     await authenticate(page, 'invite-target');
-    await mockValidate(page, {
-      valid: true,
-      inviterEmail: 'alice@example.com',
-      role: 'writer',
-      targetName: 'Lake House',
-    });
+    await mockValidate(page, validBody('alice@example.com', 'writer', 'Lake House'));
 
     await page.goto(INVITE_PATH);
 
@@ -382,10 +400,10 @@ test.describe('Invite Accept Page UI', () => {
   });
 
   test('shows a generic error for an invalid, revoked, or expired invite', async ({ page }) => {
-    // rowboat's validate returns `{ valid: false }` for ANY unusable token, so there is one
+    // rowboat's validate answers `invalid_token` for ANY unusable token, so there is one
     // generic message — the former per-code copy ("invalid or revoked" / "has expired") is gone.
     await authenticate(page, 'invite-invalid');
-    await mockValidate(page, { valid: false });
+    await mockValidate(page, { valid: false, code: 'invalid_token' });
 
     await page.goto(INVITE_PATH);
 
@@ -394,14 +412,14 @@ test.describe('Invite Accept Page UI', () => {
   });
 
   test('does not disclose the invite to an authenticated non-recipient', async ({ page }) => {
-    // A signed-in user who is not the recipient gets `{ valid: false }` (no sender/role leaked),
-    // rendering the generic error screen — never the sender or invite details.
+    // A signed-in user who is not the recipient gets `wrong_account` (no sender/role leaked),
+    // rendering the wrong-account screen — never the sender or invite details.
     await authenticate(page, 'invite-nonrecipient');
-    await mockValidate(page, { valid: false });
+    await mockValidate(page, { valid: false, code: 'wrong_account' });
 
     await page.goto(INVITE_PATH);
 
-    await expect(page.locator('text=Invite Error')).toBeVisible();
+    await expect(page.locator('text=Wrong Account')).toBeVisible();
     await expect(page.locator('text=has invited you to collaborate')).toHaveCount(0);
     await expect(page.locator('text=Folder Invitation')).toHaveCount(0);
     await expect(page.locator('button:has-text("Accept Invite")')).toHaveCount(0);
@@ -422,7 +440,7 @@ test.describe('Invite Accept Page UI', () => {
   ]) {
     test(`shows the ${role} permission description`, async ({ page }) => {
       await authenticate(page, `invite-${role}`);
-      await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role });
+      await mockValidate(page, validBody('sender@example.com', role));
 
       await page.goto(INVITE_PATH);
 
@@ -433,7 +451,7 @@ test.describe('Invite Accept Page UI', () => {
 
   test('shows the Go to Dashboard button on the error page', async ({ page }) => {
     await authenticate(page, 'invite-error-dash');
-    await mockValidate(page, { valid: false });
+    await mockValidate(page, { valid: false, code: 'invalid_token' });
 
     await page.goto(INVITE_PATH);
 
@@ -442,7 +460,7 @@ test.describe('Invite Accept Page UI', () => {
 
   test('navigates to the dashboard when clicking Decline', async ({ page }) => {
     await authenticate(page, 'invite-decline');
-    await mockValidate(page, { valid: true, inviterEmail: 'sender@example.com', role: 'writer' });
+    await mockValidate(page, validBody('sender@example.com', 'writer'));
 
     await page.goto(INVITE_PATH);
     await page.click('button:has-text("Decline")');

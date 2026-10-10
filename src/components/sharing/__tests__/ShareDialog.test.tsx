@@ -134,17 +134,43 @@ describe('ShareDialog', () => {
 
   it('renders collaborators after load', async () => {
     mockGetCollaborators.mockResolvedValue([
-      { accountId: 'acc_u1', email: 'alice@example.com', name: 'Alice', role: 'writer' },
+      {
+        accountId: 'acc_u1',
+        email: 'alice@example.com',
+        name: 'Alice',
+        role: 'writer',
+        deleted: false,
+      },
     ]);
     render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
     await waitFor(() => expect(screen.getByText(/Collaborators \(1\)/)).toBeInTheDocument());
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
+  it('falls back to the email when a collaborator has no name', async () => {
+    mockGetCollaborators.mockResolvedValue([
+      {
+        accountId: 'acc_u1',
+        email: 'alice@example.com',
+        name: null,
+        role: 'writer',
+        deleted: false,
+      },
+    ]);
+    render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
+    expect(await screen.findByText('alice@example.com')).toBeInTheDocument();
+  });
+
   it('removes a collaborator after confirm', async () => {
     (global as any).confirm = vi.fn().mockReturnValue(true);
     mockGetCollaborators.mockResolvedValue([
-      { accountId: 'acc_u1', email: 'alice@example.com', name: 'Alice', role: 'writer' },
+      {
+        accountId: 'acc_u1',
+        email: 'alice@example.com',
+        name: 'Alice',
+        role: 'writer',
+        deleted: false,
+      },
     ]);
     render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
     await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());
@@ -152,10 +178,29 @@ describe('ShareDialog', () => {
     await waitFor(() => expect(mockRemoveCollaborator).toHaveBeenCalledWith('grp_zTest', 'acc_u1'));
   });
 
+  it('labels a deleted collaborator and can still remove it', async () => {
+    (global as any).confirm = vi.fn().mockReturnValue(true);
+    mockGetCollaborators.mockResolvedValue([
+      { accountId: 'acc_gone', role: 'reader', deleted: true },
+    ]);
+    render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
+    expect(await screen.findByText('Deleted account')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deleted account' }));
+    await waitFor(() =>
+      expect(mockRemoveCollaborator).toHaveBeenCalledWith('grp_zTest', 'acc_gone'),
+    );
+  });
+
   it('does not remove a collaborator when confirm is declined', async () => {
     (global as any).confirm = vi.fn().mockReturnValue(false);
     mockGetCollaborators.mockResolvedValue([
-      { accountId: 'acc_u1', email: 'alice@example.com', name: 'Alice', role: 'writer' },
+      {
+        accountId: 'acc_u1',
+        email: 'alice@example.com',
+        name: 'Alice',
+        role: 'writer',
+        deleted: false,
+      },
     ]);
     render(<ShareDialog open onOpenChange={() => {}} folder={folder} />);
     await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());

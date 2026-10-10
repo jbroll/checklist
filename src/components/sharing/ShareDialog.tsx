@@ -1,4 +1,9 @@
-import { SharingError, useShareManager, useSharing } from '@jbroll/rowboat-sharing-react';
+import {
+  type Collaborator,
+  SharingError,
+  useShareManager,
+  useSharing,
+} from '@jbroll/rowboat-sharing-react';
 import { Share2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +27,10 @@ const ROLE_COLORS: Record<Role, { bg: string; text: string }> = {
   writer: { bg: 'bg-green-100', text: 'text-green-700' },
   admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
 };
+
+function collaboratorLabel(c: Collaborator): string {
+  return c.deleted ? 'Deleted account' : (c.name ?? c.email);
+}
 
 const MAX_TARGET_NAME_LENGTH = 200;
 
@@ -231,7 +240,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   <li key={c.accountId} className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <span className="block truncate text-sm text-content-primary">
-                        {c.name ?? c.email ?? c.accountId}
+                        {collaboratorLabel(c)}
                       </span>
                       <span
                         className={`inline-block rounded px-1.5 py-0.5 text-xs ${ROLE_COLORS[c.role as Role]?.bg ?? 'bg-surface-tertiary'} ${ROLE_COLORS[c.role as Role]?.text ?? 'text-content-secondary'}`}
@@ -241,7 +250,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                     </div>
                     <button
                       type="button"
-                      aria-label={`Remove ${c.name ?? c.email ?? c.accountId}`}
+                      aria-label={`Remove ${collaboratorLabel(c)}`}
                       onClick={() => void handleRemoveCollaborator(c.accountId)}
                       className="shrink-0 text-sm text-red-600 hover:underline"
                     >

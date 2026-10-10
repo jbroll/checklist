@@ -7,7 +7,9 @@
  * which flips backend/src/index.ts's `requireEmailVerification` off for the test run: better-auth
  * then auto-signs-in on `signUp.email` (server sets the session cookie immediately — see
  * better-auth's sign-up route, `shouldSkipAutoSignIn = autoSignIn === false || requireEmailVerification`),
- * so no verification email round-trip (GreenMail/IMAP) is needed.
+ * so no verification email round-trip (GreenMail/IMAP) is needed. The same switch marks the new
+ * account's email verified (`verifySignups`), which rowboat requires before it treats an invite
+ * to that address as this account's.
  *
  * The EmailAuthDialog's post-signup UI always shows a "Check Your Email" panel regardless of
  * whether verification is actually required (it only branches on `result.error`, not on
