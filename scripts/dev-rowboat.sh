@@ -25,6 +25,8 @@ export AUTH_SECRET="${AUTH_SECRET:-dev-auth-secret-not-for-prod}"
 export AUTH_BASE_URL="${AUTH_BASE_URL:-http://localhost:${ROUTER_PORT}/api/auth}"
 export ROWBOAT_AUTH_MODE="${ROWBOAT_AUTH_MODE:-jwt}"
 export ROWBOAT_RBAC="${ROWBOAT_RBAC:-on}"
+export WORKER_HOST="${WORKER_HOST:-127.0.0.1}"
+export MAX_UPLOAD_BYTES="${MAX_UPLOAD_BYTES:-52428800}"
 
 env_file="$here/.env.tenant.local"
 rm -f "$env_file"
