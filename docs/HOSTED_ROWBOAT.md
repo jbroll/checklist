@@ -282,8 +282,12 @@ create database with `compileSchema(shared/schema)` → register the JWT issuer)
 
 - `npm run provision:local` — provisions the local `dev:rowboat` (:3020). Run once; **re-run after a
   `.rowboat-dev/` reset** — the tool detects the wiped tenant and re-bootstraps automatically.
+  `scripts/dev-rowboat.sh` exports a dev `ROWBOAT_OPERATOR_KEY` for both the server and this step.
 - `npm run provision:prod` — provisions the checklist tenant on rowboat.rkroll.com (operator step; see the deploy runbook).
 - `npm run provision:test` — provisions the checklist-test tenant on rowboat.rkroll.com.
+
+`provision-tenant` refuses to run without the rowboat server's operator key, so `provision:prod` and
+`provision:test` need `ROWBOAT_OPERATOR_KEY` set to rowboat.rkroll.com's key in the shell.
 
 Each run checks `shared/schema.lock.json` and refuses when it is missing or its last hash is not the
 schema's (`npm run schema:lock` appends a version, `npm run schema:check` tests it). A new database is

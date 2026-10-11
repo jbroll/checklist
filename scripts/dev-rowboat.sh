@@ -19,6 +19,8 @@ fi
 export ROWBOAT_ROOT="${ROWBOAT_ROOT:-$here/.rowboat-dev}"
 export ROUTER_PORT="${ROUTER_PORT:-3020}"
 export ROUTER_SECRET="${ROUTER_SECRET:-dev-router-secret-not-for-prod}"
+# The server requires it, and provision:local below sends it to create the subscriber.
+export ROWBOAT_OPERATOR_KEY="${ROWBOAT_OPERATOR_KEY:-dev-operator-key-not-for-prod}"
 export AUTH_SECRET="${AUTH_SECRET:-dev-auth-secret-not-for-prod}"
 export AUTH_BASE_URL="${AUTH_BASE_URL:-http://localhost:${ROUTER_PORT}/api/auth}"
 export ROWBOAT_AUTH_MODE="${ROWBOAT_AUTH_MODE:-jwt}"
