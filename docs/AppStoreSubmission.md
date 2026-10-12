@@ -2,7 +2,7 @@
 
 Combined status and steps for shipping the Capacitor mobile apps. Detail for Play listing copy, privacy, and signing lives in `docs/GooglePlayStore.md`; asset dimensions live in `playstore/README.md` and `appstore/README.md`.
 
-App identity: bundle id `com.kjekit.app` (`capacitor.config.ts`, `android/app/build.gradle`, Xcode `PRODUCT_BUNDLE_IDENTIFIER`), app name `kjekit`. Android is at `versionCode 1` / `versionName "1.0"`.
+App identity: bundle id `com.kjekit.app` (`capacitor.config.ts`, `android/app/build.gradle`, Xcode `PRODUCT_BUNDLE_IDENTIFIER`), app name `kjekit`. Android is at `versionCode 1` / `versionName "1.0"`. The iOS app requires iOS 15.4 (`IPHONEOS_DEPLOYMENT_TARGET`), the first release with Web Locks, which the anonymous-store claim and signed-in sync both need (see `ARCHITECTURE.md`, Anonymous sessions & convergence).
 
 ## Current status (verified 2026-10-03)
 

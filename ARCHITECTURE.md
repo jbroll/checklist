@@ -138,8 +138,11 @@ releases the lock; a claim queued behind another tab's claim waits it out. Anoth
 on the anonymous store blocks the claim: past rowboat's bound `useAnonClaim` reports
 `blockedByOtherTab`, nothing is copied, `claiming` stays true (so first-run provisioning keeps
 waiting), and `ClaimBlockedBanner` asks the user to close that tab and offers Retry (`retry()`).
-Web Locks needs iOS 15.4; on 15.0-15.3 the anonymous store does not open and the claim fails
-naming `navigator.locks`, as sync already refuses those runtimes.
+Web Locks needs iOS 15.4, so the iOS app's deployment target is 15.4
+(`IPHONEOS_DEPLOYMENT_TARGET` in every configuration of `ios/App/App.xcodeproj`): without it the
+anonymous store cannot open and signed-in sync (`syncWithServer`) refuses to run. The generated
+`ios/App/CapApp-SPM/Package.swift` keeps Capacitor's own `.iOS(.v15)` floor, which the app's
+higher target overrides.
 
 Adopt
 converges **identity-keyed singletons** (a row whose `id` equals its scope key — `user_settings`) to
