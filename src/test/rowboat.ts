@@ -177,7 +177,7 @@ export function renderWithRowboat(
 export interface RowboatMockOptions {
   /** better-auth user id `useAuthor()`/`usePort().author` report; `null` for anonymous. */
   author?: string | null;
-  mintGroup?: (parentGroupId?: string) => Promise<string>;
+  mintGroup?: (requestKey: string, parentGroupId?: string) => Promise<string>;
 }
 
 /**

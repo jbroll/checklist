@@ -46,7 +46,7 @@ export interface UseCheckListHierarchyOptions {
    * later task. Required to call `addFolder` — omitting it is a hard error, not a
    * silent local-only group (NO FALLBACKS).
    */
-  mintGroup?: (parentGroupId?: string) => Promise<string>;
+  mintGroup?: (requestKey: string, parentGroupId?: string) => Promise<string>;
 }
 
 export interface UseCheckListHierarchyResult {
@@ -111,9 +111,10 @@ export function useCheckListHierarchy(
         throw new Error('useCheckListHierarchy.addFolder: no mintGroup configured');
       }
       const parentGroupId = parentId ? opFindById(g, parentId)?.owner_group_id : undefined;
-      const ownerGroupId = await mintGroup(parentGroupId);
+      const id = crypto.randomUUID();
+      const ownerGroupId = await mintGroup(`folder:${id}`, parentGroupId);
       return opAddFolder(g, {
-        id: crypto.randomUUID(),
+        id,
         name,
         parentId,
         type,

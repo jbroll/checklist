@@ -100,6 +100,13 @@ The folder's `owner_group_id` is a per-folder scope group, minted server-side vi
 `POST /api/folders/group` (`createScopeGroup`) and linked as a child of the user's root group so
 `effectiveRole` grants the owner admin.
 
+Every mint at hosted rowboat's `POST <sync base>/groups` sends a `requestKey`, and rowboat answers
+a repeated key with the group its first mint made. `mintGroup(requestKey, parentGroupId?)` takes the
+key from its caller, never a default: a new folder (tree, JSON and text import) keys on its new row
+id (`folder:<id>`), the first-run seed on `seed:<identity>`, and the Jazz import on the source list
+(`jazz:<listId>`), so a re-run after a partial import reuses the groups it already made. The
+anonymous claim's `mintScope` sends a fresh UUID until the rowboat client passes its own key.
+
 > **Direction — hosted rowboat (StaaS).** The embedded backend above is being superseded by running
 > CheckList against a hosted `@jbroll/rowboat-server` (sync/storage/RBAC/sharing move to rowboat;
 > CheckList keeps branded auth + billing + JWT issuance). The auth bridge (JWKS) and per-database

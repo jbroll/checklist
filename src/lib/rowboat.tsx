@@ -58,9 +58,11 @@ interface PortContextValue {
    * Mints a fresh owner_group_id for a new folder — hosted rowboat's `POST <SYNC_BASE>/groups`.
    * Injected here (rather than hardcoded into
    * `useCheckListHierarchy`) because minting talks to the server, which is an app-layer
-   * concern, not something the headless hierarchy hook should know about.
+   * concern, not something the headless hierarchy hook should know about. `requestKey` makes a
+   * repeated mint return the group the first one made: a one-off mint passes a fresh UUID, a mint
+   * that may be repeated passes a key stable across the repeats.
    */
-  mintGroup: (parentGroupId?: string) => Promise<string>;
+  mintGroup: (requestKey: string, parentGroupId?: string) => Promise<string>;
 }
 
 const PortContext = createContext<PortContextValue | null>(null);
@@ -68,14 +70,14 @@ const PortContext = createContext<PortContextValue | null>(null);
 // Authenticated mint: hosted rowboat creates a scope group the caller admins, nested under their
 // root group. Anonymous users have no token and never sync, so an anon folder gets a purely-local
 // group id — adopt on sign-in moves its rows to a server group minted here (`mintScope`).
-async function serverMintGroup(parentGroupId?: string): Promise<string> {
+async function serverMintGroup(requestKey: string, parentGroupId?: string): Promise<string> {
   const res = await fetch(`${SYNC_BASE}/groups`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       authorization: `Bearer ${await getSyncToken()}`,
     },
-    body: JSON.stringify({ parentGroup: parentGroupId }),
+    body: JSON.stringify({ parentGroup: parentGroupId, requestKey }),
   });
   // NO FALLBACKS: a non-ok response (401 on an expired token, 403, 5xx) must surface, not
   // silently yield `undefined` and let a folder be created with no scope group.
@@ -233,7 +235,8 @@ function RowboatBridge({
         const totalFolderCount = await db.table('folder').count();
         if (cancelled || provisionedRef.current) return;
         if (shouldSeedDefaultFolders({ isAnonymous: !author, totalFolderCount })) {
-          await seedDefaultFolders(graph, await mintGroup(), identity, !author);
+          // A seed retried after a failure reuses the group its first mint made.
+          await seedDefaultFolders(graph, await mintGroup(`seed:${identity}`), identity, !author);
         }
         provisionedRef.current = true;
         if (author) {
@@ -273,7 +276,8 @@ export function RowboatProvider({ children }: { children: ReactNode }) {
     app: APP_NAME,
     tables: manifest,
     options: dbOptions,
-    mintScope: () => serverMintGroup(),
+    // This client passes no request key yet, so each claim mint is a one-off.
+    mintScope: () => serverMintGroup(crypto.randomUUID()),
     onError: (err) => {
       console.error('[rowboat] useAnonClaim failed:', err);
     },

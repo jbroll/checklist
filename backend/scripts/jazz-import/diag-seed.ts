@@ -27,17 +27,18 @@ try {
   });
   await session.sync();
 
+  const now = Date.now();
+  const folderId = `diag-seed-list-${now}`;
   const res = await fetch(`${target.syncBase}/groups`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ requestKey: `folder:${folderId}` }),
   });
   if (!res.ok) throw new Error(`mint failed ${res.status}`);
   const { groupId } = (await res.json()) as { groupId: string };
-  const now = Date.now();
 
   await session.db.create('folder', {
-    id: `diag-seed-list-${now}`,
+    id: folderId,
     owner_group_id: groupId,
     name: 'Seeded server list',
     type: 'template-folder',

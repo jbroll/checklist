@@ -90,11 +90,16 @@ function closeAndRemove(open: OpenSession): void {
   }
 }
 
-async function mintGroup(syncBase: string, token: string, parentGroup: string | undefined): Promise<string> {
+async function mintGroup(
+  syncBase: string,
+  token: string,
+  requestKey: string,
+  parentGroup: string | undefined,
+): Promise<string> {
   const res = await fetch(`${syncBase}/groups`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ parentGroup }),
+    body: JSON.stringify({ parentGroup, requestKey }),
   });
   const body = await res.text();
   if (!res.ok) throw new Error(`POST /groups failed: ${res.status} ${body}`);
@@ -123,7 +128,7 @@ async function writeRows(args: ImportArgs): Promise<AppliedPlan> {
       hasUserSettings: liveRows(open.session, 'user_settings').some((row) => row.id === plan.userId),
     };
     const applied = await applyPlan(plan, tenant, {
-      mintGroup: (parentGroup) => mintGroup(args.syncBase, open.token, parentGroup),
+      mintGroup: (requestKey, parentGroup) => mintGroup(args.syncBase, open.token, requestKey, parentGroup),
       createFolder: async (row) => {
         await open.session.db.create('folder', { ...row });
       },

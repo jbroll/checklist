@@ -37,7 +37,7 @@ export interface JsonImportContext {
   /** Who newly-created folders are attributed to (`created_by`). */
   createdBy: string;
   /** Mints a fresh owner_group_id for a new folder — same contract as `useCheckListHierarchy`. */
-  mintGroup: (parentGroupId?: string) => Promise<string>;
+  mintGroup: (requestKey: string, parentGroupId?: string) => Promise<string>;
   /** Optional parent — new template folders are created under it (root if omitted). */
   parentId?: string | null;
 }
@@ -303,14 +303,15 @@ async function importFolders(
         importSession(s, items, idMap, usedSessionIds),
       );
 
-      const ownerGroupId = await ctx.mintGroup(parentGroupId);
-      const now = Date.now();
       // Already used by an earlier folder in this import counts as a conflict too — the graph
       // read-back alone can miss it on the real IndexedDB store (writes propagate async).
       const existing =
         exportedId && !folderIdMap.has(exportedId) ? folderOps.findById(g, exportedId) : undefined;
+      const id = existing ? generateId() : (exportedId ?? generateId());
+      const ownerGroupId = await ctx.mintGroup(`folder:${id}`, parentGroupId);
+      const now = Date.now();
       const row = await folderOps.addFolder(g, {
-        id: existing ? generateId() : (exportedId ?? generateId()),
+        id,
         name: finalName,
         parentId,
         type: exportedFolder.type === 'folder' ? 'folder' : 'template-folder',

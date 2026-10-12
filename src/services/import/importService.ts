@@ -204,10 +204,11 @@ export async function importAsNewTemplate(
 
   const parentId = ctx.parentId ?? null;
   const parentGroupId = parentId ? folderOps.findById(g, parentId)?.owner_group_id : undefined;
-  const ownerGroupId = await ctx.mintGroup(parentGroupId);
+  const id = crypto.randomUUID();
+  const ownerGroupId = await ctx.mintGroup(`folder:${id}`, parentGroupId);
   const now = Date.now();
   const newTemplate = await folderOps.addFolder(g, {
-    id: crypto.randomUUID(),
+    id,
     name: folderOps.generateUniqueName(g, finalTemplateName, parentId),
     parentId,
     type: 'template-folder',

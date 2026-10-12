@@ -16,7 +16,7 @@ vi.mock('@/rowboat', async () => {
 
 const CREATED_BY = 'user-1';
 
-function mintGroup(): Promise<string> {
+function mintGroup(_requestKey: string, _parentGroupId?: string): Promise<string> {
   return Promise.resolve('group-fixed');
 }
 
@@ -39,6 +39,25 @@ describe('useCheckListHierarchy', () => {
     expect(created?.owner_group_id).toBe('group-fixed');
     expect(created?.created_by).toBe(CREATED_BY);
     expect(result.current.folders.map((f) => f.id)).toContain(created?.id);
+  });
+
+  it("addFolder keys the mint on the new folder's id, under its parent's group", async () => {
+    const mint = vi.fn(mintGroup);
+    const { result } = renderHook(() =>
+      useCheckListHierarchy({ createdBy: CREATED_BY, mintGroup: mint }),
+    );
+
+    let parentId = '';
+    let childId = '';
+    await act(async () => {
+      parentId = (await result.current.addFolder('Parent', null, 'folder')).id;
+      childId = (await result.current.addFolder('Child', parentId, 'folder')).id;
+    });
+
+    expect(mint.mock.calls).toEqual([
+      [`folder:${parentId}`, undefined],
+      [`folder:${childId}`, 'group-fixed'],
+    ]);
   });
 
   it('addFolder without mintGroup configured is a hard error', async () => {

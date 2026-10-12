@@ -71,10 +71,12 @@ function live(id: string, overrides: Partial<TenantFolder> = {}): TenantFolder {
 
 function recordingWriter() {
   const minted: (string | undefined)[] = [];
+  const keys: string[] = [];
   const created: { id: string; owner_group_id: string }[] = [];
   const settings: string[] = [];
   const writer: PlanWriter = {
-    async mintGroup(parentGroup) {
+    async mintGroup(requestKey, parentGroup) {
+      keys.push(requestKey);
       minted.push(parentGroup);
       return `minted-${minted.length}`;
     },
@@ -85,7 +87,7 @@ function recordingWriter() {
       settings.push(row.id);
     },
   };
-  return { writer, minted, created, settings };
+  return { writer, minted, keys, created, settings };
 }
 
 describe('applyPlan', () => {
@@ -94,6 +96,7 @@ describe('applyPlan', () => {
     const result = await applyPlan(plan, { folders: [], hasUserSettings: false }, w.writer);
 
     expect(w.minted).toEqual([undefined, 'minted-1', 'minted-2', undefined]);
+    expect(w.keys).toEqual(['jazz:Root', 'jazz:Child', 'jazz:Grandchild', 'jazz:Other']);
     expect(w.created).toEqual([
       { id: 'Root', owner_group_id: 'minted-1' },
       { id: 'Child', owner_group_id: 'minted-2' },
@@ -130,6 +133,7 @@ describe('applyPlan', () => {
     const result = await applyPlan(plan, tenant, w.writer);
 
     expect(w.minted).toEqual(['live-group-Root', 'minted-1', undefined]);
+    expect(w.keys).toEqual(['jazz:Child', 'jazz:Grandchild', 'jazz:Other']);
     expect(w.created.map((c) => c.id)).toEqual(['Child', 'Grandchild', 'Other']);
     expect(w.settings).toEqual([USER]);
     expect(result.existingFolders).toBe(1);

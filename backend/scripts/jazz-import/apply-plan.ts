@@ -15,7 +15,7 @@ export interface TenantState {
 }
 
 export interface PlanWriter {
-  mintGroup(parentGroup: string | undefined): Promise<string>;
+  mintGroup(requestKey: string, parentGroup: string | undefined): Promise<string>;
   createFolder(row: FolderRowDraft & { owner_group_id: string }): Promise<void>;
   createUserSettings(row: UserSettingsRow): Promise<void>;
 }
@@ -69,7 +69,8 @@ export async function applyPlan(plan: UserPlan, tenant: TenantState, writer: Pla
         throw new Error(`folder ${draft.id} has parent ${draft.parent_id} with no minted group`);
       }
     }
-    const groupId = await writer.mintGroup(parentGroup);
+    // Keyed on the Jazz list id, so a re-run after a partial import reuses the group it made.
+    const groupId = await writer.mintGroup(`jazz:${draft.id}`, parentGroup);
     groups.set(draft.id, groupId);
     await writer.createFolder({ ...draft, owner_group_id: groupId });
   }
