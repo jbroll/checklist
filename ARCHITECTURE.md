@@ -158,7 +158,11 @@ authoritatively from the backend so an adopted/stale cache can't leave a paying 
 Two accounts can be combined via rowboat's native merge (`src/lib/account-merge.ts` is a thin fetch
 client over `@jbroll/rowboat-auth-betterauth`'s routes; `src/components/auth/MergeAccountFlow.tsx` is
 a two-login flow requiring source-email confirmation before finalize). The merge is group `link` +
-`grant` — **no data movement** — with self-merge and chained-merge deletion guards.
+`grant` — **no data movement** — with self-merge and chained-merge deletion guards. The confirm
+screen reads the prepared source from `/api/account/merge/info` (`sourceUserId`, `sourceEmail`), and
+finalize sends that `sourceUserId` back; rowboat refuses a finalize naming any other account, so a
+source that prepared after the user looked is never granted admin. A merge with no prepared source
+shows an error instead of a confirm.
 
 ## Folder sharing
 

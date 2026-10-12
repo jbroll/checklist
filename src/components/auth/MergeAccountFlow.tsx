@@ -36,6 +36,7 @@ export default function MergeAccountFlow() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mergeNonce, setMergeNonce] = useState<string | null>(null);
   const [sourceEmail, setSourceEmail] = useState<string | null>(null);
+  const [sourceUserId, setSourceUserId] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -95,6 +96,12 @@ export default function MergeAccountFlow() {
         setFlowState('processing');
         try {
           const info = await mergeInfo(state.nonce);
+          if (info.sourceUserId === null) {
+            throw new Error(
+              'The other account has not been signed in for this merge yet. Start the merge again.',
+            );
+          }
+          setSourceUserId(info.sourceUserId);
           setSourceEmail(info.sourceEmail);
           setFlowState('confirm');
         } catch (err) {
@@ -123,10 +130,10 @@ export default function MergeAccountFlow() {
   }
 
   async function handleConfirm() {
-    if (!mergeNonce) return;
+    if (!mergeNonce || !sourceUserId) return;
     setFlowState('processing');
     try {
-      await finalizeMerge(mergeNonce);
+      await finalizeMerge(mergeNonce, sourceUserId);
       clearMergeState();
       setFlowState('success');
     } catch (err) {

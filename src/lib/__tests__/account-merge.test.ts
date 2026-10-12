@@ -25,17 +25,37 @@ describe('account-merge client', () => {
       expect.objectContaining({ method: 'POST', credentials: 'include' }),
     );
   });
-  it('mergeInfo returns state + sourceEmail', async () => {
-    mockFetch({ state: 'prepared', sourceEmail: 's@x.com' });
-    expect(await mergeInfo('n1')).toEqual({ state: 'prepared', sourceEmail: 's@x.com' });
+  it('mergeInfo returns state, sourceUserId and sourceEmail', async () => {
+    mockFetch({ state: 'prepared', sourceUserId: 'src-1', sourceEmail: 's@x.com' });
+    expect(await mergeInfo('n1')).toEqual({
+      state: 'prepared',
+      sourceUserId: 'src-1',
+      sourceEmail: 's@x.com',
+    });
   });
-  it('prepare/finalize post the nonce; a non-ok response throws', async () => {
+  it('mergeInfo reports no source before the source account prepared', async () => {
+    mockFetch({ state: 'started', sourceUserId: null, sourceEmail: null });
+    expect(await mergeInfo('n1')).toEqual({
+      state: 'started',
+      sourceUserId: null,
+      sourceEmail: null,
+    });
+  });
+  it('prepare posts the nonce; a non-ok response throws', async () => {
     mockFetch({ success: true });
     await expect(prepareMerge('n1')).resolves.toBeUndefined();
-    mockFetch({ success: true });
-    await expect(finalizeMerge('n1')).resolves.toBeUndefined();
     mockFetch({ error: 'boom' }, false);
-    await expect(finalizeMerge('n1')).rejects.toThrow('boom');
+    await expect(prepareMerge('n1')).rejects.toThrow('boom');
+  });
+  it('finalize posts the nonce and the source account it confirmed', async () => {
+    const f = mockFetch({ success: true });
+    await expect(finalizeMerge('n1', 'src-1')).resolves.toBeUndefined();
+    expect(f).toHaveBeenCalledWith(
+      '/api/account/merge/finalize',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const body = JSON.parse((f.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body).toEqual({ nonce: 'n1', sourceUserId: 'src-1' });
   });
 
   describe('merge state persistence', () => {

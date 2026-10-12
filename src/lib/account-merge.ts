@@ -46,10 +46,16 @@ export async function prepareMerge(nonce: string): Promise<void> {
 }
 export async function mergeInfo(
   nonce: string,
-): Promise<{ state: string; sourceEmail: string | null }> {
+): Promise<{ state: string; sourceUserId: string | null; sourceEmail: string | null }> {
   const d = await postJson('/api/account/merge/info', { nonce });
-  return { state: d.state as string, sourceEmail: (d.sourceEmail as string | null) ?? null };
+  return {
+    state: d.state as string,
+    sourceUserId: (d.sourceUserId as string | null) ?? null,
+    sourceEmail: (d.sourceEmail as string | null) ?? null,
+  };
 }
-export async function finalizeMerge(nonce: string): Promise<void> {
-  await postJson('/api/account/merge/finalize', { nonce });
+// The server refuses a finalize whose sourceUserId isn't the account that prepared, so a source
+// that prepared after the user confirmed through mergeInfo is never granted admin.
+export async function finalizeMerge(nonce: string, sourceUserId: string): Promise<void> {
+  await postJson('/api/account/merge/finalize', { nonce, sourceUserId });
 }

@@ -37,7 +37,11 @@ describe('MergeAccountFlow confirm gate', () => {
   it('shows source email and requires confirm before finalize', async () => {
     window.history.replaceState({}, '', '/?merge=n1');
     helpers.loadMergeState.mockReturnValue({ nonce: 'n1', phase: 'awaiting-target' });
-    helpers.mergeInfo.mockResolvedValue({ state: 'prepared', sourceEmail: 's@x.com' });
+    helpers.mergeInfo.mockResolvedValue({
+      state: 'prepared',
+      sourceUserId: 'src-1',
+      sourceEmail: 's@x.com',
+    });
 
     render(<MergeAccountFlow />);
 
@@ -46,7 +50,7 @@ describe('MergeAccountFlow confirm gate', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /confirm|combine|finish/i }));
 
-    await waitFor(() => expect(helpers.finalizeMerge).toHaveBeenCalledWith('n1'));
+    await waitFor(() => expect(helpers.finalizeMerge).toHaveBeenCalledWith('n1', 'src-1'));
     expect(helpers.clearMergeState).toHaveBeenCalled();
     expect(await screen.findByText(/merged|complete|success/i)).toBeInTheDocument();
   });
@@ -54,13 +58,33 @@ describe('MergeAccountFlow confirm gate', () => {
   it('shows a generic label when sourceEmail is null', async () => {
     window.history.replaceState({}, '', '/?merge=n2');
     helpers.loadMergeState.mockReturnValue({ nonce: 'n2', phase: 'awaiting-target' });
-    helpers.mergeInfo.mockResolvedValue({ state: 'prepared', sourceEmail: null });
+    helpers.mergeInfo.mockResolvedValue({
+      state: 'prepared',
+      sourceUserId: 'src-2',
+      sourceEmail: null,
+    });
 
     render(<MergeAccountFlow />);
 
     expect(
       await screen.findByRole('button', { name: /confirm|combine|finish/i }),
     ).toBeInTheDocument();
+    expect(helpers.finalizeMerge).not.toHaveBeenCalled();
+  });
+
+  it('shows an error instead of a confirm when no source account has prepared', async () => {
+    window.history.replaceState({}, '', '/?merge=n5');
+    helpers.loadMergeState.mockReturnValue({ nonce: 'n5', phase: 'awaiting-target' });
+    helpers.mergeInfo.mockResolvedValue({
+      state: 'started',
+      sourceUserId: null,
+      sourceEmail: null,
+    });
+
+    render(<MergeAccountFlow />);
+
+    expect(await screen.findByText(/other account has not been signed in/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /confirm|combine|finish/i })).toBeNull();
     expect(helpers.finalizeMerge).not.toHaveBeenCalled();
   });
 
