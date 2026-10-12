@@ -78,5 +78,8 @@ e2e/.auth/
 
 # Hosted-rowboat tenant state (holds the once-shown management key) — visible, but never committed
 rowboat-tenant.*.json
+# provision-tenant's write lock, and its temp file, which can hold the only copy of the key
+rowboat-tenant.*.json.lock
+rowboat-tenant.*.json.tmp
 
 .env.tenant.local
