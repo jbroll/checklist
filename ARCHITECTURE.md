@@ -105,7 +105,8 @@ a repeated key with the group its first mint made. `mintGroup(requestKey, parent
 key from its caller, never a default: a new folder (tree, JSON and text import) keys on its new row
 id (`folder:<id>`), the first-run seed on `seed:<identity>`, and the Jazz import on the source list
 (`jazz:<listId>`), so a re-run after a partial import reuses the groups it already made. The
-anonymous claim's `mintScope` sends a fresh UUID until the rowboat client passes its own key.
+anonymous claim's `mintScope(anonScope, requestKey)` sends the key rowboat's claim gives it, which
+stays the same across a lost reply and a resume.
 
 > **Direction — hosted rowboat (StaaS).** The embedded backend above is being superseded by running
 > CheckList against a hosted `@jbroll/rowboat-server` (sync/storage/RBAC/sharing move to rowboat;
@@ -127,7 +128,20 @@ Anonymous users get a local, never-synced store scoped to `ANON_IDENTITY`. On si
 crash-resume-safe), and the provider remounts on the identity flip (`key = identity`). Each
 anonymous folder's local group is replaced by a newly minted server group (`mintScope`), because
 folders in the root group could not be shared: the sharing server refuses invites to a root group,
-which holds every private row. Adopt
+which holds every private row.
+
+The anonymous store opens only under a shared Web Lock named after it (`src/lib/anonStoreHold.ts`):
+`RowboatBridge` renders nothing until the lock is granted and gives it back with its debounced
+`db.close()`. A claim takes that lock exclusively, so no tab writes the anonymous store while the
+claim copies and deletes it. In the signing-in tab the bridge remounts to the account store and
+releases the lock; a claim queued behind another tab's claim waits it out. Another tab still open
+on the anonymous store blocks the claim: past rowboat's bound `useAnonClaim` reports
+`blockedByOtherTab`, nothing is copied, `claiming` stays true (so first-run provisioning keeps
+waiting), and `ClaimBlockedBanner` asks the user to close that tab and offers Retry (`retry()`).
+Web Locks needs iOS 15.4; on 15.0-15.3 the anonymous store does not open and the claim fails
+naming `navigator.locks`, as sync already refuses those runtimes.
+
+Adopt
 converges **identity-keyed singletons** (a row whose `id` equals its scope key — `user_settings`) to
 the one canonical `id = user.id` row instead of duplicating it (D2). Account-init provisioning
 (`RowboatBridge`, gated until the auth session and the claim have settled) then: provisions the

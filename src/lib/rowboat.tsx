@@ -28,7 +28,17 @@ import {
 } from '@jbroll/rowboat-client';
 import { useRowboat as useRawRowboat, useSelect as useRawSelect } from '@jbroll/rowboat-react';
 import { compileSchema, type RelationalGraph } from '@jbroll/rowboat-schema';
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ClaimBlockedBanner } from '@/components/ClaimBlockedBanner';
+import { holdAnonStore, releaseAnonStore } from '@/lib/anonStoreHold';
 import { getSyncToken } from '@/lib/syncToken';
 import { schema } from '@/schema/folder';
 import { seedDefaultFolders, shouldSeedDefaultFolders } from '@/services/defaultData';
@@ -92,31 +102,40 @@ async function serverMintGroup(requestKey: string, parentGroupId?: string): Prom
   return groupId;
 }
 
-function RowboatBridge({
-  identity,
-  author,
-  sessionPending,
-  claiming,
-  children,
-}: {
+interface BridgeProps {
   identity: string;
   author: string | null;
   sessionPending: boolean;
   claiming: boolean;
   children: ReactNode;
-}) {
-  // One RowboatDb per identity, kept for the life of this (keyed) subtree.
-  const dbRef = useRef<RowboatDb | null>(null);
-  if (!dbRef.current) {
-    dbRef.current = buildRowboatDb(
-      storeName(APP_NAME, identity),
-      manifest,
-      [],
-      undefined,
-      dbOptions,
+}
+
+const openStore = (name: string) => buildRowboatDb(name, manifest, [], undefined, dbOptions);
+
+// One RowboatDb per identity, kept for the life of this (keyed) subtree. The anonymous store opens
+// only once its hold is granted (`anonStoreHold`) and renders nothing until then.
+function RowboatBridge(props: BridgeProps) {
+  const name = storeName(APP_NAME, props.identity);
+  const anon = props.identity === ANON_IDENTITY;
+  const [db, setDb] = useState<RowboatDb | null>(() => (anon ? null : openStore(name)));
+  const [failure, setFailure] = useState<{ error: unknown } | null>(null);
+  if (failure) throw failure.error;
+
+  useEffect(() => {
+    if (db !== null) return;
+    let live = true;
+    holdAnonStore(name).then(
+      () => {
+        if (live) setDb(openStore(name));
+      },
+      (error: unknown) => {
+        if (live) setFailure({ error });
+      },
     );
-  }
-  const db = dbRef.current;
+    return () => {
+      live = false;
+    };
+  }, [db, name]);
 
   // Debounced close: React StrictMode dev-mode double-invokes effects (mount -> cleanup ->
   // mount, synchronously, to surface unsafe cleanup) to simulate a remount. A synchronous
@@ -125,7 +144,8 @@ function RowboatBridge({
   // and every subsequent read/write (including `syncWithServer`) fails with a Dexie
   // `DatabaseClosedError` for the rest of the page's life. Deferring the close and letting the
   // immediate StrictMode remount cancel it (same pattern as any StrictMode-fragile resource
-  // teardown) makes this correct in dev while still closing normally on a genuine unmount.
+  // teardown) makes this correct in dev while still closing normally on a genuine unmount. The
+  // anonymous store's hold goes with the close, which is what lets a sign-in claim take it.
   const pendingCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (pendingCloseRef.current !== null) {
@@ -134,12 +154,25 @@ function RowboatBridge({
     }
     return () => {
       pendingCloseRef.current = setTimeout(() => {
-        db.close();
+        db?.close();
+        if (anon) releaseAnonStore(name);
         pendingCloseRef.current = null;
       }, 0);
     };
-  }, [db]);
+  }, [db, anon, name]);
 
+  if (db === null) return null;
+  return <StoreBridge {...props} db={db} />;
+}
+
+function StoreBridge({
+  identity,
+  author,
+  sessionPending,
+  claiming,
+  children,
+  db,
+}: BridgeProps & { db: RowboatDb }) {
   const graph = useRawRowboat(schema, db);
 
   // Drive push/pull on an interval while signed in. Anonymous users never sync — there is no
@@ -272,27 +305,31 @@ export function RowboatProvider({ children }: { children: ReactNode }) {
   // up without any extra wiring here.
   // Each anonymous folder's local group becomes its own server group, so sharing one adopted
   // folder never touches the root group (which the sharing server refuses to invite into).
-  const { claiming } = useAnonClaim({
+  // The claim's key is stable across a lost reply and a resume, so each anonymous folder gets one
+  // server group however often its mint is sent.
+  const { claiming, blockedByOtherTab, retry } = useAnonClaim({
     app: APP_NAME,
     tables: manifest,
     options: dbOptions,
-    // This client passes no request key yet, so each claim mint is a one-off.
-    mintScope: () => serverMintGroup(crypto.randomUUID()),
+    mintScope: (_anonScope, requestKey) => serverMintGroup(requestKey),
     onError: (err) => {
       console.error('[rowboat] useAnonClaim failed:', err);
     },
   });
 
   return (
-    <RowboatBridge
-      key={identity}
-      identity={identity}
-      author={author}
-      sessionPending={sessionPending}
-      claiming={claiming}
-    >
-      {children}
-    </RowboatBridge>
+    <>
+      {blockedByOtherTab !== null && <ClaimBlockedBanner onRetry={retry} />}
+      <RowboatBridge
+        key={identity}
+        identity={identity}
+        author={author}
+        sessionPending={sessionPending}
+        claiming={claiming}
+      >
+        {children}
+      </RowboatBridge>
+    </>
   );
 }
 
