@@ -59,7 +59,7 @@ function stringifyFolderJsonColumns(
     folder: seed.folder.map((row) => {
       const stringified: Row = { ...row };
       for (const col of FOLDER_JSON_COLUMNS) {
-        if (!(col in row)) continue;
+        if (!(col in row) || row[col] === null) continue;
         const value = row[col];
         const stored =
           ORDERED_COLUMNS.has(col) && Array.isArray(value)
@@ -95,7 +95,7 @@ function withJsonPathMerge(store: TestStore): TestStore {
       if (dot !== -1 && jsonCols.has(col)) {
         if (!groups.has(col)) groups.set(col, new Map());
         groups.get(col)?.set(key.slice(dot + 1), value);
-      } else if (dot === -1 && jsonCols.has(col) && value !== null && typeof value === 'object') {
+      } else if (dot === -1 && jsonCols.has(col) && value !== null) {
         plain[col] = JSON.stringify(value);
       } else {
         plain[key] = value;
