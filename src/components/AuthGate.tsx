@@ -47,9 +47,10 @@ export function AuthGate() {
       localStorage.removeItem('user-signed-out');
       setUserSignedOut(false);
 
-      const stashed = takeStashedInviteToken();
-      if (stashed.available && stashed.token) {
-        window.location.href = `/invite/${stashed.token}`;
+      // Refused storage held nothing: the invite page then used itself as the OAuth callback.
+      const pending = takeStashedInviteToken();
+      if (pending.available && pending.token !== null) {
+        window.location.href = `/invite/${pending.token}`;
       }
     }
   }, [isAuthenticated]);

@@ -54,13 +54,14 @@ describe('stashed invite token', () => {
     expect(takeStashedInviteToken()).toEqual({ available: true, token: null });
   });
 
-  it('refuses to stash a malformed token', () => {
+  it('refuses to stash anything that is not an invite token', () => {
     for (const bad of ['//evil.example', 'javascript:alert(1)', '../x', 'abc\n123', '']) {
       expect(() => stashInviteToken(bad)).toThrow();
     }
   });
 
-  it('drops a malformed stash so it can never become a redirect target', () => {
+  it('drops a malformed stored value so it can never become a redirect target', () => {
+    // Session storage is page-writable, so a stored value is untrusted whatever stash allows.
     for (const bad of ['//evil.example', 'javascript:alert(1)', '../x', 'abc\n123', '']) {
       sessionStorage.setItem('pending-invite-token', bad);
       expect(takeStashedInviteToken()).toEqual({ available: true, token: null });

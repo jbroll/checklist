@@ -95,9 +95,8 @@ test.describe('Invite closed loop', () => {
     }
   });
 
-  // Validate answers a non-recipient exactly as it answers a bad token, so the wrong-account
-  // screen only follows a refused accept, which a non-recipient never reaches.
-  test('wrong account (test3) gets the invalid-invite error and sees no details', async ({
+  // Validate answers a non-recipient with wrong_account and no inviter, role or target.
+  test('wrong account (test3) gets the wrong-account screen and sees no details', async ({
     browser,
   }) => {
     expect(shareUrl).toBeTruthy();
@@ -106,10 +105,10 @@ test.describe('Invite closed loop', () => {
     try {
       await page.goto(shareUrl!);
       await page.waitForLoadState('networkidle');
-      await expect(page.getByRole('heading', { name: /invite error/i })).toBeVisible({
+      await expect(page.getByRole('heading', { name: /wrong account/i })).toBeVisible({
         timeout: 20000,
       });
-      await expect(page.getByText('This invite link is no longer valid.')).toBeVisible();
+      await expect(page.getByText(TEST_ACCOUNTS.organizer.email)).toHaveCount(0);
       await expect(page.getByText(FOLDER)).toHaveCount(0);
       await expect(page.getByRole('button', { name: /accept invite/i })).toHaveCount(0);
     } finally {

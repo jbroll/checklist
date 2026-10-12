@@ -28,10 +28,6 @@ const ROLE_COLORS: Record<Role, { bg: string; text: string }> = {
   admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
 };
 
-function collaboratorLabel(c: Collaborator): string {
-  return c.deleted ? 'Deleted account' : (c.name ?? c.email);
-}
-
 const MAX_TARGET_NAME_LENGTH = 200;
 
 // The server rejects a targetName that is empty, over 200 UTF-16 units, or holds a line break.
@@ -39,6 +35,12 @@ export function inviteTargetName(name: string): string | undefined {
   let oneLine = name.replace(/\s+/g, ' ').trim().slice(0, MAX_TARGET_NAME_LENGTH);
   if (/[\uD800-\uDBFF]$/.test(oneLine)) oneLine = oneLine.slice(0, -1);
   return oneLine.trimEnd() || undefined;
+}
+
+// A deleted account keeps its membership until an admin removes it; a live one may have no
+// display name.
+function collaboratorName(c: Collaborator): string {
+  return c.deleted ? `Deleted account (${c.accountId})` : (c.name ?? c.email);
 }
 
 function shareErrorMessage(err: Error): string {
@@ -240,7 +242,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                   <li key={c.accountId} className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <span className="block truncate text-sm text-content-primary">
-                        {collaboratorLabel(c)}
+                        {collaboratorName(c)}
                       </span>
                       <span
                         className={`inline-block rounded px-1.5 py-0.5 text-xs ${ROLE_COLORS[c.role as Role]?.bg ?? 'bg-surface-tertiary'} ${ROLE_COLORS[c.role as Role]?.text ?? 'text-content-secondary'}`}
@@ -250,7 +252,7 @@ export function ShareDialog({ open, onOpenChange, folder }: ShareDialogProps) {
                     </div>
                     <button
                       type="button"
-                      aria-label={`Remove ${collaboratorLabel(c)}`}
+                      aria-label={`Remove ${collaboratorName(c)}`}
                       onClick={() => void handleRemoveCollaborator(c.accountId)}
                       className="shrink-0 text-sm text-red-600 hover:underline"
                     >

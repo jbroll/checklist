@@ -84,8 +84,53 @@ describe('InviteAcceptPage', () => {
     mockAuthor = null;
     render(<InviteAcceptPage token={TOKEN} />);
     fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }));
-    expect(mockSignInSocial).toHaveBeenCalledWith(expect.objectContaining({ provider: 'google' }));
+    expect(mockSignInSocial).toHaveBeenCalledWith({
+      provider: 'google',
+      callbackURL: 'http://localhost',
+    });
     expect(takeStashedInviteToken()).toEqual({ available: true, token: TOKEN });
+  });
+
+  it.each([
+    ['Google', 'google'],
+    ['Apple', 'apple'],
+  ])('sends %s sign-in back to the invite page when the browser refuses the stash', (name, provider) => {
+    mockAuthor = null;
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    render(<InviteAcceptPage token={TOKEN} />);
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`Continue with ${name}`) }));
+    expect(mockSignInSocial).toHaveBeenCalledWith({
+      provider,
+      callbackURL: `http://localhost/invite/${TOKEN}`,
+    });
+    setItem.mockRestore();
+  });
+
+  it('shows the wrong-account screen when validate says wrong_account, before any accept', async () => {
+    mockValidateInvite.mockResolvedValue({ valid: false, code: 'wrong_account' });
+    render(<InviteAcceptPage token={TOKEN} />);
+    expect(await screen.findByText('Wrong Account')).toBeInTheDocument();
+    expect(screen.getByText(/signed in as me@example.com/)).toBeInTheDocument();
+    expect(mockAcceptInvite).not.toHaveBeenCalled();
+  });
+
+  it('says the answer could not be read when validate sends the old inviterEmail shape', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockValidateInvite.mockResolvedValue({
+      valid: true,
+      inviterEmail: 'alice@example.com',
+      role: 'writer',
+    });
+    render(<InviteAcceptPage token={TOKEN} />);
+    expect(
+      await screen.findByText(
+        "The server's answer about this invite could not be read. Please try again later.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Accept Invite' })).not.toBeInTheDocument();
+    consoleError.mockRestore();
   });
 
   it('names the list in a valid invite when it has a target name', async () => {
@@ -105,24 +150,10 @@ describe('InviteAcceptPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('names a deleted inviter as "Someone"', async () => {
-    mockValidateInvite.mockResolvedValue(
-      validInvite({ inviter: { deleted: true }, targetName: 'Lake House' }),
-    );
-    render(<InviteAcceptPage token={TOKEN} />);
-    expect(await screen.findByText('Someone has invited you to Lake House')).toBeInTheDocument();
-  });
-
   it('shows the generic invalid message when validate says no', async () => {
     mockValidateInvite.mockResolvedValue({ valid: false, code: 'invalid_token' });
     render(<InviteAcceptPage token={TOKEN} />);
     expect(await screen.findByText('This invite link is no longer valid.')).toBeInTheDocument();
-  });
-
-  it('shows the wrong-account screen when validate says wrong_account', async () => {
-    mockValidateInvite.mockResolvedValue({ valid: false, code: 'wrong_account' });
-    render(<InviteAcceptPage token={TOKEN} />);
-    expect(await screen.findByText('Wrong Account')).toBeInTheDocument();
   });
 
   it('shows a retry message without a code when validate fails on the network', async () => {
@@ -177,17 +208,51 @@ describe('InviteAcceptPage', () => {
     expect(screen.queryByText(/gone/)).not.toBeInTheDocument();
   });
 
-  it('explains when the inviter lost admin before the accept', async () => {
+  it.each([
+    [
+      'inviter_no_longer_admin',
+      403,
+      'The person who invited you can no longer share this list. (inviter_no_longer_admin)',
+    ],
+    [
+      'grant_refused',
+      403,
+      'This list can no longer be shared from this invite. Ask its owner for a new one. (grant_refused)',
+    ],
+    [
+      'blocked',
+      403,
+      'Your account has blocked the person who sent this invite, so it cannot be accepted. (blocked)',
+    ],
+    [
+      'unknown_role',
+      400,
+      'This invite gives a permission level that no longer exists. Ask for a new invite. (unknown_role)',
+    ],
+    [
+      'root_group',
+      400,
+      "This invite is for your account's private group, which can't be shared. (root_group)",
+    ],
+  ])('explains an accept refused with %s', async (code, status, text) => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockValidateInvite.mockResolvedValue(validInvite());
-    mockAcceptInvite.mockRejectedValue(new SharingError('nope', 403, 'inviter_no_longer_admin'));
+    mockAcceptInvite.mockRejectedValue(new SharingError('nope', status, code));
     render(<InviteAcceptPage token={TOKEN} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Accept Invite' }));
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          'The person who invited you can no longer share this list. (inviter_no_longer_admin)',
-        ),
-      ).toBeInTheDocument(),
-    );
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
+
+  it('gives the status for an accept the server answered without a code', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockValidateInvite.mockResolvedValue(validInvite());
+    mockAcceptInvite.mockRejectedValue(new SharingError('POST /accept failed with 502', 502, null));
+    render(<InviteAcceptPage token={TOKEN} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept Invite' }));
+    expect(
+      await screen.findByText('Something went wrong with this invite. Please try again. (502)'),
+    ).toBeInTheDocument();
+    consoleError.mockRestore();
   });
 });

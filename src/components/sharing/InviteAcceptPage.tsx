@@ -24,12 +24,30 @@ function inviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'err
 }
 
 function baseInviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'error' }>) {
-  // The server collapses invalid, expired, used, and addressed-to-someone-else into one answer.
+  // The server answers an expired, revoked, used or unknown token alike.
   if (state.reason === 'invalid') return 'This invite link is no longer valid.';
-  if (state.error instanceof SharingError && state.error.code === 'inviter_no_longer_admin') {
-    return 'The person who invited you can no longer share this list.';
+  const err = state.error;
+  if (err instanceof SharingError) {
+    switch (err.code) {
+      case 'inviter_no_longer_admin':
+        return 'The person who invited you can no longer share this list.';
+      case 'grant_refused':
+        return 'This list can no longer be shared from this invite. Ask its owner for a new one.';
+      case 'blocked':
+        return 'Your account has blocked the person who sent this invite, so it cannot be accepted.';
+      case 'unknown_role':
+        return 'This invite gives a permission level that no longer exists. Ask for a new invite.';
+      case 'root_group':
+        return "This invite is for your account's private group, which can't be shared.";
+      default:
+        return 'Something went wrong with this invite. Please try again.';
+    }
   }
-  return 'Something went wrong with this invite. Please try again.';
+  if (err instanceof TypeError) {
+    return 'Something went wrong with this invite. Please try again.';
+  }
+  // A malformed validate answer or a validate code the invite hook does not know.
+  return "The server's answer about this invite could not be read. Please try again later.";
 }
 
 export function InviteAcceptPage({ token }: InviteAcceptPageProps) {
@@ -105,21 +123,21 @@ function LoadingState() {
   );
 }
 
+// The stash keeps the token out of the OAuth callback URL. A browser that refuses
+// sessionStorage gets the invite page itself as the callback, so the token still comes back.
+function oauthCallbackURL(token: string): string {
+  return stashInviteToken(token)
+    ? window.location.origin
+    : `${window.location.origin}/invite/${token}`;
+}
+
 function NotAuthenticatedState({ token }: { token: string }) {
   const handleGoogleSignIn = () => {
-    stashInviteToken(token);
-    signIn.social({
-      provider: 'google',
-      callbackURL: window.location.origin,
-    });
+    signIn.social({ provider: 'google', callbackURL: oauthCallbackURL(token) });
   };
 
   const handleAppleSignIn = () => {
-    stashInviteToken(token);
-    signIn.social({
-      provider: 'apple',
-      callbackURL: window.location.origin,
-    });
+    signIn.social({ provider: 'apple', callbackURL: oauthCallbackURL(token) });
   };
 
   // Sign in BEFORE any invite details are shown. The invite's sender, role and recipient are
@@ -243,8 +261,7 @@ function ValidInviteState({
         Folder Invitation
       </h1>
       <p className="mb-6 text-center text-content-secondary">
-        {invite.inviter.deleted ? 'Someone' : invite.inviter.email} has invited you to{' '}
-        {invite.targetName ?? 'collaborate'}
+        {invite.inviter.email} has invited you to {invite.targetName ?? 'collaborate'}
       </p>
 
       <RoleDetails role={invite.role} />
@@ -324,14 +341,14 @@ function ErrorState({ message }: { message: string }) {
 /**
  * Display role level with rowboat's role names (reader/writer/admin).
  */
-function RoleDetails({ role }: { role: string | null }) {
+function RoleDetails({ role }: { role: string }) {
   const labels: Record<string, { name: string; description: string }> = {
     reader: { name: 'Reader', description: 'You can view items in this folder' },
     writer: { name: 'Writer', description: 'You can view and modify items in this folder' },
     admin: { name: 'Admin', description: 'You have full control including sharing permissions' },
   };
 
-  const info = labels[role ?? ''] ?? { name: role, description: '' };
+  const info = labels[role] ?? { name: role, description: '' };
 
   return (
     <div className="mb-6 space-y-3 rounded-lg bg-surface-tertiary p-4">

@@ -14,12 +14,9 @@ accounts + the real backend + real rowboat sync**.
 | organizer creates a folder and generates a real invite | Real folder creation + Share dialog + backend invite creation | ✅ |
 | recipient sees the real validated invite details | Real backend `validate` + recipient session → "valid" state | ✅ |
 | unauthenticated visitor is asked to sign in and sees no invite details | Signed-out accept page → Google/Apple sign-in, no folder, inviter or Accept button | ✅ |
-| wrong account (test3) gets the invalid-invite error and sees no details | `validate` answers a non-recipient `{ valid: false }` → "Invite Error" | ✅ |
-| revoked invite shows an error to the recipient | Organizer revokes → `validate` answers `{ valid: false }` → "Invite Error" | ✅ |
+| wrong account (test3) gets the wrong-account screen and sees no details | `validate` answers a non-recipient `{ valid: false, code: "wrong_account" }` → "Wrong Account" | ✅ |
+| revoked invite shows an error to the recipient | Organizer revokes → `validate` answers `{ valid: false, code: "invalid_token" }` → "Invite Error" | ✅ |
 | recipient accepts and gains folder access | Accept → RBAC grant → folder appears in recipient tree | ✅ |
-
-The "Wrong Account" screen follows only an accept refused with `wrong_account`, which a
-non-recipient never reaches here, so `InviteAcceptPage.test.tsx` covers it.
 
 The suite does not read the invite email, which names the folder (its subject is
 `<inviter> invited you to <folder name>`). GreenMail is used to verify the test

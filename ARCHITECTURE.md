@@ -143,7 +143,9 @@ group). `src/components/sharing/` holds only markup; the state comes from
 `@jbroll/rowboat-sharing-react`. `ShareDialog` uses `useShareManager` for the collaborator and
 pending-invite lists and for invite, remove and revoke. It offers Copy link (`sendEmail: false`) and
 Email invite, and sends the folder name as `targetName` (folded to one line, cut to 200 characters)
-so the email and the accept page name the list. Errors are shown by `SharingError.code`:
+so the email and the accept page name the list. Collaborators show by name, or by email when the
+name is null; a member whose account was deleted still holds the membership and shows as "Deleted
+account (<account id>)" with Remove. Errors are shown by `SharingError.code`:
 `root_group` (the folder is still in the account's private root group), `forbidden` (not an admin of
 the folder), otherwise a generic message. Every message on the dialog and the invite page ends with
 the error code, or the HTTP status when there is none (`sharingErrorText.ts`), and the full error
@@ -153,10 +155,18 @@ write it to the backend log.
 Invites are token-based, time-limited, and server-validated (recipient email must match the
 authenticated session; the sender must still have access at acceptance). `App.tsx` routes
 `/invite/<64-hex token>` (`inviteTokenFromPath`) to `InviteAcceptPage`, which maps
-`useInviteAcceptance` states onto its screens and redirects to `/` two seconds after an accept. A
-signed-out visitor signs in first: the token is stashed in `sessionStorage` (`stashInviteToken`) so
-it stays out of the OAuth callback URL, and `AuthGate` returns to the invite page with
-`takeStashedInviteToken`, which drops a malformed value.
+`useInviteAcceptance` states onto its screens and redirects to `/` two seconds after an accept.
+Validate answers an invite addressed to another email with `wrong_account`, which shows the Wrong
+Account screen before any accept; an expired, revoked, used or unknown token, or one whose inviter's
+account was deleted, shows "This invite link is no longer valid." Accept refusals each get a
+sentence: `inviter_no_longer_admin`,
+`grant_refused` (the sharing agent lost admin), `blocked` (the account blocked the sender),
+`unknown_role` (the invite's role left the role list) and `root_group`. A validate answer the
+invite hook cannot read shows its own message instead of a half-filled invite. A signed-out
+visitor signs in first: the token is stashed in `sessionStorage` (`stashInviteToken`) so it stays
+out of the OAuth callback URL, and `AuthGate` returns to the invite page with
+`takeStashedInviteToken`, which drops a malformed value. When the browser refuses
+`sessionStorage`, the stash returns false and the OAuth callback URL is the invite page itself.
 
 ## Billing & subscriptions
 

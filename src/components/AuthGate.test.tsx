@@ -446,14 +446,27 @@ describe('AuthGate', () => {
       expect(takeStashedInviteToken()).toEqual({ available: true, token });
     });
 
-    it('ignores a malformed stash', () => {
-      // stashInviteToken refuses a malformed token, so plant one the way a hostile page could.
+    it('ignores a malformed stored value', () => {
       sessionStorage.setItem('pending-invite-token', '//evil.example');
       mockAuthor = 'user-1';
 
       render(<AuthGate />);
 
       expect(window.location.href).toBe('http://localhost/');
+    });
+
+    it('stays put when the browser refuses sessionStorage on the way back', () => {
+      mockAuthor = 'user-1';
+      const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => {
+        if (key === 'pending-invite-token') throw new DOMException('denied', 'SecurityError');
+        return null;
+      });
+
+      render(<AuthGate />);
+
+      expect(getItem).toHaveBeenCalledWith('pending-invite-token');
+      expect(window.location.href).toBe('http://localhost/');
+      getItem.mockRestore();
     });
   });
 });
