@@ -61,26 +61,16 @@ const mockPendingInvites = [
 
 test.describe('Share Dialog UI', () => {
   test.beforeEach(async ({ page }) => {
-    // useShareManager lists pending invites only for an admin of the folder's group, and asks
-    // for memberships alongside collaborators, so the memberships mock takes the group id from
-    // the collaborators request.
-    let folderGroup: string | null = null;
-    await page.route('**/api/shares/user/memberships', async (route) => {
-      for (let i = 0; i < 50 && folderGroup === null; i++) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
+    // useShareManager lists pending invites only for an admin of the folder's group.
+    await page.route('**/api/shares/targets/*/role', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          memberships: folderGroup ? [{ groupId: folderGroup, role: 'admin' }] : [],
-        }),
+        body: JSON.stringify({ role: 'admin', isAdmin: true }),
       });
     });
 
     await page.route('**/api/shares/targets/*/collaborators', (route) => {
-      const match = new URL(route.request().url()).pathname.match(/\/targets\/([^/]+)\//);
-      folderGroup = match ? decodeURIComponent(match[1]) : null;
       route.fulfill({
         status: 200,
         contentType: 'application/json',

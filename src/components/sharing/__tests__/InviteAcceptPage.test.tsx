@@ -20,6 +20,7 @@ vi.mock('@jbroll/rowboat-sharing-react', async (importOriginal) => ({
     getCollaborators: vi.fn(),
     removeCollaborator: vi.fn(),
     getUserMemberships: vi.fn(),
+    getGroupRole: vi.fn(),
     isLoading: false,
     error: null,
   }),

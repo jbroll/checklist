@@ -9,6 +9,7 @@ const mockGetPendingInvites = vi.fn();
 const mockRemoveCollaborator = vi.fn();
 const mockRevokeInvite = vi.fn();
 const mockGetUserMemberships = vi.fn();
+const mockGetGroupRole = vi.fn();
 
 // Only the fetch layer is faked; the real useShareManager drives the dialog.
 vi.mock('@jbroll/rowboat-sharing-react', async (importOriginal) => ({
@@ -22,6 +23,7 @@ vi.mock('@jbroll/rowboat-sharing-react', async (importOriginal) => ({
     getCollaborators: mockGetCollaborators,
     removeCollaborator: mockRemoveCollaborator,
     getUserMemberships: mockGetUserMemberships,
+    getGroupRole: mockGetGroupRole,
     isLoading: false,
     error: null,
   }),
@@ -49,6 +51,7 @@ beforeEach(() => {
   mockRemoveCollaborator.mockResolvedValue(undefined);
   mockRevokeInvite.mockResolvedValue(undefined);
   mockGetUserMemberships.mockResolvedValue([{ groupId: 'grp_zTest', role: 'admin' }]);
+  mockGetGroupRole.mockResolvedValue({ role: 'admin', isAdmin: true });
   Object.defineProperty(navigator, 'clipboard', {
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
     configurable: true,
