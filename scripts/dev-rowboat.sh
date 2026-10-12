@@ -27,6 +27,8 @@ export ROWBOAT_AUTH_MODE="${ROWBOAT_AUTH_MODE:-jwt}"
 export ROWBOAT_RBAC="${ROWBOAT_RBAC:-on}"
 export WORKER_HOST="${WORKER_HOST:-127.0.0.1}"
 export MAX_UPLOAD_BYTES="${MAX_UPLOAD_BYTES:-52428800}"
+# provision:local registers the backend's http://localhost JWKS, which rowboat refuses without it.
+export ROWBOAT_ALLOW_LOOPBACK_JWKS=1
 
 env_file="$here/.env.tenant.local"
 rm -f "$env_file"
