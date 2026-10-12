@@ -11,7 +11,12 @@ import {
   type OAuthProviderConfig,
   type SendEmail,
 } from '@jbroll/rowboat-auth-betterauth';
-import { mountShareRoutes, registerShareTables, remoteGroupBackend } from '@jbroll/rowboat-sharing';
+import {
+  mountShareRoutes,
+  registerShareTables,
+  remoteGroupBackend,
+  type ShareRoutes,
+} from '@jbroll/rowboat-sharing';
 
 // Root .env first (shared config), then backend .env — mirrors the pre-port load order.
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
@@ -91,6 +96,30 @@ function corsMiddleware(trustedOrigins: string[]) {
     }
     next();
   };
+}
+
+const PENDING_REVOKE_RETRY_MS = 60_000;
+
+// A try waits on hosted rowboat without a bound, so the next one is scheduled only after it
+// settles: an interval would stack tries behind a hung one.
+function retryPendingRevokesWhileOpen(server: Server, shares: ShareRoutes): void {
+  let timer: NodeJS.Timeout | undefined;
+  let closed = false;
+  const run = () => {
+    shares
+      .retryPendingRevokes()
+      .catch((err: unknown) => console.error('[sharing] retrying owed invite undos failed:', err))
+      .finally(() => {
+        if (closed) return;
+        timer = setTimeout(run, PENDING_REVOKE_RETRY_MS);
+        timer.unref();
+      });
+  };
+  server.once('close', () => {
+    closed = true;
+    clearTimeout(timer);
+  });
+  run();
 }
 
 export interface RowboatServer {
@@ -175,7 +204,7 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
   });
 
   const provider = identity.provider;
-  mountShareRoutes(app, db, {
+  const shares = mountShareRoutes(app, db, {
     provider,
     sendEmail,
     groupBackend,
@@ -187,10 +216,15 @@ export async function createServer(config: ServerConfig): Promise<RowboatServer>
     app,
     db,
     signJWT: identity.signJWT,
-    start: () =>
-      app.listen(config.port, config.host, () => {
+    start: () => {
+      const server = app.listen(config.port, config.host, () => {
         console.log(`[server] listening on ${config.host}:${config.port}`);
-      }),
+      });
+      // An accept's undo that failed is kept on its row; nothing else retries it in a group
+      // whose collaborator list nobody opens.
+      retryPendingRevokesWhileOpen(server, shares);
+      return server;
+    },
   };
 }
 

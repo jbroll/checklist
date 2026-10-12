@@ -24,13 +24,16 @@ function inviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'err
 }
 
 function baseInviteErrorMessage(state: Extract<InviteAcceptanceState, { status: 'error' }>) {
-  // The server answers an expired, revoked, used or unknown token alike.
+  // The server answers an expired, revoked, used or unknown token, or a deleted inviter's, alike.
   if (state.reason === 'invalid') return 'This invite link is no longer valid.';
+  if (state.reason === 'undo_pending') {
+    return "An earlier invite to this list for your account is still being undone. This invite is still valid, so try again in a minute. If this keeps happening, ask the list's owner to remove you and invite you again.";
+  }
   const err = state.error;
   if (err instanceof SharingError) {
     switch (err.code) {
       case 'inviter_no_longer_admin':
-        return 'The person who invited you can no longer share this list.';
+        return 'The person who invited you can no longer share this list. Ask its owner for a new invite.';
       case 'grant_refused':
         return 'This list can no longer be shared from this invite. Ask its owner for a new one.';
       case 'blocked':

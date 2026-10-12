@@ -313,9 +313,10 @@ test.describe('Invite Accept Page UI', () => {
   //    about the invite is disclosed.
   //  - Only an authenticated user validates. rowboat's server answers a failure with
   //    `{ valid: false, code }` and no inviter, role or target: `invalid_token` for an invalid,
-  //    revoked, expired or used token, `wrong_account` for a pending invite to another email.
-  //    It returns `{ valid: true, inviter, role, appRole, targetName }` on success, where
-  //    `inviter` is `{ deleted: false, email }` or `{ deleted: true }`.
+  //    revoked, expired or used token or one whose inviter's account was deleted,
+  //    `wrong_account` for a pending invite to another email. It returns
+  //    `{ valid: true, inviter, role, appRole, targetName }` on success, where `inviter` is
+  //    `{ deleted: false, email }`.
   // So these tests authenticate via the CHECKLIST_TEST_AUTH signup path (rowboat-auth.ts) and mock
   // validate in rowboat's shape. They assert rowboat's (coarser, more private) behavior, not the
   // per-error-code screens the originals encoded.

@@ -159,14 +159,24 @@ authenticated session; the sender must still have access at acceptance). `App.ts
 Validate answers an invite addressed to another email with `wrong_account`, which shows the Wrong
 Account screen before any accept; an expired, revoked, used or unknown token, or one whose inviter's
 account was deleted, shows "This invite link is no longer valid." Accept refusals each get a
-sentence: `inviter_no_longer_admin`,
+sentence: `inviter_no_longer_admin` (rowboat deletes the invite, so it asks for a new one),
 `grant_refused` (the sharing agent lost admin), `blocked` (the account blocked the sender),
-`unknown_role` (the invite's role left the role list) and `root_group`. A validate answer the
+`unknown_role` (the invite's role left the role list) and `root_group`. A 503 `undo_pending` on
+accept means an undo of an earlier grant to the account in the folder's group is still owed; the
+page says the invite is still valid, to try again in a minute, and to ask the owner to remove and
+re-invite them if it persists. A validate answer the
 invite hook cannot read shows its own message instead of a half-filled invite. A signed-out
 visitor signs in first: the token is stashed in `sessionStorage` (`stashInviteToken`) so it stays
 out of the OAuth callback URL, and `AuthGate` returns to the invite page with
 `takeStashedInviteToken`, which drops a malformed value. When the browser refuses
 `sessionStorage`, the stash returns false and the OAuth callback URL is the invite page itself.
+
+An accept whose grant may have landed after the invite was removed, or whose grant failed partway,
+is undone; an undo that fails is kept in `share_pending_revokes` and retried. The backend's
+`start()` calls `retryPendingRevokes()` once, then again 60 s after each call settles, never on an
+interval, since a call waits on hosted rowboat without a bound. The timer is `unref`'d and cleared
+when the server `start()` returned closes. A failed call is logged as `[sharing] retrying owed
+invite undos failed:`; a failed undo inside it is logged by rowboat and stays owed.
 
 ## Billing & subscriptions
 

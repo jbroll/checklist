@@ -197,6 +197,20 @@ describe('InviteAcceptPage', () => {
     expect(screen.getByText(/signed in as me@example.com/)).toBeInTheDocument();
   });
 
+  it('says the invite is still valid when accept says an earlier undo is pending', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockValidateInvite.mockResolvedValue(validInvite());
+    mockAcceptInvite.mockRejectedValue(new SharingError('undo owed', 503, 'undo_pending'));
+    render(<InviteAcceptPage token={TOKEN} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept Invite' }));
+    expect(
+      await screen.findByText(
+        "An earlier invite to this list for your account is still being undone. This invite is still valid, so try again in a minute. If this keeps happening, ask the list's owner to remove you and invite you again. (undo_pending)",
+      ),
+    ).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
+
   it('shows the invalid message when accept says invalid_token', async () => {
     mockValidateInvite.mockResolvedValue(validInvite());
     mockAcceptInvite.mockRejectedValue(new SharingError('gone', 400, 'invalid_token'));
@@ -212,7 +226,7 @@ describe('InviteAcceptPage', () => {
     [
       'inviter_no_longer_admin',
       403,
-      'The person who invited you can no longer share this list. (inviter_no_longer_admin)',
+      'The person who invited you can no longer share this list. Ask its owner for a new invite. (inviter_no_longer_admin)',
     ],
     [
       'grant_refused',
