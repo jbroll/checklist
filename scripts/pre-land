@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run by `land` in the branch's worktree before merging. Under any other npm
+# major the post-land install rewrites the lockfiles, leaving main dirty.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if ! node scripts/toolchain.ts; then
+  echo "error: toolchain does not match this branch's engines — nothing landed" >&2
+  exit 1
+fi

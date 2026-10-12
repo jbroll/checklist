@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": "^24.0.0",
+    "npm": "^12.0.0"
+  },
   "scripts": {
     "dev": "concurrently -n \"frontend,backend,rowboat\" -c \"cyan,magenta,green\" \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:rowboat\"",
     "dev:frontend": "bash scripts/with-tenant-env.sh npx vite",
@@ -134,5 +138,9 @@
     "typescript": "^5.6.3",
     "vite": "^6.4.1",
     "vitest": "^4.0.6"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "lefthook": true
   }
 }

@@ -2,6 +2,10 @@
   "name": "checklist-jazz-export",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "^24.0.0",
+    "npm": "^12.0.0"
+  },
   "scripts": {
     "test": "vitest run",
     "export": "tsx src/export.ts"

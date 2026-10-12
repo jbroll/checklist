@@ -55,6 +55,7 @@ export default defineConfig({
       'src/**/*.{test,spec}.{js,ts,tsx}',
       'e2e/helpers/**/*.test.ts',
       'shared/**/*.test.ts',
+      'scripts/**/*.test.ts',
     ],
     exclude: ['node_modules/', 'dist/', 'build/'],
   },

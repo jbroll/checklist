@@ -19,8 +19,26 @@ Shared Checklists - built with rowboat and BetterAuth.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24 (`nvm use` reads `.nvmrc`) and npm 12 (`npm install -g npm@12`, once per Node
+  install)
 - Google and/or Apple OAuth credentials
+
+Each npm major writes different lockfile metadata (optional platform binaries, `dev` and
+`devOptional` flags), so an install under another npm rewrites the lockfiles. The `engines` field
+in the root, `backend/` and `migration/jazz-export/` `package.json`, each of which has its own
+lockfile, pins the majors only (`node ^24.0.0`, `npm ^12.0.0`), since a minor version changes no
+lockfile and the CI host runs an older Node 24 than the laptops. Each directory's `.npmrc` sets
+`engine-strict`, so `npm install` under another major stops with `EBADENGINE` before it touches a
+lockfile. `scripts/toolchain.ts` checks the running Node and npm against `engines`;
+`scripts/pre-land` runs it, so the shared `land` command refuses a mismatched toolchain, and
+`scripts/toolchain.test.ts` fails if the three `engines` fields differ or `.nvmrc` names another
+Node major. To move to a new major, change all four in one commit and regenerate the lockfiles in
+the next.
+
+npm 12 runs a dependency's install scripts only when `allowScripts` in that `package.json` approves
+them: `esbuild` and `lefthook` at the root, `better-sqlite3` and `esbuild` in `backend/`. `sharp`
+(used only by the icon and asset scripts) stays blocked. Approve a new one with
+`npm install-scripts approve <pkg>` after reading what its script does.
 
 ### Installation
 
