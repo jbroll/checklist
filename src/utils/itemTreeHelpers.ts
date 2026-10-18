@@ -1,3 +1,4 @@
+import { compareBySortMode, type SortMode } from '@/lib/sortPreference';
 import { getParentPath, PATH_SEPARATOR } from './pathUtils';
 
 /**
@@ -49,14 +50,10 @@ export interface ItemTreeNode<T extends TreeableItem = TreeableItem> {
  */
 export function buildItemTree<T extends TreeableItem>(
   items: readonly (T | null | undefined)[],
+  sortMode: SortMode = 'manual',
 ): ItemTreeNode<T>[] {
-  // Helper to sort items by sortOrder and name
-  const sortItems = (a: T, b: T) => {
-    if (a.sortOrder !== b.sortOrder) {
-      return a.sortOrder - b.sortOrder;
-    }
-    return a.name.localeCompare(b.name);
-  };
+  // Helper to sort items by sortOrder and name, or alphabetically when preferred
+  const sortItems = (a: T, b: T) => compareBySortMode(a, b, sortMode);
 
   // Single-pass: filter, build map, and group by parent
   const nodeMap = new Map<string, ItemTreeNode<T>>();

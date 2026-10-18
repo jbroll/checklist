@@ -1,4 +1,5 @@
 import { CheckCircle2, ListChecks } from 'lucide-react';
+import type { SortMode } from '@/lib/sortPreference';
 import type { InteractionMode } from '@/lib/useSessionInteractionMode';
 import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
 import { buildCategoryTree, type CategoryNode } from './categoryTreeBuilder';
@@ -15,6 +16,7 @@ interface ZoneInHierarchyRendererProps {
   onToggleChecked: (itemId: string) => void;
   showDeleteIcon?: boolean;
   onDeleteItem?: (itemId: string) => void;
+  sortMode?: SortMode;
   // Interaction mode props (for consistency, though these zones aren't draggable)
   interactionMode: InteractionMode;
   onEnterEditMode: (itemId: string) => void;
@@ -39,6 +41,7 @@ export function ZoneInHierarchyRenderer({
   onToggleChecked,
   showDeleteIcon = false,
   onDeleteItem,
+  sortMode = 'manual',
   interactionMode,
   onEnterEditMode,
   onExitEditMode,
@@ -73,7 +76,7 @@ export function ZoneInHierarchyRenderer({
 
   // Only include categories that have items selected or checked
   const selectedAndCheckedItems = [...selectedItems, ...checkedItems];
-  const categoriesWithItems = buildCategoryTree(selectedAndCheckedItems, template.items);
+  const categoriesWithItems = buildCategoryTree(selectedAndCheckedItems, template.items, sortMode);
 
   // Find items that aren't in any category (root-level items)
   const categorizedItemIds = new Set<string>();

@@ -13,6 +13,8 @@ function renderHeader(completedIn?: string) {
       onCycleViewMode={vi.fn()}
       getViewModeLabel={() => 'flat'}
       getViewModeIcon={() => List}
+      sortMode="manual"
+      onToggleSortMode={vi.fn()}
       onBack={vi.fn()}
       completedIn={completedIn}
     />,

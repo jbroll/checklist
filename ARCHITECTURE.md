@@ -65,8 +65,11 @@ mode, counts) are the element schemas of the ordered columns. Read-side parsing 
 not JSON arrays. Every mutation is a **field-level dotted-path write** (`items.<id>.checked`), so two
 clients editing *different* items in the same list merge with no lost survivor — the fix for the
 D1 whole-cell-LWW data-loss. The app reads/writes them through `orderedList` handles
-(`src/services/folderListHandles.ts`). Display order is the `sortOrder` field today (the ordered
-column's `__order` fracKey is the eventual home). Values are validated server-side against a
+(`src/services/folderListHandles.ts`). Display order is the `sortOrder` field in manual mode
+(the ordered column's `__order` fracKey is the eventual home); a global display-only sort
+preference (`manual` | `alphabetical`, `src/lib/sortPreference.ts`, localStorage) switches the
+`buildItemTree` / `buildCategoryTree` / `useSessionItems` comparators to `name` order without
+rewriting `sortOrder`. Values are validated server-side against a
 keyed-map jsonSchema on push.
 
 **Soft deletes** everywhere: rows/items are marked `archived: true` (or tombstoned), never hard

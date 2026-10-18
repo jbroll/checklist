@@ -2,6 +2,7 @@ import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import { Package } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
+import { useSortMode } from '@/lib/sortPreference';
 import type { NavState } from '@/lib/useNavigationHistory';
 import { formatDuration } from '@/lib/utils';
 import { useRowboat, useSelect } from '@/rowboat';
@@ -100,10 +101,17 @@ export function SessionView({
     [template.items],
   );
 
+  const { sortMode, setSortMode } = useSortMode();
+  const toggleSortMode = useCallback(
+    () => setSortMode(sortMode === 'alphabetical' ? 'manual' : 'alphabetical'),
+    [sortMode, setSortMode],
+  );
+
   // Use hooks for partitioning items
   const { selectedItems, checkedItems } = useSessionItems({
     template,
     session,
+    sortMode,
   });
 
   // Use hook for view mode management
@@ -171,7 +179,7 @@ export function SessionView({
 
   // Build hierarchical tree structure (memoized for performance)
   // Must be called before early returns to satisfy hooks rules
-  const itemTree = useMemo(() => buildItemTree(activeItems), [activeItems]);
+  const itemTree = useMemo(() => buildItemTree(activeItems, sortMode), [activeItems, sortMode]);
 
   // Shared props for view mode renderers (read-only mode)
   // Must be called before early returns to satisfy hooks rules
@@ -266,6 +274,8 @@ export function SessionView({
               onCycleViewMode={cycleViewMode}
               getViewModeLabel={getViewModeLabel}
               getViewModeIcon={getViewModeIcon}
+              sortMode={sortMode}
+              onToggleSortMode={toggleSortMode}
               onBack={onBack}
               completedIn={duration === null ? undefined : formatDuration(duration)}
             />
@@ -326,6 +336,7 @@ export function SessionView({
                   onToggleSelected={handlers.handleToggleSelected}
                   onToggleChecked={handlers.handleToggleChecked}
                   onDeleteItem={handlers.handleDeleteItem}
+                  sortMode={sortMode}
                   {...sessionNoteProps}
                   {...viewerCommonProps}
                 />

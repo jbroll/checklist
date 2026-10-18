@@ -1,21 +1,15 @@
 import { useMemo } from 'react';
+import { compareBySortMode, type SortMode } from '@/lib/sortPreference';
 import type { FolderRow, SessionData, TemplateItem } from '@/schema/folder';
 import { getLeafItems } from '@/utils/itemTreeHelpers';
-
-/** Sort items by sortOrder (with name as fallback) */
-const sortByOrder = (a: TemplateItem, b: TemplateItem) => {
-  if (a.sortOrder !== b.sortOrder) {
-    return a.sortOrder - b.sortOrder;
-  }
-  return a.name.localeCompare(b.name);
-};
 
 interface UseSessionItemsParams {
   template: FolderRow | null;
   session: SessionData | null;
+  sortMode?: SortMode;
 }
 
-export function useSessionItems({ template, session }: UseSessionItemsParams) {
+export function useSessionItems({ template, session, sortMode = 'manual' }: UseSessionItemsParams) {
   const { activeItems, availableItems, selectedItems, checkedItems } = useMemo(() => {
     const items = template?.items || [];
     const active = getLeafItems(items);
@@ -48,11 +42,11 @@ export function useSessionItems({ template, session }: UseSessionItemsParams) {
 
     return {
       activeItems: active,
-      availableItems: available.sort(sortByOrder),
-      selectedItems: selected.sort(sortByOrder),
-      checkedItems: checked.sort(sortByOrder),
+      availableItems: available.sort((a, b) => compareBySortMode(a, b, sortMode)),
+      selectedItems: selected.sort((a, b) => compareBySortMode(a, b, sortMode)),
+      checkedItems: checked.sort((a, b) => compareBySortMode(a, b, sortMode)),
     };
-  }, [template, session]);
+  }, [template, session, sortMode]);
 
   return {
     activeItems,

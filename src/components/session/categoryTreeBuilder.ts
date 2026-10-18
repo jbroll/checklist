@@ -1,3 +1,4 @@
+import { compareBySortMode, type SortMode } from '@/lib/sortPreference';
 import type { TemplateItem } from '@/schema/folder';
 import { PATH_SEPARATOR } from '@/utils/pathUtils';
 
@@ -11,18 +12,17 @@ export interface CategoryNode {
 }
 
 /**
- * Builds a multi-level category tree structure from a flat list of items
+ * Builds a multi-level category tree structure from a flat list of items.
  *
  * Items and categories are mixed together at each level based on their paths.
  * Root-level items (with no path separator) are returned as categories with no children.
- *
- * @param items - Leaf items (type='item') to organize into categories
- * @param allTemplateItems - All template items including categories for full hierarchy
- * @returns Array of category nodes (includes both actual categories and root items)
+ * Pass the full template item list to include empty categories; pass a sort mode of
+ * 'alphabetical' to order by name instead of sortOrder.
  */
 export function buildCategoryTree(
   items: TemplateItem[],
   allTemplateItems?: TemplateItem[],
+  sortMode: SortMode = 'manual',
 ): CategoryNode[] {
   const categoryMap = new Map<string, CategoryNode>();
   const rootNodes: CategoryNode[] = [];
@@ -103,18 +103,14 @@ export function buildCategoryTree(
     }
   });
 
-  // Sort items by sortOrder (with name as fallback)
-  const sortItems = (a: TemplateItem, b: TemplateItem) => {
-    if (a.sortOrder !== b.sortOrder) {
-      return a.sortOrder - b.sortOrder;
-    }
-    return a.name.localeCompare(b.name);
-  };
+  // Sort items by sortOrder (with name as fallback), or alphabetically when preferred
+  const sortItems = (a: TemplateItem, b: TemplateItem) => compareBySortMode(a, b, sortMode);
 
   // Sort categories by their sortOrder (from actual category TemplateItems)
   const sortCategoryTree = (categories: CategoryNode[]): CategoryNode[] => {
     return categories
       .sort((a, b) => {
+        if (sortMode === 'alphabetical') return a.name.localeCompare(b.name);
         // Primary: Sort by category sortOrder if available
         if (a.sortOrder !== undefined && b.sortOrder !== undefined && a.sortOrder !== b.sortOrder) {
           return a.sortOrder - b.sortOrder;

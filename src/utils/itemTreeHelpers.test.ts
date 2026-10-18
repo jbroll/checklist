@@ -99,6 +99,18 @@ describe('itemTreeHelpers', () => {
       expect(tree[1].item.name).toBe('Banana');
       expect(tree[2].item.name).toBe('Zebra');
     });
+
+    it('sorts alphabetically ignoring sortOrder when mode is alphabetical', () => {
+      const items = [
+        createItem('Oranges', 'oranges', 'item', 0),
+        createItem('Apples', 'apples', 'item', 1),
+        createItem('Bananas', 'bananas', 'item', 2),
+      ];
+
+      const tree = buildItemTree(items, 'alphabetical');
+
+      expect(tree.map((n) => n.item.name)).toEqual(['Apples', 'Bananas', 'Oranges']);
+    });
   });
 
   describe('flattenItemTree', () => {

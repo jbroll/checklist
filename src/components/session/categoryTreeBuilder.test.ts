@@ -97,6 +97,18 @@ describe('buildCategoryTree', () => {
       expect(tree[0].items[1].name).toBe('B'); // sortOrder 1.5
       expect(tree[0].items[2].name).toBe('C'); // sortOrder 3.0
     });
+
+    it('should sort items alphabetically ignoring sortOrder when mode is alphabetical', () => {
+      const items: TemplateItem[] = [
+        createItem('1', 'Oranges', `produce${PATH_SEPARATOR}oranges`, 1.0),
+        createItem('2', 'Apples', `produce${PATH_SEPARATOR}apples`, 2.0),
+        createItem('3', 'Bananas', `produce${PATH_SEPARATOR}bananas`, 3.0),
+      ];
+
+      const tree = buildCategoryTree(items, undefined, 'alphabetical');
+
+      expect(tree[0].items.map((i) => i.name)).toEqual(['Apples', 'Bananas', 'Oranges']);
+    });
   });
 
   describe('hierarchical structure', () => {
