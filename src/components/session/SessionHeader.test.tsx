@@ -3,7 +3,10 @@ import { List } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { SessionHeader } from './SessionHeader';
 
-function renderHeader(completedIn?: string, sortMode: 'manual' | 'alphabetical' = 'manual') {
+function renderHeader(
+  completedIn?: string,
+  sortMode: 'manual' | 'ascending' | 'descending' = 'manual',
+) {
   const onToggleSortMode = vi.fn();
   render(
     <SessionHeader
@@ -36,14 +39,19 @@ describe('SessionHeader', () => {
 
   it('shows the sort toggle and calls back when clicked', async () => {
     const { onToggleSortMode } = renderHeader(undefined, 'manual');
-    const toggle = screen.getByRole('button', { name: /switch to alphabetical order/i });
+    const toggle = screen.getByRole('button', { name: /switch to A-Z order/i });
     expect(toggle).toBeVisible();
     await toggle.click();
-    expect(onToggleSortMode).toHaveBeenCalledOnce();
+    expect(onToggleSortMode).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the manual-order toggle when sorting alphabetically', () => {
-    renderHeader(undefined, 'alphabetical');
+  it('shows the Z-A toggle when sorting ascending', () => {
+    renderHeader(undefined, 'ascending');
+    expect(screen.getByRole('button', { name: /switch to Z-A order/i })).toBeVisible();
+  });
+
+  it('shows the manual-order toggle when sorting descending', () => {
+    renderHeader(undefined, 'descending');
     expect(screen.getByRole('button', { name: /switch to manual order/i })).toBeVisible();
   });
 });

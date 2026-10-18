@@ -67,8 +67,8 @@ clients editing *different* items in the same list merge with no lost survivor â
 D1 whole-cell-LWW data-loss. The app reads/writes them through `orderedList` handles
 (`src/services/folderListHandles.ts`). Display order is the `sortOrder` field in manual mode
 (the ordered column's `__order` fracKey is the eventual home); a global display-only sort
-preference (`manual` | `alphabetical`, `src/lib/sortPreference.ts`, localStorage) switches the
-`buildItemTree` / `buildCategoryTree` / `useSessionItems` comparators to `name` order without
+preference (`manual` | `ascending` | `descending`, `src/lib/sortPreference.ts`, localStorage) switches the
+`buildItemTree` / `buildCategoryTree` / `useSessionItems` comparators to `name` order (A-Z or Z-A) without
 rewriting `sortOrder`. Values are validated server-side against a
 keyed-map jsonSchema on push.
 

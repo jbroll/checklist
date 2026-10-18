@@ -110,9 +110,9 @@ test.describe('UI - Session View', () => {
     await expect(page.getByRole('button', { name: /done/i })).toBeVisible();
     // View mode toggle button has aria-label like "Switch to Flat view" or "Switch to Zones in Categories view"
     await expect(page.getByRole('button', { name: /switch to (flat|zones in categories) view/i })).toBeVisible();
-    // Sort mode toggle switches between manual and alphabetical order
+    // Sort mode toggle cycles manual -> A-Z -> Z-A
     await expect(
-      page.getByRole('button', { name: /switch to (alphabetical|manual) order/i }),
+      page.getByRole('button', { name: /switch to (A-Z|Z-A|manual) order/i }),
     ).toBeVisible();
     // Add/Edit button has aria-label "Add and edit items" when not in adding mode
     await expect(page.getByRole('button', { name: /add and edit items/i })).toBeVisible();

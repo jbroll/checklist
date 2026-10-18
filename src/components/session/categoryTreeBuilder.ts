@@ -17,7 +17,7 @@ export interface CategoryNode {
  * Items and categories are mixed together at each level based on their paths.
  * Root-level items (with no path separator) are returned as categories with no children.
  * Pass the full template item list to include empty categories; pass a sort mode of
- * 'alphabetical' to order by name instead of sortOrder.
+ * 'ascending'/'descending' to order by name instead of sortOrder.
  */
 export function buildCategoryTree(
   items: TemplateItem[],
@@ -110,7 +110,10 @@ export function buildCategoryTree(
   const sortCategoryTree = (categories: CategoryNode[]): CategoryNode[] => {
     return categories
       .sort((a, b) => {
-        if (sortMode === 'alphabetical') return a.name.localeCompare(b.name);
+        if (sortMode !== 'manual') {
+          const cmp = a.name.localeCompare(b.name);
+          return sortMode === 'ascending' ? cmp : -cmp;
+        }
         // Primary: Sort by category sortOrder if available
         if (a.sortOrder !== undefined && b.sortOrder !== undefined && a.sortOrder !== b.sortOrder) {
           return a.sortOrder - b.sortOrder;

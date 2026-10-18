@@ -100,14 +100,14 @@ describe('itemTreeHelpers', () => {
       expect(tree[2].item.name).toBe('Zebra');
     });
 
-    it('sorts alphabetically ignoring sortOrder when mode is alphabetical', () => {
+    it('sorts alphabetically ignoring sortOrder when mode is ascending', () => {
       const items = [
         createItem('Oranges', 'oranges', 'item', 0),
         createItem('Apples', 'apples', 'item', 1),
         createItem('Bananas', 'bananas', 'item', 2),
       ];
 
-      const tree = buildItemTree(items, 'alphabetical');
+      const tree = buildItemTree(items, 'ascending');
 
       expect(tree.map((n) => n.item.name)).toEqual(['Apples', 'Bananas', 'Oranges']);
     });

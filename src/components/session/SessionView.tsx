@@ -2,7 +2,7 @@ import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import { Package } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ItemInput } from '@/components/ui/ItemInput';
-import { useSortMode } from '@/lib/sortPreference';
+import { nextSortMode, useSortMode } from '@/lib/sortPreference';
 import type { NavState } from '@/lib/useNavigationHistory';
 import { formatDuration } from '@/lib/utils';
 import { useRowboat, useSelect } from '@/rowboat';
@@ -103,7 +103,7 @@ export function SessionView({
 
   const { sortMode, setSortMode } = useSortMode();
   const toggleSortMode = useCallback(
-    () => setSortMode(sortMode === 'alphabetical' ? 'manual' : 'alphabetical'),
+    () => setSortMode(nextSortMode(sortMode)),
     [sortMode, setSortMode],
   );
 

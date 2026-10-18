@@ -98,16 +98,28 @@ describe('buildCategoryTree', () => {
       expect(tree[0].items[2].name).toBe('C'); // sortOrder 3.0
     });
 
-    it('should sort items alphabetically ignoring sortOrder when mode is alphabetical', () => {
+    it('should sort items A-Z ignoring sortOrder when mode is ascending', () => {
       const items: TemplateItem[] = [
         createItem('1', 'Oranges', `produce${PATH_SEPARATOR}oranges`, 1.0),
         createItem('2', 'Apples', `produce${PATH_SEPARATOR}apples`, 2.0),
         createItem('3', 'Bananas', `produce${PATH_SEPARATOR}bananas`, 3.0),
       ];
 
-      const tree = buildCategoryTree(items, undefined, 'alphabetical');
+      const tree = buildCategoryTree(items, undefined, 'ascending');
 
       expect(tree[0].items.map((i) => i.name)).toEqual(['Apples', 'Bananas', 'Oranges']);
+    });
+
+    it('should sort items Z-A ignoring sortOrder when mode is descending', () => {
+      const items: TemplateItem[] = [
+        createItem('1', 'Oranges', `produce${PATH_SEPARATOR}oranges`, 1.0),
+        createItem('2', 'Apples', `produce${PATH_SEPARATOR}apples`, 2.0),
+        createItem('3', 'Bananas', `produce${PATH_SEPARATOR}bananas`, 3.0),
+      ];
+
+      const tree = buildCategoryTree(items, undefined, 'descending');
+
+      expect(tree[0].items.map((i) => i.name)).toEqual(['Oranges', 'Bananas', 'Apples']);
     });
   });
 

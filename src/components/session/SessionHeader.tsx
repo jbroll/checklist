@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowDownAZ, ListOrdered, Pencil, Plus } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownZA, ListOrdered, Pencil, Plus } from 'lucide-react';
 import type { SortMode } from '@/lib/sortPreference';
 
 interface SessionHeaderProps {
@@ -76,20 +76,30 @@ export function SessionHeader({
                 return <Icon className="h-5 w-5" />;
               })()}
             </button>
-            {/* Sort Mode Toggle */}
+            {/* Sort Mode Toggle: manual -> A-Z -> Z-A */}
             <button
               type="button"
               onClick={onToggleSortMode}
               className="flex items-center justify-center rounded bg-surface-tertiary p-3 text-content-primary hover:bg-interactive-hover min-h-[44px] min-w-[44px]"
               aria-label={
-                sortMode === 'alphabetical'
-                  ? 'Switch to manual order'
-                  : 'Switch to alphabetical order'
+                sortMode === 'manual'
+                  ? 'Switch to A-Z order'
+                  : sortMode === 'ascending'
+                    ? 'Switch to Z-A order'
+                    : 'Switch to manual order'
               }
-              title={sortMode === 'alphabetical' ? 'Sorted A-Z' : 'Manual order'}
+              title={
+                sortMode === 'manual'
+                  ? 'Manual order'
+                  : sortMode === 'ascending'
+                    ? 'Sorted A-Z'
+                    : 'Sorted Z-A'
+              }
             >
-              {sortMode === 'alphabetical' ? (
+              {sortMode === 'ascending' ? (
                 <ArrowDownAZ className="h-5 w-5" />
+              ) : sortMode === 'descending' ? (
+                <ArrowDownZA className="h-5 w-5" />
               ) : (
                 <ListOrdered className="h-5 w-5" />
               )}

@@ -1,13 +1,21 @@
 import { useCallback, useState } from 'react';
 
-export type SortMode = 'manual' | 'alphabetical';
+export type SortMode = 'manual' | 'ascending' | 'descending';
 
 const SORT_MODE_STORAGE_KEY = 'checklist-sort-mode';
 
 export function getStoredSortMode(): SortMode {
   if (typeof window === 'undefined') return 'manual';
   const stored = localStorage.getItem(SORT_MODE_STORAGE_KEY);
-  return stored === 'alphabetical' ? 'alphabetical' : 'manual';
+  if (stored === 'ascending' || stored === 'alphabetical') return 'ascending';
+  if (stored === 'descending') return 'descending';
+  return 'manual';
+}
+
+export function nextSortMode(mode: SortMode): SortMode {
+  if (mode === 'manual') return 'ascending';
+  if (mode === 'ascending') return 'descending';
+  return 'manual';
 }
 
 export function compareBySortMode(
@@ -15,7 +23,8 @@ export function compareBySortMode(
   b: { name: string; sortOrder: number },
   mode: SortMode,
 ): number {
-  if (mode === 'alphabetical') return a.name.localeCompare(b.name);
+  if (mode === 'ascending') return a.name.localeCompare(b.name);
+  if (mode === 'descending') return b.name.localeCompare(a.name);
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
 }
