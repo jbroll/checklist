@@ -37,8 +37,8 @@ export function SessionHeader({
 }: SessionHeaderProps) {
   return (
     <div className="border-b border-divider-primary p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold text-content-primary sm:text-xl lg:text-2xl truncate">
             {sessionName ? `${templateName} · ${sessionName}` : templateName}
           </h1>

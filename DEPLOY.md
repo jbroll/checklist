@@ -56,12 +56,35 @@ Use `deploy-full.sh` to deploy both frontend and backend in one command:
 ### Subsequent Updates
 
 ```bash
-# Update both frontend and backend
-./deploy-full.sh update
+# Update test env (bare command defaults to test — see below)
+./deploy-full.sh test update
 
-# Or just:
-./deploy-full.sh
+# Update prod (see the production warning below first)
+./deploy-full.sh prod update
 ```
+
+`./deploy-full.sh` takes `[test|prod] [init|update]` and defaults to `test update`.
+Always name the environment explicitly — a bare `./deploy-full.sh update` deploys test,
+not prod.
+
+### Where to run deploys from
+
+Run deploys from the checkout that holds the tenant state files
+(`rowboat-tenant.test.json`, `rowboat-tenant.prod.json`, `.env.tenant.local`). These are
+git-ignored per-machine secrets, so a fresh git worktree does NOT have them — deploy from
+the main checkout, not a worktree. If the state file for your target is missing, run
+`npm run provision:test` (or `provision:prod`), which needs `ROWBOAT_OPERATOR_KEY` for
+rowboat.rkroll.com. No schema change means provisioning is a no-op refresh, but the state
+file must still exist: the build bakes the tenant database ID from it into the bundle.
+
+### Production warning
+
+`checklist-app.rkroll.com` still runs the Jazz-era backend. Before the first rowboat-era
+prod deploy, the Jazz users and their data must be backed up and migrated (one-time
+export/import, rehearsed on checklist-test first) — see the Engineering section of
+`docs/BACKLOG.md`. Installing the rowboat backend over it without that migration orphans
+existing users' lists. `deploy.conf` still carries the `REPLACE_WITH_PROD_DATABASE_ID`
+placeholder until `provision:prod` has run.
 
 ### Post-Deployment: Create Backend Secrets File
 
@@ -123,7 +146,12 @@ Note: Each component has its own `deploy.conf` file with module-specific configu
 
 ## Verification
 
-After deployment, verify everything is working:
+`deploy-full.sh` runs health checks then Playwright smoke tests (`npm run test:smoke:<env>`)
+as its last step. A smoke failure exits 1 AFTER frontend and backend are already live —
+there is no rollback, so "deployment may have issues" means investigate the failing spec
+and fix forward (usually a UI regression like an overflowing header on small viewports).
+
+Manual checks after deployment:
 
 ```bash
 # Check Apache is running

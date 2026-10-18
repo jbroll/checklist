@@ -3,7 +3,8 @@ import { List } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { SessionHeader } from './SessionHeader';
 
-function renderHeader(completedIn?: string) {
+function renderHeader(completedIn?: string, sortMode: 'manual' | 'alphabetical' = 'manual') {
+  const onToggleSortMode = vi.fn();
   render(
     <SessionHeader
       templateName="Groceries"
@@ -13,12 +14,13 @@ function renderHeader(completedIn?: string) {
       onCycleViewMode={vi.fn()}
       getViewModeLabel={() => 'flat'}
       getViewModeIcon={() => List}
-      sortMode="manual"
-      onToggleSortMode={vi.fn()}
+      sortMode={sortMode}
+      onToggleSortMode={onToggleSortMode}
       onBack={vi.fn()}
       completedIn={completedIn}
     />,
   );
+  return { onToggleSortMode };
 }
 
 describe('SessionHeader', () => {
@@ -30,5 +32,18 @@ describe('SessionHeader', () => {
   it('shows no completion line otherwise', () => {
     renderHeader();
     expect(screen.queryByText(/Completed in/)).not.toBeInTheDocument();
+  });
+
+  it('shows the sort toggle and calls back when clicked', async () => {
+    const { onToggleSortMode } = renderHeader(undefined, 'manual');
+    const toggle = screen.getByRole('button', { name: /switch to alphabetical order/i });
+    expect(toggle).toBeVisible();
+    await toggle.click();
+    expect(onToggleSortMode).toHaveBeenCalledOnce();
+  });
+
+  it('shows the manual-order toggle when sorting alphabetically', () => {
+    renderHeader(undefined, 'alphabetical');
+    expect(screen.getByRole('button', { name: /switch to manual order/i })).toBeVisible();
   });
 });
