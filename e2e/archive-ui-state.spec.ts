@@ -2,9 +2,9 @@
  * Archive UI State Tests
  *
  * The button-visibility / "Show Archived Lists" toggle tests run against the real rowboat app
- * (rendered by the /test page, which exposes window.testExports). Archive no longer cascades to a
- * folder's children (folderOps.setArchived is per-node). The delete / archive cascade behaviour is
- * exercised headlessly by the folderOps unit tests.
+ * (rendered by the /test page, which exposes window.testExports). Archive and unarchive cascade to
+ * the whole subtree (folderOps.setArchived). The service-seeded tests seed through
+ * window.__testServices.
  */
 
 import { expect, test } from './fixtures/base';
@@ -73,7 +73,8 @@ test.describe('Archive UI State Management', () => {
   // TODO(e2e): directory.create seeds through folderOps.addFolder, which resolves BEFORE the row
   // is readable on the real IndexedDB-backed graph (see folderOps header) — so the immediate
   // directory.get read-backs here race the write. Delete-cascade itself is covered by the
-  // folderOps unit tests. Re-enable with a reactive wait once the /test harness seeding settles.
+  // folderOps unit tests. Replace the fixed wait with a reactive one once the /test harness
+  // seeding settles.
   test('should recursively delete folder contents when deleting archived folder', async ({
     page,
   }) => {
