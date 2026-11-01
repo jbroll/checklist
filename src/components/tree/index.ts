@@ -1,9 +1,9 @@
 export { FolderNodeView } from './FolderNodeView';
 export { IndentedRow } from './IndentedRow';
-export {
-  TreeView,
-  type TreeViewArchiveSettings,
-  type TreeViewAuthProps,
-  type TreeViewHeaderActions,
-  type TreeViewSelectionHandlers,
-} from './TreeView';
+export { TreeView } from './TreeView';
+export type {
+  TreeViewArchiveSettings,
+  TreeViewAuthProps,
+  TreeViewHeaderActions,
+  TreeViewSelectionHandlers,
+} from './treeTypes';

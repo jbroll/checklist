@@ -1,72 +1,25 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  type DragOverEvent,
-  DragOverlay,
-  type DragStartEvent,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { closestCenter, DndContext, DragOverlay } from '@dnd-kit/core';
 import { useCallback, useMemo, useState } from 'react';
 import { InstallInstructionsDialog } from '@/components/ui/InstallInstructionsDialog';
 import { arraysEqualById, isTemplateFolder, useCheckListHierarchy } from '@/hooks';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import { usePort, useRowboat, useSelect } from '@/rowboat';
-import type { FolderRow } from '@/schema/folder';
 import { parseFolderRow } from '@/schema/folderData';
-import * as sessionService from '@/services/sessionService';
+import { buildFolderTree } from './buildFolderTree';
 import { FolderNodeView } from './FolderNodeView';
 import { ReorderDropZone } from './ReorderDropZone';
 import { SessionRowView } from './SessionRowView';
 import { TreeViewHeader } from './TreeViewHeader';
-
-// Tree structure for rendering
-interface TreeNode {
-  folder: FolderRow;
-  children: TreeNode[];
-  level: number;
-}
-
-// Grouped prop interfaces to reduce prop drilling
-export interface TreeViewSelectionHandlers {
-  onFolderSelect?: (folderId: string) => void;
-  onTemplateSelect?: (templateId: string) => void;
-  onOpenSession?: (templateId: string, sessionId: string) => void;
-  onExportSession?: (templateId: string, sessionId: string) => void;
-}
-
-export interface TreeViewHeaderActions {
-  onHeaderClick?: () => void;
-  onAddFolder?: () => void;
-  onAddTemplate?: () => void;
-  onExport?: () => void;
-  onImport?: () => void;
-}
-
-export interface TreeViewAuthProps {
-  onSignOut?: () => void;
-  onSignIn?: () => void;
-  onDeleteAccount?: () => void;
-  isAuthenticated?: boolean;
-  showProfileDialog?: boolean;
-  onShowProfileDialogChange?: (show: boolean) => void;
-}
-
-export interface TreeViewArchiveSettings {
-  hideArchivedTemplatesToggle?: boolean;
-  hideArchivedSessionsToggle?: boolean;
-  hideArchiveAction?: boolean;
-}
-
-export interface TreeViewSubscriptionInfo {
-  subscriptionTier?: string;
-  listCount?: number;
-  maxLists?: number;
-  onUpgradeClick?: () => void;
-}
+import type {
+  TreeNode,
+  TreeViewArchiveSettings,
+  TreeViewAuthProps,
+  TreeViewHeaderActions,
+  TreeViewSelectionHandlers,
+  TreeViewSubscriptionInfo,
+} from './treeTypes';
+import { useTreeActions } from './useTreeActions';
+import { useTreeDragDrop } from './useTreeDragDrop';
 
 interface TreeViewProps {
   selectedTemplateId?: string | null;
@@ -76,32 +29,6 @@ interface TreeViewProps {
   authProps?: TreeViewAuthProps;
   archiveSettings?: TreeViewArchiveSettings;
   subscriptionInfo?: TreeViewSubscriptionInfo;
-}
-
-/** Build the hierarchical tree from a flat `FolderRow[]` (reactive selector output). */
-function buildFolderTree(folders: FolderRow[], showArchived: boolean): TreeNode[] {
-  const byParent = new Map<string | null, FolderRow[]>();
-  for (const folder of folders) {
-    if (!showArchived && folder.archived) continue;
-    const key = folder.parent_id;
-    const siblings = byParent.get(key) ?? [];
-    siblings.push(folder);
-    byParent.set(key, siblings);
-  }
-
-  function build(parentId: string | null, level: number): TreeNode[] {
-    const siblings = byParent.get(parentId) ?? [];
-    return siblings
-      .slice()
-      .sort((a, b) => a.created_at - b.created_at)
-      .map((folder) => ({
-        folder,
-        children: build(folder.id, level + 1),
-        level,
-      }));
-  }
-
-  return build(null, 0);
 }
 
 export function TreeView({
@@ -157,7 +84,6 @@ export function TreeView({
     arraysEqualById,
   );
 
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(false);
 
@@ -173,114 +99,29 @@ export function TreeView({
     }
   }, [hasNativePrompt, triggerInstall]);
 
+  const {
+    activeFolderId,
+    sensors,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useTreeDragDrop({ findById, moveNode });
+
   const selectedFolder = useMemo(() => {
     if (!selectedFolderId) return null;
     return findById(selectedFolderId) ?? null;
   }, [selectedFolderId, findById]);
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
-  );
-
-  const handleToggleFolderExpand = useCallback(
-    (folder: FolderRow) => {
-      void g.folder.update(folder.id, { expanded: !folder.expanded });
-    },
-    [g],
-  );
-
-  const handleRenameFolder = useCallback(
-    (folder: FolderRow, newName: string) => {
-      void renameNode(folder.id, newName);
-    },
-    [renameNode],
-  );
-
-  const handleToggleArchiveFolder = useCallback(
-    (folder: FolderRow) => {
-      if (folder.archived) {
-        void unarchiveNode(folder.id);
-      } else {
-        void archiveNode(folder.id);
-      }
-    },
-    [archiveNode, unarchiveNode],
-  );
-
-  const handleDeleteFolder = useCallback(
-    (folder: FolderRow) => {
-      void deleteNode(folder.id);
-    },
-    [deleteNode],
-  );
-
-  const handleToggleArchiveSession = useCallback(
-    (templateId: string, sessionId: string, archived: boolean) => {
-      if (archived) {
-        void sessionService.unarchiveSession(g, templateId, sessionId);
-      } else {
-        void sessionService.archiveSession(g, templateId, sessionId);
-      }
-    },
-    [g],
-  );
-
-  const handleRenameSession = useCallback(
-    (templateId: string, sessionId: string, name: string) => {
-      void sessionService.renameSession(g, templateId, sessionId, name);
-    },
-    [g],
-  );
-
-  const handleDeleteSession = useCallback(
-    (templateId: string, sessionId: string) => {
-      void sessionService.deleteSession(g, templateId, sessionId);
-    },
-    [g],
-  );
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const folderId = event.active.data.current?.folderId as string;
-    setActiveFolderId(folderId);
-  }, []);
-
-  const handleDragOver = useCallback((_event: DragOverEvent) => {
-    // No-op: reserved for future visual feedback during drag.
-  }, []);
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      setActiveFolderId(null);
-      if (!over || !active.data.current) return;
-
-      const draggedFolderId = active.data.current.folderId as string;
-      const overData = over.data.current;
-      const draggedFolder = findById(draggedFolderId);
-      if (!draggedFolder) return;
-
-      let newParentId: string | null | undefined;
-      if (overData?.path === '__ROOT_DROP_ZONE__') {
-        newParentId = null;
-      } else if (overData?.isFolder && overData?.folderId) {
-        newParentId = overData.folderId as string;
-      }
-
-      if (newParentId === undefined) return;
-
-      try {
-        void moveNode(draggedFolder.id, newParentId);
-      } catch (error) {
-        console.error('[TreeView] Error moving folder:', error);
-      }
-    },
-    [findById, moveNode],
-  );
-
-  const handleDragCancel = useCallback(() => {
-    setActiveFolderId(null);
-  }, []);
+  const {
+    handleToggleFolderExpand,
+    handleRenameFolder,
+    handleToggleArchiveFolder,
+    handleDeleteFolder,
+    handleToggleArchiveSession,
+    handleRenameSession,
+    handleDeleteSession,
+  } = useTreeActions({ renameNode, archiveNode, unarchiveNode, deleteNode });
 
   const folderTree = useMemo(
     () => buildFolderTree(allFolderRows, showArchivedTemplates),

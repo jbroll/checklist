@@ -23,7 +23,6 @@
 | Recurring sessions | 8-12h | Auto-create on schedule |
 | Undo/redo | 6-8h | Action history |
 | Item photos | 6-8h | Attach images to items |
-| TreeView refactoring | 4-6h | Split 610-line component |
 | Nutrition / calorie tracking | Large | Detailed design below (D5) — needs a product decision first |
 
 ### Explicitly not planned
