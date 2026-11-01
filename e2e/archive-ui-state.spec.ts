@@ -2,13 +2,9 @@
  * Archive UI State Tests
  *
  * The button-visibility / "Show Archived Lists" toggle tests run against the real rowboat app
- * (rendered by the /test page, which exposes window.testExports). The three service-seeded tests
- * are `test.skip` for the rowboat port — see the per-test TODO(e2e) notes: archive no longer
- * cascades to a folder's children (folderOps.setArchived is per-node, unlike a naive recursive
- * archive), and the directory-seeding read-back races the real IndexedDB write-propagation
- * (folderOps.addFolder resolves before g.folder(id) is readable — see its header). The delete /
- * archive cascade behaviour those tests covered is exercised headlessly by the folderOps unit
- * tests.
+ * (rendered by the /test page, which exposes window.testExports). Archive no longer cascades to a
+ * folder's children (folderOps.setArchived is per-node). The delete / archive cascade behaviour is
+ * exercised headlessly by the folderOps unit tests.
  */
 
 import { expect, test } from './fixtures/base';
