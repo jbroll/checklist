@@ -7,29 +7,11 @@
  * `window.testExports` API (src/services/testHelpers.ts — `directory.create` for
  * folders/templates, `templateService.createItem` for template items, both g-first/async) and
  * are un-skipped.
- *
- * One test stays `test.skip`: "should show default Quick Errands list for new users" — that was
- * account-migration seeding with no rowboat equivalent; new anonymous sessions start with an
- * empty tree.
  */
 
 import { expect, test } from './fixtures/base';
 
 test.describe('UI - Template Selection', () => {
-  test.skip('should show default Quick Errands list for new users', async ({ page }) => {
-    // Anonymous sessions no longer get seeded content (see defaultData.seedDefaultFolders).
-    // This test is kept for reference; authenticated sign-up seeding is covered by unit tests.
-    await page.goto('/');
-
-    // Wait for page to load
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Should show the default Quick Errands list
-    await expect(page.getByText(/quick errands/i)).toBeVisible();
-  });
-
   test('should navigate to session view when selecting a template', async ({ page }) => {
     await page.goto('/test');
     await page.waitForFunction(() => window.testExports !== undefined, { timeout: 10000 });
